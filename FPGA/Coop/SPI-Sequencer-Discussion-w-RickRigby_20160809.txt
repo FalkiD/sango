@@ -1,0 +1,36 @@
+SPI-Sequencer-Discussion-w-RickRigby_20160809.txt
+---------------------------------------------------------------------------
+
+RMR - commented #2 10-Aug-2016
+
+
+1.) All: Review AD9954 datasheet and any assoc'd AppNotes for the 3 modes,
+         especially RAM mode.
+         a.) Can RAM do only sequential ramps (can it do non-sequential)?
+
+2.) RMR: Check and see if Ampleon has an AD9954 eval board and/or get one.
+	These boards are ~$400, I'll ping Roger when he returns if we should
+	get one.
+
+3.) RAW: Is LTC6946 divider constant?
+         Is LTC6946 power out setting constant (+3, 0, -3, -6dBm)?
+         Basically, is LTC6946 "set-and-forget" for s4?
+
+4.) RAW: What is fine-grained power/gain control strategy (part?)?
+
+5.) All: How is time kept/referenced in the sequencer?
+
+6.) All: What are the tolerable latencies in the sequencer?
+
+7.) See Rick's Whiteboard picture.
+
+
+
+NOTES:
+-----
+- AD9954  max SPI clk = 25MHz ---> 1.6us/40-bit register write
+- LTC6946 max SPI clk = 20MHz ---> 0.8us/8-bit  register write
+
+
+         1         2         3         4         5         6         7
+123456789012345678901234567890123456789012345678901234567890123456789012345
