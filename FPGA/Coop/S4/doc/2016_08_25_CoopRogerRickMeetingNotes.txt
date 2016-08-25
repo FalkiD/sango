@@ -1,0 +1,59 @@
+
+FPGA Pattern Processor meeting notes
+25-Aug-2016
+
+1) Use parameterized modules to support X7 and S4
+
+2) Move all debug file I/O to testbench, don't do debug file IO in Verilog
+
+3) S4 pattern tick must be 50ns, not 100ns like the X7.
+   *S4 MUST support pulse width & period, pulse width 50ns, T 100ns*
+   Typical usage: bursts of these 50ns pulses for a few milliseconds 
+   in duration.
+
+4) Must use main clock of 100MHz, or 200MHz. Divides/multiplies 
+   must be pipelined to happen in a couple of clock ticks. S4
+   calculations are simpler anyway. Using Xilinx IP is not
+   desireable for production.
+
+5) S4 power is controlled by a 12-bit SPI DAC 
+
+6) S4 Bias is On/Off, using a GPIO pin
+
+7) Safe Fallback: SPI pasthrough mde. Minimal FPGA functionality
+   allowing host programming of SPI devices. X7 has some sample
+   Verilog. Assign different Id's to each SPI device. Id, Read
+   bit?, and other bits go in first byte.
+   Use a separate GPIO line, or UART command, to enable SPI
+   passthru mode. Use UART command to implement this.
+
+8) Pattern sequencer:All happens at indexed time
+   -pattern opcode processor must suport branching/looping
+   -don't align latencies right now. If needed, user can adjust
+    start time.
+   -frequency accuracy not critical, ~100KHz. Fast switching
+    is required.
+   -pattern opcodes support measure bit and bias bit
+
+9) Measurement
+   -zmon measurements triggered by SPI read. Two additional
+    separate SPI busses for measurements. 1MS/Sec rate supported.
+   -FIFO will contain up to user-defined maximum number of samples.
+   -Details and HDL examples are in xdige/xdig4 FPGA. HDL can be
+    used directly.
+
+
+TBD:
+  Rick:
+    -Get xdige HDL sample code
+    -Checkin MMC core so we can create MMC core skeleton.
+    -Finish ECHO & STATUS opcodes
+    -Refactor as Coop makes improvements
+    -Update documentation
+    -Work w/Scott to update pattern compiler
+    -Add SPI pass-thru support
+
+  Coop:
+    -Create MMC module w/ROM'd init values
+    -Implement pattern processor 	
+ 
