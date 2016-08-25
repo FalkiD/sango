@@ -1,1 +1,1 @@
-Establish Sango_GitHub\sango\FPGA\Coop\S4\project_1.srcs\sources_1\ip\fifo_dualport\ subdirectory.
+This directory contains content from Vivado rtl project main directory's "ip/fifo_dualclock/" subdirectory.
