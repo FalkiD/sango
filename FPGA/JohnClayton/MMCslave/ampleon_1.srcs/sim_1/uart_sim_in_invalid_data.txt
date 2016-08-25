@@ -1,0 +1,84 @@
+-- Simulation Input File
+-- For "uart_ascii_control_port"
+--
+-- u = UART transmit data
+-- <time delay> is relative time which elapses before next line is processed.
+--
+-- Format:
+--
+-- u <time delay> xyz ...          Where wwwwwwww = relative time and (x, y, z...) = ASCII characters
+-- A single Carriage Return is sent at the end of each line (at the ';' character)
+-- Currently, Backspace and other "special characters" are not supported,
+-- although "uart_control_port" can certainly be used to send those.
+
+-- This set of commands is useful to verify operation of the rs232_syscon module.
+--d  10 us;             -- Delay
+--u 300 us ;            -- <CR> (Allows autobaud to obtain lock on baud rate.)
+--u 300 us i;           -- i<CR>
+--u 600 us r 00;        -- read in src region, qty unspecified. (POR default is used.)
+--u 600 us r 00 2;      -- read in src region
+--u 600 us r 10 2;      -- read in dst region
+--u 600 us r;           -- read in dst region, use same qty as previous command, with sequential address.
+--u 2.1 ms r 00 31;     -- read across src, dst, misc and beyond, resulting in bus error message
+--u 300 us f 14 55 4;   -- fill in dst region
+--u 300 us f 18 AA 4;   -- fill
+--u 300 us w 1c 01 23;  -- write
+--u 300 us w 00 45 67;  -- write
+--u 300 us y 0r 45 67;  -- write, should cause "c?" message
+--u 300 us w 0r 45 67;  -- write, should cause "a?" message
+--u 300 us w 00 t5 67;  -- write, should cause "d?" message
+--u 300 us f 00 45 poo;  -- fill, should cause "q?" message
+
+-- This set of commands is useful to exercise the module under test
+d  10 us;             -- Delay
+u 1.0 ms ;            -- <CR> (Allows autobaud to obtain lock on baud rate.)
+u 8.0 ms r 3000000 10; -- read MMC host registers
+
+-- Example commands brought in from bus_control_port
+-- It is a testbench having an MMC_host_8bit at address 3000000.
+--
+--u  5 us w 3000009 00346DC6; -- Set DDS for sd_clk_o of 400kHz
+--u  5 us w 300000E 200; -- Set DMA address at 0x200
+--u 15 us r 3000000 10; -- Read registers
+--u  10 us w 3000000 200 0; -- Set BLK_SIZE=512, BLK_COUNT=0
+--u 300 us w 3000002 000 00000000; -- Write CMD0 (RESET, no response)
+--u 300 us w 3000002 119 00FF8080; -- Write CMD1 (SEND_OP_COND, short response)
+--u  10 us r 3000004 4; -- Read CMD Response
+--u 500 us w 3000002 21A 00000000; -- Write CMD2 (ALL_SEND_CID, long response)
+--u  10 us r 3000004 4; -- Read CMD Response
+--u 300 us w 3000002 319 00050000; -- Write CMD3 (SET_RELATIVE_ADDRESS, short response)
+--u  10 us r 3000004 4; -- Read CMD Response
+----u 300 us w 3000002 D19 00050000; -- Write CMD13 (SEND_STATUS, short response)
+----u  10 us r 3000004 4; -- Read CMD Response
+--u 300 us w 3000002 719 00050000; -- Write CMD7 (SELECT, short response) GOES TO CARD_TRAN
+--u  10 us r 3000004 4; -- Read CMD Response
+--u   5 us w 3000008 7D000001; -- Set controller timeout=32000, bus size
+--u 300 us w 3000002 619 03B70100; -- Write CMD6 (SWITCH, short response) set bus width
+--u  10 us r 3000004 4; -- Read CMD Response
+--u 300 us w 3000002 839 000001AA; -- Write CMD8 (SEND_EXT_CSD, short response, arg=stuff bits, read data)
+--u  10 us r 3000004 4; -- Read CMD Response
+--u   5 us w 3000009 189374BC; -- Set DDS for sd_clk_o of 48MHz
+--u 100 us ;
+--u  10 us r 4000200 40; -- Read first 64 EXT_CSD values
+--u  10 us r 40002B7 1; -- Read BUS_WIDTH value
+--u  10 us r 40003FE 2; -- Read last two EXT_CSD values
+--u   5 us w 300000E 200; -- Set DMA address at 0x200
+--u  30 us w 3000002 1959 00010000; -- Write CMD25 (WRITE_MULTIPLE_BLOCK)
+--u   5 us w 3000002 0C19 00000000; -- Write CMD12 (STOP_TRANSMISSION, arg=stuff bits)
+--u   5 us w 3000002 000 00000000; -- Write CMD0 (RESET, no response)
+--u   5 us w 3000002 119 00FF8080; -- Write CMD1 (SEND_OP_COND, short response)
+--u  10 us r 3000004 4; -- Read CMD Response
+--u  15 us w 3000002 21A 00000000; -- Write CMD2 (ALL_SEND_CID, long response)
+--u  10 us r 3000004 4; -- Read CMD Response
+--u   5 us w 3000002 319 00050000; -- Write CMD3 (SET_RELATIVE_ADDRESS, short response)
+--u  10 us r 3000004 4; -- Read CMD Response
+--u   5 us w 3000002 D19 00050000; -- Write CMD13 (SEND_STATUS, short response)
+--u  10 us r 3000004 4; -- Read CMD Response
+--u   5 us w 3000002 719 00050000; -- Write CMD7 (SELECT, short response) GOES TO CARD_TRAN
+--u  10 us r 3000004 4; -- Read CMD Response
+--u   5 us w 3000008 7D000000; -- Set controller timeout=32000, bus size
+--u   5 us w 3000002 619 03B70000; -- Write CMD6 (SWITCH, short response) set bus size
+--u  15 us w 3000002 1959 00010000; -- Write CMD25 (WRITE_MULTIPLE_BLOCK)
+--u   5 us w 3000002 0C19 00000000; -- Write CMD12 (STOP_TRANSMISSION, arg=stuff bits)
+--
+

@@ -1,0 +1,3 @@
+w 3000002 0E 0 # Write CMD14 (BUSTEST_R) GOES TO CARD_TRAN
+r 3000004 4    # Read CMD Response
+

@@ -1,0 +1,3 @@
+w 3000002 D 00050000 # Write CMD13 (SEND_STATUS, short response)
+r 3000004 4 # Read CMD Response
+

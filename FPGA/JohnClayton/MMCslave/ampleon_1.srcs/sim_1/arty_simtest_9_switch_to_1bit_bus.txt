@@ -1,0 +1,3 @@
+w 3000008 04000000 # Set controller timeout=32000, bus size
+w 3000002 6 03B70000 # Write CMD6 (SWITCH, short response) set bus width
+r 3000004 4 # Read CMD Response

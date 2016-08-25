@@ -1,0 +1,67 @@
+w 3000022 3 # Activate host and slave modes
+r 3000020 10 # read MMC test registers
+r 3000010 10 # read MMC slave registers
+r 3000020 10 # read MMC test registers
+w 3000009 010624DE # Set DDS for sd_clk_o of 400kHz
+w 300000E 200 # Set DMA address at 0x200
+r 3000000 10 # Read host registers
+w 3000000 200 0 # Set BLK_SIZE=512, BLK_COUNT=0
+w 3000002 0 00000000 # Write CMD0 (RESET, no response)
+# Write CMD1 (SEND_OP_COND, short response)
+w 3000002 1 00FF8080
+r 3000004 4 # Read CMD Response
+# Write CMD2 (ALL_SEND_CID, long response)
+w 3000002 2 00000000
+r 3000004 4 # Read CMD Response
+# Write CMD3 (SET_RELATIVE_ADDRESS, short response)
+w 3000002 3 00050000
+r 3000004 4 # Read CMD Response
+# Write CMD13 (SEND_STATUS, short response)
+w 3000002 D 00050000
+r 3000004 4 # Read CMD Response
+# Write CMD7 (SELECT, short response) GOES TO CARD_TRAN
+w 3000002 7 00050000
+r 3000004 4 # Read CMD Response
+w 3000008 7D000001 # Set controller timeout=32000, bus size
+# Write CMD6 (SWITCH, short response) set bus width
+w 3000002 6 03B70100
+r 3000004 4 # Read CMD Response
+# Write CMD8 (SEND_EXT_CSD, short response, 
+#             arg=stuff bits, read data)
+w 3000002 8 000001AA 
+r 3000004 4 # Read CMD Response
+#w 3000009 80000000 # Set DDS for sd_clk_o of 50MHz
+r 4000200 40 # Read first 64 EXT_CSD values
+r 40002B7 1 # Read BUS_WIDTH value
+r 40003FE 2 # Read last two EXT_CSD values
+w 300000E 200 # Set DMA address at 0x200
+w 3000002 19 00000800 # Write CMD25 (WRITE_MULTIPLE_BLOCK)
+# Write CMD12 (STOP_TRANSMISSION, arg=stuff bits)
+w 3000002 C 00000000
+w 3000002 0 00000000 # Write CMD0 (RESET, no response)
+ r 5000800 40 # Read 64 card data pipe BRAM values
+r 50009FE 2 # Read last two card data pipe BRAM values
+# Write CMD1 (SEND_OP_COND, short response)
+w 3000002 1 00FF8080
+r 3000004 4 # Read CMD Response
+# Write CMD2 (ALL_SEND_CID, long response)
+w 3000002 2 00000000
+r 3000004 4 # Read CMD Response
+# Write CMD3 (SET_RELATIVE_ADDRESS, short response)
+w 3000002 3 00050000
+r 3000004 4 # Read CMD Response
+# Write CMD13 (SEND_STATUS, short response)
+w 3000002 D 00050000
+r 3000004 4 # Read CMD Response
+# Write CMD7 (SELECT, short response) GOES TO CARD_TRAN
+w 3000002 7 00050000
+r 3000004 4 # Read CMD Response
+w 3000008 7D000000 # Set controller timeout=32000, bus size
+# Write CMD6 (SWITCH, short response) set bus size
+w 3000002 6 03B70000
+w 3000002 19 00010000 # Write CMD25 (WRITE_MULTIPLE_BLOCK)
+# Write CMD12 (STOP_TRANSMISSION, arg=stuff bits)
+w 3000002 C 00000000
+r0 300002F 40 # Read 64 card data pipe FIFO values
+
+

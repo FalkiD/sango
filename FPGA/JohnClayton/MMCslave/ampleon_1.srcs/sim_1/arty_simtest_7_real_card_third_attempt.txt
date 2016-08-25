@@ -1,0 +1,18 @@
+#w 3000022 2 # Set host_mode, clear card_mode
+w 3000009 010624DE # Set DDS for sd_clk_o of 400kHz
+w 300000E 200 # Set DMA address at 0x200
+w 3000000 200 0 # Set BLK_SIZE=512, BLK_COUNT=0
+w 3000002 0 00000000 # Write CMD0 (RESET, no response)
+w 3000002 1 00FF8000 # Write CMD1 (SEND_OP_COND, short response)
+r 3000004 4 # Read CMD Response
+w 3000002 1 00FF8000 # Write CMD1 (SEND_OP_COND, short response)
+r 3000004 4 # Read CMD Response
+w 3000002 2 00000000 # Write CMD2 (ALL_SEND_CID, long response)
+r 3000004 4 # Read CMD Response
+w 3000002 3 00050000 # Write CMD3 (SET_RELATIVE_ADDRESS, short response)
+r 3000004 4 # Read CMD Response
+w 3000002 D 00050000 # Write CMD13 (SEND_STATUS, short response)
+r 3000004 4 # Read CMD Response
+w 3000002 7 00050000 # Write CMD7 (SELECT, short response) GOES TO CARD_TRAN
+r 3000004 4 # Read CMD Response
+r 3000000 2f # Read test registers

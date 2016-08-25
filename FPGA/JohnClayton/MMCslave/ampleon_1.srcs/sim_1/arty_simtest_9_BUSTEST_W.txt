@@ -1,0 +1,2 @@
+w 3000002 13 0 # Write CMD19 (BUSTEST_W) GOES TO CARD_BTST
+r 3000004 4    # Read CMD Response

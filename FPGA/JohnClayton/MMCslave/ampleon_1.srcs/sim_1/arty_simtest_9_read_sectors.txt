@@ -1,0 +1,4 @@
+w 300000E 0 # Set DMA address at 0x200
+w 3000002 17 1 # set block count
+w 3000002 12 600 # CMD18 (READ_MULTIPLE_BLOCK)
+r 3000004 4 # Read CMD Response

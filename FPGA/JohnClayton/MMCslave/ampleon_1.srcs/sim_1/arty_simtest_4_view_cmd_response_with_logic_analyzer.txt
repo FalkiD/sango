@@ -1,0 +1,7 @@
+w 3000009 010624DE # Set DDS for sd_clk_o of 400kHz
+w 300000E 200 # Set DMA address at 0x200
+w 3000000 200 0 # Set BLK_SIZE=512, BLK_COUNT=0
+w 3000002 0 00000000 # Write CMD0 (RESET, no response)
+# Write CMD1 (SEND_OP_COND, short response)
+w 3000002 1 00FF8080
+r 3000004 4 # Read CMD Response
