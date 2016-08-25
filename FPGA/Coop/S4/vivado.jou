@@ -1,0 +1,19 @@
+#-----------------------------------------------------------
+# Vivado v2016.2 (64-bit)
+# SW Build 1577090 on Thu Jun  2 16:32:40 MDT 2016
+# IP Build 1577682 on Fri Jun  3 12:00:54 MDT 2016
+# Start of session at: Wed Aug 24 19:53:17 2016
+# Process ID: 7092
+# Current directory: C:/Users/coop/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4
+# Command line: vivado.exe -gui_launcher_event rodinguilauncherevent9152 C:\Users\coop\Documents\Ampleon\s4x7\Sango_GitHub\sango\FPGA\Coop\S4\project_1a.xpr
+# Log file: C:/Users/coop/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4/vivado.log
+# Journal file: C:/Users/coop/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4\vivado.jou
+#-----------------------------------------------------------
+start_gui
+open_project C:/Users/coop/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4/project_1a.xpr
+close_project
+open_project C:/Users/coop/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4/project_1.xpr
+close_project
+open_project C:/Users/coop/Documents/Ampleon/ARTY/ARTY_sw_btn_led/Arty_sw_btn_Demo.xpr
+update_compile_order -fileset sources_1
+close_project
