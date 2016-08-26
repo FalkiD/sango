@@ -100,245 +100,246 @@ module pulse(
 //`else
 //`endif
 
-    //////////////////////////////////////////////////////////////////
-    // Instantiate fifo's used by pattern opcode processor
-    //////////////////////////////////////////////////////////////////
+//    //////////////////////////////////////////////////////////////////
+//    // Instantiate fifo's used by pattern opcode processor
+//    //////////////////////////////////////////////////////////////////
 
-    // fifo's want low-true reset
-    wire rst_n;
-    assign rst_n = ~rst;
+//    // fifo's want low-true reset
+//    wire rst_n;
+//    assign rst_n = ~rst;
 
-    ///////////////////////////////////////////////////////////////////////
-    // Frequency FIFO
-    // variables for frequency FIFO, written by pattern processor, 
-    // read by pattern frequency processor instance
-    ///////////////////////////////////////////////////////////////////////
-    wire        ptn_freq_fifo_rst_i = 0;
-    reg         ptn_freq_fifo_clk_en = 0;
-    wire        ptn_freq_fifo_wr_en;
-    wire        ptn_freq_fifo_rd_en;
-    wire [31:0] ptn_freq_fifo_data_in;
-    wire [31:0] ptn_freq_fifo_data_out;
-    wire [9:0]  ptn_freq_fifo_count;    // 512 max
-    wire        ptn_freq_fifo_empty, ptn_freq_fifo_full;
-    wire        ptn_freq_fifo_pf_full, ptn_freq_fifo_pf_flag, ptn_freq_fifo_pf_empty;
-    // Instantiate fifo that the pattern opcode processor is using to store frequencies
-    swiss_army_fifo #(
-      .USE_BRAM(1),
-      .WIDTH(32),
-      .DEPTH(128),                   // 512 byte opcode block of only freq opcodes holds 85 frequencies
-      .FILL_LEVEL_BITS(10),
-      .PF_FULL_POINT(127),
-      .PF_FLAG_POINT(64),
-      .PF_EMPTY_POINT(1)
-    ) freq_fifo(
-        .sys_rst_n(rst_n),
-        .sys_clk(clk),
-        .sys_clk_en(pulse_en),
+//    ///////////////////////////////////////////////////////////////////////
+//    // Frequency FIFO
+//    // variables for frequency FIFO, written by pattern processor, 
+//    // read by pattern frequency processor instance
+//    ///////////////////////////////////////////////////////////////////////
+//    wire        ptn_freq_fifo_rst_i = 0;
+//    reg         ptn_freq_fifo_clk_en = 0;
+//    wire        ptn_freq_fifo_wr_en;
+//    wire        ptn_freq_fifo_rd_en;
+//    wire [31:0] ptn_freq_fifo_data_in;
+//    wire [31:0] ptn_freq_fifo_data_out;
+//    wire [9:0]  ptn_freq_fifo_count;    // 512 max
+//    wire        ptn_freq_fifo_empty, ptn_freq_fifo_full;
+//    wire        ptn_freq_fifo_pf_full, ptn_freq_fifo_pf_flag, ptn_freq_fifo_pf_empty;
+//    // Instantiate fifo that the pattern opcode processor is using to store frequencies
+//    swiss_army_fifo #(
+//      .USE_BRAM(1),
+//      .WIDTH(32),
+//      .DEPTH(128),                   // 512 byte opcode block of only freq opcodes holds 85 frequencies
+//      .FILL_LEVEL_BITS(10),
+//      .PF_FULL_POINT(127),
+//      .PF_FLAG_POINT(64),
+//      .PF_EMPTY_POINT(1)
+//    ) freq_fifo(
+//        .sys_rst_n(rst_n),
+//        .sys_clk(clk),
+//        .sys_clk_en(pulse_en),
         
-        .reset_i(ptn_freq_fifo_rst_i),
+//        .reset_i(ptn_freq_fifo_rst_i),
         
-        .fifo_wr_i(ptn_freq_fifo_wr_en),
-        .fifo_din(ptn_freq_fifo_data_in),
+//        .fifo_wr_i(ptn_freq_fifo_wr_en),
+//        .fifo_din(ptn_freq_fifo_data_in),
         
-        .fifo_rd_i(ptn_freq_fifo_rd_en),
-        .fifo_dout(ptn_freq_fifo_data_out),
+//        .fifo_rd_i(ptn_freq_fifo_rd_en),
+//        .fifo_dout(ptn_freq_fifo_data_out),
         
-        .fifo_fill_level(ptn_freq_fifo_count),
-        .fifo_full(ptn_freq_fifo_full),
-        .fifo_empty(ptn_freq_fifo_empty),
-        .fifo_pf_full(ptn_freq_fifo_pf_full),
-        .fifo_pf_flag(ptn_freq_fifo_pf_flag),
-        .fifo_pf_empty(ptn_freq_fifo_pf_empty)           
-    );
+//        .fifo_fill_level(ptn_freq_fifo_count),
+//        .fifo_full(ptn_freq_fifo_full),
+//        .fifo_empty(ptn_freq_fifo_empty),
+//        .fifo_pf_full(ptn_freq_fifo_pf_full),
+//        .fifo_pf_flag(ptn_freq_fifo_pf_flag),
+//        .fifo_pf_empty(ptn_freq_fifo_pf_empty)           
+//    );
               
-    /////////////////////////////////////////////////////////////////////////////////////
-    // Power FIFO                       
-    // Instantiate fifo that the pattern processor is using to store power opcodes
-    // Written by pattern processor, read by pattern power processor instance
-    /////////////////////////////////////////////////////////////////////////////////////
-    wire        pwr_fifo_rst_i = 0;
-    reg         pwr_fifo_clk_en = 0;
-    wire        pwr_fifo_wr_en;
-    wire        pwr_fifo_rd_en;
-    wire [31:0] pwr_fifo_data_in;
-    wire [31:0] pwr_fifo_data_out;
-    wire [15:0] pwr_fifo_count;
-    wire        pwr_fifo_empty, pwr_fifo_full;
-    wire        pwr_fifo_pf_full, pwr_fifo_pf_flag, pwr_fifo_pf_empty;
-    swiss_army_fifo #(
-      .USE_BRAM(1),
-      .WIDTH(32),
-      .DEPTH(128),                   // 512 byte opcode block of only pwr opcodes holds 85 powers
-      .FILL_LEVEL_BITS(16),
-      .PF_FULL_POINT(127),
-      .PF_FLAG_POINT(64),
-      .PF_EMPTY_POINT(1)
-    ) power_fifo(
-        .sys_rst_n(rst_n),
-        .sys_clk(clk),
-        .sys_clk_en(pulse_en),
+//    /////////////////////////////////////////////////////////////////////////////////////
+//    // Power FIFO                       
+//    // Instantiate fifo that the pattern processor is using to store power opcodes
+//    // Written by pattern processor, read by pattern power processor instance
+//    /////////////////////////////////////////////////////////////////////////////////////
+//    wire        ptn_pwr_fifo_rst_i = 0;
+//    reg         ptn_pwr_fifo_clk_en = 0;
+//    wire        ptn_pwr_fifo_wr_en;
+//    wire        ptn_pwr_fifo_rd_en;
+//    wire [31:0] ptn_pwr_fifo_data_in;
+//    wire [31:0] ptn_pwr_fifo_data_out;
+//    wire [15:0] ptn_pwr_fifo_count;
+//    wire        ptn_pwr_fifo_empty, ptn_pwr_fifo_full;
+//    wire        ptn_pwr_fifo_pf_full, ptn_pwr_fifo_pf_flag, ptn_pwr_fifo_pf_empty;
+//    swiss_army_fifo #(
+//      .USE_BRAM(1),
+//      .WIDTH(32),
+//      .DEPTH(128),                   // 512 byte opcode block of only pwr opcodes holds 85 powers
+//      .FILL_LEVEL_BITS(16),
+//      .PF_FULL_POINT(127),
+//      .PF_FLAG_POINT(64),
+//      .PF_EMPTY_POINT(1)
+//    ) power_fifo(
+//        .sys_rst_n(rst_n),
+//        .sys_clk(clk),
+//        .sys_clk_en(pulse_en),
         
-        .reset_i(pwr_fifo_rst_i),
+//        .reset_i(ptn_pwr_fifo_rst_i),
         
-        .fifo_wr_i(pwr_fifo_wr_en),
-        .fifo_din(pwr_fifo_data_in),
+//        .fifo_wr_i(ptn_pwr_fifo_wr_en),
+//        .fifo_din(ptn_pwr_fifo_data_in),
         
-        .fifo_rd_i(pwr_fifo_rd_en),
-        .fifo_dout(pwr_fifo_data_out),
+//        .fifo_rd_i(ptn_pwr_fifo_rd_en),
+//        .fifo_dout(ptn_pwr_fifo_data_out),
         
-        .fifo_fill_level(pwr_fifo_count),
-        .fifo_full(pwr_fifo_full),
-        .fifo_empty(pwr_fifo_empty),
-        .fifo_pf_full(pwr_fifo_pf_full),
-        .fifo_pf_flag(pwr_fifo_pf_flag),
-        .fifo_pf_empty(pwr_fifo_pf_empty)           
-    );
+//        .fifo_fill_level(ptn_pwr_fifo_count),
+//        .fifo_full(ptn_pwr_fifo_full),
+//        .fifo_empty(ptn_pwr_fifo_empty),
+//        .fifo_pf_full(ptn_pwr_fifo_pf_full),
+//        .fifo_pf_flag(ptn_pwr_fifo_pf_flag),
+//        .fifo_pf_empty(ptn_pwr_fifo_pf_empty)           
+//    );
 
-    /////////////////////////////////////////////////////////////////////////////////////
-    // Pulse FIFO is a dummy, pulse opcodes have been unrolled into their
-    // component opcodes (power, measure) already.
-    /////////////////////////////////////////////////////////////////////////////////////
-    wire        pulse_fifo_rst_i = 0;
-    reg         pulse_fifo_clk_en = 0;
-    wire        pulse_fifo_wr_en;
-    wire        pulse_fifo_rd_en;
-    wire [63:0] pulse_fifo_data_in;
-    wire [63:0] pulse_fifo_data_out;
-    wire [15:0] pulse_fifo_count;
-    wire        pulse_fifo_empty, pulse_fifo_full;
-    wire        pulse_fifo_pf_full, pulse_fifo_pf_flag, pulse_fifo_pf_empty;
+//    /////////////////////////////////////////////////////////////////////////////////////
+//    // Pulse FIFO is a dummy, pulse opcodes have been unrolled into their
+//    // component opcodes (power, measure) already.
+//    /////////////////////////////////////////////////////////////////////////////////////
+//    wire        ptn_pulse_fifo_rst_i = 0;
+//    reg         ptn_pulse_fifo_clk_en = 0;
+//    wire        ptn_pulse_fifo_wr_en;
+//    wire        ptn_pulse_fifo_rd_en;
+//    wire [63:0] ptn_pulse_fifo_data_in;
+//    wire [63:0] ptn_pulse_fifo_data_out;
+//    wire [15:0] ptn_pulse_fifo_count;
+//    wire        ptn_pulse_fifo_empty, ptn_pulse_fifo_full;
+//    wire        ptn_pulse_fifo_pf_full, ptn_pulse_fifo_pf_flag, ptn_pulse_fifo_pf_empty;
     
-    /////////////////////////////////////////////////////////////////////////////////////
-    // Bias FIFO                       
-    // Instantiate fifo that the pattern processor is using to store bias opcodes
-    // Written by pattern processor, read by pattern bias processor instance
-    /////////////////////////////////////////////////////////////////////////////////////
-    wire        ptn_bias_fifo_rst_i = 0;
-    reg         ptn_bias_fifo_clk_en = 0;
-    wire        ptn_bias_fifo_wr_en;
-    wire        ptn_bias_fifo_rd_en;
-    wire [15:0] ptn_bias_fifo_data_in;
-    wire [15:0] ptn_bias_fifo_data_out;
-    wire [9:0]  ptn_bias_fifo_count;
-    wire        ptn_bias_fifo_empty, ptn_bias_fifo_full;
-    wire        ptn_bias_fifo_pf_full, ptn_bias_fifo_pf_flag, ptn_bias_fifo_pf_empty;
-    swiss_army_fifo #(
-      .USE_BRAM(1),
-      .WIDTH(16),
-      .DEPTH(128),                   // 512 byte opcode block of only pwr opcodes holds 85 powers
-      .FILL_LEVEL_BITS(10),
-      .PF_FULL_POINT(127),
-      .PF_FLAG_POINT(64),
-      .PF_EMPTY_POINT(1)
-    ) bias_fifo(
-        .sys_rst_n(rst_n),
-        .sys_clk(clk),
-        .sys_clk_en(pulse_en),
+//    /////////////////////////////////////////////////////////////////////////////////////
+//    // Bias FIFO                       
+//    // Instantiate fifo that the pattern processor is using to store bias opcodes
+//    // Written by pattern processor, read by pattern bias processor instance
+//    /////////////////////////////////////////////////////////////////////////////////////
+//    wire        ptn_bias_fifo_rst_i = 0;
+//    reg         ptn_bias_fifo_clk_en = 0;
+//    wire        ptn_bias_fifo_wr_en;
+//    wire        ptn_bias_fifo_rd_en;
+//    wire [15:0] ptn_bias_fifo_data_in;
+//    wire [15:0] ptn_bias_fifo_data_out;
+//    wire [9:0]  ptn_bias_fifo_count;
+//    wire        ptn_bias_fifo_empty, ptn_bias_fifo_full;
+//    wire        ptn_bias_fifo_pf_full, ptn_bias_fifo_pf_flag, ptn_bias_fifo_pf_empty;
+//    swiss_army_fifo #(
+//      .USE_BRAM(1),
+//      .WIDTH(16),
+//      .DEPTH(128),                   // 512 byte opcode block of only pwr opcodes holds 85 powers
+//      .FILL_LEVEL_BITS(10),
+//      .PF_FULL_POINT(127),
+//      .PF_FLAG_POINT(64),
+//      .PF_EMPTY_POINT(1)
+//    ) bias_fifo(
+//        .sys_rst_n(rst_n),
+//        .sys_clk(clk),
+//        .sys_clk_en(pulse_en),
         
-        .reset_i(ptn_bias_fifo_rst_i),
+//        .reset_i(ptn_bias_fifo_rst_i),
         
-        .fifo_wr_i(ptn_bias_fifo_wr_en),
-        .fifo_din(ptn_bias_fifo_data_in),
+//        .fifo_wr_i(ptn_bias_fifo_wr_en),
+//        .fifo_din(ptn_bias_fifo_data_in),
         
-        .fifo_rd_i(ptn_bias_fifo_rd_en),
-        .fifo_dout(ptn_bias_fifo_data_out),
+//        .fifo_rd_i(ptn_bias_fifo_rd_en),
+//        .fifo_dout(ptn_bias_fifo_data_out),
         
-        .fifo_fill_level(ptn_bias_fifo_count),
-        .fifo_full(ptn_bias_fifo_full),
-        .fifo_empty(ptn_bias_fifo_empty),
-        .fifo_pf_full(ptn_bias_fifo_pf_full),
-        .fifo_pf_flag(ptn_bias_fifo_pf_flag),
-        .fifo_pf_empty(ptn_bias_fifo_pf_empty)           
-    );
+//        .fifo_fill_level(ptn_bias_fifo_count),
+//        .fifo_full(ptn_bias_fifo_full),
+//        .fifo_empty(ptn_bias_fifo_empty),
+//        .fifo_pf_full(ptn_bias_fifo_pf_full),
+//        .fifo_pf_flag(ptn_bias_fifo_pf_flag),
+//        .fifo_pf_empty(ptn_bias_fifo_pf_empty)           
+//    );
 
-    //////////////////////////////////////////////
-    // Pattern opcode processor FIFO
-    // pulse & pattern opcodes will write to this FIFO
-    // Pattern processor will execute from this FIFO
-    // Assumes 32-bit opcodes, 64k of them
-    //////////////////////////////////////////////
-    wire        ptn_fifo_rst_i = 0;
-    reg         ptn_fifo_clk_en = 0;
-    reg         ptn_fifo_wr_en;
-    wire        ptn_fifo_rd_en;
-    reg [7:0]   ptn_fifo_data_in;
-    wire [7:0]  ptn_fifo_data_out;
-    wire [15:0] ptn_fifo_count; // 18:0
-    wire        ptn_fifo_empty, ptn_opcode_fifo_full;
-    wire        ptn_fifo_pf_full, ptn_opcode_fifo_pf_flag, ptn_opcode_fifo_pf_empty;
-    swiss_army_fifo #(
-        .USE_BRAM(1),
-        .WIDTH(8),
-        .DEPTH(32768),         // 2**18, 262144
-        .FILL_LEVEL_BITS(16),   // 1 more bit 19
-        .PF_FULL_POINT(32767),   // 262143
-        .PF_FLAG_POINT(16384),   // 131072
-        .PF_EMPTY_POINT(1)
-    ) ptn_opcodes(
-        .sys_rst_n(rst_n),
-        .sys_clk(clk),
-        .sys_clk_en(ptn_fifo_clk_en),
+//    //////////////////////////////////////////////
+//    // Pattern opcode processor FIFO
+//    // pulse & pattern opcodes will write to this FIFO
+//    // Pattern processor will execute from this FIFO
+//    // Assumes 32-bit opcodes, 64k of them
+//    //////////////////////////////////////////////
+//    wire        ptn_fifo_rst_i = 0;
+//    reg         ptn_fifo_clk_en = 0;
+//    reg         ptn_fifo_wr_en;
+//    wire        ptn_fifo_rd_en;
+//    reg [7:0]   ptn_fifo_data_in;
+//    wire [7:0]  ptn_fifo_data_out;
+//    wire [15:0]  ptn_fifo_count; // was 15:0    18:0
+//    wire        ptn_fifo_empty, ptn_fifo_full;
+//    wire        ptn_fifo_pf_full, ptn_fifo_pf_flag, ptn_fifo_pf_empty;
+//    swiss_army_fifo #(
+//        .USE_BRAM(1),
+//        .WIDTH(8),
+//        .DEPTH(32768),         // 32768 for 2**15(15:0 ptn_fifo_count)    2**18, 262144
+//        .FILL_LEVEL_BITS(16),   // 1 more bit 19
+//        .PF_FULL_POINT(32767),   // 32767   262143
+//        .PF_FLAG_POINT(16384),   // 16384   131072
+//        .PF_EMPTY_POINT(1)
+//    ) ptn_opcodes(
+//        .sys_rst_n(rst_n),
+//        .sys_clk(clk),
+//        .sys_clk_en(ptn_fifo_clk_en),
         
-        .reset_i(ptn_fifo_rst_i),
+//        .reset_i(ptn_fifo_rst_i),
         
-        .fifo_wr_i(ptn_fifo_wr_en),
-        .fifo_din(ptn_fifo_data_in),
+//        .fifo_wr_i(ptn_fifo_wr_en),
+//        .fifo_din(ptn_fifo_data_in),
         
-        .fifo_rd_i(ptn_fifo_rd_en),
-        .fifo_dout(ptn_fifo_data_out),
+//        .fifo_rd_i(ptn_fifo_rd_en),
+//        .fifo_dout(ptn_fifo_data_out),
         
-        .fifo_fill_level(ptn_fifo_count),
-        .fifo_full(ptn_fifo_full),
-        .fifo_empty(ptn_fifo_empty),
-        .fifo_pf_full(ptn_fifo_pf_full),
-        .fifo_pf_flag(ptn_fifo_pf_flag),
-        .fifo_pf_empty(ptn_fifo_pf_empty)           
-    );
+//        .fifo_fill_level(ptn_fifo_count),
+//        .fifo_full(ptn_fifo_full),
+//        .fifo_empty(ptn_fifo_empty),
+//        .fifo_pf_full(ptn_fifo_pf_full),
+//        .fifo_pf_flag(ptn_fifo_pf_flag),
+//        .fifo_pf_empty(ptn_fifo_pf_empty)           
+//    );
 
-    // Instantiate the pattern  processor module, a 'special'
-    // version of the 'ordinary' opcode processor.
-    // Pattern processor will run until ending pattern
-    // clock tick.
-    // variables for input(opcode) FIFO
-    wire [31:0] ptn_opcode_counter;
-    wire        ptn_processor_busy;
-    assign ptn_opcodes_processed_o = ~ptn_opcode_counter;
-    opcodes pattern_processor(
-        .clk(clk),
-        .rst(rst),
-        .ce(pulse_en),
+//    // Instantiate the pattern  processor module, a 'special'
+//    // version of the 'ordinary' opcode processor.
+//    // Pattern processor will run until ending pattern
+//    // clock tick.
+//    // variables for input(opcode) FIFO
+//    wire [31:0] ptn_opcode_counter;
+//    wire        ptn_processor_busy;
+//    wire [7:0]  ptn_processor_status;
+//    assign ptn_opcodes_processed_o = ~ptn_opcode_counter;
+//    opcodes pattern_processor(
+//        .clk(clk),
+//        .rst(rst),
+//        .ce(1'b0),
 
-        .opcode_fifo_i(ptn_fifo_data_out),
-        .rd_en_o(ptn_fifo_rd_en),
-        .fifo_empty_i(ptn_fifo_empty),
-        .opcode_fifo_count_i(ptn_fifo_count),
+//        .opcode_fifo_i(ptn_fifo_data_out),
+//        .rd_en_o(ptn_fifo_rd_en),
+//        .fifo_empty_i(ptn_fifo_empty),
+//        .opcode_fifo_count_i(ptn_fifo_count),
          
-        .frequency_o(ptn_freq_fifo_data_in),        // frequency output in MHz, into FIFO
-        .frq_wr_en_o(ptn_freq_fifo_wr_en),          // freq fifo write line
-        .frq_fifo_empty_i(ptn_freq_fifo_empty),     // freq fifo empty line 
-        .frq_fifo_full_i(ptn_freq_fifo_full),       // frequency fifo full flag
+//        .frequency_o(ptn_freq_fifo_data_in),        // frequency output in MHz, into FIFO
+//        .frq_wr_en_o(ptn_freq_fifo_wr_en),          // freq fifo write line
+//        .frq_fifo_empty_i(ptn_freq_fifo_empty),     // freq fifo empty line 
+//        .frq_fifo_full_i(ptn_freq_fifo_full),       // frequency fifo full flag
 
-        .power_o(ptn_pwr_fifo_data_in),             // desired power output in dBm, into FIFO
-        .pwr_wr_en_o(ptn_pwr_fifo_wr_en),           // power fifo write line
-        .pwr_fifo_empty_i(ptn_pwr_fifo_empty),      // power fifo empty line 
-        .pwr_fifo_full_i(ptn_pwr_fifo_full),        // power fifo full flag
+//        .power_o(ptn_pwr_fifo_data_in),             // desired power output in dBm, into FIFO
+//        .pwr_wr_en_o(ptn_pwr_fifo_wr_en),           // power fifo write line
+//        .pwr_fifo_empty_i(ptn_pwr_fifo_empty),      // power fifo empty line 
+//        .pwr_fifo_full_i(ptn_pwr_fifo_full),        // power fifo full flag
 
-        // pulse opcodes have already been "unrolled", should never get any when running a pattern
-        .pulse_o(ptn_pulse_fifo_data_in),           // to fifo, pulse opcode
-        .pulse_wr_en_o(ptn_pulse_fifo_wr_en),       // write pulse fifo enable
-        .pulse_fifo_empty_i(ptn_pulse_fifo_empty),  // pulse fifo empty flag
-        .pulse_fifo_full_i(ptn_pulse_fifo_full),    // pulse fifo full flag
+//        // pulse opcodes have already been "unrolled", should never get any when running a pattern
+//        .pulse_o(ptn_pulse_fifo_data_in),           // to fifo, pulse opcode
+//        .pulse_wr_en_o(ptn_pulse_fifo_wr_en),       // write pulse fifo enable
+//        .pulse_fifo_empty_i(ptn_pulse_fifo_empty),  // pulse fifo empty flag
+//        .pulse_fifo_full_i(ptn_pulse_fifo_full),    // pulse fifo full flag
 
-        .bias_o(ptn_bias_fifo_data_in),             // to fifo, bias opcode
-        .bias_wr_en_o(ptn_bias_fifo_wr_en),         // write bias fifo enable
-        .bias_fifo_empty_i(ptn_bias_fifo_empty),    // bias fifo empty flag
-        .bias_fifo_full_i(ptn_bias_fifo_full),      // bias fifo full flag
+//        .bias_o(ptn_bias_fifo_data_in),             // to fifo, bias opcode
+//        .bias_wr_en_o(ptn_bias_fifo_wr_en),         // write bias fifo enable
+//        .bias_fifo_empty_i(ptn_bias_fifo_empty),    // bias fifo empty flag
+//        .bias_fifo_full_i(ptn_bias_fifo_full),      // bias fifo full flag
 
-        .opcode_counter_o(ptn_opcode_counter),                     
-        .status_o(ptn_processor_status),     // done with block, 1 is Success, else 8-bit error code
-        .busy_o(ptn_processor_busy)
-        );
+//        .opcode_counter_o(ptn_opcode_counter),                     
+//        .status_o(ptn_processor_status),     // done with block, 1 is Success, else 8-bit error code
+//        .busy_o(ptn_processor_busy)
+//        );
 
 
     /////////////////////////////////////////////////////////
