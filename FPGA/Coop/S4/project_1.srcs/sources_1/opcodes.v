@@ -34,8 +34,8 @@
 `define STATE_FETCH                 7'h03
 `define STATE_LENGTH                7'h04
 `define STATE_DATA                  7'h05
-`define STATE_DATA_WAIT             7'h06
-`define STATE_FIFO_WRITE            7'h07
+`define STATE_FIFO_WRITE            7'h06
+`define STATE_DATA_WR_MULTIBYTE     7'h07
 
 /*
     Opcode block MUST be terminated by a NULL opcode
@@ -57,7 +57,6 @@ module opcodes(
     input response_fifo_empty_i,    // response fifo empty flag
     input response_fifo_full_i,     // response fifo full flag
     output reg response_ready_o,    // response is waiting
-
 
     output reg [31:0] frequency_o,  // to fifo, frequency output in MHz
     output reg frq_wr_en_o,         // frequency fifo write enable
@@ -131,7 +130,7 @@ module opcodes(
     reg [31:0]  shift = 0;              // tmp used building opcode data
 
     // save last programmed values for use when processing pulse opcodes
-    reg [7:0]   last_power [5:0];       // 16 channels, 4 bytes per channel
+    reg [7:0]   last_power [5:0];       // 4 bytes plus 2 for opcode & length
     reg [7:0]   last_frequency [5:0];   // ditto
     reg [7:0]   last_bias   [5:0];      // ditto
     // write saved values to registers next level up
@@ -165,7 +164,7 @@ module opcodes(
      1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 
      1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 
      1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b1, 1'b0, 1'b0, 1'b0, 
-     1'b0, 1'b0, 1'b0, 1'b0, 1'b1, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0};    
+     1'b0, 1'b0, 1'b0, 1'b1, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0};    
 //   0..., DBG_READREG, DBG_MBWSPI, DBG_MSYNSPI, DBG_RSYNSPI, DBG_DDSSPI, DBG_FLASHSPI, DBG_IQDATA, DBG_IQSPI, DBG_IQCTRL, DBG_OPCTRL, DBG_LEVELSPI, DBG_ATTENSPI
 //   0..., MEAS_ZMCTL, MEAS_ZMSIZE
 //   0,0,0,0,0,0,0,0,0,0,0,0, PTN_DATA, PTN_PATCTL, PTN_PATADR, PTN_PATCLK
@@ -177,18 +176,43 @@ module opcodes(
             len_upr <= 0;
             length <= 9'b000000000;
             data_length <= 9'b000000000;
-            rd_en_o <= 0; // Added by John Clayton
-            frq_wr_en_o <= 0;
+            rd_en_o <= 1'b0; // Added by John Clayton
+            frq_wr_en_o <= 1'b0;
+            pwr_wr_en_o <= 1'b0;
+            pulse_wr_en_o <= 1'b0;
+            bias_wr_en_o <= 1'b0;
             opcode_counter_o <= 0;
             uinttmp <= 64'h0000_0000_0000_0000;
+            response_wr_en_o <= 1'b0;
             response_ready_o <= 1'b0;
             busy_o <= 1'b0;
+            status_o <= 8'h00;
             state <= `STATE_IDLE;                     
+
+            last_power[0] <= 0;
+            last_power[1] <= 0;
+            last_power[2] <= 0;
+            last_power[3] <= 0;
+            last_power[4] <= 0;
+            last_power[5] <= 0;
+            last_frequency[0] <= 0;
+            last_frequency[1] <= 0;
+            last_frequency[2] <= 0;
+            last_frequency[3] <= 0;
+            last_frequency[4] <= 0;
+            last_frequency[5] <= 0;
+            last_bias[0] <= 0;
+            last_bias[1] <= 0;
+            last_bias[2] <= 0;
+            last_bias[3] <= 0;
+            last_bias[4] <= 0;
+            last_bias[5] <= 0;
         end
         else if(ce == 1) begin
             case(state)
             `STATE_IDLE: begin
-                    if(!fifo_empty_i) begin
+                if(status_o <= `SUCCESS) begin  // Don't continue when status is ERR
+                    if(!fifo_empty_i) begin 
                         rd_en_o <= 1;
                         status_o <= 0;
                         opcode <= 0;
@@ -197,9 +221,20 @@ module opcodes(
                         data_length <= 9'b000000000;
                         uinttmp <= 64'h0000_0000_0000_0000;
                         busy_o <= 1'b1;
+                        
+                        frq_wr_en_o <= 1'b0;
+                        pwr_wr_en_o <= 1'b0;
+                        pulse_wr_en_o <= 1'b0;
+                        bias_wr_en_o <= 1'b0;
+                        response_wr_en_o <= 1'b0;
+                        //response_ready_o <= 1'b0;   ??Reset after response has been read
+                        
                         state <= `STATE_FETCH_WAIT;
                     end
+                    else
+                        busy_o <= 1'b0;
                 end
+            end
             `STATE_FETCH_WAIT: begin
                 length <= opcode_fifo_i;
                 state <= `STATE_FETCH;
@@ -218,7 +253,7 @@ module opcodes(
                 `ifdef XILINX_SIMULATOR
                     if(fileopcode == 0)
                         fileopcode = $fopen("../../../project_1.srcs/sources_1/opc_from_fifo.txt", "a");
-                    $fdisplay (fileopcode, "%02h", opcode);
+                    $fdisplay (fileopcode, "%02h, length:%d", (opcode_fifo_i & 8'hFE) >> 1, length);
                 `endif
             end
             `STATE_DATA: begin
@@ -370,7 +405,7 @@ module opcodes(
                             state <= `STATE_IDLE;
                         end
                         endcase
-                    end
+                    end // if(length == 0) block
                     else begin  // integer argument, 2 to 8 bytes in length
                         uinttmp <= uinttmp | (opcode_fifo_i << shift);
                         if(length == 2)         // Turn OFF with 1 clock left. 1=last read, 0=begin write fifo
@@ -407,16 +442,18 @@ module opcodes(
                                 status_o <= `ERR_RSP_FIFO_FULL;
                                 state <= `STATE_IDLE;
                             end
-                            else if(length == 0) begin
-                                response_ready_o <= 1'b1;
-                            end
                             else begin
-                                response_ready_o <= 1'b0;
-                                response_o <= ~opcode_fifo_i;   // complement the data for echo test
+                                response_o <= ~opcode_fifo_i;       // complement the data for echo test
                                 response_wr_en_o <= 1;
-                                rd_en_o <= 0;                   // turn off reading while waiting for write
-                                state <= `STATE_DATA_WAIT;      // wait for fifo write processing block argument data
+                                rd_en_o <= 0;                       // turn off reading while waiting for write
                                 length <= length - 1;
+                                state <= `STATE_DATA_WR_MULTIBYTE;  // wait for write of byte to output memory
+                                if(length == 0) begin
+                                    response_ready_o <= 1'b1;
+                                    state <= `STATE_IDLE;           // next opcode
+                                end
+                                else if(response_ready_o == 1'b1)
+                                    response_ready_o <= 1'b0;
                             end
                          end
                         `PTN_DATA: begin
@@ -454,11 +491,10 @@ module opcodes(
                 // Count opcode
                 opcode_counter_o <= opcode_counter_o + 1;                     
             end
-            `STATE_DATA_WAIT: begin
-                // Wait a clock tick for response fifo write, then continue
-                response_wr_en_o <= 0;  // OFF
-                rd_en_o <= 1;           // continue...
-                state <= `STATE_DATA;   // continue writing response fifo or pattern RAM
+            `STATE_DATA_WR_MULTIBYTE: begin     // turn OFF write, continue multibyte data read
+                response_wr_en_o <= 0;          // write OFF
+                rd_en_o <= 1;                   // read next byte ON
+                state <= `STATE_DATA;
             end
             default:
             begin
@@ -466,7 +502,7 @@ module opcodes(
                 busy_o <= 1'b0;
                 state <= `STATE_IDLE;
             end
-            endcase;
-        end
-    end    
+            endcase;    // main state machine case
+        end // if(ce == 1) block
+    end // always block    
 endmodule
