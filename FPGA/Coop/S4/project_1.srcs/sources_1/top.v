@@ -531,7 +531,7 @@ module top(
     wire        response_fifo_rst_i = 0;
     reg         response_fifo_clk_en = 0;
     wire        response_fifo_wr_en;
-    wire        response_fifo_rd_en;
+    reg         response_fifo_rd_en;
     wire  [7:0] response_fifo_data_in;
     wire  [7:0] response_fifo_data_out;
     wire  [9:0] response_fifo_count;
@@ -845,6 +845,8 @@ module top(
     // Debugging only, Array of opcode data, load from file, then into FIFO   
     reg  [7:0] oplist [0: `MMC_SECTOR_SIZE-1];
     reg  [9:0] count;
+    reg  [7:0] rsp_data [0: `MMC_SECTOR_SIZE-1];
+    reg  [9:0] rsp_count;
 
     // SPI request fifo, request a write to an SPI device.
     // Data for the device will already have been written into the
@@ -1364,6 +1366,12 @@ module top(
     reg [31:0]  arty_interval4 = `MS001+3;
     reg [31:0]  clk_counter = 32'h00000000;
 
+    `define RSP_STATE_IDLE  0
+    `define RSP_STATE_READ  1
+    `define RSP_STATE_WAIT  2
+    `define RSP_STATE_DONE  3
+    reg [6:0]   response_state = `RSP_STATE_IDLE;
+
     // "main" & prototyping/testing loop.
     always @(posedge clk50)
     begin
@@ -1371,6 +1379,7 @@ module top(
         begin
             LED <= 4'hf;
             system_state <= `STATE_RESET;
+            response_state <= `RSP_STATE_IDLE;
         end
         else begin
             if(system_state & `STATE_RESET) begin
@@ -1387,6 +1396,33 @@ module top(
                     system_state <= (system_state & ~(`STATE_INITIALIZING)) | `STATE_INITIALIZED;
                     spi_arb_request_i <= spi_arb_request_i & (~`INIT_SPI); // Done, clear our request                
                     run_init <= 0;
+                    rsp_count <= 9'b000000000;
+                end
+            end
+            else if(system_state & `STATE_RSP_READY) begin
+                if(response_state == `RSP_STATE_IDLE) begin
+                    rsp_count <= `MMC_SECTOR_SIZE;
+                    response_state <= `RSP_STATE_WAIT;
+                    response_fifo_rd_en <= 1;
+                end
+                else if(response_state == `RSP_STATE_READ) begin
+                    rsp_data[rsp_count-1] <= response_fifo_data_out;
+                    if(rsp_count > 1) begin
+                        rsp_count <= rsp_count - 1;
+                        response_state <= `RSP_STATE_WAIT;
+                    end
+                    else begin
+                        // write the array to a file for debugging
+                    `ifdef XILINX_SIMULATOR
+                        $writememh("../../../project_1.srcs/sources_1/response.txt", rsp_data, 0, 127);
+                    `else
+                        $writememh("response.txt", rsp_data, 0, 127);    
+                    `endif
+                        response_state <= `RSP_STATE_IDLE;
+                    end                
+                end
+                else if(response_state == `RSP_STATE_WAIT) begin
+                    response_state <= `RSP_STATE_READ;
                 end
             end
 
