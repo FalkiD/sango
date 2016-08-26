@@ -1,0 +1,16 @@
+File created Fri Oct 11 15:55:10 2013 by make_registers v15
+
+Module [registers]: Prefix = , AddrWidth = 7, DataWidth = 16, ClkEnable = 0
+
+	R/W registers
+	--------------------------------------------------------
+
+	Read-only registers
+	--------------------------------------------------------
+	0x7e: version[15:0] <= &(0xffff)
+			MAJOR_VERSION = version[15:12]
+			MINOR_VERSION = version[11:4]
+			REVISION = version[3:0]
+
+	Write-only registers
+	--------------------------------------------------------

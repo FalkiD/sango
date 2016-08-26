@@ -1,0 +1,69 @@
+FLOWTYPE = CPLD;
+###############################################################
+## Filename: balanced.opt
+##
+## Option File For Xilinx XC9500XL CPLD Implementation Flow
+## 
+## Version: 13.1
+## $Header: /devl/xcs/repo/env/Jobs/Xflow/data/optionfiles/xc9500xl_balanced.opt,v 1.15 2011/01/05 01:18:16 rvklair Exp $
+###############################################################
+#
+# Options for Translator
+#
+# Type "ngdbuild -h" for a detailed list of ngdbuild command line options
+#
+Program ngdbuild 
+-p <partname>;        		# Partname to use - picked from xflow commandline
+-nt timestamp;        		# NGO File generation. Regenerate only when
+                      		# source netlist is newer than existing 
+                      		# NGO file (default)
+-intstyle xflow;                # Message Reporting Style: ise, xflow, or silent
+#-insert_keep_hierarchy; 	# Retain hierarchy identified by individual source input netlists
+<userdesign>;         		# User design - pick from xflow command line
+<design>.ngd;         		# Name of NGD file. Filebase same as design filebase
+End Program ngdbuild
+
+#
+# Options for CPLD Fitter -- cpldfit
+#
+#
+#
+Program cpldfit
+-inputs 54;             # collapsing input limit
+-pterms 25;             # collapsing pterm limit
+-slew fast;             # default output slew rate
+-power std;             # Macrocell Power Setting
+-terminate keeper;	# input and tristate output termination mode
+-unused float;		# unused I/O pad termination mode
+-loc on;                # use design location constraints
+-p <partname>;          # partname to use
+-log <design>.log;      # log file
+-optimize speed;        # optimized for speed (this is the default) 
+-init low;              # set power up values of devices
+-intstyle xflow;        # Message Reporting Style: ise, xflow, or silent
+<design>.ngd;           # Name of NGD file. Filebase same as design filebase
+End Program cpldfit
+
+#
+# Options for Timing Report Generator
+#
+# Type "taengine -h" for a detailed list of taengine of command line options
+#
+Program taengine
+-f <inputdir><design>;  # Input design file
+-l <design>.tim;        # Output timing report file
+-detail;                # Create detailed path report 
+-intstyle xflow;        # Message Reporting Style: ise, xflow, or silent
+END Program taengine
+
+#
+# Option File for Progamming File Generator
+#
+# Type "hprep6 -h" for a detailed list of hprep6 command line options
+#
+Program hprep6
+-i <inputdir><design>; # input design file
+-n <design>;           # add signature to output, for programmer.
+END Program hprep6
+
+

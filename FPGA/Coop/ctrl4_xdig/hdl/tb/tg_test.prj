@@ -1,0 +1,9 @@
+verilog work clkrst.v
+verilog work emc_master.v
+verilog work tg_test.v
+verilog work glbl.v
+verilog work ../rtl/registers.v
+verilog work ../rtl/xdig.v
+verilog work ../rtl/tg.v
+verilog work ../rtl/trig_filter.v
+verilog work ../core/sin_cos_lut.v

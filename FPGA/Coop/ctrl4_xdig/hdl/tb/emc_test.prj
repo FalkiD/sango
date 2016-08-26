@@ -1,0 +1,4 @@
+verilog work clkrst.v
+verilog work emc_master.v
+verilog work emc_test.v
+verilog work glbl.v

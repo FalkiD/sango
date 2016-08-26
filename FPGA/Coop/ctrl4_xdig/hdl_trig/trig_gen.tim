@@ -1,0 +1,181 @@
+                         Detailed Path Analysis Report
+                         -----------------------------
+
+Design:     trig_gen
+Device:     XC9572XL-10-VQ44
+Speed File: Version 3.0
+Program:    Timing Report Generator:  version O.87xd
+Date:       Tue Apr 29 12:49:58 2014
+
+Output will be sorted by decreasing path delays.
+Logical Path    Delay Type                              Delay        Cumulative
+------------    ----------                              -----        ----------
+                              ********************
+                              * Pad to Pad (tPD) *
+                              ********************
+From: TRIGIN    -                                       :  0.0ns        (0.0ns)
+Thru: TRIGIN_IBUF tIN                                   :  3.5ns        (3.5ns)
+Thru: LEDOUT    tLOGI + tPDI                            :  3.5ns        (7.0ns)
+  To: LEDOUT    tOUT + tSLEW                            :  7.5ns       (14.5ns)
+
+From: TRIGIN    -                                       :  0.0ns        (0.0ns)
+Thru: TRIGIN_IBUF tIN                                   :  3.5ns        (3.5ns)
+Thru: TRIGOUT<1> tLOGI + tPDI                           :  3.5ns        (7.0ns)
+  To: TRIGOUT<1> tOUT                                   :  3.0ns       (10.0ns)
+
+From: TRIGIN    -                                       :  0.0ns        (0.0ns)
+Thru: TRIGIN_IBUF tIN                                   :  3.5ns        (3.5ns)
+Thru: TRIGOUT<2> tLOGI + tPDI                           :  3.5ns        (7.0ns)
+  To: TRIGOUT<2> tOUT                                   :  3.0ns       (10.0ns)
+
+From: TRIGIN    -                                       :  0.0ns        (0.0ns)
+Thru: TRIGIN_IBUF tIN                                   :  3.5ns        (3.5ns)
+Thru: TRIGOUT<3> tLOGI + tPDI                           :  3.5ns        (7.0ns)
+  To: TRIGOUT<3> tOUT                                   :  3.0ns       (10.0ns)
+
+From: TRIGIN    -                                       :  0.0ns        (0.0ns)
+Thru: TRIGIN_IBUF tIN                                   :  3.5ns        (3.5ns)
+Thru: TRIGOUT<4> tLOGI + tPDI                           :  3.5ns        (7.0ns)
+  To: TRIGOUT<4> tOUT                                   :  3.0ns       (10.0ns)
+
+                       *********************************
+                       * Clock Pad to Output Pad (tCO) *
+                       *********************************
+From: TRIGIN    -                                       :  0.0ns        (0.0ns)
+Thru: FCLK-IO_0 tGCK                                    :  1.8ns        (1.8ns)
+Thru: trigsel_0 tCOI                                    :  1.0ns        (2.8ns)
+Thru: TRIGOUT<1> tF + tLOGI + tPDI                      :  7.7ns       (10.5ns)
+  To: TRIGOUT<1> tOUT                                   :  3.0ns       (13.5ns)
+
+From: TRIGIN    -                                       :  0.0ns        (0.0ns)
+Thru: FCLK-IO_0 tGCK                                    :  1.8ns        (1.8ns)
+Thru: trigsel<1> tCOI                                   :  1.0ns        (2.8ns)
+Thru: TRIGOUT<2> tF + tLOGI + tPDI                      :  7.7ns       (10.5ns)
+  To: TRIGOUT<2> tOUT                                   :  3.0ns       (13.5ns)
+
+From: TRIGIN    -                                       :  0.0ns        (0.0ns)
+Thru: FCLK-IO_0 tGCK                                    :  1.8ns        (1.8ns)
+Thru: trigsel<2> tCOI                                   :  1.0ns        (2.8ns)
+Thru: TRIGOUT<3> tF + tLOGI + tPDI                      :  7.7ns       (10.5ns)
+  To: TRIGOUT<3> tOUT                                   :  3.0ns       (13.5ns)
+
+From: TRIGIN    -                                       :  0.0ns        (0.0ns)
+Thru: FCLK-IO_0 tGCK                                    :  1.8ns        (1.8ns)
+Thru: trigsel<3> tCOI                                   :  1.0ns        (2.8ns)
+Thru: TRIGOUT<4> tF + tLOGI + tPDI                      :  7.7ns       (10.5ns)
+  To: TRIGOUT<4> tOUT                                   :  3.0ns       (13.5ns)
+
+                           *************************
+                           * Clock to Setup (tCYC) *
+                           *************************
+Source clock net: FCLK-IO_0
+Worst case clock delay from origin TRIGIN is 1.8ns
+Destination clock net: FCLK-IO_0
+Worst case clock delay from origin TRIGIN is 1.8ns
+Source and destination clock skew: 0.0ns
+From: trigsel<1> tCOI                                   :  1.0ns        (1.0ns)
+  To: trigsel<2>.D tF + tLOGI + tSUI                    :  9.0ns       (10.0ns)
+
+Source clock net: FCLK-IO_0
+Worst case clock delay from origin TRIGIN is 1.8ns
+Destination clock net: FCLK-IO_0
+Worst case clock delay from origin TRIGIN is 1.8ns
+Source and destination clock skew: 0.0ns
+From: trigsel<2> tCOI                                   :  1.0ns        (1.0ns)
+  To: trigsel<3>.D tF + tLOGI + tSUI                    :  9.0ns       (10.0ns)
+
+Source clock net: FCLK-IO_0
+Worst case clock delay from origin TRIGIN is 1.8ns
+Destination clock net: FCLK-IO_0
+Worst case clock delay from origin TRIGIN is 1.8ns
+Source and destination clock skew: 0.0ns
+From: trigsel<3> tCOI                                   :  1.0ns        (1.0ns)
+  To: trigsel_0.D tF + tLOGI + tSUI                     :  9.0ns       (10.0ns)
+
+Source clock net: FCLK-IO_0
+Worst case clock delay from origin TRIGIN is 1.8ns
+Destination clock net: FCLK-IO_0
+Worst case clock delay from origin TRIGIN is 1.8ns
+Source and destination clock skew: 0.0ns
+From: trigsel_0 tCOI                                    :  1.0ns        (1.0ns)
+  To: trigsel<1>.D tF + tLOGI + tSUI                    :  9.0ns       (10.0ns)
+
+                                ****************
+                                * Clock to Pad *
+                                ****************
+Source clock net: FCLK-IO_0
+Worst case clock delay from origin TRIGIN is 1.8ns
+From: trigsel<1> tCOI                                   :  1.0ns        (1.0ns)
+Thru: TRIGOUT<2> tF + tLOGI + tPDI                      :  7.7ns        (8.7ns)
+  To: TRIGOUT<2> tOUT                                   :  3.0ns       (11.7ns)
+
+Source clock net: FCLK-IO_0
+Worst case clock delay from origin TRIGIN is 1.8ns
+From: trigsel<2> tCOI                                   :  1.0ns        (1.0ns)
+Thru: TRIGOUT<3> tF + tLOGI + tPDI                      :  7.7ns        (8.7ns)
+  To: TRIGOUT<3> tOUT                                   :  3.0ns       (11.7ns)
+
+Source clock net: FCLK-IO_0
+Worst case clock delay from origin TRIGIN is 1.8ns
+From: trigsel<3> tCOI                                   :  1.0ns        (1.0ns)
+Thru: TRIGOUT<4> tF + tLOGI + tPDI                      :  7.7ns        (8.7ns)
+  To: TRIGOUT<4> tOUT                                   :  3.0ns       (11.7ns)
+
+Source clock net: FCLK-IO_0
+Worst case clock delay from origin TRIGIN is 1.8ns
+From: trigsel_0 tCOI                                    :  1.0ns        (1.0ns)
+Thru: TRIGOUT<1> tF + tLOGI + tPDI                      :  7.7ns        (8.7ns)
+  To: TRIGOUT<1> tOUT                                   :  3.0ns       (11.7ns)
+
+                   *****************************************
+                   * Path Ending at Clock Pin of Flip-Flop *
+                   *****************************************
+From: TRIGIN    -                                       :  0.0ns        (0.0ns)
+  To: FCLK-IO_0 tGCK                                    :  1.8ns        (1.8ns)
+
+Path Type Definition: 
+
+Pad to Pad (tPD) -                        Reports pad to pad paths that start 
+                                          at input pads and end at output pads. 
+                                          Paths are not traced through 
+                                          registers. 
+
+Clock Pad to Output Pad (tCO) -           Reports paths that start at input 
+                                          pads trace through clock inputs of 
+                                          registers and end at output pads. 
+                                          Paths are not traced through PRE/CLR 
+                                          inputs of registers. 
+
+Setup to Clock at Pad (tSU or tSUF) -     Reports external setup time of data 
+                                          to clock at pad. Data path starts at 
+                                          an input pad and ends at register 
+                                          (Fast Input Register for tSUF) D/T 
+                                          input. Clock path starts at input pad 
+                                          and ends at the register clock input. 
+                                          Paths are not traced through 
+                                          registers. Pin-to-pin setup 
+                                          requirement is not reported or 
+                                          guaranteed for product-term clocks 
+                                          derived from macrocell feedback 
+                                          signals. 
+
+Clock to Setup (tCYC) -                   Register to register cycle time. 
+                                          Include source register tCO and 
+                                          destination register tSU. Note that 
+                                          when the computed Maximum Clock Speed 
+                                          is limited by tCYC it is computed 
+                                          assuming that all registers are 
+                                          rising-edge sensitive. 
+
+Clock to Pad -                            Reports path starting at clock pin of 
+                                          register and ends at ouput pad. 
+
+Path Ending at Clock Pin of Flip-Flop -   Reports paths that start at input pad 
+                                          and end at clock input of flip-flop. 
+                                          Paths are not traced through 
+                                          registers. 
+
+Pad to Setup -                            Reports paths that start at pads and 
+                                          end at register D/T input. Paths are 
+                                          not traced through registers. 
+

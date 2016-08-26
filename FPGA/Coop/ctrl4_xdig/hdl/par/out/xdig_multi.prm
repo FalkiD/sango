@@ -1,0 +1,18 @@
+PROMGEN: Xilinx Prom Generator O.87xd
+Copyright (c) 1995-2011 Xilinx, Inc.  All rights reserved.
+
+promgen -w -p mcs -spi -s 512 -c FF -o xdig_multi -u 0 xdig-1.7.3.bit -u 42000 xdig.bit 
+
+PROM xdig_multi.prm map: Wed Oct 15 12:55:08 2014
+
+Calculating PROM checksum with fill value ff
+
+Format        Mcs86 (32-bit)
+Size          512K
+PROM start    0000:0000
+PROM end      0007:ffff
+PROM checksum 02e78567
+
+        Addr1        Addr2                     Date File(s)
+    0000:0000    0002:e945     Oct 15 12:46:45 2014 xdig-1.7.3.bit
+    0004:2000    0007:0945     Oct 15 12:55:00 2014 xdig.bit

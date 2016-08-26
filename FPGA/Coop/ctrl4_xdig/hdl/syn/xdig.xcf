@@ -1,0 +1,1 @@
+NET FPGA_CLK	PERIOD = 10ns;

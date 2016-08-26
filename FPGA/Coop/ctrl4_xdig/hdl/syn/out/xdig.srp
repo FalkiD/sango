@@ -1,0 +1,1549 @@
+Release 13.4 - xst O.87xd (lin64)
+Copyright (c) 1995-2011 Xilinx, Inc.  All rights reserved.
+--> 
+
+Reading constraint file ../xdig.xcf.
+XCF parsing done.
+
+TABLE OF CONTENTS
+  1) Synthesis Options Summary
+  2) HDL Compilation
+  3) Design Hierarchy Analysis
+  4) HDL Analysis
+  5) HDL Synthesis
+     5.1) HDL Synthesis Report
+  6) Advanced HDL Synthesis
+     6.1) Advanced HDL Synthesis Report
+  7) Low Level Synthesis
+  8) Partition Report
+  9) Final Report
+	9.1) Device utilization summary
+	9.2) Partition Resource Summary
+	9.3) TIMING REPORT
+
+
+=========================================================================
+*                      Synthesis Options Summary                        *
+=========================================================================
+---- Source Parameters
+Input File Name                    : "../xdig.prj"
+Input Format                       : mixed
+Synthesis Constraint File          : ../xdig.xcf
+
+---- Target Parameters
+Output File Name                   : "xdig.ngc"
+Output Format                      : NGC
+Target Device                      : XC3S400AN-4FTG256
+
+---- Source Options
+Top Module Name                    : xdig
+
+---- Target Options
+Add IO Buffers                     : yes
+Equivalent register Removal        : no
+
+---- General Options
+Bus Delimiter                      : []
+Hierarchy Separator                : /
+Optimization Goal                  : speed
+Optimization Effort                : 2
+Write Timing Constraints           : no
+Verilog 2001                       : yes
+
+=========================================================================
+
+
+=========================================================================
+*                          HDL Compilation                              *
+=========================================================================
+Compiling verilog file "..//../rtl/registers.v" in library work
+Compiling verilog include file "..//../rtl/registers_def.v"
+Compiling verilog include file "..//../rtl/timescale.v"
+Module <tg_registers> compiled
+Compiling verilog file "..//../rtl/xdig.v" in library work
+Compiling verilog include file "..//../rtl/registers_def.v"
+Compiling verilog include file "..//../rtl/version.v"
+Compiling verilog include file "..//../rtl/timescale.v"
+Module <registers> compiled
+Module <xdig> compiled
+Compiling verilog file "..//../rtl/tg.v" in library work
+Compiling verilog include file "..//../rtl/registers_def.v"
+Compiling verilog include file "..//../rtl/timescale.v"
+Module <rs> compiled
+Compiling verilog file "..//../rtl/trig_filter.v" in library work
+Compiling verilog include file "..//../rtl/timescale.v"
+Module <tg> compiled
+Module <trig_filter> compiled
+No errors in compilation
+Analysis of file <"../xdig.prj"> succeeded.
+ 
+
+Reading constraint file ../xdig.xcf.
+XCF parsing done.
+
+=========================================================================
+*                     Design Hierarchy Analysis                         *
+=========================================================================
+Analyzing hierarchy for module <xdig> in library <work> with parameters.
+	IClkFall = "011"
+	IClkRise = "010"
+	IDataChange = "100"
+	IIdle = "000"
+	IStart = "001"
+	WC = "00000000000000000000000000001000"
+	WS = "00000000000000000000000000001000"
+
+Analyzing hierarchy for module <registers> in library <work>.
+
+Analyzing hierarchy for module <trig_filter> in library <work>.
+
+Analyzing hierarchy for module <rs> in library <work>.
+
+Analyzing hierarchy for module <tg> in library <work> with parameters.
+	ADone = "100"
+	ADone2 = "101"
+	AIdle = "000"
+	ASckOff = "011"
+	ASckOn = "001"
+	ASckOnWait = "010"
+	Armed = "0001"
+	ConvDelay = "101"
+	ConvEnd = "111"
+	ConvForce = "011"
+	ConvStart = "110"
+	ConvWait = "100"
+	DacStart = "1000"
+	Load0 = "0011"
+	Load1 = "0100"
+	Load2 = "0101"
+	Load3 = "0110"
+	Load4 = "0111"
+	MArmed = "001"
+	MBurstStart = "010"
+	MIdle = "000"
+	NewExt = "0101"
+	NewFreq = "0011"
+	NewPwr = "0100"
+	NextBurst = "0010"
+	NextDacSck = "1100"
+	NextDacSdo = "1101"
+	NextSck = "1010"
+	NextSdo = "1011"
+	PulseOff = "1010"
+	PulseOffStart = "1001"
+	PulseOn = "1100"
+	PulseOnStart = "1011"
+	SEnd = "1110"
+	SIdle = "0000"
+	SckOnStretch = "010"
+	SynStart = "0110"
+	TBurstStart = "1000"
+	TIdle = "0000"
+	TickSync = "1001"
+	VgaStart = "0111"
+
+Analyzing hierarchy for module <tg_registers> in library <work>.
+
+
+=========================================================================
+*                            HDL Analysis                               *
+=========================================================================
+Analyzing top module <xdig>.
+	IClkFall = 3'b011
+	IClkRise = 3'b010
+	IDataChange = 3'b100
+	IIdle = 3'b000
+	IStart = 3'b001
+	WC = 32'sb00000000000000000000000000001000
+	WS = 32'sb00000000000000000000000000001000
+Module <xdig> is correct for synthesis.
+ 
+    Set user-defined property "SIM_DELAY_TYPE =  SCALED" for instance <SPI_ACCESS_inst> in unit <xdig>.
+    Set user-defined property "SIM_DEVICE =  3S400AN" for instance <SPI_ACCESS_inst> in unit <xdig>.
+    Set user-defined property "SIM_FACTORY_ID =  00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" for instance <SPI_ACCESS_inst> in unit <xdig>.
+    Set user-defined property "SIM_MEM_FILE =  NONE" for instance <SPI_ACCESS_inst> in unit <xdig>.
+    Set user-defined property "SIM_USER_ID =  FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF" for instance <SPI_ACCESS_inst> in unit <xdig>.
+    Set user-defined property "CLKDV_DIVIDE =  10.000000" for instance <DCM_clk> in unit <xdig>.
+    Set user-defined property "CLKFX_DIVIDE =  1" for instance <DCM_clk> in unit <xdig>.
+    Set user-defined property "CLKFX_MULTIPLY =  4" for instance <DCM_clk> in unit <xdig>.
+    Set user-defined property "CLKIN_DIVIDE_BY_2 =  FALSE" for instance <DCM_clk> in unit <xdig>.
+    Set user-defined property "CLKIN_PERIOD =  825257587.000000" for instance <DCM_clk> in unit <xdig>.
+    Set user-defined property "CLKOUT_PHASE_SHIFT =  FIXED" for instance <DCM_clk> in unit <xdig>.
+    Set user-defined property "CLK_FEEDBACK =  1X" for instance <DCM_clk> in unit <xdig>.
+    Set user-defined property "DESKEW_ADJUST =  SYSTEM_SYNCHRONOUS" for instance <DCM_clk> in unit <xdig>.
+    Set user-defined property "DFS_FREQUENCY_MODE =  LOW" for instance <DCM_clk> in unit <xdig>.
+    Set user-defined property "DLL_FREQUENCY_MODE =  LOW" for instance <DCM_clk> in unit <xdig>.
+    Set user-defined property "DSS_MODE =  NONE" for instance <DCM_clk> in unit <xdig>.
+    Set user-defined property "DUTY_CYCLE_CORRECTION =  TRUE" for instance <DCM_clk> in unit <xdig>.
+    Set user-defined property "FACTORY_JF =  C080" for instance <DCM_clk> in unit <xdig>.
+    Set user-defined property "PHASE_SHIFT =  0" for instance <DCM_clk> in unit <xdig>.
+    Set user-defined property "STARTUP_WAIT =  TRUE" for instance <DCM_clk> in unit <xdig>.
+    Set user-defined property "CAPACITANCE =  DONT_CARE" for instance <OBUFDS_conv[4]> in unit <xdig>.
+    Set user-defined property "IOSTANDARD =  LVDS_33" for instance <OBUFDS_conv[4]> in unit <xdig>.
+    Set user-defined property "SLEW =  SLOW" for instance <OBUFDS_conv[4]> in unit <xdig>.
+    Set user-defined property "CAPACITANCE =  DONT_CARE" for instance <OBUFDS_conv[3]> in unit <xdig>.
+    Set user-defined property "IOSTANDARD =  LVDS_33" for instance <OBUFDS_conv[3]> in unit <xdig>.
+    Set user-defined property "SLEW =  SLOW" for instance <OBUFDS_conv[3]> in unit <xdig>.
+    Set user-defined property "CAPACITANCE =  DONT_CARE" for instance <OBUFDS_conv[2]> in unit <xdig>.
+    Set user-defined property "IOSTANDARD =  LVDS_33" for instance <OBUFDS_conv[2]> in unit <xdig>.
+    Set user-defined property "SLEW =  SLOW" for instance <OBUFDS_conv[2]> in unit <xdig>.
+    Set user-defined property "CAPACITANCE =  DONT_CARE" for instance <OBUFDS_conv[1]> in unit <xdig>.
+    Set user-defined property "IOSTANDARD =  LVDS_33" for instance <OBUFDS_conv[1]> in unit <xdig>.
+    Set user-defined property "SLEW =  SLOW" for instance <OBUFDS_conv[1]> in unit <xdig>.
+    Set user-defined property "KEEP =  true" for signal <clk>.
+    Set user-defined property "KEEP =  true" for signal <clk10>.
+    Set user-defined property "KEEP =  true" for signal <clk200>.
+Analyzing module <registers> in library <work>.
+Module <registers> is correct for synthesis.
+ 
+Analyzing module <trig_filter> in library <work>.
+Module <trig_filter> is correct for synthesis.
+ 
+Analyzing module <rs> in library <work>.
+Module <rs> is correct for synthesis.
+ 
+Analyzing module <tg> in library <work>.
+	ADone = 3'b100
+	ADone2 = 3'b101
+	AIdle = 3'b000
+	ASckOff = 3'b011
+	ASckOn = 3'b001
+	ASckOnWait = 3'b010
+	Armed = 4'b0001
+	ConvDelay = 3'b101
+	ConvEnd = 3'b111
+	ConvForce = 3'b011
+	ConvStart = 3'b110
+	ConvWait = 3'b100
+	DacStart = 4'b1000
+	Load0 = 4'b0011
+	Load1 = 4'b0100
+	Load2 = 4'b0101
+	Load3 = 4'b0110
+	Load4 = 4'b0111
+	MArmed = 3'b001
+	MBurstStart = 3'b010
+	MIdle = 3'b000
+	NewExt = 4'b0101
+	NewFreq = 4'b0011
+	NewPwr = 4'b0100
+	NextBurst = 4'b0010
+	NextDacSck = 4'b1100
+	NextDacSdo = 4'b1101
+	NextSck = 4'b1010
+	NextSdo = 4'b1011
+	PulseOff = 4'b1010
+	PulseOffStart = 4'b1001
+	PulseOn = 4'b1100
+	PulseOnStart = 4'b1011
+	SEnd = 4'b1110
+	SIdle = 4'b0000
+	SckOnStretch = 3'b010
+	SynStart = 4'b0110
+	TBurstStart = 4'b1000
+	TIdle = 4'b0000
+	TickSync = 4'b1001
+	VgaStart = 4'b0111
+Module <tg> is correct for synthesis.
+ 
+    Set user-defined property "INITP_00 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INITP_01 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INITP_02 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INITP_03 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INITP_04 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INITP_05 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INITP_06 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INITP_07 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_00 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_01 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_02 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_03 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_04 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_05 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_06 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_07 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_08 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_09 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_0A =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_0B =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_0C =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_0D =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_0E =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_0F =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_10 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_11 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_12 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_13 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_14 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_15 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_16 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_17 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_18 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_19 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_1A =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_1B =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_1C =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_1D =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_1E =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_1F =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_20 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_21 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_22 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_23 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_24 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_25 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_26 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_27 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_28 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_29 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_2A =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_2B =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_2C =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_2D =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_2E =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_2F =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_30 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_31 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_32 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_33 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_34 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_35 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_36 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_37 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_38 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_39 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_3A =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_3B =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_3C =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_3D =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_3E =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_3F =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_A =  000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INIT_B =  000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "SIM_COLLISION_CHECK =  ALL" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "SRVAL_A =  000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "SRVAL_B =  000000000" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "WRITE_MODE_A =  WRITE_FIRST" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "WRITE_MODE_B =  WRITE_FIRST" for instance <mfifo[3]> in unit <tg>.
+    Set user-defined property "INITP_00 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INITP_01 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INITP_02 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INITP_03 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INITP_04 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INITP_05 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INITP_06 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INITP_07 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_00 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_01 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_02 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_03 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_04 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_05 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_06 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_07 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_08 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_09 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_0A =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_0B =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_0C =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_0D =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_0E =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_0F =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_10 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_11 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_12 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_13 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_14 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_15 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_16 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_17 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_18 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_19 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_1A =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_1B =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_1C =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_1D =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_1E =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_1F =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_20 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_21 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_22 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_23 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_24 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_25 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_26 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_27 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_28 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_29 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_2A =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_2B =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_2C =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_2D =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_2E =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_2F =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_30 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_31 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_32 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_33 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_34 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_35 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_36 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_37 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_38 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_39 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_3A =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_3B =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_3C =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_3D =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_3E =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_3F =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_A =  000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INIT_B =  000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "SIM_COLLISION_CHECK =  ALL" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "SRVAL_A =  000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "SRVAL_B =  000000000" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "WRITE_MODE_A =  WRITE_FIRST" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "WRITE_MODE_B =  WRITE_FIRST" for instance <mfifo[2]> in unit <tg>.
+    Set user-defined property "INITP_00 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INITP_01 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INITP_02 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INITP_03 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INITP_04 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INITP_05 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INITP_06 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INITP_07 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_00 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_01 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_02 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_03 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_04 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_05 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_06 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_07 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_08 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_09 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_0A =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_0B =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_0C =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_0D =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_0E =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_0F =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_10 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_11 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_12 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_13 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_14 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_15 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_16 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_17 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_18 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_19 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_1A =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_1B =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_1C =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_1D =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_1E =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_1F =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_20 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_21 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_22 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_23 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_24 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_25 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_26 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_27 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_28 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_29 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_2A =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_2B =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_2C =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_2D =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_2E =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_2F =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_30 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_31 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_32 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_33 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_34 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_35 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_36 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_37 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_38 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_39 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_3A =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_3B =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_3C =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_3D =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_3E =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_3F =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_A =  000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INIT_B =  000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "SIM_COLLISION_CHECK =  ALL" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "SRVAL_A =  000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "SRVAL_B =  000000000" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "WRITE_MODE_A =  WRITE_FIRST" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "WRITE_MODE_B =  WRITE_FIRST" for instance <mfifo[1]> in unit <tg>.
+    Set user-defined property "INITP_00 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INITP_01 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INITP_02 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INITP_03 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INITP_04 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INITP_05 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INITP_06 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INITP_07 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_00 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_01 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_02 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_03 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_04 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_05 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_06 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_07 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_08 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_09 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_0A =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_0B =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_0C =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_0D =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_0E =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_0F =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_10 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_11 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_12 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_13 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_14 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_15 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_16 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_17 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_18 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_19 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_1A =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_1B =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_1C =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_1D =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_1E =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_1F =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_20 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_21 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_22 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_23 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_24 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_25 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_26 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_27 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_28 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_29 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_2A =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_2B =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_2C =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_2D =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_2E =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_2F =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_30 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_31 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_32 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_33 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_34 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_35 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_36 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_37 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_38 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_39 =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_3A =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_3B =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_3C =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_3D =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_3E =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_3F =  0000000000000000000000000000000000000000000000000000000000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_A =  000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "INIT_B =  000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "SIM_COLLISION_CHECK =  ALL" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "SRVAL_A =  000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "SRVAL_B =  000000000" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "WRITE_MODE_A =  WRITE_FIRST" for instance <mfifo[0]> in unit <tg>.
+    Set user-defined property "WRITE_MODE_B =  WRITE_FIRST" for instance <mfifo[0]> in unit <tg>.
+    Set property "ram_style = pipe_distributed" for signal <tram>.
+Analyzing module <tg_registers> in library <work>.
+Module <tg_registers> is correct for synthesis.
+ 
+
+=========================================================================
+*                           HDL Synthesis                               *
+=========================================================================
+
+Performing bidirectional port resolution...
+
+Synthesizing Unit <registers>.
+    Related source file is "..//../rtl/registers.v".
+    Found 16-bit register for signal <dat_o>.
+    Found 7-bit register for signal <addr_keep>.
+    Found 16-bit register for signal <conf>.
+    Found 1-bit register for signal <conf_ld>.
+    Found 16-bit register for signal <ctrl>.
+    Found 1-bit register for signal <ctrl_ld>.
+    Found 16-bit register for signal <dat_i_dly>.
+    Found 16-bit register for signal <dat_i_sync>.
+    Found 16-bit register for signal <filter>.
+    Found 1-bit register for signal <filter_ld>.
+    Found 16-bit register for signal <irq_clr>.
+    Found 1-bit register for signal <irq_clr_ld>.
+    Found 16-bit register for signal <irq_mask>.
+    Found 1-bit register for signal <irq_mask_ld>.
+    Found 16-bit register for signal <multiboot>.
+    Found 1-bit register for signal <multiboot_ld>.
+    Found 1-bit register for signal <rd_keep>.
+    Found 16-bit register for signal <sync>.
+    Found 1-bit register for signal <sync_ld>.
+    Found 16-bit register for signal <trig_src>.
+    Found 1-bit register for signal <trig_src_ld>.
+    Found 1-bit register for signal <w_strobe>.
+    Found 1-bit register for signal <w_strobe_dly>.
+    Found 1-bit register for signal <wr_dly>.
+    Found 1-bit register for signal <wr_dly1>.
+    Found 1-bit register for signal <wr_keep>.
+    Summary:
+	inferred 197 D-type flip-flop(s).
+Unit <registers> synthesized.
+
+
+Synthesizing Unit <trig_filter>.
+    Related source file is "..//../rtl/trig_filter.v".
+    Found 1-bit register for signal <O>.
+    Found 16-bit comparator equal for signal <O$cmp_eq0000> created at line 39.
+    Found 16-bit up counter for signal <tf>.
+    Summary:
+	inferred   1 Counter(s).
+	inferred   1 D-type flip-flop(s).
+	inferred   1 Comparator(s).
+Unit <trig_filter> synthesized.
+
+
+Synthesizing Unit <rs>.
+    Related source file is "..//../rtl/xdig.v".
+    Found 1-bit register for signal <Q>.
+    Summary:
+	inferred   1 D-type flip-flop(s).
+Unit <rs> synthesized.
+
+
+Synthesizing Unit <tg_registers>.
+    Related source file is "..//../rtl/registers.v".
+    Found 16-bit register for signal <dat_o>.
+    Found 5-bit register for signal <addr_keep>.
+    Found 16-bit register for signal <dat_i_dly>.
+    Found 16-bit register for signal <dat_i_sync>.
+    Found 16-bit register for signal <debug>.
+    Found 1-bit register for signal <debug_ld>.
+    Found 16-bit register for signal <mconf>.
+    Found 1-bit register for signal <mconf_ld>.
+    Found 16-bit register for signal <mctrl>.
+    Found 1-bit register for signal <mctrl_ld>.
+    Found 1-bit register for signal <mqueue_rd>.
+    Found 1-bit register for signal <rd_keep>.
+    Found 16-bit register for signal <rd_multi>.
+    Found 16-bit register for signal <tctrl>.
+    Found 1-bit register for signal <tctrl_ld>.
+    Found 32-bit register for signal <tqueue>.
+    Found 1-bit register for signal <tqueue_ld>.
+    Found 1-bit register for signal <tqueue_ld_dly>.
+    Found 1-bit register for signal <w_strobe>.
+    Found 1-bit register for signal <w_strobe_dly>.
+    Found 1-bit register for signal <wr_dly>.
+    Found 1-bit register for signal <wr_dly1>.
+    Found 1-bit register for signal <wr_keep>.
+    Found 16-bit register for signal <wr_multi>.
+    Found 1-bit register for signal <wr_multi_ld>.
+    Summary:
+	inferred 195 D-type flip-flop(s).
+Unit <tg_registers> synthesized.
+
+
+Synthesizing Unit <tg>.
+    Related source file is "..//../rtl/tg.v".
+WARNING:Xst:647 - Input <synss_i> is never used. This port will be preserved and left unconnected if it belongs to a top-level block or it belongs to a sub-block and the hierarchy of this sub-block is preserved.
+WARNING:Xst:647 - Input <vgass_i> is never used. This port will be preserved and left unconnected if it belongs to a top-level block or it belongs to a sub-block and the hierarchy of this sub-block is preserved.
+WARNING:Xst:646 - Signal <tparam4<31>> is assigned but never used. This unconnected signal will be trimmed during the optimization process.
+WARNING:Xst:646 - Signal <tparam3<31>> is assigned but never used. This unconnected signal will be trimmed during the optimization process.
+WARNING:Xst:646 - Signal <tparam3<15>> is assigned but never used. This unconnected signal will be trimmed during the optimization process.
+WARNING:Xst:646 - Signal <tparam2<31>> is assigned but never used. This unconnected signal will be trimmed during the optimization process.
+WARNING:Xst:646 - Signal <tparam2<15>> is assigned but never used. This unconnected signal will be trimmed during the optimization process.
+WARNING:Xst:646 - Signal <tparam1<31:30>> is assigned but never used. This unconnected signal will be trimmed during the optimization process.
+WARNING:Xst:646 - Signal <tctrl<9:0>> is assigned but never used. This unconnected signal will be trimmed during the optimization process.
+WARNING:Xst:646 - Signal <sdo_in<31>> is assigned but never used. This unconnected signal will be trimmed during the optimization process.
+WARNING:Xst:646 - Signal <reg_w<15:0>> is assigned but never used. This unconnected signal will be trimmed during the optimization process.
+WARNING:Xst:653 - Signal <mdone> is used but never assigned. This sourceless signal will be automatically connected to value 0.
+WARNING:Xst:646 - Signal <mctrl<13>> is assigned but never used. This unconnected signal will be trimmed during the optimization process.
+WARNING:Xst:646 - Signal <mctrl<11:0>> is assigned but never used. This unconnected signal will be trimmed during the optimization process.
+WARNING:Xst:646 - Signal <mconf<15:11>> is assigned but never used. This unconnected signal will be trimmed during the optimization process.
+    Found 16x32-bit dual-port RAM <Mram_tram> for signal <tram>.
+    Found finite state machine <FSM_0> for signal <tstate>.
+    -----------------------------------------------------------------------
+    | States             | 13                                             |
+    | Transitions        | 22                                             |
+    | Inputs             | 8                                              |
+    | Outputs            | 18                                             |
+    | Clock              | clk                       (rising_edge)        |
+    | Reset              | tstate$or0000             (positive)           |
+    | Reset type         | synchronous                                    |
+    | Reset State        | 0000                                           |
+    | Power Up State     | 0000                                           |
+    | Encoding           | automatic                                      |
+    | Implementation     | automatic                                      |
+    -----------------------------------------------------------------------
+    Found finite state machine <FSM_1> for signal <sstate>.
+    -----------------------------------------------------------------------
+    | States             | 13                                             |
+    | Transitions        | 20                                             |
+    | Inputs             | 6                                              |
+    | Outputs            | 13                                             |
+    | Clock              | clk                       (rising_edge)        |
+    | Reset              | tstate$or0000             (positive)           |
+    | Reset type         | synchronous                                    |
+    | Reset State        | 0000                                           |
+    | Power Up State     | 0000                                           |
+    | Encoding           | automatic                                      |
+    | Implementation     | automatic                                      |
+    -----------------------------------------------------------------------
+    Found finite state machine <FSM_2> for signal <mstate>.
+    -----------------------------------------------------------------------
+    | States             | 8                                              |
+    | Transitions        | 18                                             |
+    | Inputs             | 9                                              |
+    | Outputs            | 8                                              |
+    | Clock              | clk                       (rising_edge)        |
+    | Reset              | mstate$or0000             (positive)           |
+    | Reset type         | synchronous                                    |
+    | Reset State        | 000                                            |
+    | Power Up State     | 000                                            |
+    | Encoding           | automatic                                      |
+    | Implementation     | automatic                                      |
+    -----------------------------------------------------------------------
+    Found finite state machine <FSM_3> for signal <astate>.
+    -----------------------------------------------------------------------
+    | States             | 6                                              |
+    | Transitions        | 9                                              |
+    | Inputs             | 3                                              |
+    | Outputs            | 7                                              |
+    | Clock              | clk                       (rising_edge)        |
+    | Reset              | mstate$or0000             (positive)           |
+    | Reset type         | synchronous                                    |
+    | Reset State        | 000                                            |
+    | Power Up State     | 000                                            |
+    | Encoding           | automatic                                      |
+    | Implementation     | automatic                                      |
+    -----------------------------------------------------------------------
+    Found 1-bit register for signal <conv_o>.
+    Found 1-bit register for signal <vgassn_o>.
+    Found 1-bit register for signal <dacssn_o>.
+    Found 1-bit register for signal <synssn_o>.
+    Found 1-bit register for signal <adc_sck_o>.
+    Found 1-bit xor2 for signal <sck_o>.
+    Found 6-bit register for signal <acount>.
+    Found 6-bit subtractor for signal <acount$addsub0000> created at line 645.
+    Found 32-bit register for signal <adc_dat>.
+    Found 1-bit register for signal <adc_dat_wr>.
+    Found 32-bit register for signal <adcf_dat>.
+    Found 32-bit register for signal <adcr_dat>.
+    Found 1-bit register for signal <burst_loaded>.
+    Found 1-bit register for signal <conv_force>.
+    Found 1-bit register for signal <dacss_dly>.
+    Found 1-bit register for signal <gate>.
+    Found 7-bit register for signal <last_freq>.
+    Found 6-bit register for signal <last_pwr>.
+    Found 11-bit register for signal <maxpulses>.
+    Found 11-bit subtractor for signal <maxpulses$addsub0000> created at line 602.
+    Found 13-bit updown counter for signal <mcount>.
+    Found 13-bit adder for signal <mcount$add0000> created at line 747.
+    Found 16-bit register for signal <mctrl>.
+    Found 1-bit register for signal <mhalf>.
+    Found 13-bit comparator greatequal for signal <mhalf$cmp_ge0000> created at line 741.
+    Found 12-bit register for signal <mnpulses>.
+    Found 12-bit subtractor for signal <mnpulses$addsub0000> created at line 601.
+    Found 12-bit register for signal <mnskip>.
+    Found 12-bit subtractor for signal <mnskip$addsub0000> created at line 592.
+    Found 4-bit register for signal <mprescale>.
+    Found 4-bit subtractor for signal <mprescale$addsub0000> created at line 537.
+    Found 16-bit 4-to-1 multiplexer for signal <mqueue_dat_o>.
+    Found 1-bit register for signal <mqueue_rd_dly>.
+    Found 1-bit register for signal <mqueue_rd_dly2>.
+    Found 12-bit up counter for signal <mrptr>.
+    Found 15-bit register for signal <mtimer>.
+    Found 15-bit down counter for signal <mtimer_count>.
+    Found 1-bit register for signal <mtimer_load>.
+    Found 11-bit up counter for signal <mwptr>.
+    Found 6-bit register for signal <nbits>.
+    Found 6-bit subtractor for signal <nbits$share0000> created at line 412.
+    Found 1-bit register for signal <pulse>.
+    Found 1-bit register for signal <sck>.
+    Found 1-bit register for signal <sck_pol>.
+    Found 3-bit register for signal <sck_time>.
+    Found 3-bit subtractor for signal <sck_time$addsub0000> created at line 653.
+    Found 32-bit register for signal <sdo>.
+    Found 12-bit adder for signal <sdo$add0000> created at line 426.
+    Found 32-bit register for signal <sdo_in>.
+    Found 1-bit register for signal <sdone>.
+    Found 1-bit register for signal <spi_ext_flag>.
+    Found 1-bit register for signal <spi_freq_flag>.
+    Found 1-bit register for signal <spi_freq_started>.
+    Found 1-bit register for signal <spi_new_freq>.
+    Found 7-bit comparator not equal for signal <spi_new_freq$cmp_ne0000> created at line 282.
+    Found 1-bit register for signal <spi_new_pwr>.
+    Found 6-bit comparator not equal for signal <spi_new_pwr$cmp_ne0000> created at line 284.
+    Found 1-bit register for signal <spi_pwr_flag>.
+    Found 1-bit register for signal <spi_pwr_started>.
+    Found 5-bit down counter for signal <tcount>.
+    Found 16-bit register for signal <tctrl>.
+    Found 1-bit register for signal <tdone>.
+    Found 1-bit register for signal <tfetch>.
+    Found 3-bit down counter for signal <tick_count>.
+    Found 1-bit register for signal <tick_sync>.
+    Found 1-bit register for signal <tick_sync7>.
+    Found 5-bit up counter for signal <tiptr>.
+    Found 12-bit register for signal <tnpulses>.
+    Found 12-bit subtractor for signal <tnpulses$addsub0000> created at line 312.
+    Found 4-bit up counter for signal <toptr>.
+    Found 32-bit register for signal <tparam1>.
+    Found 32-bit register for signal <tparam2>.
+    Found 32-bit register for signal <tparam3>.
+    Found 32-bit register for signal <tparam4>.
+    Found 4-bit register for signal <tprescale>.
+    Found 4-bit subtractor for signal <tprescale$addsub0000> created at line 188.
+    Found 1-bit register for signal <tqueue_ld_dly>.
+    Found 1-bit register for signal <tqueue_ld_dly2>.
+    Found 1-bit register for signal <trig_dly>.
+    Found 1-bit register for signal <tstart>.
+    Found 3-bit comparator greater for signal <tstate$cmp_gt0000> created at line 243.
+    Found 15-bit register for signal <ttimer>.
+    Found 15-bit down counter for signal <ttimer_count>.
+    Found 1-bit register for signal <ttimer_load>.
+    Found 32-bit register for signal <tval>.
+    Summary:
+	inferred   4 Finite State Machine(s).
+	inferred   1 RAM(s).
+	inferred   9 Counter(s).
+	inferred 499 D-type flip-flop(s).
+	inferred  11 Adder/Subtractor(s).
+	inferred   4 Comparator(s).
+	inferred  16 Multiplexer(s).
+Unit <tg> synthesized.
+
+
+Synthesizing Unit <xdig>.
+    Related source file is "..//../rtl/xdig.v".
+WARNING:Xst:646 - Signal <sync<7:5>> is assigned but never used. This unconnected signal will be trimmed during the optimization process.
+WARNING:Xst:646 - Signal <reg_w<15:0>> is assigned but never used. This unconnected signal will be trimmed during the optimization process.
+WARNING:Xst:646 - Signal <multiboot<15:1>> is assigned but never used. This unconnected signal will be trimmed during the optimization process.
+WARNING:Xst:646 - Signal <ctrl<13:12>> is assigned but never used. This unconnected signal will be trimmed during the optimization process.
+WARNING:Xst:646 - Signal <ctrl<7:4>> is assigned but never used. This unconnected signal will be trimmed during the optimization process.
+    Found finite state machine <FSM_4> for signal <istate>.
+    -----------------------------------------------------------------------
+    | States             | 5                                              |
+    | Transitions        | 7                                              |
+    | Inputs             | 2                                              |
+    | Outputs            | 5                                              |
+    | Clock              | clk                       (rising_edge)        |
+    | Power Up State     | 000                                            |
+    | Encoding           | automatic                                      |
+    | Implementation     | automatic                                      |
+    -----------------------------------------------------------------------
+    Found 3-bit register for signal <ANTSEL>.
+    Found 16-bit tristate buffer for signal <D>.
+    Found 1-bit register for signal <MCU_TRIGIN>.
+    Found 1-bit 32-to-1 multiplexer for signal <SYNC_OUTX>.
+    Found 16-bit register for signal <ctrl>.
+    Found 4-bit shifter logical left for signal <dacss>.
+    Found 12-bit register for signal <extdig>.
+    Found 8-bit down counter for signal <gcount>.
+    Found 8-bit comparator lessequal for signal <gcount$cmp_le0000> created at line 206.
+    Found 1-bit register for signal <gen>.
+    Found 14-bit down counter for signal <gprescale>.
+    Found 1-bit register for signal <icap_cen>.
+    Found 1-bit register for signal <icap_clk>.
+    Found 4-bit register for signal <icap_word>.
+    Found 4-bit adder for signal <icap_word$addsub0000> created at line 622.
+    Found 16-bit register for signal <irq_clr>.
+    Found 1-bit register for signal <led>.
+    Found 1-bit register for signal <led_holdoff>.
+    Found 11-bit up counter for signal <led_timer>.
+    Found 1-bit register for signal <led_trig10>.
+    Found 16-bit register for signal <multiboot>.
+    Found 4-bit shifter logical left for signal <synss>.
+    Found 4-bit register for signal <trig>.
+    Found 5-bit register for signal <trigflt_dly>.
+    Found 4-bit shifter logical left for signal <vgass>.
+    Summary:
+	inferred   1 Finite State Machine(s).
+	inferred   3 Counter(s).
+	inferred  83 D-type flip-flop(s).
+	inferred   1 Adder/Subtractor(s).
+	inferred   1 Comparator(s).
+	inferred   1 Multiplexer(s).
+	inferred   3 Combinational logic shifter(s).
+	inferred  16 Tristate(s).
+Unit <xdig> synthesized.
+
+INFO:Xst:1767 - HDL ADVISOR - Resource sharing has identified that some arithmetic operations in this design can share the same physical resources for reduced device utilization. For improved clock frequency you may try to disable resource sharing.
+
+=========================================================================
+HDL Synthesis Report
+
+Macro Statistics
+# RAMs                                                 : 4
+ 16x32-bit dual-port RAM                               : 4
+# Adders/Subtractors                                   : 45
+ 11-bit subtractor                                     : 4
+ 12-bit adder                                          : 4
+ 12-bit subtractor                                     : 12
+ 13-bit adder                                          : 4
+ 3-bit subtractor                                      : 4
+ 4-bit adder                                           : 1
+ 4-bit subtractor                                      : 8
+ 6-bit subtractor                                      : 8
+# Counters                                             : 43
+ 11-bit up counter                                     : 5
+ 12-bit up counter                                     : 4
+ 13-bit updown counter                                 : 4
+ 14-bit down counter                                   : 1
+ 15-bit down counter                                   : 8
+ 16-bit up counter                                     : 4
+ 3-bit down counter                                    : 4
+ 4-bit up counter                                      : 4
+ 5-bit down counter                                    : 4
+ 5-bit up counter                                      : 4
+ 8-bit down counter                                    : 1
+# Registers                                            : 521
+ 1-bit register                                        : 361
+ 11-bit register                                       : 4
+ 12-bit register                                       : 13
+ 15-bit register                                       : 8
+ 16-bit register                                       : 58
+ 3-bit register                                        : 5
+ 32-bit register                                       : 40
+ 4-bit register                                        : 10
+ 5-bit register                                        : 5
+ 6-bit register                                        : 12
+ 7-bit register                                        : 5
+# Comparators                                          : 21
+ 13-bit comparator greatequal                          : 4
+ 16-bit comparator equal                               : 4
+ 3-bit comparator greater                              : 4
+ 6-bit comparator not equal                            : 4
+ 7-bit comparator not equal                            : 4
+ 8-bit comparator lessequal                            : 1
+# Multiplexers                                         : 5
+ 1-bit 32-to-1 multiplexer                             : 1
+ 16-bit 4-to-1 multiplexer                             : 4
+# Logic shifters                                       : 3
+ 4-bit shifter logical left                            : 3
+# Tristates                                            : 1
+ 16-bit tristate buffer                                : 1
+# Xors                                                 : 4
+ 1-bit xor2                                            : 4
+
+=========================================================================
+
+=========================================================================
+*                       Advanced HDL Synthesis                          *
+=========================================================================
+
+Analyzing FSM <FSM_4> for best encoding.
+Optimizing FSM <istate/FSM> on signal <istate[1:5]> with one-hot encoding.
+-------------------
+ State | Encoding
+-------------------
+ 000   | 00001
+ 001   | 00010
+ 010   | 00100
+ 011   | 01000
+ 100   | 10000
+-------------------
+Analyzing FSM <FSM_3> for best encoding.
+Optimizing FSM <tg[4]/astate/FSM> on signal <astate[1:6]> with one-hot encoding.
+Optimizing FSM <tg[3]/astate/FSM> on signal <astate[1:6]> with one-hot encoding.
+Optimizing FSM <tg[2]/astate/FSM> on signal <astate[1:6]> with one-hot encoding.
+Optimizing FSM <tg[1]/astate/FSM> on signal <astate[1:6]> with one-hot encoding.
+-------------------
+ State | Encoding
+-------------------
+ 000   | 000001
+ 001   | 000010
+ 010   | 000100
+ 011   | 001000
+ 100   | 010000
+ 101   | 100000
+-------------------
+Analyzing FSM <FSM_2> for best encoding.
+Optimizing FSM <tg[4]/mstate/FSM> on signal <mstate[1:8]> with one-hot encoding.
+Optimizing FSM <tg[3]/mstate/FSM> on signal <mstate[1:8]> with one-hot encoding.
+Optimizing FSM <tg[2]/mstate/FSM> on signal <mstate[1:8]> with one-hot encoding.
+Optimizing FSM <tg[1]/mstate/FSM> on signal <mstate[1:8]> with one-hot encoding.
+-------------------
+ State | Encoding
+-------------------
+ 000   | 00000001
+ 001   | 00000010
+ 010   | 00001000
+ 011   | 00000100
+ 100   | 00010000
+ 101   | 00100000
+ 110   | 01000000
+ 111   | 10000000
+-------------------
+Analyzing FSM <FSM_1> for best encoding.
+Optimizing FSM <tg[4]/sstate/FSM> on signal <sstate[1:13]> with one-hot encoding.
+Optimizing FSM <tg[3]/sstate/FSM> on signal <sstate[1:13]> with one-hot encoding.
+Optimizing FSM <tg[2]/sstate/FSM> on signal <sstate[1:13]> with one-hot encoding.
+Optimizing FSM <tg[1]/sstate/FSM> on signal <sstate[1:13]> with one-hot encoding.
+------------------------
+ State | Encoding
+------------------------
+ 0000  | 0000000000001
+ 0011  | 0000000000010
+ 0100  | 0000000000100
+ 0101  | 0000000001000
+ 0110  | 0000000010000
+ 0111  | 0000000100000
+ 1000  | 0000001000000
+ 1001  | 0000010000000
+ 1010  | 0001000000000
+ 1011  | 0010000000000
+ 1100  | 0000100000000
+ 1101  | 1000000000000
+ 1110  | 0100000000000
+------------------------
+Analyzing FSM <FSM_0> for best encoding.
+Optimizing FSM <tg[4]/tstate/FSM> on signal <tstate[1:13]> with one-hot encoding.
+Optimizing FSM <tg[3]/tstate/FSM> on signal <tstate[1:13]> with one-hot encoding.
+Optimizing FSM <tg[2]/tstate/FSM> on signal <tstate[1:13]> with one-hot encoding.
+Optimizing FSM <tg[1]/tstate/FSM> on signal <tstate[1:13]> with one-hot encoding.
+------------------------
+ State | Encoding
+------------------------
+ 0000  | 0000000000001
+ 0001  | 0000000000010
+ 0010  | 0000000000100
+ 0011  | 0000000001000
+ 0100  | 0000000010000
+ 0101  | 0000000100000
+ 0110  | 0000001000000
+ 0111  | 0000010000000
+ 1000  | 0000100000000
+ 1001  | 0001000000000
+ 1010  | 0010000000000
+ 1011  | 0100000000000
+ 1100  | 1000000000000
+------------------------
+
+Synthesizing (advanced) Unit <tg>.
+INFO:Xst:3216 - HDL ADVISOR - LUT implementation is currently selected for the RAM <Mram_tram>. If you want the register to be removed and the RAM to be implemented as block RAM, please change the RAM implementation style accordingly.
+    -----------------------------------------------------------------------
+    | ram_type           | Distributed                         |          |
+    -----------------------------------------------------------------------
+    | Port A                                                              |
+    |     aspect ratio   | 16-word x 32-bit                    |          |
+    |     clkA           | connected to signal <clk>           | rise     |
+    |     weA            | connected to signal <twe>           | high     |
+    |     addrA          | connected to signal <tiptr>         |          |
+    |     diA            | connected to signal <reg_w>         |          |
+    -----------------------------------------------------------------------
+    | Port B                                                              |
+    |     aspect ratio   | 16-word x 32-bit                    |          |
+    |     addrB          | connected to signal <toptr>         |          |
+    |     doB            | connected to internal node          |          |
+    -----------------------------------------------------------------------
+Unit <tg> synthesized (advanced).
+WARNING:Xst:2677 - Node <sdo_in_24> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <sdo_in_25> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <sdo_in_26> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <sdo_in_27> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <sdo_in_28> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <sdo_in_29> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <sdo_in_30> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <sdo_in_31> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <mctrl_0> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <mctrl_1> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <mctrl_2> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <mctrl_3> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <mctrl_4> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <mctrl_5> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <mctrl_6> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <mctrl_7> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <mctrl_8> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <mctrl_9> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <mctrl_10> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <mctrl_11> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <mctrl_13> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <tctrl_0> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <tctrl_1> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <tctrl_2> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <tctrl_3> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <tctrl_4> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <tctrl_5> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <tctrl_6> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <tctrl_7> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <tctrl_8> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <tctrl_9> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <tval_31> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <tparam3_15> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <tparam3_31> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <tparam1_30> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <tparam1_31> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <tparam2_15> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <tparam2_31> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <tparam4_31> of sequential type is unconnected in block <tg>.
+WARNING:Xst:2677 - Node <ctrl_4> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <ctrl_5> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <ctrl_6> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <ctrl_7> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <ctrl_12> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <ctrl_13> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <multiboot_1> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <multiboot_2> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <multiboot_3> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <multiboot_4> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <multiboot_5> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <multiboot_6> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <multiboot_7> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <multiboot_8> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <multiboot_9> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <multiboot_10> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <multiboot_11> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <multiboot_12> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <multiboot_13> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <multiboot_14> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <multiboot_15> of sequential type is unconnected in block <xdig>.
+
+=========================================================================
+Advanced HDL Synthesis Report
+
+Macro Statistics
+# FSMs                                                 : 5
+# RAMs                                                 : 4
+ 16x32-bit dual-port distributed RAM                   : 4
+# Adders/Subtractors                                   : 45
+ 11-bit subtractor                                     : 4
+ 12-bit adder                                          : 4
+ 12-bit subtractor                                     : 12
+ 13-bit adder                                          : 4
+ 3-bit subtractor                                      : 4
+ 4-bit adder                                           : 1
+ 4-bit subtractor                                      : 8
+ 6-bit subtractor                                      : 8
+# Counters                                             : 43
+ 11-bit up counter                                     : 5
+ 12-bit up counter                                     : 4
+ 13-bit updown counter                                 : 4
+ 14-bit down counter                                   : 1
+ 15-bit down counter                                   : 8
+ 16-bit up counter                                     : 4
+ 3-bit down counter                                    : 4
+ 4-bit up counter                                      : 4
+ 5-bit down counter                                    : 4
+ 5-bit up counter                                      : 4
+ 8-bit down counter                                    : 1
+# Registers                                            : 2899
+ Flip-Flops                                            : 2899
+# Comparators                                          : 21
+ 13-bit comparator greatequal                          : 4
+ 16-bit comparator equal                               : 4
+ 3-bit comparator greater                              : 4
+ 6-bit comparator not equal                            : 4
+ 7-bit comparator not equal                            : 4
+ 8-bit comparator lessequal                            : 1
+# Multiplexers                                         : 5
+ 1-bit 32-to-1 multiplexer                             : 1
+ 16-bit 4-to-1 multiplexer                             : 4
+# Logic shifters                                       : 3
+ 4-bit shifter logical left                            : 3
+# Xors                                                 : 4
+ 1-bit xor2                                            : 4
+
+=========================================================================
+
+=========================================================================
+*                         Low Level Synthesis                           *
+=========================================================================
+WARNING:Xst:1293 - FF/Latch <sdo_0> has a constant value of 0 in block <tg>. This FF/Latch will be trimmed during the optimization process.
+WARNING:Xst:1896 - Due to other FF/Latch trimming, FF/Latch <sdo_1> has a constant value of 0 in block <tg>. This FF/Latch will be trimmed during the optimization process.
+WARNING:Xst:1896 - Due to other FF/Latch trimming, FF/Latch <sdo_2> has a constant value of 0 in block <tg>. This FF/Latch will be trimmed during the optimization process.
+WARNING:Xst:1896 - Due to other FF/Latch trimming, FF/Latch <sdo_3> has a constant value of 0 in block <tg>. This FF/Latch will be trimmed during the optimization process.
+WARNING:Xst:1896 - Due to other FF/Latch trimming, FF/Latch <sdo_4> has a constant value of 0 in block <tg>. This FF/Latch will be trimmed during the optimization process.
+WARNING:Xst:1896 - Due to other FF/Latch trimming, FF/Latch <sdo_5> has a constant value of 0 in block <tg>. This FF/Latch will be trimmed during the optimization process.
+WARNING:Xst:1896 - Due to other FF/Latch trimming, FF/Latch <sdo_6> has a constant value of 0 in block <tg>. This FF/Latch will be trimmed during the optimization process.
+WARNING:Xst:1896 - Due to other FF/Latch trimming, FF/Latch <sdo_7> has a constant value of 0 in block <tg>. This FF/Latch will be trimmed during the optimization process.
+WARNING:Xst:1896 - Due to other FF/Latch trimming, FF/Latch <adc_dat_0> has a constant value of 0 in block <tg>. This FF/Latch will be trimmed during the optimization process.
+WARNING:Xst:1896 - Due to other FF/Latch trimming, FF/Latch <adc_dat_1> has a constant value of 0 in block <tg>. This FF/Latch will be trimmed during the optimization process.
+WARNING:Xst:1896 - Due to other FF/Latch trimming, FF/Latch <adc_dat_16> has a constant value of 0 in block <tg>. This FF/Latch will be trimmed during the optimization process.
+WARNING:Xst:1896 - Due to other FF/Latch trimming, FF/Latch <adc_dat_17> has a constant value of 0 in block <tg>. This FF/Latch will be trimmed during the optimization process.
+WARNING:Xst:1293 - FF/Latch <addr_keep_0> has a constant value of 0 in block <registers>. This FF/Latch will be trimmed during the optimization process.
+WARNING:Xst:2677 - Node <addr_keep_0> of sequential type is unconnected in block <registers>.
+WARNING:Xst:1293 - FF/Latch <addr_keep_0> has a constant value of 0 in block <tg_registers>. This FF/Latch will be trimmed during the optimization process.
+WARNING:Xst:2677 - Node <addr_keep_0> of sequential type is unconnected in block <tg_registers>.
+WARNING:Xst:2677 - Node <Mram_tram32> of sequential type is unconnected in block <tg>.
+INFO:Xst:1901 - Instance mfifo[3] in unit tg of type RAMB16_S18_S36 has been replaced by RAMB16BWE
+INFO:Xst:1901 - Instance mfifo[2] in unit tg of type RAMB16_S18_S36 has been replaced by RAMB16BWE
+INFO:Xst:1901 - Instance mfifo[1] in unit tg of type RAMB16_S18_S36 has been replaced by RAMB16BWE
+INFO:Xst:1901 - Instance mfifo[0] in unit tg of type RAMB16_S18_S36 has been replaced by RAMB16BWE
+
+Optimizing unit <xdig> ...
+
+Optimizing unit <registers> ...
+
+Optimizing unit <tg_registers> ...
+
+Optimizing unit <tg> ...
+WARNING:Xst:1293 - FF/Latch <sck_time_2> has a constant value of 0 in block <tg>. This FF/Latch will be trimmed during the optimization process.
+WARNING:Xst:2677 - Node <sck_time_2> of sequential type is unconnected in block <tg>.
+WARNING:Xst:1293 - FF/Latch <sck_time_2> has a constant value of 0 in block <tg>. This FF/Latch will be trimmed during the optimization process.
+WARNING:Xst:2677 - Node <sck_time_2> of sequential type is unconnected in block <tg>.
+WARNING:Xst:1293 - FF/Latch <sck_time_2> has a constant value of 0 in block <tg>. This FF/Latch will be trimmed during the optimization process.
+WARNING:Xst:2677 - Node <sck_time_2> of sequential type is unconnected in block <tg>.
+WARNING:Xst:1293 - FF/Latch <sck_time_2> has a constant value of 0 in block <tg>. This FF/Latch will be trimmed during the optimization process.
+WARNING:Xst:2677 - Node <sck_time_2> of sequential type is unconnected in block <tg>.
+WARNING:Xst:1293 - FF/Latch <irq_latch[3]/Q> has a constant value of 0 in block <xdig>. This FF/Latch will be trimmed during the optimization process.
+WARNING:Xst:1293 - FF/Latch <irq_latch[7]/Q> has a constant value of 0 in block <xdig>. This FF/Latch will be trimmed during the optimization process.
+WARNING:Xst:1293 - FF/Latch <irq_latch[11]/Q> has a constant value of 0 in block <xdig>. This FF/Latch will be trimmed during the optimization process.
+WARNING:Xst:1293 - FF/Latch <irq_latch[15]/Q> has a constant value of 0 in block <xdig>. This FF/Latch will be trimmed during the optimization process.
+WARNING:Xst:2677 - Node <reggie/multiboot_15> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <reggie/multiboot_14> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <reggie/multiboot_13> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <reggie/multiboot_12> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <reggie/multiboot_11> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <reggie/multiboot_10> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <reggie/multiboot_9> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <reggie/multiboot_8> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <reggie/multiboot_7> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <reggie/multiboot_6> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <reggie/multiboot_5> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <reggie/multiboot_4> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <reggie/multiboot_3> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <reggie/multiboot_2> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <reggie/multiboot_1> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <reggie/ctrl_13> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <reggie/ctrl_12> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <reggie/ctrl_7> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <reggie/ctrl_6> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <reggie/ctrl_5> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <reggie/ctrl_4> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[1]/tg_reg/tctrl_0> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[1]/tg_reg/tctrl_1> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[1]/tg_reg/tctrl_2> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[1]/tg_reg/tctrl_3> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[1]/tg_reg/tctrl_4> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[1]/tg_reg/tctrl_5> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[1]/tg_reg/tctrl_6> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[1]/tg_reg/tctrl_7> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[1]/tg_reg/tctrl_8> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[1]/tg_reg/tctrl_9> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[1]/tg_reg/mctrl_0> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[1]/tg_reg/mctrl_1> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[1]/tg_reg/mctrl_2> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[1]/tg_reg/mctrl_3> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[1]/tg_reg/mctrl_4> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[1]/tg_reg/mctrl_5> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[1]/tg_reg/mctrl_6> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[1]/tg_reg/mctrl_7> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[1]/tg_reg/mctrl_8> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[1]/tg_reg/mctrl_9> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[1]/tg_reg/mctrl_10> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[1]/tg_reg/mctrl_11> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[1]/tg_reg/mctrl_13> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[2]/tg_reg/tctrl_0> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[2]/tg_reg/tctrl_1> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[2]/tg_reg/tctrl_2> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[2]/tg_reg/tctrl_3> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[2]/tg_reg/tctrl_4> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[2]/tg_reg/tctrl_5> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[2]/tg_reg/tctrl_6> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[2]/tg_reg/tctrl_7> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[2]/tg_reg/tctrl_8> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[2]/tg_reg/tctrl_9> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[2]/tg_reg/mctrl_0> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[2]/tg_reg/mctrl_1> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[2]/tg_reg/mctrl_2> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[2]/tg_reg/mctrl_3> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[2]/tg_reg/mctrl_4> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[2]/tg_reg/mctrl_5> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[2]/tg_reg/mctrl_6> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[2]/tg_reg/mctrl_7> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[2]/tg_reg/mctrl_8> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[2]/tg_reg/mctrl_9> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[2]/tg_reg/mctrl_10> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[2]/tg_reg/mctrl_11> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[2]/tg_reg/mctrl_13> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[3]/tg_reg/tctrl_0> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[3]/tg_reg/tctrl_1> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[3]/tg_reg/tctrl_2> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[3]/tg_reg/tctrl_3> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[3]/tg_reg/tctrl_4> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[3]/tg_reg/tctrl_5> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[3]/tg_reg/tctrl_6> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[3]/tg_reg/tctrl_7> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[3]/tg_reg/tctrl_8> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[3]/tg_reg/tctrl_9> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[3]/tg_reg/mctrl_0> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[3]/tg_reg/mctrl_1> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[3]/tg_reg/mctrl_2> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[3]/tg_reg/mctrl_3> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[3]/tg_reg/mctrl_4> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[3]/tg_reg/mctrl_5> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[3]/tg_reg/mctrl_6> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[3]/tg_reg/mctrl_7> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[3]/tg_reg/mctrl_8> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[3]/tg_reg/mctrl_9> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[3]/tg_reg/mctrl_10> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[3]/tg_reg/mctrl_11> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[3]/tg_reg/mctrl_13> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[4]/tg_reg/tctrl_0> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[4]/tg_reg/tctrl_1> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[4]/tg_reg/tctrl_2> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[4]/tg_reg/tctrl_3> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[4]/tg_reg/tctrl_4> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[4]/tg_reg/tctrl_5> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[4]/tg_reg/tctrl_6> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[4]/tg_reg/tctrl_7> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[4]/tg_reg/tctrl_8> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[4]/tg_reg/tctrl_9> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[4]/tg_reg/mctrl_0> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[4]/tg_reg/mctrl_1> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[4]/tg_reg/mctrl_2> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[4]/tg_reg/mctrl_3> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[4]/tg_reg/mctrl_4> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[4]/tg_reg/mctrl_5> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[4]/tg_reg/mctrl_6> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[4]/tg_reg/mctrl_7> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[4]/tg_reg/mctrl_8> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[4]/tg_reg/mctrl_9> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[4]/tg_reg/mctrl_10> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[4]/tg_reg/mctrl_11> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <tg[4]/tg_reg/mctrl_13> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <irq_clr_3> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <irq_clr_7> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <irq_clr_11> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <irq_clr_15> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <irq_latch[3]/Q> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <irq_latch[7]/Q> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <irq_latch[11]/Q> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <irq_latch[15]/Q> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <reggie/irq_clr_15> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <reggie/irq_clr_11> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <reggie/irq_clr_7> of sequential type is unconnected in block <xdig>.
+WARNING:Xst:2677 - Node <reggie/irq_clr_3> of sequential type is unconnected in block <xdig>.
+
+Mapping all equations...
+Annotating constraints using XCF file '../xdig.xcf'
+XCF parsing done.
+Building and optimizing final netlist ...
+INFO:Xst:2260 - The FF/Latch <tg[1]/sdo_in_0> in Unit <xdig> is equivalent to the following 3 FFs/Latches : <tg[2]/sdo_in_0> <tg[3]/sdo_in_0> <tg[4]/sdo_in_0> 
+
+Final Macro Processing ...
+
+Processing Unit <xdig> :
+	Found 3-bit shift register for signal <tg[1]/adcr_dat_18>.
+	Found 3-bit shift register for signal <tg[1]/adcr_dat_2>.
+	Found 3-bit shift register for signal <tg[1]/adcf_dat_18>.
+	Found 3-bit shift register for signal <tg[1]/adcf_dat_2>.
+	Found 3-bit shift register for signal <tg[2]/adcr_dat_18>.
+	Found 3-bit shift register for signal <tg[2]/adcr_dat_2>.
+	Found 3-bit shift register for signal <tg[2]/adcf_dat_18>.
+	Found 3-bit shift register for signal <tg[2]/adcf_dat_2>.
+	Found 3-bit shift register for signal <tg[3]/adcr_dat_18>.
+	Found 3-bit shift register for signal <tg[3]/adcr_dat_2>.
+	Found 3-bit shift register for signal <tg[3]/adcf_dat_18>.
+	Found 3-bit shift register for signal <tg[3]/adcf_dat_2>.
+	Found 3-bit shift register for signal <tg[4]/adcr_dat_18>.
+	Found 3-bit shift register for signal <tg[4]/adcr_dat_2>.
+	Found 3-bit shift register for signal <tg[4]/adcf_dat_18>.
+	Found 3-bit shift register for signal <tg[4]/adcf_dat_2>.
+Unit <xdig> processed.
+
+=========================================================================
+Final Register Report
+
+Macro Statistics
+# Registers                                            : 3263
+ Flip-Flops                                            : 3263
+# Shift Registers                                      : 16
+ 3-bit shift register                                  : 16
+
+=========================================================================
+
+=========================================================================
+*                           Partition Report                            *
+=========================================================================
+
+Partition Implementation Status
+-------------------------------
+
+  No Partitions were found in this design.
+
+-------------------------------
+
+=========================================================================
+*                            Final Report                               *
+=========================================================================
+Final Results
+Top Level Output File Name         : xdig.ngc
+Output Format                      : NGC
+Optimization Goal                  : speed
+Keep Hierarchy                     : no
+
+Design Statistics
+# IOs                              : 129
+
+Cell Usage :
+# BELS                             : 5515
+#      GND                         : 1
+#      INV                         : 234
+#      LUT1                        : 216
+#      LUT2                        : 308
+#      LUT2_D                      : 1
+#      LUT2_L                      : 1
+#      LUT3                        : 1220
+#      LUT3_D                      : 5
+#      LUT3_L                      : 11
+#      LUT4                        : 1874
+#      LUT4_D                      : 21
+#      LUT4_L                      : 82
+#      MUXCY                       : 582
+#      MUXF5                       : 357
+#      MUXF6                       : 3
+#      MUXF7                       : 1
+#      VCC                         : 1
+#      XORCY                       : 597
+# FlipFlops/Latches                : 3279
+#      FD                          : 141
+#      FD_1                        : 96
+#      FDE                         : 1535
+#      FDR                         : 410
+#      FDRE                        : 1020
+#      FDRS                        : 4
+#      FDRSE                       : 1
+#      FDS                         : 44
+#      FDSE                        : 28
+# RAMS                             : 140
+#      RAM16X1D                    : 124
+#      RAMB16BWE                   : 16
+# Shift Registers                  : 16
+#      SRL16E                      : 16
+# Clock Buffers                    : 5
+#      BUFG                        : 5
+# IO Buffers                       : 125
+#      IBUF                        : 53
+#      IBUFG                       : 1
+#      IOBUF                       : 16
+#      OBUF                        : 51
+#      OBUFDS                      : 4
+# DCMs                             : 1
+#      DCM_SP                      : 1
+# Others                           : 2
+#      ICAP_SPARTAN3A              : 1
+#      SPI_ACCESS                  : 1
+=========================================================================
+
+Device utilization summary:
+---------------------------
+
+Selected Device : 3s400anftg256-4 
+
+ Number of Slices:                     2446  out of   3584    68%  
+ Number of Slice Flip Flops:           3279  out of   7168    45%  
+ Number of 4 input LUTs:               4237  out of   7168    59%  
+    Number used as logic:              3973
+    Number used as Shift registers:      16
+    Number used as RAMs:                248
+ Number of IOs:                         129
+ Number of bonded IOBs:                 129  out of    195    66%  
+ Number of BRAMs:                        16  out of     20    80%  
+ Number of GCLKs:                         5  out of     24    20%  
+ Number of DCMs:                          1  out of      4    25%  
+
+---------------------------
+Partition Resource Summary:
+---------------------------
+
+  No Partitions were found in this design.
+
+---------------------------
+
+
+=========================================================================
+TIMING REPORT
+
+NOTE: THESE TIMING NUMBERS ARE ONLY A SYNTHESIS ESTIMATE.
+      FOR ACCURATE TIMING INFORMATION PLEASE REFER TO THE TRACE REPORT
+      GENERATED AFTER PLACE-and-ROUTE.
+
+Clock Information:
+------------------
+-----------------------------------+-------------------------+-------+
+Clock Signal                       | Clock buffer(FF name)   | Load  |
+-----------------------------------+-------------------------+-------+
+FPGA_CLK                           | +BUFGDCM_clk:CLK0       | 2380  |
+FPGA_CLK                           | +BUFGDCM_clk:CLK2X      | 855   |
+FPGA_CLK                           | +BUFGDCM_clk:CLKDV      | 104   |
+cfg_sck(cfg_sck1:O)                | NONE(*)(SPI_ACCESS_inst)| 1     |
+SCK_IN                             | IBUF+BUFG               | 96    |
+-----------------------------------+-------------------------+-------+
+(*) This 1 clock signal(s) are generated by combinatorial logic,
+and XST is not able to identify which are the primary clock signals.
+Please use the CLOCK_SIGNAL constraint to specify the clock signal(s) generated by combinatorial logic.
+INFO:Xst:2169 - HDL ADVISOR - Some clock signals were not automatically buffered by XST with BUFG/BUFR resources. Please use the buffer_type constraint in order to insert these buffers to the clock signals to help prevent skew problems.
+
+Asynchronous Control Signals Information:
+----------------------------------------
+No asynchronous control signals found in this design
+
+Timing Summary:
+---------------
+Speed Grade: -4
+
+   Minimum period: 14.708ns (Maximum Frequency: 67.990MHz)
+   Minimum input arrival time before clock: 10.812ns
+   Maximum output required time after clock: 20.940ns
+   Maximum combinational path delay: 9.304ns
+
+=========================================================================
+Timing constraint: NET FPGA_CLK PERIOD = 10 nS HIGH 5 nS
+WARNING:Xst:2245 - Timing constraint is not met.
+  Clock period: 14.708ns (frequency: 67.990MHz)
+  Total number of paths / destination ports: 74044 / 8517
+  Number of failed paths / ports: 2629 (3.55%) / 147 (1.73%)
+-------------------------------------------------------------------------
+Slack:                  -4.708ns
+  Source:               reggie/addr_keep_1 (FF)
+  Destination:          reggie/dat_o_5 (FF)
+  Data Path Delay:      7.354ns (Levels of Logic = 5)
+  Source Clock:         FPGA_CLK rising 2.0X at 0.000ns
+  Destination Clock:    FPGA_CLK rising 2.0X at 5.000ns
+
+  Data Path: reggie/addr_keep_1 (FF) to reggie/dat_o_5 (FF)
+                                Gate     Net
+    Cell:in->out      fanout   Delay   Delay  Logical Name (Net Name)
+    ----------------------------------------  ------------
+     FDE:C->Q             41   0.591   1.408  reggie/addr_keep_1 (reggie/addr_keep_1)
+     LUT3_D:I0->O         10   0.648   0.885  reggie/dat_o_mux0000[7]58 (reggie/dat_o_mux0000[0]90)
+     LUT4:I3->O            1   0.648   0.452  reggie/dat_o_mux0000[5]92 (reggie/dat_o_mux0000[5]92)
+     LUT3_L:I2->LO         1   0.648   0.103  reggie/dat_o_mux0000[5]100 (reggie/dat_o_mux0000[5]100)
+     LUT4:I3->O            1   0.648   0.423  reggie/dat_o_mux0000[5]126 (reggie/dat_o_mux0000[5]126)
+     LUT4:I3->O            1   0.648   0.000  reggie/dat_o_mux0000[5]137 (reggie/dat_o_mux0000[5])
+     FDE:D                     0.252          reggie/dat_o_5
+    ----------------------------------------
+    Total                      7.354ns (4.083ns logic, 3.271ns route)
+                                       (55.5% logic, 44.5% route)
+
+=========================================================================
+
+
+Total REAL time to Xst completion: 58.00 secs
+Total CPU time to Xst completion: 42.61 secs
+ 
+--> 
+
+
+Total memory usage is 713172 kilobytes
+
+Number of errors   :    0 (   0 filtered)
+Number of warnings :  235 (   0 filtered)
+Number of infos    :    8 (   0 filtered)
+

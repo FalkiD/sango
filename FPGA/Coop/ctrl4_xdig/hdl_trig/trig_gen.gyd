@@ -1,0 +1,24 @@
+Pin Freeze File:  version O.87xd
+
+9572XL44VQ XC9572XL-10-VQ44
+TRIGIN S:PIN44
+LEDOUT S:PIN7
+TRIGOUT<1> S:PIN39
+TRIGOUT<2> S:PIN38
+TRIGOUT<3> S:PIN32
+TRIGOUT<4> S:PIN19
+
+
+;The remaining section of the .gyd file is for documentation purposes only.
+;It shows where your internal equations were placed in the last successful fit.
+
+PARTITION FB1_2 TRIGOUT_1_OBUF
+PARTITION FB1_18 trigsel_0
+PARTITION FB2_8 TRIGOUT_3_OBUF
+PARTITION FB2_15 trigsel<3> trigsel<2> TRIGOUT_2_OBUF trigsel<1>
+		
+PARTITION FB3_8 LEDOUT_OBUF
+
+PARTITION FB4_2 TRIGOUT_4_OBUF
+
+

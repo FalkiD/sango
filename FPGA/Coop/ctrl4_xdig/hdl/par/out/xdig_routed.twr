@@ -1,0 +1,568 @@
+--------------------------------------------------------------------------------
+Release 13.4 Trace  (lin64)
+Copyright (c) 1995-2011 Xilinx, Inc.  All rights reserved.
+
+/opt/Xilinx/13.4/ISE_DS/ISE/bin/lin64/unwrapped/trce -e 100 -u 100 -o
+xdig_routed.twr xdig_routed.ncd xdig.pcf
+
+Design file:              xdig_routed.ncd
+Physical constraint file: xdig.pcf
+Device,package,speed:     xc3s400an,ftg256,-4 (PRODUCTION 1.42 2012-01-07)
+Report level:             error report, limited to 100 items per constraint
+                          unconstrained path report, limited to 100 items
+
+Environment Variable      Effect 
+--------------------      ------ 
+NONE                      No environment variables were set
+--------------------------------------------------------------------------------
+
+INFO:Timing:3386 - Intersecting Constraints found and resolved.  For more 
+   information, see the TSI report.  Please consult the Xilinx Command Line 
+   Tools User Guide for information on generating a TSI report.
+INFO:Timing:3412 - To improve timing, see the Timing Closure User Guide (UG612).
+INFO:Timing:3339 - The clock-to-out numbers in this timing report are based on 
+   a 50 Ohm transmission line loading model.  For the details of this model, 
+   and for more information on accounting for different loading conditions, 
+   please see the device datasheet.
+INFO:Timing:3390 - This architecture does not support a default System Jitter 
+   value, please add SYSTEM_JITTER constraint to the UCF to modify the Clock 
+   Uncertainty calculation.
+INFO:Timing:3389 - This architecture does not support 'Discrete Jitter' and 
+   'Phase Error' calculations, these terms will be zero in the Clock 
+   Uncertainty calculation.  Please make appropriate modification to 
+   SYSTEM_JITTER to account for the unsupported Discrete Jitter and Phase 
+   Error.
+
+================================================================================
+Timing constraint: TS_clk100 = PERIOD TIMEGRP "clk100_speed" 10 ns HIGH 50%;
+For more information, see Period Analysis in the Timing Closure User Guide (UG612).
+
+ 66455 paths analyzed, 10958 endpoints analyzed, 0 failing endpoints
+ 0 timing errors detected. (0 setup errors, 0 hold errors, 0 component switching limit errors)
+ Minimum period is   9.818ns.
+--------------------------------------------------------------------------------
+
+================================================================================
+Timing constraint: TS_clk10 = PERIOD TIMEGRP "clk10_speed" TS_clk100 * 10 HIGH 
+50%;
+For more information, see Period Analysis in the Timing Closure User Guide (UG612).
+
+ 3812 paths analyzed, 351 endpoints analyzed, 0 failing endpoints
+ 0 timing errors detected. (0 setup errors, 0 hold errors, 0 component switching limit errors)
+ Minimum period is  98.620ns.
+--------------------------------------------------------------------------------
+
+================================================================================
+Timing constraint: TS_clk200 = PERIOD TIMEGRP "clk200_speed" TS_clk100 / 2 HIGH 
+50%;
+For more information, see Period Analysis in the Timing Closure User Guide (UG612).
+
+ 1450 paths analyzed, 1384 endpoints analyzed, 0 failing endpoints
+ 0 timing errors detected. (0 setup errors, 0 hold errors, 0 component switching limit errors)
+ Minimum period is   4.789ns.
+--------------------------------------------------------------------------------
+
+================================================================================
+Timing constraint: TS_spi = PERIOD TIMEGRP "spi_speed" 80 ns HIGH 50%;
+For more information, see Period Analysis in the Timing Closure User Guide (UG612).
+
+ 92 paths analyzed, 92 endpoints analyzed, 0 failing endpoints
+ 0 timing errors detected. (0 setup errors, 0 hold errors, 0 component switching limit errors)
+ Minimum period is  20.000ns.
+--------------------------------------------------------------------------------
+
+================================================================================
+Timing constraint: PATH "TS_spi_sync_path" TIG;
+
+ 100 paths analyzed, 96 endpoints analyzed, 0 failing endpoints
+ 0 timing errors detected. (0 setup errors, 0 hold errors)
+--------------------------------------------------------------------------------
+
+================================================================================
+Timing constraint: Unconstrained OFFSET IN BEFORE analysis for clock "clk" 
+
+ 54 paths analyzed, 41 endpoints analyzed, 0 failing endpoints
+ 0 timing errors detected.
+ Minimum allowable offset is   3.092ns.
+--------------------------------------------------------------------------------
+
+================================================================================
+Timing constraint: Unconstrained OFFSET OUT AFTER analysis for clock "clk" 
+
+ 104 paths analyzed, 46 endpoints analyzed, 0 failing endpoints
+ 0 timing errors detected.
+ Maximum allowable offset is  19.216ns.
+--------------------------------------------------------------------------------
+
+================================================================================
+Timing constraint: Unconstrained OFFSET IN BEFORE analysis for clock "clk200" 
+
+ 148 paths analyzed, 124 endpoints analyzed, 0 failing endpoints
+ 0 timing errors detected.
+ Minimum allowable offset is   2.019ns.
+--------------------------------------------------------------------------------
+
+================================================================================
+Timing constraint: Unconstrained OFFSET OUT AFTER analysis for clock "clk200" 
+
+ 192 paths analyzed, 5 endpoints analyzed, 0 failing endpoints
+ 0 timing errors detected.
+ Maximum allowable offset is  20.732ns.
+--------------------------------------------------------------------------------
+
+================================================================================
+Timing constraint: Unconstrained OFFSET IN BEFORE analysis for clock "clk10" 
+
+ 118 paths analyzed, 92 endpoints analyzed, 0 failing endpoints
+ 0 timing errors detected.
+ Minimum allowable offset is   2.837ns.
+--------------------------------------------------------------------------------
+
+================================================================================
+Timing constraint: Unconstrained OFFSET OUT AFTER analysis for clock "clk10" 
+
+ 3 paths analyzed, 2 endpoints analyzed, 0 failing endpoints
+ 0 timing errors detected.
+ Maximum allowable offset is  17.712ns.
+--------------------------------------------------------------------------------
+
+================================================================================
+Timing constraint: Unconstrained OFFSET IN BEFORE analysis for clock 
+"SCK_IN_IBUF" 
+
+ 4 paths analyzed, 4 endpoints analyzed, 0 failing endpoints
+ 0 timing errors detected.
+ Offset is -37.717ns.
+--------------------------------------------------------------------------------
+
+================================================================================
+Timing constraint: Unconstrained OFFSET IN BEFORE analysis for clock "cfg_sck" 
+
+ 5 paths analyzed, 2 endpoints analyzed, 0 failing endpoints
+ 0 timing errors detected.
+ Minimum allowable offset is   9.114ns.
+--------------------------------------------------------------------------------
+
+================================================================================
+Timing constraint: Unconstrained OFFSET OUT AFTER analysis for clock "cfg_sck" 
+
+ 1 path analyzed, 1 endpoint analyzed, 0 failing endpoints
+ 0 timing errors detected.
+ Maximum allowable offset is  73.391ns.
+--------------------------------------------------------------------------------
+
+================================================================================
+Timing constraint: Unconstrained path analysis 
+
+ 3946 paths analyzed, 3770 endpoints analyzed, 0 failing endpoints
+ 0 timing errors detected. (0 setup errors, 0 hold errors)
+ Minimum period is   8.155ns.
+ Maximum delay is  32.420ns.
+--------------------------------------------------------------------------------
+
+
+Derived Constraint Report
+Derived Constraints for TS_clk100
++-------------------------------+-------------+-------------+-------------+-------------+-------------+-------------+-------------+
+|                               |   Period    |       Actual Period       |      Timing Errors        |      Paths Analyzed       |
+|           Constraint          | Requirement |-------------+-------------|-------------+-------------|-------------+-------------|
+|                               |             |   Direct    | Derivative  |   Direct    | Derivative  |   Direct    | Derivative  |
++-------------------------------+-------------+-------------+-------------+-------------+-------------+-------------+-------------+
+|TS_clk100                      |     10.000ns|      9.818ns|      9.862ns|            0|            0|        66455|         5262|
+| TS_clk10                      |    100.000ns|     98.620ns|          N/A|            0|            0|         3812|            0|
+| TS_clk200                     |      5.000ns|      4.789ns|          N/A|            0|            0|         1450|            0|
++-------------------------------+-------------+-------------+-------------+-------------+-------------+-------------+-------------+
+
+All constraints were met.
+
+
+Data Sheet report:
+-----------------
+All values displayed in nanoseconds (ns)
+
+Setup/Hold to clock CFG_SSELN
+------------+------------+------------+------------------+--------+
+            |Max Setup to|Max Hold to |                  | Clock  |
+Source      | clk (edge) | clk (edge) |Internal Clock(s) | Phase  |
+------------+------------+------------+------------------+--------+
+MOSI_IN     |    5.576(R)|    7.151(R)|cfg_sck           |   0.000|
+SS_IN       |    8.380(R)|   10.809(R)|cfg_sck           |   0.000|
+            |  -31.620(F)|   50.809(F)|cfg_sck           |  40.000|
+------------+------------+------------+------------------+--------+
+
+Setup/Hold to clock FPGA_CLK
+-------------+------------+------------+------------------+--------+
+             |Max Setup to|Max Hold to |                  | Clock  |
+Source       | clk (edge) | clk (edge) |Internal Clock(s) | Phase  |
+-------------+------------+------------+------------------+--------+
+ADCF_SDO[1]  |   -0.774(R)|    2.415(R)|clk               |   0.000|
+ADCF_SDO[2]  |   -1.386(R)|    2.921(R)|clk               |   0.000|
+ADCF_SDO[3]  |   -2.182(R)|    3.543(R)|clk               |   0.000|
+ADCF_SDO[4]  |   -1.638(R)|    3.110(R)|clk               |   0.000|
+ADCR_SDO[1]  |   -1.318(R)|    2.850(R)|clk               |   0.000|
+ADCR_SDO[2]  |   -0.196(R)|    1.969(R)|clk               |   0.000|
+ADCR_SDO[3]  |   -1.788(R)|    3.225(R)|clk               |   0.000|
+ADCR_SDO[4]  |   -0.734(R)|    2.378(R)|clk               |   0.000|
+A[1]         |   -0.031(R)|    3.406(R)|clk200            |   0.000|
+A[2]         |   -0.031(R)|    3.337(R)|clk200            |   0.000|
+A[3]         |    0.972(R)|    3.299(R)|clk200            |   0.000|
+A[4]         |   -0.004(R)|    3.322(R)|clk200            |   0.000|
+A[5]         |    1.858(R)|    2.692(R)|clk200            |   0.000|
+A[6]         |    1.837(R)|    2.271(R)|clk200            |   0.000|
+A[7]         |    2.019(R)|    3.087(R)|clk200            |   0.000|
+CHAN_ENN[1]  |    2.390(R)|    0.032(R)|clk               |   0.000|
+             |    2.837(R)|    1.100(R)|clk10             |   0.000|
+CSN          |    1.902(R)|    2.388(R)|clk200            |   0.000|
+DAC_SSELN    |    2.861(R)|    2.039(R)|clk               |   0.000|
+D[0]         |   -0.005(R)|    3.596(R)|clk200            |   0.000|
+D[1]         |   -0.008(R)|    3.190(R)|clk200            |   0.000|
+D[2]         |   -0.042(R)|    3.022(R)|clk200            |   0.000|
+D[3]         |   -0.005(R)|    3.396(R)|clk200            |   0.000|
+D[4]         |   -0.014(R)|    3.185(R)|clk200            |   0.000|
+D[5]         |    0.598(R)|    3.358(R)|clk200            |   0.000|
+D[6]         |   -0.014(R)|    3.389(R)|clk200            |   0.000|
+D[7]         |    1.875(R)|    3.350(R)|clk200            |   0.000|
+D[8]         |   -0.015(R)|    3.232(R)|clk200            |   0.000|
+D[9]         |    0.363(R)|    2.778(R)|clk200            |   0.000|
+D[10]        |   -0.025(R)|    3.021(R)|clk200            |   0.000|
+D[11]        |    0.426(R)|    3.450(R)|clk200            |   0.000|
+D[12]        |   -0.042(R)|    3.183(R)|clk200            |   0.000|
+D[13]        |    0.976(R)|    3.169(R)|clk200            |   0.000|
+D[14]        |   -0.044(R)|    2.933(R)|clk200            |   0.000|
+D[15]        |   -0.010(R)|    3.461(R)|clk200            |   0.000|
+EXTDIG_IN[0] |   -0.086(R)|    2.358(R)|clk               |   0.000|
+EXTDIG_IN[1] |   -0.086(R)|    2.358(R)|clk               |   0.000|
+EXTDIG_IN[2] |   -0.095(R)|    2.368(R)|clk               |   0.000|
+EXTDIG_IN[3] |   -0.095(R)|    2.368(R)|clk               |   0.000|
+EXTDIG_IN[4] |   -0.046(R)|    2.311(R)|clk               |   0.000|
+EXTDIG_IN[5] |   -0.046(R)|    2.311(R)|clk               |   0.000|
+EXTDIG_IN[6] |   -0.042(R)|    2.307(R)|clk               |   0.000|
+EXTDIG_IN[7] |   -0.042(R)|    2.307(R)|clk               |   0.000|
+EXTDIG_IN[8] |   -0.042(R)|    2.307(R)|clk               |   0.000|
+EXTDIG_IN[9] |   -0.040(R)|    2.304(R)|clk               |   0.000|
+EXTDIG_IN[10]|   -0.047(R)|    2.313(R)|clk               |   0.000|
+EXTDIG_IN[11]|   -0.049(R)|    2.315(R)|clk               |   0.000|
+EXT_UNLOCK   |    0.853(R)|    1.261(R)|clk               |   0.000|
+             |    1.920(R)|    1.834(R)|clk10             |   0.000|
+OEN          |   -0.850(R)|    3.155(R)|clk200            |   0.000|
+SSEL[0]      |    3.092(R)|    2.262(R)|clk               |   0.000|
+SSEL[1]      |    2.799(R)|    2.467(R)|clk               |   0.000|
+SS_IN        |    2.543(R)|    2.528(R)|clk               |   0.000|
+TRIG_INN[1]  |    0.421(R)|    2.268(R)|clk10             |   0.000|
+TRIG_INN[2]  |    0.900(R)|    2.568(R)|clk10             |   0.000|
+TRIG_INN[3]  |    0.319(R)|    2.368(R)|clk10             |   0.000|
+TRIG_INN[4]  |    0.917(R)|    1.425(R)|clk10             |   0.000|
+WEN          |   -1.174(R)|    3.295(R)|clk200            |   0.000|
+-------------+------------+------------+------------------+--------+
+
+Setup/Hold to clock SCK_IN
+------------+------------+------------+------------------+--------+
+            |Max Setup to|Max Hold to |                  | Clock  |
+Source      | clk (edge) | clk (edge) |Internal Clock(s) | Phase  |
+------------+------------+------------+------------------+--------+
+MOSI_IN     |    5.291(R)|    7.507(R)|cfg_sck           |   0.000|
+            |  -37.717(F)|   39.571(F)|SCK_IN_IBUF       |  40.000|
+SS_IN       |    8.095(R)|   11.165(R)|cfg_sck           |   0.000|
+            |  -31.905(F)|   51.165(F)|cfg_sck           |  40.000|
+------------+------------+------------+------------------+--------+
+
+Clock CFG_SSELN to Pad
+------------+------------+------------------+--------+
+            | clk (edge) |                  | Clock  |
+Destination |   to PAD   |Internal Clock(s) | Phase  |
+------------+------------+------------------+--------+
+MISO_OUT    |   73.035(F)|cfg_sck           |  40.000|
+------------+------------+------------------+--------+
+
+Clock FPGA_CLK to Pad
+------------+------------+------------------+--------+
+            | clk (edge) |                  | Clock  |
+Destination |   to PAD   |Internal Clock(s) | Phase  |
+------------+------------+------------------+--------+
+ADCF_SCK[1] |   12.786(R)|clk               |   0.000|
+ADCF_SCK[2] |   12.408(R)|clk               |   0.000|
+ADCF_SCK[3] |   11.222(R)|clk               |   0.000|
+ADCF_SCK[4] |   12.171(R)|clk               |   0.000|
+ADCR_SCK[1] |   12.765(R)|clk               |   0.000|
+ADCR_SCK[2] |   12.671(R)|clk               |   0.000|
+ADCR_SCK[3] |   11.861(R)|clk               |   0.000|
+ADCR_SCK[4] |   11.930(R)|clk               |   0.000|
+ANTSEL[0]   |    9.627(R)|clk               |   0.000|
+ANTSEL[1]   |    9.627(R)|clk               |   0.000|
+ANTSEL[2]   |    9.624(R)|clk               |   0.000|
+CONVN[1]    |   10.816(R)|clk               |   0.000|
+CONVN[2]    |   11.494(R)|clk               |   0.000|
+CONVN[3]    |    9.388(R)|clk               |   0.000|
+CONVN[4]    |   11.181(R)|clk               |   0.000|
+CONVP[1]    |   10.816(R)|clk               |   0.000|
+CONVP[2]    |   11.494(R)|clk               |   0.000|
+CONVP[3]    |    9.388(R)|clk               |   0.000|
+CONVP[4]    |   11.181(R)|clk               |   0.000|
+DACSSN[1]   |   12.639(R)|clk               |   0.000|
+DACSSN[2]   |   13.790(R)|clk               |   0.000|
+DACSSN[3]   |   12.984(R)|clk               |   0.000|
+DACSSN[4]   |   13.875(R)|clk               |   0.000|
+FPGA_IRQN   |   15.796(R)|clk               |   0.000|
+MCU_TRIGIN  |   12.726(R)|clk               |   0.000|
+MOSI[1]     |   12.974(R)|clk               |   0.000|
+MOSI[2]     |   13.392(R)|clk               |   0.000|
+MOSI[3]     |   13.050(R)|clk               |   0.000|
+MOSI[4]     |   14.192(R)|clk               |   0.000|
+RF_GATE[1]  |   13.119(R)|clk               |   0.000|
+            |   16.617(R)|clk200            |   0.000|
+RF_GATE[2]  |   14.956(R)|clk               |   0.000|
+            |   16.136(R)|clk200            |   0.000|
+RF_GATE[3]  |   12.839(R)|clk               |   0.000|
+            |   14.454(R)|clk200            |   0.000|
+RF_GATE[4]  |   15.943(R)|clk               |   0.000|
+            |   16.615(R)|clk200            |   0.000|
+SCK[1]      |   13.650(R)|clk               |   0.000|
+SCK[2]      |   15.205(R)|clk               |   0.000|
+SCK[3]      |   12.643(R)|clk               |   0.000|
+SCK[4]      |   14.964(R)|clk               |   0.000|
+SYNC_OUTX   |   19.216(R)|clk               |   0.000|
+            |   17.712(R)|clk10             |   0.000|
+            |   20.732(R)|clk200            |   0.000|
+SYNSSN[1]   |   12.501(R)|clk               |   0.000|
+SYNSSN[2]   |   13.588(R)|clk               |   0.000|
+SYNSSN[3]   |   13.212(R)|clk               |   0.000|
+SYNSSN[4]   |   14.122(R)|clk               |   0.000|
+TEST_LEDN   |   13.439(R)|clk10             |   0.000|
+VGASSN[1]   |   12.939(R)|clk               |   0.000|
+VGASSN[2]   |   13.361(R)|clk               |   0.000|
+VGASSN[3]   |   13.286(R)|clk               |   0.000|
+VGASSN[4]   |   13.416(R)|clk               |   0.000|
+------------+------------+------------------+--------+
+
+Clock SCK_IN to Pad
+------------+------------+------------------+--------+
+            | clk (edge) |                  | Clock  |
+Destination |   to PAD   |Internal Clock(s) | Phase  |
+------------+------------+------------------+--------+
+MISO_OUT    |   73.391(F)|cfg_sck           |  40.000|
+------------+------------+------------------+--------+
+
+Clock to Setup on destination clock CFG_SSELN
+---------------+---------+---------+---------+---------+
+               | Src:Rise| Src:Fall| Src:Rise| Src:Fall|
+Source Clock   |Dest:Rise|Dest:Rise|Dest:Fall|Dest:Fall|
+---------------+---------+---------+---------+---------+
+CFG_SSELN      |    9.114|    9.114|  -30.886|  -30.886|
+---------------+---------+---------+---------+---------+
+
+Clock to Setup on destination clock FPGA_CLK
+---------------+---------+---------+---------+---------+
+               | Src:Rise| Src:Fall| Src:Rise| Src:Fall|
+Source Clock   |Dest:Rise|Dest:Rise|Dest:Fall|Dest:Fall|
+---------------+---------+---------+---------+---------+
+FPGA_CLK       |    9.818|         |         |         |
+SCK_IN         |         |    2.467|         |         |
+---------------+---------+---------+---------+---------+
+
+Clock to Setup on destination clock SCK_IN
+---------------+---------+---------+---------+---------+
+               | Src:Rise| Src:Fall| Src:Rise| Src:Fall|
+Source Clock   |Dest:Rise|Dest:Rise|Dest:Fall|Dest:Fall|
+---------------+---------+---------+---------+---------+
+CFG_SSELN      |    8.829|    8.829|  -31.171|  -31.171|
+SCK_IN         |         |         |         |    3.365|
+---------------+---------+---------+---------+---------+
+
+Pad to Pad
+---------------+---------------+---------+
+Source Pad     |Destination Pad|  Delay  |
+---------------+---------------+---------+
+A[5]           |D[0]           |   11.536|
+A[5]           |D[1]           |   10.399|
+A[5]           |D[2]           |   10.074|
+A[5]           |D[3]           |   11.286|
+A[5]           |D[4]           |   12.197|
+A[5]           |D[5]           |   11.331|
+A[5]           |D[6]           |   12.352|
+A[5]           |D[7]           |   10.500|
+A[5]           |D[8]           |   10.590|
+A[5]           |D[9]           |   11.991|
+A[5]           |D[10]          |   10.201|
+A[5]           |D[11]          |   10.814|
+A[5]           |D[12]          |   10.156|
+A[5]           |D[13]          |   11.510|
+A[5]           |D[14]          |   10.340|
+A[5]           |D[15]          |   10.079|
+A[6]           |D[0]           |   10.832|
+A[6]           |D[1]           |   10.172|
+A[6]           |D[2]           |   10.938|
+A[6]           |D[3]           |   11.514|
+A[6]           |D[4]           |   12.615|
+A[6]           |D[5]           |   11.194|
+A[6]           |D[6]           |   12.399|
+A[6]           |D[7]           |   10.778|
+A[6]           |D[8]           |   10.553|
+A[6]           |D[9]           |   11.237|
+A[6]           |D[10]          |   11.027|
+A[6]           |D[11]          |   11.207|
+A[6]           |D[12]          |   10.582|
+A[6]           |D[13]          |   11.374|
+A[6]           |D[14]          |   10.736|
+A[6]           |D[15]          |    9.801|
+A[7]           |D[0]           |    9.071|
+A[7]           |D[1]           |    8.585|
+A[7]           |D[2]           |    8.369|
+A[7]           |D[3]           |    9.387|
+A[7]           |D[4]           |    8.999|
+A[7]           |D[5]           |    8.051|
+A[7]           |D[6]           |   10.173|
+A[7]           |D[7]           |    8.810|
+A[7]           |D[8]           |    8.450|
+A[7]           |D[9]           |   10.186|
+A[7]           |D[10]          |    8.709|
+A[7]           |D[11]          |    8.335|
+A[7]           |D[12]          |    7.665|
+A[7]           |D[13]          |    9.195|
+A[7]           |D[14]          |    7.963|
+A[7]           |D[15]          |    8.257|
+CFG_SSELN      |MISO_OUT       |   32.420|
+CHAN_ENN[1]    |RF_ENN[1]      |   11.611|
+CHAN_ENN[2]    |RF_ENN[2]      |    7.557|
+CHAN_ENN[3]    |RF_ENN[3]      |    7.607|
+CHAN_ENN[4]    |RF_ENN[4]      |    6.973|
+CSN            |D[0]           |    8.266|
+CSN            |D[1]           |    7.963|
+CSN            |D[2]           |    7.928|
+CSN            |D[3]           |    8.537|
+CSN            |D[4]           |    9.893|
+CSN            |D[5]           |    7.682|
+CSN            |D[6]           |   10.425|
+CSN            |D[7]           |   10.164|
+CSN            |D[8]           |    7.992|
+CSN            |D[9]           |    9.889|
+CSN            |D[10]          |    7.951|
+CSN            |D[11]          |    7.392|
+CSN            |D[12]          |    7.355|
+CSN            |D[13]          |   10.158|
+CSN            |D[14]          |    7.819|
+CSN            |D[15]          |    7.992|
+DAC_SSELN      |DACSSN[1]      |   10.882|
+DAC_SSELN      |DACSSN[2]      |   12.073|
+DAC_SSELN      |DACSSN[3]      |   12.002|
+DAC_SSELN      |DACSSN[4]      |   11.571|
+EXT_UNLOCK     |RF_ENN[1]      |   10.074|
+EXT_UNLOCK     |RF_ENN[2]      |    8.120|
+EXT_UNLOCK     |RF_ENN[3]      |    8.301|
+EXT_UNLOCK     |RF_ENN[4]      |    7.112|
+I2C_SEL[0]     |I2CEXT         |    7.633|
+I2C_SEL[0]     |I2CINT         |    8.387|
+I2C_SEL[0]     |I2C[1]         |    7.591|
+I2C_SEL[0]     |I2C[2]         |    8.119|
+I2C_SEL[0]     |I2C[3]         |    8.098|
+I2C_SEL[0]     |I2C[4]         |    7.562|
+I2C_SEL[1]     |I2CEXT         |    7.343|
+I2C_SEL[1]     |I2CINT         |    8.116|
+I2C_SEL[1]     |I2C[1]         |    7.332|
+I2C_SEL[1]     |I2C[2]         |    7.829|
+I2C_SEL[1]     |I2C[3]         |    7.827|
+I2C_SEL[1]     |I2C[4]         |    7.336|
+I2C_SEL[2]     |I2CEXT         |    7.064|
+I2C_SEL[2]     |I2CINT         |    8.017|
+I2C_SEL[2]     |I2C[1]         |    7.033|
+I2C_SEL[2]     |I2C[2]         |    7.550|
+I2C_SEL[2]     |I2C[3]         |    7.728|
+I2C_SEL[2]     |I2C[4]         |    7.228|
+MCU_SYNCOUT    |SYNC_OUTX      |   13.913|
+MOSI_IN        |MOSI[1]        |    8.996|
+MOSI_IN        |MOSI[2]        |    9.932|
+MOSI_IN        |MOSI[3]        |   10.030|
+MOSI_IN        |MOSI[4]        |   10.355|
+OEN            |D[0]           |    6.937|
+OEN            |D[1]           |    6.634|
+OEN            |D[2]           |    6.599|
+OEN            |D[3]           |    7.208|
+OEN            |D[4]           |    8.564|
+OEN            |D[5]           |    6.353|
+OEN            |D[6]           |    9.096|
+OEN            |D[7]           |    8.835|
+OEN            |D[8]           |    6.663|
+OEN            |D[9]           |    8.560|
+OEN            |D[10]          |    6.622|
+OEN            |D[11]          |    6.063|
+OEN            |D[12]          |    6.026|
+OEN            |D[13]          |    8.829|
+OEN            |D[14]          |    6.490|
+OEN            |D[15]          |    6.663|
+SCK_IN         |SCK[1]         |    9.181|
+SCK_IN         |SCK[2]         |   10.704|
+SCK_IN         |SCK[3]         |    9.556|
+SCK_IN         |SCK[4]         |   10.630|
+SSEL[0]        |DACSSN[1]      |   10.777|
+SSEL[0]        |DACSSN[2]      |   12.592|
+SSEL[0]        |DACSSN[3]      |   10.890|
+SSEL[0]        |DACSSN[4]      |   11.293|
+SSEL[0]        |SYNSSN[1]      |   10.830|
+SSEL[0]        |SYNSSN[2]      |   11.441|
+SSEL[0]        |SYNSSN[3]      |   10.725|
+SSEL[0]        |SYNSSN[4]      |   11.715|
+SSEL[0]        |VGASSN[1]      |   10.995|
+SSEL[0]        |VGASSN[2]      |   10.974|
+SSEL[0]        |VGASSN[3]      |   10.540|
+SSEL[0]        |VGASSN[4]      |   10.389|
+SSEL[1]        |DACSSN[1]      |   10.869|
+SSEL[1]        |DACSSN[2]      |   10.906|
+SSEL[1]        |DACSSN[3]      |   11.940|
+SSEL[1]        |DACSSN[4]      |   12.045|
+SSEL[1]        |SYNSSN[1]      |    9.716|
+SSEL[1]        |SYNSSN[2]      |   11.657|
+SSEL[1]        |SYNSSN[3]      |   12.322|
+SSEL[1]        |SYNSSN[4]      |   13.189|
+SSEL[1]        |VGASSN[1]      |    9.881|
+SSEL[1]        |VGASSN[2]      |   11.190|
+SSEL[1]        |VGASSN[3]      |   12.137|
+SSEL[1]        |VGASSN[4]      |   11.863|
+SS_IN          |DACSSN[1]      |   10.372|
+SS_IN          |DACSSN[2]      |   12.043|
+SS_IN          |DACSSN[3]      |   10.079|
+SS_IN          |DACSSN[4]      |   11.043|
+SS_IN          |MISO_OUT       |   31.686|
+SS_IN          |SYNSSN[1]      |   10.298|
+SS_IN          |SYNSSN[2]      |   10.982|
+SS_IN          |SYNSSN[3]      |   10.884|
+SS_IN          |SYNSSN[4]      |   11.306|
+SS_IN          |VGASSN[1]      |   10.463|
+SS_IN          |VGASSN[2]      |   10.515|
+SS_IN          |VGASSN[3]      |   10.699|
+SS_IN          |VGASSN[4]      |    9.980|
+SYNC_IN        |SYNC_OUTX      |   14.120|
+SYN_SSELN      |SYNSSN[1]      |   10.445|
+SYN_SSELN      |SYNSSN[2]      |    9.792|
+SYN_SSELN      |SYNSSN[3]      |    9.689|
+SYN_SSELN      |SYNSSN[4]      |    9.932|
+VGA_SSELN      |VGASSN[1]      |    9.689|
+VGA_SSELN      |VGASSN[2]      |   10.381|
+VGA_SSELN      |VGASSN[3]      |   10.135|
+VGA_SSELN      |VGASSN[4]      |    9.836|
+---------------+---------------+---------+
+
+
+Timing summary:
+---------------
+
+Timing errors: 0  Score: 0  (Setup/Max: 0, Hold: 0)
+
+Constraints cover 76484 paths, 0 nets, and 19679 connections
+
+Design statistics:
+   Minimum period:  98.620ns   (Maximum frequency:  10.140MHz)
+   Maximum combinational path delay:  32.420ns
+   Minimum input required time before clock:   9.114ns
+   Maximum output delay after clock:  73.391ns
+
+
+Analysis completed Wed Oct 15 12:47:05 2014 
+--------------------------------------------------------------------------------
+
+Trace Settings:
+-------------------------
+Trace Settings 
+
+Peak Memory Usage: 463 MB
+
+
+
