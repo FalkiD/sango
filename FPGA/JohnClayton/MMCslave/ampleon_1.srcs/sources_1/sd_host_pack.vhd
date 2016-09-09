@@ -615,7 +615,7 @@ signal busy_int   : std_logic;
 signal blkcnt_reg : unsigned(BLKCNT_W-1 downto 0);
 signal start_bit  : std_logic;
 signal crc_c      : unsigned(4 downto 0);
-signal crc_s      : unsigned(2 downto 0);
+signal crc_s      : unsigned(3 downto 0);
 signal data_index : unsigned(2 downto 0);
 signal last_din   : unsigned(7 downto 0);
 
@@ -902,7 +902,7 @@ begin
         if (d_stop_i='1') then
           state <= IDLE;
         elsif (transf_cnt = data_cycles+23) then
-          if (start_bit='1') then -- start_bit high means card is busy.
+          if (start_bit='1') then
             state <= CHECK_CRC_STATUS;
           else
             transf_cnt <= (others=>'0');
@@ -919,14 +919,14 @@ begin
         end if;
 
       when CHECK_CRC_STATUS =>
-        if (crc_s_cnt < 3) then
+        if (crc_s_cnt < 4) then
           crc_s(to_integer(crc_s_cnt)) <= dat_reg(0);
         end if;
         crc_s_cnt <= crc_s_cnt+1;
         busy_int <= '1';
         -- state transition
-        if (crc_s_cnt = 3) then
-          if (crc_s="010") then
+        if (crc_s_cnt = 4) then
+          if (crc_s="1010") then
             crc_ok_l <= '1';
           else
             crc_ok_l <= '0';

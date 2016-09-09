@@ -147,7 +147,7 @@ package sd_card_pack is
     EXT_CSD_INIT_FILE : string; -- Initial contents of EXT_CSD
     FIFO_DEPTH        : integer;
     FILL_LEVEL_BITS   : integer; -- Should be at least int(floor(log2(FIFO_DEPTH))+1.0)
-    RAM_ADR_WIDTH     : integer  -- 16 Kilobytes
+    RAM_ADR_WIDTH     : integer
   );
   port (
 
@@ -283,9 +283,8 @@ signal crc_clr    : std_logic;
 signal crc_match  : std_logic;
 signal crc_val    : unsigned(6 downto 0);
   -- Related to the incoming command
-signal sd_cmd_r1  : std_logic;
 signal counter    : unsigned(5 downto 0);
-signal rx_sr      : unsigned(47 downto 0);
+signal rx_sr      : unsigned(45 downto 0);
 signal cmd_raw_l  : unsigned(47 downto 0);
 
 begin
@@ -306,7 +305,7 @@ begin
 
     -- Input and Control
     clear_i    => crc_clr,
-    data_i     => rx_sr(0),
+    data_i     => sd_cmd_i,
     flush_i    => '0',
 
     -- Output
@@ -328,53 +327,32 @@ begin
   if (sys_rst_n='0') then
     counter <= (others=>'0');
     rx_sr <= (others=>'0');
-    sd_cmd_r1 <= '1';
     cmd_raw_l <= (others=>'1');
-    cmd_done_o  <= '0';
-    crc_err_o   <= '0';
-    dir_err_o   <= '0';
-    stop_err_o  <= '0';
 --  elsif (sd_clk_i'event and sd_clk_i='0') then -- falling edge is used, when data is stable.
   elsif (sd_clk_i'event and sd_clk_i='1') then -- rising edge is used, per the specification.
-    -- Default values
-    cmd_done_o  <= '0';
-    crc_err_o   <= '0';
-    dir_err_o   <= '0';
-    stop_err_o  <= '0';
-    
-    -- Metastability mitigation (synchronization) flip flops
-    sd_cmd_r1 <= sd_cmd_i;
-    -- The shift register is the second synchronization flip flop
-    rx_sr(0)  <= sd_cmd_r1;
-    rx_sr(47 downto 1) <= rx_sr(46 downto 0);
+    -- The shift register bit is the only synchronization flip flop
+    rx_sr(0)  <= sd_cmd_i;
+    rx_sr(45 downto 1) <= rx_sr(44 downto 0);
     -- Decrement the counter when it is non-zero
     if (counter>0) then
       counter <= counter-1;
     end if;
     -- Load the counter when a start bit is seen
-    if (counter=0 and sd_cmd_r1='0') then
-      counter <= to_unsigned(48,counter'length);
+    if (counter=0 and sd_cmd_i='0') then
+      counter <= to_unsigned(47,counter'length);
     end if;
     -- Store the output when the counter is expiring
-    if (counter=1) then
-      cmd_raw_l <= rx_sr;
-      -- Perform error checks
-      if (rx_sr(0)='0') then
-        stop_err_o <= '1';
-      end if;
-      if (rx_sr(46)='0') then
-        dir_err_o <= '1';
-      end if;
-      if (crc_match='0') then
-        crc_err_o <= '1';
-      end if;
-      -- Provide done signal
-      if (crc_match='1' and rx_sr(46)='1' and rx_sr(0)='1') then
-        cmd_done_o <= '1';
-      end if;
+    if (counter=2) then
+      cmd_raw_l <= rx_sr & sd_cmd_i & '1';
     end if;
   end if;
 end process;
+
+-- Provide output signals
+cmd_done_o <= '1' when (counter=1 and crc_match='1' and cmd_raw_l(46)='1' and sd_cmd_i='1') else '0';
+stop_err_o <= '1' when (counter=1 and sd_cmd_i='0') else '0';
+dir_err_o  <= '1' when (counter=1 and cmd_raw_l(46)='0') else '0';
+crc_err_o  <= '1' when (counter=1 and crc_match='0') else '0';
 
 -- Split out fields of the command
 cmd_raw_o   <= cmd_raw_l;
@@ -691,6 +669,7 @@ signal last_din    : unsigned(7 downto 0);
 signal bustest_0   : unsigned(7 downto 0);
 signal bustest_1   : unsigned(7 downto 0);
 signal blk_prg_tmr : unsigned(BLK_PRG_CBITS-1 downto 0);
+signal d_stop_pending : std_logic;
 
 begin
 
@@ -759,6 +738,7 @@ begin
     bustest_0 <= (others=>'0');
     bustest_1 <= (others=>'0');
     blk_prg_tmr <= (others=>'0');
+    d_stop_pending <= '0';
   elsif (sd_clk_i'event and sd_clk_i='1') then
     -- Handle block programming timer
     if (blk_prg_tmr>0) then
@@ -767,6 +747,7 @@ begin
     -- Implement finite state machine
     case(state) is
       when IDLE =>
+        d_stop_pending <= '0';
         sd_dat_oe_o <= '0';
         sd_dat_o <= "11111111";
         crc_enable <= '0';
@@ -829,8 +810,7 @@ begin
           sd_dat_oe_o <= '0';
         end if;
         -- state transition
-        if (transf_cnt >= data_cycles+1) then
-          transf_cnt <= (others=>'0');
+        if ((d_stop_i='1') or (transf_cnt >= data_cycles+1)) then
           state <= IDLE;
         end if;
 
@@ -838,7 +818,9 @@ begin
         sd_dat_oe_o <= '0';
         transf_cnt <= (others=>'0');
         -- state transition
-        if (start_bit='1') then
+        if (d_stop_i='1') then -- signal for stopping
+          state <= IDLE;
+        elsif (start_bit='1') then
           state <= READ_BUSTEST;
         end if;
 
@@ -853,7 +835,7 @@ begin
         -- state transition
         -- No CRC status response is needed
         -- Look for stop bits
-        if (dat_reg = "11111111") then
+        if ((d_stop_i='1') or (dat_reg = "11111111")) then
           state <= IDLE;
         end if;
 
@@ -986,7 +968,9 @@ begin
         crc_c      <= to_unsigned(15,crc_c'length);-- end
         transf_cnt <= (others=>'0');
         -- state transition
-        if (start_bit='1') then
+        if (d_stop_i='1') then -- signal for stopping
+          state <= IDLE;
+        elsif (start_bit='1') then
           state <= READ_DAT;
         end if;
 
@@ -1056,8 +1040,13 @@ begin
         -- on transf_cnt=(data_cycles+16) and (data_cycles+17)
         -- Then, CRC status response begins
         if (d_stop_i='1') then -- signal for stopping
-          state <= IDLE;
-        elsif (transf_cnt=(data_cycles+17)) then
+          if (transf_cnt <= data_cycles+16) then
+            state <= IDLE;
+          else
+            d_stop_pending <= '1'; -- Continue with CRC status token response, then stop.
+          end if;
+        end if;
+        if (transf_cnt=(data_cycles+17)) then
           sd_dat_oe_o <= '1';
           sd_dat_o <= "00000000"; -- start bit for CRC status response
           if (crc_ok_l='1') then
@@ -1074,7 +1063,10 @@ begin
         sd_dat_o(0) <= crc_status(3);
         sd_dat_o(7 downto 1) <= (others=>'1');
         crc_status <= crc_status(2 downto 0) & '1';
-        if (transf_cnt=(data_cycles+21)) then
+        if (d_stop_i='1') then
+          d_stop_pending <= '1';
+        end if;
+        if (transf_cnt=(data_cycles+22)) then
           blk_prg_tmr <= to_unsigned(BLK_PRG_TIME,blk_prg_tmr'length);
           state <= RECV_BUSY;
         end if;
@@ -1084,13 +1076,20 @@ begin
         sd_dat_o(0) <= crc_status(3);
         sd_dat_o(7 downto 1) <= (others=>'1');
         crc_status <= crc_status(2 downto 0) & '1';
-        if (transf_cnt=(data_cycles+21)) then
+        if (d_stop_i='1') then
+          d_stop_pending <= '1';
+        end if;
+        if (transf_cnt=(data_cycles+22)) then
           blkcnt_reg <= to_unsigned(1,blkcnt_reg'length); -- Cancel remainder, due to error
           blk_prg_tmr <= to_unsigned(BLK_PRG_TIME,blk_prg_tmr'length);
           state <= RECV_BUSY;
         end if;
 
       when RECV_BUSY =>
+        if (d_stop_i='1') then
+          d_stop_pending <= '1';
+        end if;
+        -- Wait for busy period, even if stop is pending
         if (blk_prg_tmr>0) then
           null; -- Wait here
         else
@@ -1098,7 +1097,7 @@ begin
             blkcnt_reg <= blkcnt_reg-1;
           end if;
           -- State transition
-          if (blkcnt_reg=1) then
+          if ((d_stop_pending='1') or (blkcnt_reg=1)) then
             state <= IDLE;
           else
             state <= READ_WAIT;
@@ -1240,12 +1239,17 @@ end beh;
 --
 -- Address   Structure   Function
 -- -------   ---------   -----------------------------------------------------
---   0x0       (31:0)    Card status
---   0x1       (15:0)    Card Specific Data (CSD) lower 16 bits
---   0x2       (15:0)    Relative Card Address (RCA) (READ ONLY)
---   0x3       (15:0)    Driver Stage Register (DSR)
---   0x4        (8:0)    EXT_CSD address
---   0x5        (7:0)    EXT_CSD data
+--   0x0       (31:0)    Card status, some bits read only
+--   0x1       (31:0)    (31:16)=Relative Card Address (RCA) (READ ONLY)
+--                       (15: 0)=Driver Stage Register (DSR) (READ ONLY)
+--   0x2        (8:0)    EXT_CSD address
+--   0x3        (7:0)    EXT_CSD data
+--   0x4       (31:0)    Card Specific Data (CSD) bytes [ 3: 0]
+--                       Byte [0] is a "scratchpad" only, since the card R2
+--                       responder populates those bits with CRC-7 and stop bit.
+--   0x5       (31:0)    Card Specific Data (CSD) bytes [ 7: 4]
+--   0x6       (31:0)    Card Specific Data (CSD) bytes [11: 8]
+--   0x7       (31:0)    Card Specific Data (CSD) bytes [15:12]
 --   0xF       (15:0)    Command receive CRC error count
 --
 -- Notes on SD/MMC card registers:
@@ -1257,16 +1261,18 @@ end beh;
 --   ------  ---------  ------  ---------------------------
 --   status    4 bytes    RW    module R_0
 --   CID      16 bytes    RO    Wholly set by generics
---   CSD      16 bytes    RW*   16 lsbs in module R_1
---   EXT_CSD 512 bytes    RW    contained in Block RAM
---   RCA       2 bytes    RO    module R_2
---   DSR       2 bytes    RO    module R_3, use is optional
+--   CSD      16 bytes    RW    Defaults set by generics
+--   EXT_CSD 512 bytes    RW    contained in initialized Block RAM
+--   RCA       2 bytes    RO    module R_1, bits (31:16)
+--   DSR       2 bytes    RO    module R_1, bits (15: 0), use is optional
 --   OCR       4 bytes    RW    Set by constant plus generics
 --
---   *RW only in the 2 lower bytes, the upper 14 bytes are
---    determined by generics.
+--   CSD is readable in the 2 lower bytes by the card, the upper 14 bytes are
+--   read only on the card side.
 --
 -- Notes on module registers:
+--
+--   Refer to MMC specifications for descriptions of the card registers.
 --
 --   0xF : SD/MMC command receive CRC error count
 --
@@ -1301,10 +1307,10 @@ entity sd_card_emulator is
     CID_PSN    : unsigned(31 downto 0) := str2u("00000012",32); -- Product serial number
     CID_MDT    : unsigned( 7 downto 0) := str2u("43",8); -- Manufacture Date (Jan=1, 1997=0, e.g. Apr. 2000=0x43)
     DEF_STAT   : unsigned(31 downto 0) := str2u("00000000",32); -- Read Write, R_0
-    CSD_WORD_3 : unsigned(31 downto 0) := str2u("905E002A",32); -- Read only
-    CSD_WORD_2 : unsigned(31 downto 0) := str2u("1F5983D3",32); -- Read only
-    CSD_WORD_1 : unsigned(31 downto 0) := str2u("EDB707FF",32); -- Read only
-    CSD_WORD_0 : unsigned(31 downto 0) := str2u("96400000",32); -- (31:16) is read only, (15:0) is R_1 default (R/W)
+    CSD_WORD_3 : unsigned(31 downto 0) := str2u("905E002A",32); -- See MMC spec
+    CSD_WORD_2 : unsigned(31 downto 0) := str2u("1F5983D3",32); -- See MMC spec
+    CSD_WORD_1 : unsigned(31 downto 0) := str2u("EDB707FF",32); -- See MMC spec
+    CSD_WORD_0 : unsigned(31 downto 0) := str2u("96400000",32); -- See MMC spec, bits (7:0) not used.
     DEF_R_Z    : unsigned(31 downto 0) := str2u("33333333",32)  -- Value returned for nonexistent registers
   );
   port (
@@ -1482,11 +1488,13 @@ begin
   with to_integer(adr_i) select
   dat_o <=
     reported_status                        when 0,
-    to_unsigned(0,16) & csd(15 downto 0)   when 1,
-    u_resize(rca,32)                       when 2,
-    u_resize(dsr,32)                       when 3,
-    u_resize(ext_csd_reg_adr,32)           when 4,
-    u_resize(ext_csd_reg_dat_rd,32)        when 5,
+    rca & dsr                              when 1,
+    u_resize(ext_csd_reg_adr,32)           when 2,
+    u_resize(ext_csd_reg_dat_rd,32)        when 3,
+    csd(31 downto 0)                       when 4,
+    csd(63 downto 32)                      when 5,
+    csd(95 downto 64)                      when 6,
+    csd(127 downto 96)                     when 7,
     DEF_R_Z                                when others;
 
   -- Create acknowledge signal
@@ -1496,8 +1504,8 @@ begin
   module_reg_proc: process(sys_clk, sys_rst_n)
   begin
     if (sys_rst_n='0') then
-      status           <= DEF_STAT;
-      csd(15 downto 0) <= CSD_WORD_0(15 downto 0);
+      status <= DEF_STAT;
+      csd    <= CSD_WORD_3 & CSD_WORD_2 & CSD_WORD_1 & CSD_WORD_0;
       ext_csd_reg_adr  <= (others=>'0');
     elsif (sys_clk'event and sys_clk='1') then
       -- Handle bus writes to registers
@@ -1508,12 +1516,18 @@ begin
             -- Except for the reported card_state, and the self-clearing
             -- error bits, the other status can be set here.
             status <= dat_i;
-          when 1 =>
-            csd(15 downto 0) <= dat_i(15 downto 0);
-          when 4 =>
+          when 2 =>
             ext_csd_reg_adr <= dat_i(8 downto 0);
-          when 5 =>
+          when 3 =>
             null; -- EXT_CSD write handled at the BRAM
+          when 4 =>
+            csd( 31 downto  0) <= dat_i;
+          when 5 =>
+            csd( 63 downto 32) <= dat_i;
+          when 6 =>
+            csd( 95 downto 64) <= dat_i;
+          when 7 =>
+            csd(127 downto 96) <= dat_i;
           when others => null;
         end case;
       end if; -- sel_i
@@ -1537,10 +1551,9 @@ begin
 cid <= CID_MID & "000000" & CID_CBX & CID_OID & CID_PNM &
        CID_PRV & CID_PSN & CID_MDT & "00000001";
 cid_resp <= cid(127 downto 8); -- Responder adds the CRC-7 and stop bit fields
-
-csd(127 downto 16) <= CSD_WORD_3 & CSD_WORD_2 & CSD_WORD_1 & CSD_WORD_0(31 downto 16);
 csd_resp <= csd(127 downto 8); -- Responder adds the CRC-7 and stop bit fields
 
+    -- OCR:
     -- Per the eMMC Specification, JESD84-A44, the following fields are defined:
     -- (From table 40, page 111, Section 8.1)
     --
@@ -1594,7 +1607,7 @@ ocr <= ocr_pwrup_done & ocr_mode & "00000" & "111111111" & "0000000" & ocr_vbit 
     );
 
   -- create system side write enable
-  ext_csd_reg_we <= '1' when sel_i='1' and we_i='1' and adr_i=5 else '0';
+  ext_csd_reg_we <= '1' when sel_i='1' and we_i='1' and adr_i=3 else '0';
 
   -- process for the SD/MMC card side
   -- CMD39 "FAST_IO" register writes are handled here
@@ -2687,7 +2700,7 @@ use work.block_ram_pack.all;
   generic (
     EXT_CSD_INIT_FILE : string  := "ext_csd_init.txt"; -- Initial contents of EXT_CSD
     FIFO_DEPTH        : integer := 2048;
-    FILL_LEVEL_BITS   : integer :=   10; -- Should be at least int(floor(log2(FIFO_DEPTH))+1.0)
+    FILL_LEVEL_BITS   : integer :=   12; -- Should be at least int(floor(log2(FIFO_DEPTH))+1.0)
     RAM_ADR_WIDTH     : integer :=   14  -- 16 Kilobytes
   );
   port (
@@ -2779,10 +2792,10 @@ mmc_1 : sd_card_emulator
     CID_PSN    => str2u("00000012",32), -- Product serial number
     CID_MDT    => str2u("43",8), -- Manufacture Date (Jan=1, 1997=0, e.g. Apr. 2000=0x43)
     DEF_STAT   => str2u("00000000",32), -- Read Write, R_0
-    CSD_WORD_3 => str2u("905E002A",32), -- Read only
-    CSD_WORD_2 => str2u("1F590010",32), -- Read only
-    CSD_WORD_1 => str2u("2DB407FF",32), -- Read only
-    CSD_WORD_0 => str2u("96400000",32), -- (31:16) is read only, (15:0) is R_1 default (R/W)
+    CSD_WORD_3 => str2u("905E002A",32), -- See MMC spec
+    CSD_WORD_2 => str2u("1F5903D3",32), -- See MMC spec
+    CSD_WORD_1 => str2u("EDB707FF",32), -- See MMC spec
+    CSD_WORD_0 => str2u("96400000",32), -- See MMC spec, bits (7:0) not used
     DEF_R_Z    => str2u("33333333",32)  -- Value returned for nonexistent registers
   )
   port map(
@@ -2826,7 +2839,7 @@ mmc_1 : sd_card_emulator
       USE_BRAM         => 1, -- Set to nonzero value for BRAM, zero for distributed RAM
       WIDTH            => 8,
       DEPTH            => FIFO_DEPTH,
-      FILL_LEVEL_BITS  => bit_width(FIFO_DEPTH)+1, -- Should be at least int(floor(log2(DEPTH))+1.0)
+      FILL_LEVEL_BITS  => FILL_LEVEL_BITS, -- Should be at least int(floor(log2(DEPTH))+1.0)
       PF_FULL_POINT    => FIFO_DEPTH-1,
       PF_FLAG_POINT    => 512,
       PF_EMPTY_POINT   => 1
@@ -2866,7 +2879,7 @@ mmc_1 : sd_card_emulator
       USE_BRAM         => 1, -- Set to nonzero value for BRAM, zero for distributed RAM
       WIDTH            => 8,
       DEPTH            => FIFO_DEPTH,
-      FILL_LEVEL_BITS  => bit_width(FIFO_DEPTH)+1, -- Should be at least int(floor(log2(DEPTH))+1.0)
+      FILL_LEVEL_BITS  => FILL_LEVEL_BITS, -- Should be at least int(floor(log2(DEPTH))+1.0)
       PF_FULL_POINT    => FIFO_DEPTH-1,
       PF_FLAG_POINT    => 512,
       PF_EMPTY_POINT   => 1

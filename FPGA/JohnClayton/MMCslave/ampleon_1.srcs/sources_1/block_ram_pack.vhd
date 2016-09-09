@@ -414,7 +414,8 @@ architecture beh of swiss_army_ram is
     end function;
 
   -- Variable Declarations
-  shared variable ram1 : ram_array := ram_file_init(init_file);
+--  shared variable ram1 : ram_array := ram_file_init(init_file);
+  shared variable ram1 : ram_array; -- Initialization removed for this project due to Vivado 64K loop limit...
 
   -- Signal Declarations
   signal dat_a_wt : unsigned(DAT_WIDTH-1 downto 0);

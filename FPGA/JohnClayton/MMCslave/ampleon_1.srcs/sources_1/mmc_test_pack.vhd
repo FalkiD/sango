@@ -31,13 +31,14 @@ package mmc_test_pack is
 
   component mmc_tester
   generic (
-    SYS_CLK_RATE      : real; -- The clock rate at which the FPGA runs
-    SYS_LEDS          : natural; -- Number of LED outputs on the board
-    SYS_SWITCHES      : natural; -- Number of Switch inputs on the board
-    EXT_CSD_INIT_FILE : string; -- Initial contents of EXT_CSD
-    FIFO_DEPTH        : integer;
-    FILL_LEVEL_BITS   : integer; -- Should be at least int(floor(log2(FIFO_DEPTH))+1.0)
-    RAM_ADR_WIDTH     : integer
+    SYS_CLK_RATE        : real; -- The clock rate at which the FPGA runs
+    SYS_LEDS            : natural; -- Number of LED outputs on the board
+    SYS_SWITCHES        : natural; -- Number of Switch inputs on the board
+    EXT_CSD_INIT_FILE   : string; -- Initial contents of EXT_CSD
+    HOST_RAM_ADR_BITS   : natural; -- Determines amount of BRAM in MMC host
+    MMC_FIFO_DEPTH      : integer;
+    MMC_FILL_LEVEL_BITS : integer; -- Should be at least int(floor(log2(FIFO_DEPTH))+1.0)
+    MMC_RAM_ADR_BITS    : integer
   );
   port (
 
@@ -619,13 +620,14 @@ use work.async_syscon_pack.all;
 
   entity mmc_tester is
   generic (
-    SYS_CLK_RATE      : real    := 50000000.0; -- The clock rate at which the FPGA runs
-    SYS_LEDS          : natural := 8; -- Number of LED outputs on the board
-    SYS_SWITCHES      : natural := 4; -- Number of Switch inputs on the board
-    EXT_CSD_INIT_FILE : string  := "ext_csd_init.txt"; -- Initial contents of EXT_CSD
-    FIFO_DEPTH        : integer := 2048;
-    FILL_LEVEL_BITS   : integer := 14; -- Should be at least int(floor(log2(FIFO_DEPTH))+1.0)
-    RAM_ADR_WIDTH     : integer := 14  -- 16 Kilobytes
+    SYS_CLK_RATE        : real    := 50000000.0; -- The clock rate at which the FPGA runs
+    SYS_LEDS            : natural := 8; -- Number of LED outputs on the board
+    SYS_SWITCHES        : natural := 4; -- Number of Switch inputs on the board
+    EXT_CSD_INIT_FILE   : string  := "ext_csd_init.txt"; -- Initial contents of EXT_CSD
+    HOST_RAM_ADR_BITS   : natural := 14; -- Determines amount of BRAM in MMC host
+    MMC_FIFO_DEPTH      : integer := 2048;
+    MMC_FILL_LEVEL_BITS : integer := 14; -- Should be at least int(floor(log2(FIFO_DEPTH))+1.0)
+    MMC_RAM_ADR_BITS    : integer := 14  -- 16 Kilobytes
   );
   port (
 
@@ -679,10 +681,6 @@ architecture beh of mmc_tester is
   constant WDOG_VALUE      : natural :=      2000;
   constant DAT_SIZE        : natural := 4*DAT_DIGITS;
   constant ADR_SIZE        : natural := 4*ADR_DIGITS;
-
-    -- MMC related
-  constant HOST_RAM_ADR_BITS : natural := 14; -- Determines amount of BRAM in MMC host
-  constant MMC_RAM_ADR_BITS  : natural := 16; -- Determines amount of BRAM in card
 
     -- Telemetry related
   constant TLM_FIFO_DEPTH  : natural := 16384;
@@ -800,6 +798,9 @@ architecture beh of mmc_tester is
   signal dbus_size_clear       : std_logic;
   signal reg_dbus_size         : unsigned(1 downto 0);
   signal dstart_wait           : unsigned(12 downto 0);
+  signal dstart_wait_reading   : unsigned(12 downto 0);
+  signal dstart_wait_writing   : unsigned(12 downto 0);
+  signal write_active          : std_logic;
   signal dbus_active_count     : unsigned(12 downto 0);
   signal mmc_dat_r1            : unsigned(7 downto 0);
   signal mmc_dat_r2            : unsigned(7 downto 0);
@@ -829,8 +830,8 @@ architecture beh of mmc_tester is
   signal tlm_log_dat_we        : std_logic;
 
     -- local signals for the MMC data pipe
-  signal s_fif_dat_rd_level : unsigned(11 downto 0);
-  signal s_fif_dat_wr_level : unsigned(11 downto 0);
+  signal s_fif_dat_rd_level : unsigned(MMC_FILL_LEVEL_BITS-1 downto 0);
+  signal s_fif_dat_wr_level : unsigned(MMC_FILL_LEVEL_BITS-1 downto 0);
 
 begin
 
@@ -1168,7 +1169,7 @@ begin
       -- location offset 183d (0xB7).  Based on the current bus size, a
       -- dstart_wait value is derived, and used to ignore activity on the
       -- SD/MMC data bus during the transfer, thereby guaranteeing that only
-      -- start bits are counted.
+      -- real start bits are counted.
       if (t_rx_cmd_done='1' and (t_rx_cmd_raw(47 downto 40)=16#46#)
           and t_rx_cmd_crc_err='0' and t_rx_cmd_stop_err='0') then
         if (t_rx_cmd_raw(31 downto 24)=16#B7#) then
@@ -1258,12 +1259,22 @@ begin
   -- Derive dstart_wait values, used in detecting valid data transfer
   -- start bits.  Tune these values as needed, based on the sector
   -- size.
+  write_active <= '1' when ((t_rx_cmd_raw(45 downto 40)=24) or (t_rx_cmd_raw(45 downto 40)=25)) else '0';
+  dstart_wait <= dstart_wait_writing when (write_active='1') else dstart_wait_reading;
+  -- When reading, include sector, plus start, CRC-16 and stop bits
   with (reg_dbus_size) select
-  dstart_wait <=
-    to_unsigned(4096,dstart_wait'length) when "00",
-    to_unsigned(1024,dstart_wait'length) when "01",
-    to_unsigned( 512,dstart_wait'length) when "10",
-    to_unsigned( 512,dstart_wait'length) when others;
+  dstart_wait_reading <=
+    to_unsigned(4096+2+16,dstart_wait'length) when "00",
+    to_unsigned(1024+2+16,dstart_wait'length) when "01",
+    to_unsigned( 512+2+16,dstart_wait'length) when "10",
+    to_unsigned( 512+2+16,dstart_wait'length) when others;
+  -- When writing, include sector, plus start, CRC-16, stop and CRC response token (2 turnaround+5 bits)
+  with (reg_dbus_size) select
+  dstart_wait_writing <=
+    to_unsigned(4096+2+16+7,dstart_wait'length) when "00",
+    to_unsigned(1024+2+16+7,dstart_wait'length) when "01",
+    to_unsigned( 512+2+16+7,dstart_wait'length) when "10",
+    to_unsigned( 512+2+16+7,dstart_wait'length) when others;
 
   -------------------------------------------------------------------------
   -- SD/MMC transaction telemetry sending logic
@@ -1502,7 +1513,7 @@ end process;
   mmc_slave : mmc_data_pipe
   generic map(
     EXT_CSD_INIT_FILE => "ext_csd_init.txt", -- Initial contents of EXT_CSD
-    FIFO_DEPTH        => 2048,
+    FIFO_DEPTH        => MMC_FIFO_DEPTH,
     FILL_LEVEL_BITS   => s_fif_dat_wr_level'length, -- Should be at least int(floor(log2(FIFO_DEPTH))+1.0)
     RAM_ADR_WIDTH     => MMC_RAM_ADR_BITS
   )

@@ -6,7 +6,7 @@
 
 # Clock signal
 
-set_property -dict {PACKAGE_PIN E3 IOSTANDARD LVCMOS33} [get_ports {CLK}]
+set_property -dict {PACKAGE_PIN E3 IOSTANDARD LVCMOS33} [get_ports CLK]
 create_clock -period 10.000 -name sys_clk_pin -waveform {0.000 5.000} -add [get_ports CLK]
 
 # MMC clock signal -- The use of this property was "highly discouraged"
@@ -25,18 +25,18 @@ set_property IOSTANDARD LVCMOS33 [get_ports {SW[3]}]
 
 # LEDs
 
-set_property -dict {PACKAGE_PIN E1 IOSTANDARD LVCMOS33} [get_ports {RGB0_Blue}]
-set_property -dict {PACKAGE_PIN F6 IOSTANDARD LVCMOS33} [get_ports {RGB0_Green}]
-set_property -dict {PACKAGE_PIN G6 IOSTANDARD LVCMOS33} [get_ports {RGB0_Red}]
-set_property -dict {PACKAGE_PIN G4 IOSTANDARD LVCMOS33} [get_ports {RGB1_Blue}]
-set_property -dict {PACKAGE_PIN J4 IOSTANDARD LVCMOS33} [get_ports {RGB1_Green}]
-set_property -dict {PACKAGE_PIN G3 IOSTANDARD LVCMOS33} [get_ports {RGB1_Red}]
-set_property -dict {PACKAGE_PIN H4 IOSTANDARD LVCMOS33} [get_ports {RGB2_Blue}]
-set_property -dict {PACKAGE_PIN J2 IOSTANDARD LVCMOS33} [get_ports {RGB2_Green}]
-set_property -dict {PACKAGE_PIN J3 IOSTANDARD LVCMOS33} [get_ports {RGB2_Red}]
-set_property -dict {PACKAGE_PIN K2 IOSTANDARD LVCMOS33} [get_ports {RGB3_Blue}]
-set_property -dict {PACKAGE_PIN H6 IOSTANDARD LVCMOS33} [get_ports {RGB3_Green}]
-set_property -dict {PACKAGE_PIN K1 IOSTANDARD LVCMOS33} [get_ports {RGB3_Red}]
+set_property -dict {PACKAGE_PIN E1 IOSTANDARD LVCMOS33} [get_ports RGB0_Blue]
+set_property -dict {PACKAGE_PIN F6 IOSTANDARD LVCMOS33} [get_ports RGB0_Green]
+set_property -dict {PACKAGE_PIN G6 IOSTANDARD LVCMOS33} [get_ports RGB0_Red]
+set_property -dict {PACKAGE_PIN G4 IOSTANDARD LVCMOS33} [get_ports RGB1_Blue]
+set_property -dict {PACKAGE_PIN J4 IOSTANDARD LVCMOS33} [get_ports RGB1_Green]
+set_property -dict {PACKAGE_PIN G3 IOSTANDARD LVCMOS33} [get_ports RGB1_Red]
+set_property -dict {PACKAGE_PIN H4 IOSTANDARD LVCMOS33} [get_ports RGB2_Blue]
+set_property -dict {PACKAGE_PIN J2 IOSTANDARD LVCMOS33} [get_ports RGB2_Green]
+set_property -dict {PACKAGE_PIN J3 IOSTANDARD LVCMOS33} [get_ports RGB2_Red]
+set_property -dict {PACKAGE_PIN K2 IOSTANDARD LVCMOS33} [get_ports RGB3_Blue]
+set_property -dict {PACKAGE_PIN H6 IOSTANDARD LVCMOS33} [get_ports RGB3_Green]
+set_property -dict {PACKAGE_PIN K1 IOSTANDARD LVCMOS33} [get_ports RGB3_Red]
 set_property PACKAGE_PIN H5 [get_ports {LED[0]}]
 set_property IOSTANDARD LVCMOS33 [get_ports {LED[0]}]
 set_property PACKAGE_PIN J5 [get_ports {LED[1]}]
@@ -176,8 +176,8 @@ set_property PULLUP true [get_ports {jd[0]}]
 
 #USB-UART Interface
 
-set_property -dict {PACKAGE_PIN D10 IOSTANDARD LVCMOS33} [get_ports {UART_RSP_o}]
-set_property -dict {PACKAGE_PIN A9 IOSTANDARD LVCMOS33} [get_ports {UART_CMD_i}]
+set_property -dict {PACKAGE_PIN D10 IOSTANDARD LVCMOS33} [get_ports UART_RSP_o]
+set_property -dict {PACKAGE_PIN A9 IOSTANDARD LVCMOS33} [get_ports UART_CMD_i]
 
 ##ChipKit Signals
 
@@ -258,7 +258,7 @@ set_property -dict {PACKAGE_PIN A9 IOSTANDARD LVCMOS33} [get_ports {UART_CMD_i}]
 ##Misc. ChipKit signals
 
 #set_property -dict { PACKAGE_PIN M17   IOSTANDARD LVCMOS33 } [get_ports { ck_ioa }]; #IO_L10N_T1_D15_14 Sch=ck_ioa
-set_property -dict {PACKAGE_PIN C2 IOSTANDARD LVCMOS33} [get_ports {ck_rst}]
+set_property -dict {PACKAGE_PIN C2 IOSTANDARD LVCMOS33} [get_ports ck_rst]
 
 ## ChipKit SPI
 
@@ -312,3 +312,7 @@ set_property -dict {PACKAGE_PIN C2 IOSTANDARD LVCMOS33} [get_ports {ck_rst}]
 #set_property -dict { PACKAGE_PIN F13   IOSTANDARD LVCMOS33 } [get_ports { sns5v_p[0] }]; #IO_L5P_T0_AD9P_15 Sch=sns5v_p[0]
 #set_property -dict { PACKAGE_PIN C12   IOSTANDARD LVCMOS33 } [get_ports { vsns5v[0] }]; #IO_L3P_T0_DQS_AD1P_15 Sch=vsns5v[0]
 #set_property -dict { PACKAGE_PIN B16   IOSTANDARD LVCMOS33 } [get_ports { vsnsvu }]; #IO_L7P_T1_AD2P_15 Sch=vsnsvu
+
+
+set_property BITSTREAM.CONFIG.CONFIGRATE 33 [current_design]
+set_property CONFIG_MODE SPIx4 [current_design]

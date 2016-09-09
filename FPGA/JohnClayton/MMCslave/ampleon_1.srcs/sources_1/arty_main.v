@@ -117,9 +117,10 @@ assign LED        = SW[3]?(count1[27:24] ^ SW):led_l[3:0];
     .SYS_LEDS             (16),
     .SYS_SWITCHES         (8),
     .EXT_CSD_INIT_FILE    ("ext_csd_init.txt"), // Initial contents of EXT_CSD
-    .FIFO_DEPTH           (2048),
-    .FILL_LEVEL_BITS      (14),
-    .RAM_ADR_WIDTH        (17)
+    .HOST_RAM_ADR_BITS    (14), // Determines amount of BRAM in MMC host
+    .MMC_FIFO_DEPTH       (2048),
+    .MMC_FILL_LEVEL_BITS  (14),
+    .MMC_RAM_ADR_BITS     (17)
   ) mmc_tester_0 (
 
     // Asynchronous reset
