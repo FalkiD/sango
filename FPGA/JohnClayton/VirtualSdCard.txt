@@ -1,0 +1,16 @@
+From:
+http://superuser.com/questions/373463/how-to-access-an-sd-card-from-a-virtual-machine
+
+List windows devices:
+(admin prompt)
+wmic diskdrive list brief
+
+Usually \\.\PHYSICALDRIVE1 or 2 
+
+Then execute this, with correct drive info:
+"C:\Program Files\Oracle\VirtualBox\VBoxManage" internalcommands createrawvmdk -filename "%USERPROFILE%/Desktop/sdcard.vmdk" -rawdisk "\\.\PHYSICALDRIVE1"
+
+Example:
+"%USERPROFILE%\VirtualBox VMs\Ubuntu"
+
+"C:\Program Files\Oracle\VirtualBox\VBoxManage" internalcommands createrawvmdk -filename "%USERPROFILE%\VirtualBox VMs\Ubuntu\mmccard.vmdk" -rawdisk "\\.\PHYSICALDRIVE1"
