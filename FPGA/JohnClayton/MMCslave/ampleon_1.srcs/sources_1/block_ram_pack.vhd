@@ -1,3 +1,9 @@
+-- **28-Feb-2017**
+-- **Note** Reverse the comments on line 416 to use the host_ram_init.txt
+-- file to initialize host RAM. The initialization was commented to maximize
+-- RAM so a small file system could be tested. When using the FIFO interface
+-- instead of RAM teh initialization can be left in.
+--
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
