@@ -128,13 +128,10 @@
 //   to be sent to hardware.
 //
 //   Each SPI device also has a fifo at top level. SPI data is written
-//   by each subsystem processor into the correct SPI fifo. When a
+//   by each subsystem processor into the corresponding SPI fifo. When a
 //   hardware processor has finished generating SPI bytes, a request 
-//   to write SPI will be written into the top level SpiQueue fifo.
+//   to write SPI will be written to the SPI processor.
 //
-//   An always block at top level will process the SPI queue, writing
-//   bytes from a device fifo to the device.
-// 
 // -----------------------------------------------------------------------------
 
 `include "version.v"
@@ -146,35 +143,30 @@
 // `define's
 // -----------------------------------------------------------------------------
 
-// John Clayton's `define's
-// 
 `define ENTRIES         16
 `define MMC_SECTOR_SIZE 512
 
 // For displaying output with LED's. 50MHz clock
-`define MS750      750000000/20     // 750e6 NS/Period = 750ms
-`define MS250      250000000/20     // 250 ms
-`define MS500      500000000/20     // 500 ms
-// Flash 16-bits using 4 led'S every 5 seconds
-`define MS2000     2000000000/20    // 2 seconds 
-`define MS2500     2500000000/20    // 2.5 seconds 
-`define MS3000     3000000000/20    // 3 seconds 
-`define MS3500     3500000000/20    // 3.5 seconds 
+//`define MS750      750000000/20     // 750e6 NS/Period = 750ms
+//`define MS250      250000000/20     // 250 ms
+//`define MS500      500000000/20     // 500 ms
+//// Flash 16-bits using 4 led'S every 5 seconds
+//`define MS2000     2000000000/20    // 2 seconds 
+//`define MS2500     2500000000/20    // 2.5 seconds 
+//`define MS3000     3000000000/20    // 3 seconds 
+//`define MS3500     3500000000/20    // 3.5 seconds 
 
-`define MS5000     250000000        // 5 seconds
+//`define MS5000     250000000        // 5 seconds
 
-`define US150      150000/20        // 150 us
-`define MS001      1500000/20       // 1.5ms 
+//`define US150      150000/20        // 150 us
+//`define MS001      1500000/20       // 1.5ms 
 
 // Coop's #define's
 // 
 //                 Temporary workaround for Si514 problem on etch rev A boards
 `define ETCHREVA_ALTFPGACLK 1
 
-
-
 // -----------------------------------------------------------------------------
-
 
 module s4
 (
@@ -185,7 +177,7 @@ module s4
   output             ACTIVE_LEDn,        //  T14   O       
 
   inout              MMC_CLK,            //  N11   I        MCU<-->MMC-Slave I/F
-  output             MMC_IRQn,           //  P8    O       
+  output             MMC_IRQn,           //  P8    O        MCU SDIO_SD pin, low==MMC card present       
   inout              MMC_CMD,            //  R7    I       
 
   inout              MMC_DAT7,           //  R6    IO      
@@ -294,13 +286,23 @@ wire        mmc_tlm;
 wire        syscon_rsp;
 
 // MMC card I/O proxy signals
-// (They are mapped to jb and jc ports)
+// (During Arty dev they were mapped to jb and jc ports)
 wire        MMC_CLK_io;
 wire        MMC_CMD_io;
 wire  [7:0] MMC_DAT_io;
 wire        MMC_CLK_i;
 wire        MMC_CMD_i;
 wire  [7:0] MMC_DAT_i;
+
+// SPI debugging connections for w 03000030 command
+// Write up to 14 byte to SPI device
+wire  [7:0] arr_spi_bytes [13:0];
+wire  [3:0] dbg_spi_bytes;      // bytes to send
+reg   [3:0] dbg_spi_count;      // down counter
+wire        dbg_spi_start;
+reg         dbg_spi_done;
+wire  [2:0] dbg_spi_device;     // 1=VGA, 2=SYN, 3=DDS, 4=ZMON
+wire  [15:0] dbg_enables;       // toggle various enables/wires
 
 //------------------------------------------------------------------------
 // Start of logic
@@ -425,37 +427,33 @@ MMCME2_BASE_inst (
   assign clk200 = 1'b0;
   assign clk050 = 1'b0;
 
+  //assign sys_clk   = clk100;        zzm_etchreva_dbg
+  assign sys_clk   = clkin;       //  zzm_etchreva_dbg
+  //assign sys_rst_n = FPGA_MCU1;     zzm_etchreva_dbg
+  assign sys_rst_n = 1'b1;        //  zzm_etchreva_dbg
 
-//assign sys_clk   = clk100;        zzm_etchreva_dbg
-assign sys_clk   = clkin;       //  zzm_etchreva_dbg
-//assign sys_rst_n = FPGA_MCU1;     zzm_etchreva_dbg
-assign sys_rst_n = 1'b1;        //  zzm_etchreva_dbg
-
-
-// Create a "time-alive" counter.
-//   2^40 @ 100MHz wraps at ~3.05 hours.
-//
-always @(posedge sys_clk)
-  if (!sys_rst_n) begin
-    count1 <= 0;
-  end
-  else begin
-    count1 <= count1+1;
+  // Create a "time-alive" counter.
+  //   2^40 @ 100MHz wraps at ~3.05 hours.
+  //
+  always @(posedge sys_clk)
+    if (!sys_rst_n) begin
+      count1 <= 0;
+    end
+    else begin
+      count1 <= count1+1;
   end
 
-
-// Create a "blink" counter.
-//   2^26 @ 100MHz wraps at ~1.5  seconds.
-//   2^40 @ 100MHz wraps at ~3.05 hours.
-//
-always @(posedge sys_clk)
-  if (!sys_rst_n) begin
-    count2 <= 0;
+  // Create a "blink" counter.
+  //   2^26 @ 100MHz wraps at ~1.5  seconds.
+  //   2^40 @ 100MHz wraps at ~3.05 hours.
+  //
+  always @(posedge sys_clk)
+    if (!sys_rst_n) begin
+      count2 <= 0;
+    end
+    else begin
+      count2 <= count2+1;
   end
-  else begin
-    count2 <= count2+1;
-  end
-
 
 // +----------------------------------------------------------+
 // |  mmc_tester                                              |
@@ -511,12 +509,162 @@ always @(posedge sys_clk)
     .mmc_dat_o     (mmc_dat),
     .mmc_dat_oe_o  (mmc_dat_oe),
     .mmc_od_mode_o (mmc_od_mode),  // open drain mode, applies to sd_cmd_o and sd_dat_o
-    .mmc_dat_siz_o (mmc_dat_siz)
-
+    .mmc_dat_siz_o (mmc_dat_siz),
+    
+    // 31-Mar added a crapload of debug signals
+    // signals for spi debug data written to MMC debug terminal (03000030 X Y Z...)
+    .dbg_spi_data0_o    (arr_spi_bytes[0]),
+    .dbg_spi_data1_o    (arr_spi_bytes[1]),
+    .dbg_spi_data2_o    (arr_spi_bytes[2]),
+    .dbg_spi_data3_o    (arr_spi_bytes[3]),
+    .dbg_spi_data4_o    (arr_spi_bytes[4]),
+    .dbg_spi_data5_o    (arr_spi_bytes[5]),
+    .dbg_spi_data6_o    (arr_spi_bytes[6]),
+    .dbg_spi_data7_o    (arr_spi_bytes[7]),
+    .dbg_spi_data8_o    (arr_spi_bytes[8]),
+    .dbg_spi_data9_o    (arr_spi_bytes[9]),
+    .dbg_spi_dataA_o    (arr_spi_bytes[10]),
+    .dbg_spi_dataB_o    (arr_spi_bytes[11]),
+    .dbg_spi_dataC_o    (arr_spi_bytes[12]),
+    .dbg_spi_dataD_o    (arr_spi_bytes[13]),
+    .dbg_spi_bytes_io   (dbg_spi_bytes),
+    .dbg_spi_start_o    (dbg_spi_start),
+    .dbg_spi_device_o   (dbg_spi_device),   // 1=VGA, 2=SYN, 3=DDS, 4=ZMON
+    .dbg_spi_busy_i     (dbg_spi_busy),     // asserted while top processes SPI bytes
+    .dbg_enables_o      (dbg_enables)
   );
+  
+  // 31-Mar-2017 Add SPI instances to debug on S4
+  //////////////////////////////////////////////////////
+  // SPI instance for debugging S4
+  // We'll run at 12.5MHz (100MHz/8), CPOL=0, CPHA=0
+  //////////////////////////////////////////////////////
+  reg         SPI_MISO;
+  wire        SPI_MOSI;
+  wire        SPI_SCLK;
+  reg         SPI_SSN;
+  
+  reg         spi_run = 0;
+  reg  [7:0]  spi_write;
+  wire [7:0]  spi_read;
+  wire        spi_busy;         // 'each byte' busy
+  wire        spi_done_byte;    // 1=done with a byte, data is valid
+  spi #(.CLK_DIV(3)) syn_spi 
+  (
+      .clk(sys_clk),
+      .rst(!sys_rst_n),
+      .miso(SPI_MISO),
+      .mosi(SPI_MOSI),
+      .sck(SPI_SCLK),
+      .start(spi_run),
+      .data_in(spi_write),
+      .data_out(spi_read),
+      .busy(spi_busy),
+      .new_data(spi_done_byte)     // 1=signal, data_out is valid
+  );
+  // Run the debug SPI instance
+  `define SPI_IDLE            4'd0
+  `define SPI_FETCH_DEVICE    4'd1
+  `define SPI_START_WAIT      4'd2
+  `define SPI_WRITING         4'd3
+  `define SPI_SSN_OFF         4'd4
+  reg [3:0]   spi_state    = `SPI_IDLE;    
+  always @(posedge sys_clk) begin
+    if(sys_rst_n == 1'b0) begin
+      SPI_SSN <= 1'b1;
+      spi_state <= `SPI_IDLE;    
+    end
+    else begin
+      case(spi_state)
+      `SPI_IDLE: begin
+        if(dbg_spi_start) begin
+          spi_run <= 1'b1;
+          dbg_spi_count <= 0;
+          spi_write <= arr_spi_bytes[0];
+          spi_state <= `SPI_START_WAIT;
+          SPI_SSN <= 1'b0;
+        end
+        else
+          SPI_SSN = 1'b1;
+      end
+      `SPI_FETCH_DEVICE: begin
+      end
+      `SPI_START_WAIT: begin
+        if(spi_busy == 1'b1) begin
+          dbg_spi_count <= dbg_spi_count + 1;
+          spi_state <= `SPI_WRITING;
+        end
+      end
+      `SPI_WRITING: begin
+        if(spi_done_byte == 1'b1) begin
+          // ready for next byte 
+          if(dbg_spi_count == dbg_spi_bytes) begin
+            spi_run <= 1'b0;
+            dbg_spi_done <= 1'b1;        
+            spi_state <= `SPI_SSN_OFF;
+          end
+          else begin
+            spi_write <= arr_spi_bytes[dbg_spi_count];
+            spi_state <= `SPI_START_WAIT;
+          end
+        end
+      end
+      `SPI_SSN_OFF: begin
+        if(spi_busy == 1'b0) begin
+          SPI_SSN <= 1'b1;
+          spi_state <= `SPI_IDLE;
+        end
+      end
+      endcase
+    end
+  end
+  // top level SPI busy flag used by mmc_test_pack 
+  // SPI debug command processsor
+  assign dbg_spi_busy = (spi_state == `SPI_IDLE) ? 1'b0 : 1'b1;  
+  // Connect SPI to wires based on which device is selected.
+  localparam SPI_VGA = 4'd1, SPI_SYN = 4'd2, SPI_DDS = 4'd3, SPI_ZMON = 4'd4;
+  assign VGA_SSN = dbg_spi_device == 0 ? 1'b1 :
+		   dbg_spi_device == SPI_VGA ? SPI_SSN : 1'b1;
+  assign VGA_SCLK = (dbg_spi_device == SPI_VGA) ? SPI_SCLK : 1'b0;
+  assign VGA_MOSI = (dbg_spi_device == SPI_VGA) ? SPI_MOSI : 1'b0;
 
-  // assign UART_RSP_o = SW[3]?mmc_tlm:syscon_rsp;
-  //assign UART_RSP_o = syscon_rsp;
+  assign SYN_SSN = dbg_spi_device == 0 ? 1'b1 :
+		   dbg_spi_device == SPI_SYN ? SPI_SSN : 1'b1;
+  assign SYN_SCLK = (dbg_spi_device == SPI_SYN) ? SPI_SCLK : 1'b0;
+  assign SYN_MOSI = (dbg_spi_device == SPI_SYN) ? SPI_MOSI : 1'b0;
+
+  assign DDS_SSN = dbg_spi_device == 0 ? 1'b1 :
+		   dbg_spi_device == SPI_DDS ? SPI_SSN : 1'b1;
+  assign DDS_SCLK = (dbg_spi_device == SPI_DDS) ? SPI_SCLK : 1'b0;
+  assign DDS_MOSI = (dbg_spi_device == SPI_DDS) ? SPI_MOSI : 1'b0;
+  
+  // S4 Enables/lines
+  localparam BIT_RF_GATE     = 12'h001;
+  localparam BIT_RF_GATE2    = 12'h002;
+  localparam BIT_VGA_VSW     = 12'h004;
+  localparam BIT_DRV_BIAS_EN = 12'h008;
+  localparam BIT_PA_BIAS_EN  = 12'h010;
+  localparam BIT_SYN_STAT    = 12'h020;
+  localparam BIT_SYN_MUTE    = 12'h040;
+  localparam BIT_DDS_IORST   = 12'h080;
+  localparam BIT_DDS_IOUP    = 12'h100;
+  localparam BIT_DDS_SYNC    = 12'h200;
+  localparam BIT_DDS_PS0     = 12'h400;
+  localparam BIT_DDS_PS1     = 12'h800;
+  assign RF_GATE = dbg_enables & BIT_RF_GATE ? 1'b1 : 1'b0;
+  assign RF_GATE2 = dbg_enables & BIT_RF_GATE2 ? 1'b1 : 1'b0;
+  assign VGA_VSW = dbg_enables & BIT_VGA_VSW ? 1'b1 : 1'b0;
+  assign VGA_VSWn = !VGA_VSW;       
+  assign DRV_BIAS_EN = dbg_enables & BIT_DRV_BIAS_EN ? 1'b1 : 1'b0;
+  assign PA_BIAS_EN = dbg_enables & BIT_PA_BIAS_EN ? 1'b1 : 1'b0;
+  assign SYN_MUTE = dbg_enables & BIT_SYN_MUTE ? 1'b1 : 1'b0;
+  assign DDS_IORST = dbg_enables & BIT_DDS_IORST ? 1'b1 : 1'b0;
+  assign DDS_IOUP = dbg_enables & BIT_DDS_IOUP ? 1'b1 : 1'b0;
+  assign DDS_SYNC = dbg_enables & BIT_DDS_SYNC ? 1'b1 : 1'b0;
+  assign DDS_PS0 = dbg_enables & BIT_DDS_PS0 ? 1'b1 : 1'b0;
+  assign DDS_PS1 = dbg_enables & BIT_DDS_PS1 ? 1'b1 : 1'b0;
+
+  // FPGA_TXD to MMC UART output
   assign FPGA_TXD = syscon_rsp;
 
   // Implement MMC card tri-state drivers at the top level
@@ -564,37 +712,14 @@ always @(posedge sys_clk)
   
 //  assign    ACTIVE_LEDn = led_l[0];    //  T14   O       
   assign    ACTIVE_LEDn = count2[24];  //  T14   O       zzm_etchreva_dbg
-  assign    MMC_IRQn = 1'bZ;           //  P8    O       
+  assign    MMC_IRQn = 1'b0;           //  P8    O      Assert Card Present always       
   assign    TRIG_OUT = 1'bZ;           //  M16   O       
-//  assign    FPGA_TXD = 1'bZ;           //  N16   O        MMC UART
-  assign    VGA_MOSI = 1'bZ;           //  B7    O        RF Power Setting SPI
-  assign    VGA_SCLK = 1'bZ;           //  B6    O        I/F
-  assign    VGA_SSn = 1'bZ;            //  B5    O       
-  assign    VGA_VSW = 1'bZ;            //  A5    O       
-  assign    VGA_VSWn = 1'bZ;           //  A3    O       
-  assign    SYN_MOSI = 1'bZ;           //  B2    O        LTC6946 RF Synth SPI I/F
-  assign    SYN_SCLK = 1'bZ;           //  C1    O       
-  assign    SYN_SSn = 1'bZ;            //  C1    O
-  assign    SYN_MUTE = 1'bZ;           //  E2    O
-  assign    DDS_MOSI = 1'bZ;           //  F2    O        AD9954 DDS SPI+ I/F
-  assign    DDS_SSn = 1'bZ;            //  G2    O
-  assign    DDS_SCLK = 1'bZ;           //  G1    O       
-  assign    DDS_IORST = 1'bZ;          //  H2    O       
-  assign    DDS_IOUP = 1'bZ;           //  H1    O       
-  assign    DDS_SYNC = 1'bZ;           //  K1    O
-  assign    DDS_PS0 = 1'bZ;            //  J1    O
-  assign    DDS_PS1 = 1'bZ;            //  L2    O
-  assign    RF_GATE = 1'bZ;            //  C2    O        RF On/Off Keying/Biasing
-  assign    RF_GATE2 = 1'bZ;           //  C3    O       
-  assign    DRV_BIAS_EN = 1'bZ;        //  A3    O                 
-  assign    PA_BIAS_EN = 1'bZ;         //  K2    O                 
-  assign    ZMON_EN = 1'bZ;            //  T2    O        ZMon SPI Cnvrt & Read I/F
-  assign    CONV = 1'bZ;               //  M1    O
-  assign    ADC_SCLK = 1'bZ;           //  R1    O
+//  assign    ZMON_EN = 1'bZ;            //  T2    O        ZMon SPI Cnvrt & Read I/F
+//  assign    CONV = 1'bZ;               //  M1    O
+//  assign    ADC_SCLK = 1'bZ;           //  R1    O
   assign    FPGA_TXD2 = 1'bZ;          //  R10   O        HW DBG UART
   
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
-
     
  /*
     // Debugging UART variables
