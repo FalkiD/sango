@@ -429,8 +429,8 @@ MMCME2_BASE_inst (
 
   //assign sys_clk   = clk100;        zzm_etchreva_dbg
   assign sys_clk   = clkin;       //  zzm_etchreva_dbg
-  //assign sys_rst_n = FPGA_MCU1;     zzm_etchreva_dbg
-  assign sys_rst_n = 1'b1;        //  zzm_etchreva_dbg
+  assign sys_rst_n = FPGA_MCU1;     // FPGA_MCU1 is RESETn
+  //assign sys_rst_n = 1'b1;        //  zzm_etchreva_dbg
 
   // Create a "time-alive" counter.
   //   2^40 @ 100MHz wraps at ~3.05 hours.
@@ -542,7 +542,7 @@ MMCME2_BASE_inst (
   reg         SPI_MISO;
   wire        SPI_MOSI;
   wire        SPI_SCLK;
-  reg         SPI_SSN;
+  reg         SPI_SSn;
   
   reg         spi_run = 0;
   reg  [7:0]  spi_write;
@@ -571,7 +571,7 @@ MMCME2_BASE_inst (
   reg [3:0]   spi_state    = `SPI_IDLE;    
   always @(posedge sys_clk) begin
     if(sys_rst_n == 1'b0) begin
-      SPI_SSN <= 1'b1;
+      SPI_SSn <= 1'b1;
       spi_state <= `SPI_IDLE;    
     end
     else begin
@@ -582,10 +582,10 @@ MMCME2_BASE_inst (
           dbg_spi_count <= 0;
           spi_write <= arr_spi_bytes[0];
           spi_state <= `SPI_START_WAIT;
-          SPI_SSN <= 1'b0;
+          SPI_SSn <= 1'b0;
         end
         else
-          SPI_SSN = 1'b1;
+          SPI_SSn = 1'b1;
       end
       `SPI_FETCH_DEVICE: begin
       end
@@ -611,7 +611,7 @@ MMCME2_BASE_inst (
       end
       `SPI_SSN_OFF: begin
         if(spi_busy == 1'b0) begin
-          SPI_SSN <= 1'b1;
+          SPI_SSn <= 1'b1;
           spi_state <= `SPI_IDLE;
         end
       end
@@ -623,20 +623,17 @@ MMCME2_BASE_inst (
   assign dbg_spi_busy = (spi_state == `SPI_IDLE) ? 1'b0 : 1'b1;  
   // Connect SPI to wires based on which device is selected.
   localparam SPI_VGA = 4'd1, SPI_SYN = 4'd2, SPI_DDS = 4'd3, SPI_ZMON = 4'd4;
-  assign VGA_SSN = dbg_spi_device == 0 ? 1'b1 :
-		   dbg_spi_device == SPI_VGA ? SPI_SSN : 1'b1;
-  assign VGA_SCLK = (dbg_spi_device == SPI_VGA) ? SPI_SCLK : 1'b0;
-  assign VGA_MOSI = (dbg_spi_device == SPI_VGA) ? SPI_MOSI : 1'b0;
+  assign VGA_SSn = dbg_spi_device == SPI_VGA ? SPI_SSn : 1'b1;
+  assign VGA_SCLK = dbg_spi_device == SPI_VGA ? SPI_SCLK : 1'b0;
+  assign VGA_MOSI = dbg_spi_device == SPI_VGA ? SPI_MOSI : 1'b0;
 
-  assign SYN_SSN = dbg_spi_device == 0 ? 1'b1 :
-		   dbg_spi_device == SPI_SYN ? SPI_SSN : 1'b1;
-  assign SYN_SCLK = (dbg_spi_device == SPI_SYN) ? SPI_SCLK : 1'b0;
-  assign SYN_MOSI = (dbg_spi_device == SPI_SYN) ? SPI_MOSI : 1'b0;
+  assign SYN_SSn = dbg_spi_device == SPI_SYN ? SPI_SSn : 1'b1;
+  assign SYN_SCLK = dbg_spi_device == SPI_SYN ? SPI_SCLK : 1'b0;
+  assign SYN_MOSI = dbg_spi_device == SPI_SYN ? SPI_MOSI : 1'b0;
 
-  assign DDS_SSN = dbg_spi_device == 0 ? 1'b1 :
-		   dbg_spi_device == SPI_DDS ? SPI_SSN : 1'b1;
-  assign DDS_SCLK = (dbg_spi_device == SPI_DDS) ? SPI_SCLK : 1'b0;
-  assign DDS_MOSI = (dbg_spi_device == SPI_DDS) ? SPI_MOSI : 1'b0;
+  assign DDS_SSn = dbg_spi_device == SPI_DDS ? SPI_SSn : 1'b1;
+  assign DDS_SCLK = dbg_spi_device == SPI_DDS ? SPI_SCLK : 1'b0;
+  assign DDS_MOSI = dbg_spi_device == SPI_DDS ? SPI_MOSI : 1'b0;
   
   // S4 Enables/lines
   localparam BIT_RF_GATE     = 12'h001;
