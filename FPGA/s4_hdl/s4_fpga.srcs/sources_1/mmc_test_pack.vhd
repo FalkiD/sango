@@ -1,8 +1,10 @@
 --------------------------------------------------------------------------
+--------------------------------------------------------------------------
 -- Package containing SD Card interface modules,
 -- and related support modules.
 --
-
+-- 31-Mar-2017 RMR Added SPI debug capability to 'w 03000030'
+--
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
@@ -74,8 +76,27 @@ package mmc_test_pack is
     mmc_dat_o     : out unsigned(7 downto 0);
     mmc_dat_oe_o  : out std_logic;
     mmc_od_mode_o : out std_logic; -- Open drain mode
-    mmc_dat_siz_o : out unsigned(1 downto 0)
-
+    mmc_dat_siz_o : out unsigned(1 downto 0);
+    
+    dbg_spi_data0_o     : out unsigned(7 downto 0);
+    dbg_spi_data1_o     : out unsigned(7 downto 0);
+    dbg_spi_data2_o     : out unsigned(7 downto 0);
+    dbg_spi_data3_o     : out unsigned(7 downto 0);
+    dbg_spi_data4_o     : out unsigned(7 downto 0);
+    dbg_spi_data5_o     : out unsigned(7 downto 0);
+    dbg_spi_data6_o     : out unsigned(7 downto 0);
+    dbg_spi_data7_o     : out unsigned(7 downto 0);
+    dbg_spi_data8_o     : out unsigned(7 downto 0);
+    dbg_spi_data9_o     : out unsigned(7 downto 0);
+    dbg_spi_dataA_o     : out unsigned(7 downto 0);
+    dbg_spi_dataB_o     : out unsigned(7 downto 0);
+    dbg_spi_dataC_o     : out unsigned(7 downto 0);
+    dbg_spi_dataD_o     : out unsigned(7 downto 0);
+    dbg_spi_bytes_io    : inout unsigned(3 downto 0); --bytes to send
+    dbg_spi_start_o     : inout std_logic;
+    dbg_spi_device_o    : out unsigned(2 downto 0); --1=VGA, 2=SYN, 3=DDS, 4=ZMON
+    dbg_spi_busy_i      : in  std_logic;
+    dbg_enables_o       : out unsigned(15 downto 0) --toggle various enables/wires
   );
   end component;
 
@@ -557,6 +578,8 @@ end beh;
 --                   bit 8 is clear, then reading this register returns
 --                   0x55555555.
 --
+-- 0x0300_002C  R12  S4 Enables/lines
+--
 -- 0x0300_002D  R13  MMC_data_pipe write data FIFO fill level (READ/WRITE)
 --                   Reading this register returns the number of bytes in
 --                   the MMC slave write data FIFO.  The FIFO holds data
@@ -584,7 +607,7 @@ end beh;
 --                   However, if the read data FIFO is empty, then no valid
 --                   data is actually delivered.
 --
--- 0x0300_0030  R16  Opcode processor status, 8 lsbs
+-- 0x0300_0030  R16  Rd:Opcode processor status, 8 lsbs, Wr:SPI data, device, #bytes, 14 bytes data
 --
 -- 0x3000_0031  R17  Opcode processor opcode counter, 32 bits
 --
@@ -716,8 +739,28 @@ use work.async_syscon_pack.all;
     mmc_dat_o     : out unsigned(7 downto 0);
     mmc_dat_oe_o  : out std_logic;
     mmc_od_mode_o : out std_logic; -- Open drain mode
-    mmc_dat_siz_o : out unsigned(1 downto 0)
-
+    mmc_dat_siz_o : out unsigned(1 downto 0);
+    
+    -- SPI debugging connections
+    dbg_spi_data0_o     : out unsigned(7 downto 0);
+    dbg_spi_data1_o     : out unsigned(7 downto 0);
+    dbg_spi_data2_o     : out unsigned(7 downto 0);
+    dbg_spi_data3_o     : out unsigned(7 downto 0);
+    dbg_spi_data4_o     : out unsigned(7 downto 0);
+    dbg_spi_data5_o     : out unsigned(7 downto 0);
+    dbg_spi_data6_o     : out unsigned(7 downto 0);
+    dbg_spi_data7_o     : out unsigned(7 downto 0);
+    dbg_spi_data8_o     : out unsigned(7 downto 0);
+    dbg_spi_data9_o     : out unsigned(7 downto 0);
+    dbg_spi_dataA_o     : out unsigned(7 downto 0);
+    dbg_spi_dataB_o     : out unsigned(7 downto 0);
+    dbg_spi_dataC_o     : out unsigned(7 downto 0);
+    dbg_spi_dataD_o     : out unsigned(7 downto 0);
+    dbg_spi_bytes_io    : inout unsigned(3 downto 0); --bytes to send
+    dbg_spi_start_o     : inout std_logic;
+    dbg_spi_device_o    : out unsigned(2 downto 0); --1=VGA, 2=SYN, 3=DDS, 4=ZMON
+    dbg_spi_busy_i      : in  std_logic;            --top level is writing SPI bytes
+    dbg_enables_o       : out unsigned(15 downto 0) --toggle various enables/wires
   );
   end mmc_tester;
 
@@ -917,6 +960,9 @@ architecture beh of mmc_tester is
 --  signal power              : unsigned(31 downto 0);
 --  signal pwr_fifo_wr_en     : std_logic;
 
+  signal dbg_spi_count      : unsigned(3 downto 0); --down counter
+  signal dbg_spi_state      : integer;
+
 begin
 
   ------------------------------
@@ -1062,7 +1108,7 @@ begin
     u_resize(opc_system_mode,32)                   when 16#4#,      -- mode
     u_resize(opc_frq_pwr_status,32)                when 16#5#,      -- freq processor status upper 16, power lower 16
     u_resize(opc_phs_pls_status,32)                when 16#6#,      -- phase processor status upper 16, pulse lower 16
-    u_resize(opc_ptn_dbg_status,32)                when 16#7#,      -- pattern processor status upper 16, unused lower 16
+    u_resize(opc_ptn_dbg_status,32)                when 16#7#,      -- temporarily 'response_ready' pattern processor status upper 16, unused lower 16
     u_resize(s_fif_dat_wr_level,32)                when 16#8#,      -- response fifo fill level
     str2u("51514343",32)                           when others;
 
@@ -1083,6 +1129,12 @@ begin
       host_en_reg <= '0';
       slave_en_reg <= '0';
       tlm_fifo_reg_access <= '0';
+      -- SPI debugging
+      dbg_spi_bytes_io <= to_unsigned(0, dbg_spi_bytes_io'length);
+      dbg_spi_start_o <= '0';
+      dbg_spi_device_o <= to_unsigned(0, dbg_spi_device_o'length);
+      dbg_enables_o <= to_unsigned(0, dbg_enables_o'length);
+      dbg_spi_state <= 0;
     elsif (sys_clk'event and sys_clk='1') then
       -- Default values
       reg_gdcount_clear <= '0';
@@ -1118,6 +1170,8 @@ begin
           when 16#8# =>
             reg_dbus_size_clear <= '1';
           -- Register 9 writes implemented at the FIFO
+          when 16#C# =>
+             dbg_enables_o <= syscon_dat_wr(15 downto 0);
           when 16#E# =>
             s_fif_dat_wr_clear <= syscon_dat_wr(0);
             s_fif_dat_rd_clear <= syscon_dat_wr(1);
@@ -1125,6 +1179,120 @@ begin
             null;
         end case;
       end if;
+      
+      -- spi debug, opcode processor register writes
+      if (o_reg_sel='1' and syscon_we='1') then
+        case to_integer(syscon_adr(3 downto 0)) is
+          when 16#0# =>
+            dbg_spi_device_o <= syscon_dat_wr(2 downto 0);
+            dbg_spi_start_o <= '0';
+          when 16#1# =>
+            dbg_spi_bytes_io <= syscon_dat_wr(3 downto 0);
+            dbg_spi_count <= to_unsigned(1, dbg_spi_count'length);
+          when 16#2# =>
+            dbg_spi_data0_o <= syscon_dat_wr(7 downto 0);
+            if(dbg_spi_count = dbg_spi_bytes_io) then
+              dbg_spi_start_o <= '1';
+            else
+              dbg_spi_count <= dbg_spi_count + to_unsigned(1, dbg_spi_count'length);
+            end if;
+          when 16#3# =>
+            dbg_spi_data1_o <= syscon_dat_wr(7 downto 0);
+            if(dbg_spi_count = dbg_spi_bytes_io) then
+              dbg_spi_start_o <= '1';
+            else
+              dbg_spi_count <= dbg_spi_count + to_unsigned(1, dbg_spi_count'length);
+            end if;
+          when 16#4# =>
+            dbg_spi_data2_o <= syscon_dat_wr(7 downto 0);
+            if(dbg_spi_count = dbg_spi_bytes_io) then
+              dbg_spi_start_o <= '1';
+            else
+              dbg_spi_count <= dbg_spi_count + to_unsigned(1, dbg_spi_count'length);
+            end if;
+          when 16#5# =>
+            dbg_spi_data3_o <= syscon_dat_wr(7 downto 0);
+            if(dbg_spi_count = dbg_spi_bytes_io) then
+              dbg_spi_start_o <= '1';
+            else
+              dbg_spi_count <= dbg_spi_count + to_unsigned(1, dbg_spi_count'length);
+            end if;
+          when 16#6# =>
+            dbg_spi_data4_o <= syscon_dat_wr(7 downto 0);
+            if(dbg_spi_count = dbg_spi_bytes_io) then
+              dbg_spi_start_o <= '1';
+            else
+              dbg_spi_count <= dbg_spi_count + to_unsigned(1, dbg_spi_count'length);
+            end if;
+          when 16#7# =>
+            dbg_spi_data5_o <= syscon_dat_wr(7 downto 0);
+            if(dbg_spi_count = dbg_spi_bytes_io) then
+              dbg_spi_start_o <= '1';
+            else
+              dbg_spi_count <= dbg_spi_count + to_unsigned(1, dbg_spi_count'length);
+            end if;
+          when 16#8# =>
+            dbg_spi_data6_o <= syscon_dat_wr(7 downto 0);
+            if(dbg_spi_count = dbg_spi_bytes_io) then
+              dbg_spi_start_o <= '1';
+            else
+              dbg_spi_count <= dbg_spi_count + to_unsigned(1, dbg_spi_count'length);
+            end if;
+          when 16#9# =>
+            dbg_spi_data7_o <= syscon_dat_wr(7 downto 0);
+            if(dbg_spi_count = dbg_spi_bytes_io) then
+              dbg_spi_start_o <= '1';
+            else
+              dbg_spi_count <= dbg_spi_count + to_unsigned(1, dbg_spi_count'length);
+            end if;
+          when 16#A# =>
+            dbg_spi_data8_o <= syscon_dat_wr(7 downto 0);
+            if(dbg_spi_count = dbg_spi_bytes_io) then
+              dbg_spi_start_o <= '1';
+            else
+              dbg_spi_count <= dbg_spi_count + to_unsigned(1, dbg_spi_count'length);
+            end if;
+          when 16#B# =>
+            dbg_spi_data9_o <= syscon_dat_wr(7 downto 0);
+            if(dbg_spi_count = dbg_spi_bytes_io) then
+              dbg_spi_start_o <= '1';
+            else
+              dbg_spi_count <= dbg_spi_count + to_unsigned(1, dbg_spi_count'length);
+            end if;
+          when 16#C# =>
+            dbg_spi_dataA_o <= syscon_dat_wr(7 downto 0);
+            if(dbg_spi_count = dbg_spi_bytes_io) then
+              dbg_spi_start_o <= '1';
+            else
+              dbg_spi_count <= dbg_spi_count + to_unsigned(1, dbg_spi_count'length);
+            end if;
+          when 16#D# =>
+            dbg_spi_dataB_o <= syscon_dat_wr(7 downto 0);
+            if(dbg_spi_count = dbg_spi_bytes_io) then
+              dbg_spi_start_o <= '1';
+            else
+              dbg_spi_count <= dbg_spi_count + to_unsigned(1, dbg_spi_count'length);
+            end if;
+          when 16#E# =>
+            dbg_spi_dataC_o <= syscon_dat_wr(7 downto 0);
+            if(dbg_spi_count = dbg_spi_bytes_io) then
+              dbg_spi_start_o <= '1';
+            else
+              dbg_spi_count <= dbg_spi_count + to_unsigned(1, dbg_spi_count'length);
+            end if;
+          when 16#F# =>
+            dbg_spi_dataD_o <= syscon_dat_wr(7 downto 0);
+            dbg_spi_start_o <= '1';
+          when others =>
+            null;
+          end case;
+      end if;            
+
+      --If Debug SPI just started, clear start pulse, device #
+      if(dbg_spi_start_o = '1' and dbg_spi_busy_i = '1') then
+        dbg_spi_start_o <= '0';     -- clear start
+      end if;
+      
     end if;
   end process;
   -- Provide test register acknowledge
@@ -1773,7 +1941,7 @@ end process;
   
 --    power_o                 => power,
 --    pwr_wr_en_o             => pwr_fifo_wr_en,
-  
+
     opcode_counter_o        => opc_counter,         -- count opcodes for status info                     
     status_o                => opc_status,          -- success=1, or error code
     state_o                 => opc_state            -- internal opc state for debugger
