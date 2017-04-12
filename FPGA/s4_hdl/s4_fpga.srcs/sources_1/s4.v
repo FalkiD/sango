@@ -654,7 +654,7 @@ MMCME2_BASE_inst (
   assign VGA_VSWn = !VGA_VSW;       
   assign DRV_BIAS_EN = dbg_enables & BIT_DRV_BIAS_EN ? 1'b1 : 1'b0;
   assign PA_BIAS_EN = dbg_enables & BIT_PA_BIAS_EN ? 1'b1 : 1'b0;
-  assign SYN_MUTE = dbg_enables & BIT_SYN_MUTE ? 1'b1 : 1'b0;
+  assign SYN_MUTE = dbg_enables & BIT_SYN_MUTE ? 1'b0 : 1'b1;
   assign DDS_IORST = dbg_enables & BIT_DDS_IORST ? 1'b1 : 1'b0;
   assign DDS_IOUP = dbg_enables & BIT_DDS_IOUP ? 1'b1 : 1'b0;
   assign DDS_SYNC = dbg_enables & BIT_DDS_SYNC ? 1'b1 : 1'b0;
