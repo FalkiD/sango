@@ -636,18 +636,19 @@ MMCME2_BASE_inst (
   assign DDS_MOSI = dbg_spi_device == SPI_DDS ? SPI_MOSI : 1'b0;
   
   // S4 Enables/lines
-  localparam BIT_RF_GATE     = 12'h001;
-  localparam BIT_RF_GATE2    = 12'h002;
-  localparam BIT_VGA_VSW     = 12'h004;
-  localparam BIT_DRV_BIAS_EN = 12'h008;
-  localparam BIT_PA_BIAS_EN  = 12'h010;
-  localparam BIT_SYN_STAT    = 12'h020;
-  localparam BIT_SYN_MUTE    = 12'h040;
-  localparam BIT_DDS_IORST   = 12'h080;
-  localparam BIT_DDS_IOUP    = 12'h100;
-  localparam BIT_DDS_SYNC    = 12'h200;
-  localparam BIT_DDS_PS0     = 12'h400;
-  localparam BIT_DDS_PS1     = 12'h800;
+  localparam BIT_RF_GATE     = 16'h0001;
+  localparam BIT_RF_GATE2    = 16'h0002;
+  localparam BIT_VGA_VSW     = 16'h0004;
+  localparam BIT_DRV_BIAS_EN = 16'h0008;
+  localparam BIT_PA_BIAS_EN  = 16'h0010;
+  localparam BIT_SYN_STAT    = 16'h0020;
+  localparam BIT_SYN_MUTE    = 16'h0040;
+  localparam BIT_DDS_IORST   = 16'h0080;
+  localparam BIT_DDS_IOUP    = 16'h0100;
+  localparam BIT_DDS_SYNC    = 16'h0200;
+  localparam BIT_DDS_PS0     = 16'h0400;
+  localparam BIT_DDS_PS1     = 16'h0800;
+  localparam BIT_ZMON_EN     = 16'h1000;
   assign RF_GATE = dbg_enables & BIT_RF_GATE ? 1'b1 : 1'b0;
   assign RF_GATE2 = dbg_enables & BIT_RF_GATE2 ? 1'b1 : 1'b0;
   assign VGA_VSW = dbg_enables & BIT_VGA_VSW ? 1'b1 : 1'b0;
@@ -660,6 +661,7 @@ MMCME2_BASE_inst (
   assign DDS_SYNC = dbg_enables & BIT_DDS_SYNC ? 1'b1 : 1'b0;
   assign DDS_PS0 = dbg_enables & BIT_DDS_PS0 ? 1'b1 : 1'b0;
   assign DDS_PS1 = dbg_enables & BIT_DDS_PS1 ? 1'b1 : 1'b0;
+  assign ZMON_EN = dbg_enables & BIT_ZMON_EN ? 1'b1 : 1'b0;
 
   // FPGA_TXD to MMC UART output
   assign FPGA_TXD = syscon_rsp;
