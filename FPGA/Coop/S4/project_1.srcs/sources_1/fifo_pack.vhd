@@ -1,23 +1,3 @@
-----------------------------------------------------------------------------------
--- Company: 
--- Engineer: 
--- 
--- Create Date: 04/13/2016 05:10:19 PM
--- Design Name: 
--- Module Name: fifo_pack - Behavioral
--- Project Name: 
--- Target Devices: 
--- Tool Versions: 
--- Description: From John Clayton's project
--- 
--- Dependencies: 
--- 
--- Revision:
--- Revision 0.01 - File Created
--- Additional Comments:
--- 
-----------------------------------------------------------------------------------
-
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -57,7 +37,7 @@ package fifo_pack is
     generic(
       WIDTH            : integer;
       DEPTH            : integer;
-      fill_level_bits  : integer; -- Should be at least int(floor(log2(DEPTH))+1.0)
+      FILL_LEVEL_BITS  : integer; -- Should be at least int(floor(log2(DEPTH))+1.0)
       PF_FULL_POINT    : integer;
       PF_FLAG_POINT    : integer;
       PF_EMPTY_POINT   : integer
@@ -75,7 +55,7 @@ package fifo_pack is
       fifo_wr_i       : in  std_logic;
       fifo_din        : in  unsigned(WIDTH-1 downto 0);
 
-      fifo_fill_level : out unsigned(fill_level_bits-1 downto 0);
+      fifo_fill_level : out unsigned(FILL_LEVEL_BITS-1 downto 0);
       fifo_full       : out std_logic;
       fifo_empty      : out std_logic;    
       fifo_pf_full    : out std_logic;
@@ -107,7 +87,7 @@ package fifo_pack is
       fifo_rd_i       : in  std_logic;
       fifo_dout       : out unsigned(WIDTH-1 downto 0);
 
-      fifo_fill_level : out unsigned(fill_level_bits-1 downto 0);
+      fifo_fill_level : out unsigned(FILL_LEVEL_BITS-1 downto 0);
       fifo_full       : out std_logic;
       fifo_empty      : out std_logic;    
       fifo_pf_full    : out std_logic;
@@ -116,13 +96,52 @@ package fifo_pack is
     );
   end component;
 
+  component swiss_army_fifo_cdc
+    generic (
+      USE_BRAM         : integer; -- Set to nonzero value for BRAM, zero for distributed RAM
+      WIDTH            : integer;
+      DEPTH            : integer;
+      FILL_LEVEL_BITS  : integer; -- Should be at least int(floor(log2(DEPTH))+1.0)
+      PF_FULL_POINT    : integer;
+      PF_FLAG_POINT    : integer;
+      PF_EMPTY_POINT   : integer
+    );
+    port (
+      sys_rst_n        : in  std_logic; -- Asynchronous
+
+      wr_clk_i         : in  std_logic;
+      wr_clk_en_i      : in  std_logic;
+      wr_reset_i       : in  std_logic;  -- Synchronous
+      wr_en_i          : in  std_logic;
+      wr_dat_i         : in  unsigned(WIDTH-1 downto 0);
+      wr_fifo_level    : out unsigned(FILL_LEVEL_BITS-1 downto 0);
+      wr_fifo_full     : out std_logic;
+      wr_fifo_empty    : out std_logic;
+      wr_fifo_pf_full  : out std_logic;
+      wr_fifo_pf_flag  : out std_logic;
+      wr_fifo_pf_empty : out std_logic;
+
+      rd_clk_i         : in  std_logic;
+      rd_clk_en_i      : in  std_logic;
+      rd_reset_i       : in  std_logic;  -- Synchronous
+      rd_en_i          : in  std_logic;
+      rd_dat_o         : out unsigned(WIDTH-1 downto 0);
+      rd_fifo_level    : out unsigned(FILL_LEVEL_BITS-1 downto 0);
+      rd_fifo_full     : out std_logic;
+      rd_fifo_empty    : out std_logic;
+      rd_fifo_pf_full  : out std_logic;
+      rd_fifo_pf_flag  : out std_logic;
+      rd_fifo_pf_empty : out std_logic
+    );
+  end component;
+
   component data_packer
     generic (
-      ADR_W          : integer :=   4; -- Bit width of snoop address
-      DATA_IN_W      : integer :=  16; -- Maximum in_dat_i word size
-      LOG2_DATA_IN_W : integer :=   4; -- Bit width of in_word_size_i
-      DATA_OUT_W     : integer :=   8; -- Bit width of archive data
-      FIFO_DEPTH     : integer := 512  -- Size of BRAM FIFO buffer
+      ADR_W          : integer; -- Bit width of snoop address
+      DATA_IN_W      : integer; -- Maximum in_dat_i word size
+      LOG2_DATA_IN_W : integer; -- Bit width of in_word_size_i
+      DATA_OUT_W     : integer; -- Bit width of archive data
+      FIFO_DEPTH     : integer  -- Size of BRAM FIFO buffer
     );
     port ( 
 
@@ -428,7 +447,7 @@ entity fifo_with_fill_level is
     generic ( 
       WIDTH            : integer :=  8;
       DEPTH            : integer :=  5;
-      fill_level_bits  : integer :=  3; -- Should be at least int(floor(log2(DEPTH))+1.0)
+      FILL_LEVEL_BITS  : integer :=  3; -- Should be at least int(floor(log2(DEPTH))+1.0)
       PF_FULL_POINT    : integer :=  3;
       PF_FLAG_POINT    : integer :=  2;
       PF_EMPTY_POINT   : integer :=  0
@@ -446,7 +465,7 @@ entity fifo_with_fill_level is
       fifo_wr_i       : in  std_logic;
       fifo_din        : in  unsigned(WIDTH-1 downto 0);
 
-      fifo_fill_level : out unsigned(fill_level_bits-1 downto 0);
+      fifo_fill_level : out unsigned(FILL_LEVEL_BITS-1 downto 0);
       fifo_full       : out std_logic;
       fifo_empty      : out std_logic;
       fifo_pf_full    : out std_logic;
@@ -485,7 +504,7 @@ BEGIN
   fifo_pf_full    <= '1' when (fill_level>=PF_FULL_POINT or current_state=st_full) else '0';
   fifo_pf_flag    <= '1' when (fill_level>=PF_FLAG_POINT) else '0';
   fifo_pf_empty   <= '1' when (fill_level<=PF_EMPTY_POINT and current_state/=st_full) else '0';
-  fifo_fill_level <= u_resize(fill_level,fill_level_bits);
+  fifo_fill_level <= u_resize(fill_level,FILL_LEVEL_BITS);
 
 -------------------------
 -- The FIFO Fill Level
@@ -659,7 +678,7 @@ entity swiss_army_fifo is
       fifo_rd_i       : in  std_logic;
       fifo_dout       : out unsigned(WIDTH-1 downto 0);
 
-      fifo_fill_level : out unsigned(fill_level_bits-1 downto 0);
+      fifo_fill_level : out unsigned(FILL_LEVEL_BITS-1 downto 0);
       fifo_full       : out std_logic;
       fifo_empty      : out std_logic;
       fifo_pf_full    : out std_logic;
@@ -695,7 +714,7 @@ BEGIN
   fifo_pf_full    <= '1' when (fill_level>=PF_FULL_POINT or current_state=st_full) else '0';
   fifo_pf_flag    <= '1' when (fill_level>=PF_FLAG_POINT) else '0';
   fifo_pf_empty   <= '1' when (fill_level<=PF_EMPTY_POINT and current_state/=st_full) else '0';
-  fifo_fill_level <= u_resize(fill_level,fill_level_bits);
+  fifo_fill_level <= u_resize(fill_level,FILL_LEVEL_BITS);
 
 -------------------------
 -- The FIFO Fill Level
@@ -833,6 +852,236 @@ fill_level_proc: process(wr_row, rd_row, current_state)
     end if; -- sys_clk
   end process clocked;
 
+
+end beh;
+
+--------------------------------------------------------------
+-- SWISS ARMY FIFO "Clock Domain Crossing" version
+--------------------------------------------------------------
+-- Description:
+--
+-- This is the same as "swiss_army_fifo" but it has been
+-- coded to include two separate clock domains.  Originally,
+-- the status signals were all synchronized to their respective
+-- clock domains.  However, it was taken out so that the user of
+-- this module must take care as the status signals are not delayed,
+-- but they are possibly subject to metastability.
+--
+-- Note : When USE_BRAM=0, the behavior when reading the FIFO is to
+--        make read data available immediately during the clock cycle
+--        in which fifo_rd_i='1'.  When USE_BRAM/=0, then an additional
+--        clock cycle occurs following the fifo_rd_i pulse, before the
+--        output data is available.
+--        Please be aware of this.
+--
+--
+
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.NUMERIC_STD.ALL;
+use IEEE.MATH_REAL.ALL;
+
+library work;
+use work.convert_pack.all;
+use work.block_ram_pack.all;
+
+entity swiss_army_fifo_cdc is
+    generic (
+      USE_BRAM         : integer :=  1; -- Set to nonzero value for BRAM, zero for distributed RAM
+      WIDTH            : integer :=  8;
+      DEPTH            : integer :=  5;
+      FILL_LEVEL_BITS  : integer :=  3; -- Should be at least int(floor(log2(DEPTH))+1.0)
+      PF_FULL_POINT    : integer :=  3;
+      PF_FLAG_POINT    : integer :=  2;
+      PF_EMPTY_POINT   : integer :=  0
+    );
+    port (
+      sys_rst_n        : in  std_logic; -- Asynchronous
+
+      wr_clk_i         : in  std_logic;
+      wr_clk_en_i      : in  std_logic;
+      wr_reset_i       : in  std_logic;  -- Synchronous
+      wr_en_i          : in  std_logic;
+      wr_dat_i         : in  unsigned(WIDTH-1 downto 0);
+      wr_fifo_level    : out unsigned(FILL_LEVEL_BITS-1 downto 0);
+      wr_fifo_full     : out std_logic;
+      wr_fifo_empty    : out std_logic;
+      wr_fifo_pf_full  : out std_logic;
+      wr_fifo_pf_flag  : out std_logic;
+      wr_fifo_pf_empty : out std_logic;
+
+      rd_clk_i         : in  std_logic;
+      rd_clk_en_i      : in  std_logic;
+      rd_reset_i       : in  std_logic;  -- Synchronous
+      rd_en_i          : in  std_logic;
+      rd_dat_o         : out unsigned(WIDTH-1 downto 0);
+      rd_fifo_level    : out unsigned(FILL_LEVEL_BITS-1 downto 0);
+      rd_fifo_full     : out std_logic;
+      rd_fifo_empty    : out std_logic;
+      rd_fifo_pf_full  : out std_logic;
+      rd_fifo_pf_flag  : out std_logic;
+      rd_fifo_pf_empty : out std_logic           
+
+    );
+end swiss_army_fifo_cdc;
+
+architecture beh of swiss_army_fifo_cdc is
+
+  -- Constants
+  constant FLG_WIDTH : integer := bit_width(DEPTH); -- Bit Width of memory address.  Pointers are one bit wider,
+                                                    -- so that fill_level can represent the full quantity of 
+                                                    -- items stored in the FIFO.  This is important when DEPTH
+                                                    -- is an even power of 2.
+
+  -- Signal Declarations
+  signal rd_row     : unsigned(FLG_WIDTH downto 0);
+  signal wr_row     : unsigned(FLG_WIDTH downto 0);
+  signal fill_level : unsigned(FLG_WIDTH+1 downto 0);
+  signal ram_we_a   : std_logic;
+  signal bram_dat_b : unsigned(WIDTH-1 downto 0);
+
+  signal fifo_level       : unsigned(FILL_LEVEL_BITS-1 downto 0);
+  signal fifo_full        : std_logic;
+  signal fifo_empty       : std_logic;
+  signal fifo_pf_full     : std_logic;
+  signal fifo_pf_flag     : std_logic;
+  signal fifo_pf_empty    : std_logic;
+
+begin
+
+  fifo_level    <= u_resize(fill_level,FILL_LEVEL_BITS);
+  fifo_full     <= '1' when (fill_level=DEPTH) else '0';
+  fifo_empty    <= '1' when (fill_level=0) else '0';
+  fifo_pf_full  <= '1' when (fill_level>=PF_FULL_POINT) else '0';
+  fifo_pf_flag  <= '1' when (fill_level>=PF_FLAG_POINT) else '0';
+  fifo_pf_empty <= '1' when (fill_level<=PF_EMPTY_POINT) else '0';
+
+-------------------------
+-- The FIFO Fill Level
+
+fill_level <= (others=>'0') when wr_row=rd_row else
+              ('0' & wr_row)-('0' & rd_row) when wr_row>rd_row else
+              (2**(FLG_WIDTH+1))+(('0' & wr_row)-('0' & rd_row));
+
+-------------------------
+-- The FIFO memory
+
+-- Port A is the write side.
+-- Port B is dedicated to reading only.
+-- The hexfile is used to permit initialization of the RAM
+
+  fifo_ram : swiss_army_ram
+    generic map(
+      USE_BRAM  => USE_BRAM,
+      WRITETHRU => 0, -- Set to nonzero value for writethrough mode
+      USE_FILE  => 0, -- Set to nonzero value to use INIT_FILE
+      INIT_VAL  => 0,
+      INIT_SEL  => 0, -- No generate loop here
+      INIT_FILE => ".\foo.txt", -- ASCII hexadecimal initialization file name
+      FIL_WIDTH => 32, -- Bit width of init file lines
+      ADR_WIDTH => FLG_WIDTH,
+      DAT_WIDTH => WIDTH
+    )
+    port map (
+       clk_a    => wr_clk_i,
+       clk_b    => rd_clk_i,
+
+       adr_a_i  => wr_row(FLG_WIDTH-1 downto 0),
+       adr_b_i  => rd_row(FLG_WIDTH-1 downto 0),
+
+       we_a_i   => ram_we_a,
+       en_a_i   => wr_clk_en_i,
+       dat_a_i  => wr_dat_i,
+       dat_a_o  => open,
+
+       we_b_i   => '0',
+       en_b_i   => rd_clk_en_i,
+       dat_b_i  => bram_dat_b,
+       dat_b_o  => rd_dat_o
+    );
+
+  bram_dat_b <= (others=>'0');
+  ram_we_a <= '1' when wr_en_i='1' and fifo_full='0' else '0';
+
+-------------------------
+-- The FIFO writing process
+  wr_proc : PROCESS(wr_clk_i, sys_rst_n)
+  begin
+    if (sys_rst_n = '0') then
+      wr_row   <= (others=>'0');
+    elsif (wr_clk_i'event and wr_clk_i = '1') then
+      if (wr_clk_en_i='1') then
+        if (wr_reset_i='1') then
+          wr_row <= (others=>'0');
+        else
+          if (ram_we_a='1') then
+            if (fifo_level=DEPTH) then
+              null; -- FIFO is full!  Don't do any writes.
+            else
+              wr_row <= wr_row+1;
+            end if;
+          end if;
+        end if;
+        -- Synchronize all dataflow outputs to the
+        -- wr_clk_i clock domain
+--        wr_fifo_level    <= fifo_level;
+--        wr_fifo_full     <= fifo_full;
+--        wr_fifo_empty    <= fifo_empty;
+--        wr_fifo_pf_full  <= fifo_pf_full;
+--        wr_fifo_pf_flag  <= fifo_pf_flag;
+--        wr_fifo_pf_empty <= fifo_pf_empty;
+      end if; -- wr_clk_en
+    end if; -- wr_clk_i
+  end process wr_proc;
+  -- Synchronized version removed, because it added an extra clock
+  -- cycle of delay.
+  -- This may be dangerous in terms of flip-flop metastability
+  wr_fifo_level    <= fifo_level;
+  wr_fifo_full     <= fifo_full;
+  wr_fifo_empty    <= fifo_empty;
+  wr_fifo_pf_full  <= fifo_pf_full;
+  wr_fifo_pf_flag  <= fifo_pf_flag;
+  wr_fifo_pf_empty <= fifo_pf_empty;
+
+-------------------------
+-- The FIFO reading process
+  rd_proc : PROCESS(rd_clk_i, sys_rst_n)
+  begin
+    if (sys_rst_n = '0') then
+      rd_row   <= (others=>'0');
+    elsif (rd_clk_i'event and rd_clk_i = '1') then
+      if (rd_clk_en_i='1') then
+        if (rd_reset_i='1') then
+          rd_row <= (others=>'0');
+        else
+          if (rd_en_i='1' and fifo_empty='0') then
+            if (fifo_level=0) then
+              null; -- FIFO is empty!  Don't read anything.
+            else
+              rd_row <= rd_row+1;
+            end if;
+          end if;
+        end if;
+        -- Synchronize all dataflow outputs to the
+        -- rd_clk_i clock domain
+--        rd_fifo_level    <= fifo_level;
+--        rd_fifo_full     <= fifo_full;
+--        rd_fifo_empty    <= fifo_empty;
+--        rd_fifo_pf_full  <= fifo_pf_full;
+--        rd_fifo_pf_flag  <= fifo_pf_flag;
+--        rd_fifo_pf_empty <= fifo_pf_empty;
+      end if; -- rd_clk_en
+    end if; -- rd_clk_i
+  end process rd_proc;
+  -- Synchronized version removed, because it added an extra clock
+  -- cycle of delay.
+  -- This may be dangerous in terms of flip-flop metastability
+  rd_fifo_level    <= fifo_level;
+  rd_fifo_full     <= fifo_full;
+  rd_fifo_empty    <= fifo_empty;
+  rd_fifo_pf_full  <= fifo_pf_full;
+  rd_fifo_pf_flag  <= fifo_pf_flag;
+  rd_fifo_pf_empty <= fifo_pf_empty;
 
 end beh;
 
@@ -1094,3 +1343,4 @@ out_cyc_o <= '1' when fsm_state=WRITE_DATA or fsm_state=WRITE_LAST_DATA else '0'
 out_dat_o <= bits_out;
 
 end beh;
+

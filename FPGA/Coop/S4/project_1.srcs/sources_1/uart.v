@@ -15,66 +15,38 @@
 // File name:  uart.v
 // Project:    s4x7
 // Author:     Roger Williams <roger.williams@ampleon.com> (RAW)
-// Purpose:    Diag/debug access to s4x7 FPGA internals.
+// Purpose:    Diag/debug access to s4x7 FPGA "backside" internals.
 // -----------------------------------------------------------------------------
 // 0.00.1  2016-08-04 (JLC) Modified for current project.
+// 0.00.2  2017-04-11 (JLC) Modified for s4 backside.
 //
 //------------------------------------------------------------------------------
-`include "timescale.v"
-`include "version.v"
 
 // define these constants as macros instead of parameters so that sim can override them
-`define CLK_FREQ        50000000      // 50MHz
+//`define CLK_FREQ        100000000     // 100MHz
+`define CLK_FREQ        10000000     // 10MHz    coop_hack temp clk
 `define I2C_FREQ        400000        // 400kbps
 `define SPI_FREQ        1000000       // 1Mbps
 `define REF_FREQ        2000000       // 2MHz  (to produce 1MHz square wave)
-`define BAUD            57600         // 57600 Baud
-
-
-// PMod JD pins:
-//
-//   +---+---+---+---+---+---+
-//   |Vcc|GND|P04|P03|P02|P01|    Pins  6 & 12 are Vcc (3.3V)
-//   +---+---+---+---+---+---+    Pins  5 & 11 are GND
-//   |Vcc GND P10 P09 P08 P07|
-//   +---+---+---+---+---+---+
-//
-//
-//   JD_GPIO7   D3   Pin  2   REFCLK_O  (done in dbg_uart_top.v)
-//   JD_GPIO6   D2   Pin  8   Txd USB -> FPGA
-//   JD_GPIO5   F4   Pin  3   Rxd USB <- FPGA
-//   JD_GPIO4   H2   Pin  9                                     *
-//   JD_GPIO3   F3   Pin  4                                     *  
-//   JD_GPIO2   G2   Pin 10                                     *
-//   JD_GPIO1   D4   Pin  1                                     *
-//   JD_GPIO2   E2   Pin  7                                     *
-// 
-//   * means these signals have been stretched to an additional 3 clock ticks,
-//     so a 1-tick signal is 4 ticks wide to show better on my 70MHz scope.
-// 
+`define BAUD            115200        // 115200 Baud
+`define VERSION         16'h1001
 
 module uart
    (// diag/debug control signal outputs
-    output      [15:0]    UART1_CTL,
-    output      [3:0]     LED,
-    output      [3:0]     LEDG,
-
+    output      [15:0]    hw_ctl_o,
     // diag/debug status  signal inputs
-    input       [15:0]    UART1_STAT,
-    input       [2:0]     BTN,
-    input       [3:0]     SW,
-
-    input       [31:0]    OPCODES,          // count of opcodes processed from top level
-    input       [31:0]    PTN_OPCODES,      // count of pattern opcodes processed from top level
-    input       [15:0]    ARG16,            // 16-bit data to show, system_state for now
+    input       [15:0]    hw_stat_i,
+    input       [31:0]    gp_opc_cnt_i,     // count of opcodes processed from top level
+    input       [31:0]    ptn_opc_cnt_i,    // count of pattern opcodes processed from top level
+    input       [15:0]    sys_stat_vec_i,   // 16-bit status to show, system_state for now
 	
     // infrastructure, etc.
-    input                 CLK,              // Arty 100MHz clock input on E3.
-    input                 RST,              // Using SW3 as a reset button for now.
-    output                REFCLK_O,		    // temporary test output
-    input                 DBG_UART_TXO,		// "TX" from USB serial bridge to FPGA
-    output                DBG_UART_RXI,		// "RX" from FPGA to USB serial bridge
-    output [6:0]          DBG_STATE         // Utility debug output.
+    input                 clk_i,            // 
+    input                 rst_i,            // 
+    output                refclk_o,         // temporary test output
+    input                 RxD_i,            // "RxD" from USB serial bridge to FPGA
+    output                TxD_o,            // "TxD" from FPGA to USB serial bridge
+    output [3:0]          dbg_vec           // Utility debug output.
    );
 
    // Freq Gen Info
@@ -83,7 +55,7 @@ module uart
    localparam  REF_DIV            = `CLK_FREQ / `REF_FREQ - 1;   // 24
    localparam  BAUD_DIV           = `CLK_FREQ / `BAUD - 1;       // 867
 
-   // UART state machine state declarations (probably should mutable as macros):
+   // UART state machine state declarations (probably should be mutable as macros):
    localparam  UART_IDLE          = 8'b0000_0000;
    localparam  UART_SEND_PROMPT   = 8'b0000_0001;
    localparam  UART_SEND_CR       = 8'b0000_0010;
@@ -92,46 +64,48 @@ module uart
    localparam  UART_GETSTAT1      = 8'b0001_0001;
    localparam  UART_GETSTAT2      = 8'b0001_0010;
    localparam  UART_GETSTAT3      = 8'b0001_0011;
-   //localparam  UART_GETSTAT4      = 8'b0001_0100;
-   //localparam  UART_GETSTAT5      = 8'b0001_0101;
-   //localparam  UART_GETSTAT6      = 8'b0001_0110;
-   //localparam  UART_GETSTAT7      = 8'b0001_0111;
+   localparam  UART_GETSTAT4      = 8'b0001_0100;
+   localparam  UART_GETSTAT5      = 8'b0001_0101;
+   localparam  UART_GETSTAT6      = 8'b0001_0110;
+   localparam  UART_GETSTAT7      = 8'b0001_0111;
    localparam  UART_SETCTL0       = 8'b0010_0000;
    localparam  UART_SETCTL1       = 8'b0010_0001;
    localparam  UART_SETCTL2       = 8'b0010_0010;
    localparam  UART_SETCTL3       = 8'b0010_0011;
-   //localparam  UART_SETCTL4       = 8'b0010_0100;
-   //localparam  UART_SETCTL5       = 8'b0010_0101;
-   //localparam  UART_SETCTL6       = 8'b0010_0110;
-   //localparam  UART_SETCTL7       = 8'b0010_0111;
+   localparam  UART_SETCTL4       = 8'b0010_0100;
+   localparam  UART_SETCTL5       = 8'b0010_0101;
+   localparam  UART_SETCTL6       = 8'b0010_0110;
+   localparam  UART_SETCTL7       = 8'b0010_0111;
+   localparam  UART_GETOPC0       = 8'b0011_0000;
+   localparam  UART_GETOPC1       = 8'b0011_0001;
+   localparam  UART_GETOPC2       = 8'b0011_0010;
+   localparam  UART_GETOPC3       = 8'b0011_0011;
+   localparam  UART_GETOPC4       = 8'b0011_0100;
+   localparam  UART_GETOPC5       = 8'b0011_0101;
+   localparam  UART_GETOPC6       = 8'b0011_0110;
+   localparam  UART_GETOPC7       = 8'b0011_0111;
+   localparam  UART_GETPTN0       = 8'b0011_1000;
+   localparam  UART_GETPTN1       = 8'b0011_1001;
+   localparam  UART_GETPTN2       = 8'b0011_1010;
+   localparam  UART_GETPTN3       = 8'b0011_1011;
+   localparam  UART_GETPTN4       = 8'b0011_1100;
+   localparam  UART_GETPTN5       = 8'b0011_1101;
+   localparam  UART_GETPTN6       = 8'b0011_1110;
+   localparam  UART_GETPTN7       = 8'b0011_1111;
+   localparam  UART_PTNUSC        = 8'b1111_0100;
+   localparam  UART_GETARG3       = 8'b1111_0000;
+   localparam  UART_GETARG2       = 8'b1111_0001;
+   localparam  UART_GETARG1       = 8'b1111_0010;
+   localparam  UART_GETARG0       = 8'b1111_0011;
    localparam  UART_GETVER0       = 8'b0100_0000;
    localparam  UART_GETVER1       = 8'b0100_0001;
    localparam  UART_GETVER2       = 8'b0100_0010;
    localparam  UART_GETVER3       = 8'b0100_0011;
-   localparam  UART_GETSWS0       = 8'b1000_0000;
-   localparam  UART_GETSWS1       = 8'b1000_0001;
-   localparam  UART_SETLED0       = 8'b1100_0000;
-   localparam  UART_BADCHAR       = 8'b1110_0000;
-   localparam  UART_TEST0         = 8'b1110_0001;
-   localparam  UART_TEST1         = 8'b1110_0010;
-   localparam  UART_TEST2         = 8'b1110_0011;
-   localparam  UART_GETOPC0       = 8'b1110_0100;
-   localparam  UART_GETOPC1       = 8'b1110_0101;
-   localparam  UART_GETOPC2       = 8'b1110_0110;
-   localparam  UART_GETOPC3       = 8'b1110_0111;
-   localparam  UART_GETOPC4       = 8'b1110_1000;
-   localparam  UART_GETOPC5       = 8'b1110_1001;
-   localparam  UART_GETOPC6       = 8'b1110_1010;
-   localparam  UART_GETOPC7       = 8'b1110_1011;
-   localparam  UART_GETPTN0       = 8'b1110_1100;
-   localparam  UART_GETPTN1       = 8'b1110_1101;
-   localparam  UART_GETPTN2       = 8'b1110_1110;
-   localparam  UART_GETPTN3       = 8'b1110_1111;
-   localparam  UART_PTNUSC        = 8'b1111_0000;
-   localparam  UART_GETARG3       = 8'b1111_0001;       // Show 32-bit data arg to instance
-   localparam  UART_GETARG2       = 8'b1111_0010;
-   localparam  UART_GETARG1       = 8'b1111_0011;
-   localparam  UART_GETARG0       = 8'b1111_0100;
+   localparam  UART_BADCHAR       = 8'b1111_0101;
+   localparam  UART_TEST0         = 8'b1111_1000;
+   localparam  UART_TEST1         = 8'b1111_1001;
+   localparam  UART_TEST2         = 8'b1111_1010;
+
   
    // ASCII Char Codes
    localparam  UART_CHAR_CR       = 8'h0d;    // CR                             NOTE:  btn[3] is used as reset!
@@ -159,8 +133,6 @@ module uart
    localparam  UART_CHAR_OK1      = 8'h4B;
    localparam  UART_CHAR_OK2      = 8'h21;
 
-   wire [15:0]            version          = 16'hd_00_1;
-
    reg  [15:0]            uart_rd_stat     = 16'h0000;
    reg  [3:0]             uart_rd_sw       = 16'h0;
    reg  [2:0]             uart_rd_btn      = 16'h0;
@@ -172,23 +144,10 @@ module uart
 
    reg  [6:0]             refclkdiv        = 7'b0;
    reg                    refclkstate      = 1'b0;
-   reg  [3:0]             ledsgr           = 4'b0;
 
    reg  [7:0]             tx_char          = 8'b0;
    reg  [7:0]             rx_charr         = 8'b0;
    wire [7:0] 		      rx_charw;
-   
-   reg                    RST_SYN0         = 1'b0;
-   reg                    RST_SYN1         = 1'b0;
-   reg                    RST_SYN2         = 1'b0;
-
-   // Synchronize btn[3] to CLK (CLK50 50MHz).
-   always @(posedge CLK) begin
-      RST_SYN0                     <= RST;
-      RST_SYN1                     <= RST_SYN0;
-      RST_SYN2                     <= RST_SYN1;
-   end  // end of always @ (posedge CLK)
-   
    
    // serial TX FIFO
    reg  [7:0]             tx_fifo [63:0];   // actual tx FIFO array
@@ -202,8 +161,10 @@ module uart
    wire                   tbre;             // UART xmtr is ready for another char
    wire                   drdy;             // UART rcvr has valid rcv'd char
 
-   always @(posedge CLK) begin
-      if (RST_SYN2) begin
+   wire [15:0]            version_w;
+   
+   always @(posedge clk_i) begin
+      if (rst_i) begin
          txa_addr                  <= 6'b00_0000;
          txb_addr                  <= 6'b00_0000;
          tx_stb1                   <= 0;
@@ -221,7 +182,7 @@ module uart
             txb_addr                  <= txb_addr + 6'b00_0001;
          end
       end
-   end  // end of always @ (posedge CLK)
+   end  // end of always @ (posedge clk_i)
    // end of Serial TX FIFO
 
    
@@ -236,24 +197,22 @@ module uart
    wire [6:0]       dbgOutw      = dbgOutr | dbgOutrr | dbgOutrrr | dbgOutrrrr;
 
    // Snapshot:  capture data for R & S commands.   
-   always @(posedge CLK) begin
-      if (RST_SYN2) begin
+   always @(posedge clk_i) begin
+      if (rst_i) begin
          uart_rd_stat              <= 16'h0000;
          uart_rd_sw                <= 4'b0000;
          uart_rd_btn               <= 3'b000;
       end
       else begin
          if (snapShot == 1'b1) begin
-            uart_rd_stat           <= UART1_STAT;
-            uart_rd_sw             <= SW;
-            uart_rd_btn            <= BTN;
+            uart_rd_stat           <= hw_stat_i;
          end
       end
    end  // end of always @ (posedge clk).
 
    // Command State Machine
-   always @(posedge CLK) begin
-      if (RST_SYN2) begin
+   always @(posedge clk_i) begin
+      if (rst_i) begin
          cmdState                <= UART_IDLE;
          rx_charr                <= 8'b0;
          tx_char                 <= 8'b0;
@@ -267,7 +226,6 @@ module uart
          dbgOutrr                <= 5'b0_0000;
          dbgOutrrr               <= 5'b0_0000;
          dbgOutrrrr              <= 5'b0_0000;
-         ledsgr                  <= 4'b0000;
       end
       else begin
          // clears for one-tick signals
@@ -332,20 +290,6 @@ module uart
                     cmdState     <= UART_GETARG3;
                      tx_load           <= 1'b1;
                   end
-                  UART_CHAR_UB: begin
-                     cmdState    <= UART_GETSWS1;
-                     tx_load           <= 1'b1;
-                  end
-                  UART_CHAR_LB: begin
-                     cmdState    <= UART_GETSWS1;
-                     tx_load           <= 1'b1;
-                  end
-                  UART_CHAR_UL: begin
-                     cmdState    <= UART_SETLED0;
-                  end
-                  UART_CHAR_LL: begin
-                     cmdState    <= UART_SETLED0;
-                  end
                   UART_CHAR_UW: begin
                      cmdState    <= UART_SETCTL3;
                   end
@@ -375,22 +319,22 @@ module uart
                endcase  // endacse (rx_charr)
             end  // end of UART_PROMPT case.
             UART_GETVER3: begin
-               tx_char           <= hex_to_ascii(version[15:12]);
+               tx_char           <= hex_to_ascii(version_w[15:12]);
                tx_load           <= 1'b1;
                cmdState          <= UART_GETVER2;
             end  // end of UART_GETVER3 case.
             UART_GETVER2: begin
-               tx_char           <= hex_to_ascii(version[11:8]);
+               tx_char           <= hex_to_ascii(version_w[11:8]);
                tx_load           <= 1'b1;
                cmdState          <= UART_GETVER1;
             end  // end of UART_GETVER2 case.
             UART_GETVER1: begin
-               tx_char           <= hex_to_ascii(version[7:4]);
+               tx_char           <= hex_to_ascii(version_w[7:4]);
                tx_load           <= 1'b1;
                cmdState          <= UART_GETVER0;
             end  // end of UART_GETVER1 case.
             UART_GETVER0: begin
-               tx_char           <= hex_to_ascii(version[3:0]);
+               tx_char           <= hex_to_ascii(version_w[3:0]);
                tx_load           <= 1'b1;
                cmdState          <= UART_SEND_CR;
             end  // end of UART_GETVER0 case.
@@ -414,16 +358,6 @@ module uart
                tx_load           <= 1'b1;
                cmdState          <= UART_SEND_CR;
             end  // end of UART_GETSTAT0 case.
-            UART_GETSWS1: begin
-               tx_char           <= hex_to_ascii(uart_rd_sw[3:0]);
-               tx_load           <= 1'b1;
-               cmdState          <= UART_GETSWS0;
-            end  // end of UART_GETSW1 case.
-            UART_GETSWS0: begin
-               tx_char           <= hex_to_ascii({1'b0, uart_rd_btn[2:0]});
-               tx_load           <= 1'b1;
-               cmdState          <= UART_SEND_CR;
-            end  // end of UART_GETSW0 case.
             UART_SEND_CR: begin
                tx_char           <= UART_CHAR_CR;
                tx_load           <= 1'b1;
@@ -471,15 +405,6 @@ module uart
                   cmdState       <= UART_SEND_CR;
                end
             end  // end of case UART_SETCTL1.
-            UART_SETLED0: begin
-               if (drdy == 1'b0) begin
-                  cmdState       <= UART_SETLED0;
-               end
-               else begin
-                  uart_wr_leds <= ascii_to_hex(rx_charw);
-                  cmdState       <= UART_SEND_CR;
-               end
-            end  // end of case UART_SETCTL1.
             UART_BADCHAR: begin
                tx_char           <= UART_CHAR_WTF;
                tx_load           <= 1'b1;
@@ -501,42 +426,42 @@ module uart
                cmdState          <= UART_SEND_CR;
             end  // end of case UART_TEST2.
             UART_GETOPC7: begin
-               tx_char           <= hex_to_ascii(OPCODES[31:28]);
+               tx_char           <= hex_to_ascii(gp_opc_cnt_i[31:28]);
                tx_load           <= 1'b1;
                cmdState          <= UART_GETOPC6;
             end  // end of UART_GETOPC7 case.
             UART_GETOPC6: begin
-               tx_char           <= hex_to_ascii(OPCODES[27:24]);
+               tx_char           <= hex_to_ascii(gp_opc_cnt_i[27:24]);
                tx_load           <= 1'b1;
                cmdState          <= UART_GETOPC5;
             end  // end of UART_GETOPC6 case.
             UART_GETOPC5: begin
-               tx_char           <= hex_to_ascii(OPCODES[23:20]);
+               tx_char           <= hex_to_ascii(gp_opc_cnt_i[23:20]);
                tx_load           <= 1'b1;
                cmdState          <= UART_GETOPC4;
             end  // end of UART_GETOPC5 case.
             UART_GETOPC4: begin
-               tx_char           <= hex_to_ascii(OPCODES[19:16]);
+               tx_char           <= hex_to_ascii(gp_opc_cnt_i[19:16]);
                tx_load           <= 1'b1;
                cmdState          <= UART_GETOPC3;
             end  // end of UART_GETOPC4 case.
             UART_GETOPC3: begin
-               tx_char           <= hex_to_ascii(OPCODES[15:12]);
+               tx_char           <= hex_to_ascii(gp_opc_cnt_i[15:12]);
                tx_load           <= 1'b1;
                cmdState          <= UART_GETOPC2;
             end  // end of UART_GETOPC3 case.
             UART_GETOPC2: begin
-               tx_char           <= hex_to_ascii(OPCODES[11:8]);
+               tx_char           <= hex_to_ascii(gp_opc_cnt_i[11:8]);
                tx_load           <= 1'b1;
                cmdState          <= UART_GETOPC1;
             end  // end of UART_GETOPC2 case.
             UART_GETOPC1: begin
-               tx_char           <= hex_to_ascii(OPCODES[7:4]);
+               tx_char           <= hex_to_ascii(gp_opc_cnt_i[7:4]);
                tx_load           <= 1'b1;
                cmdState          <= UART_GETOPC0;
             end  // end of UART_GETOPC1 case.
             UART_GETOPC0: begin
-               tx_char           <= hex_to_ascii(OPCODES[3:0]);
+               tx_char           <= hex_to_ascii(gp_opc_cnt_i[3:0]);
                tx_load           <= 1'b1;
                cmdState          <= UART_PTNUSC;
             end  // end of UART_GETOPC0 case.
@@ -545,43 +470,63 @@ module uart
                tx_load           <= 1'b1;
                cmdState          <= UART_GETPTN3;
             end  // end of UART_PTNSPC case.
+            UART_GETPTN7: begin
+               tx_char           <= hex_to_ascii(ptn_opc_cnt_i[31:28]);
+               tx_load           <= 1'b1;
+               cmdState          <= UART_GETPTN6;
+            end  // end of UART_GETOPC3 case.
+            UART_GETPTN6: begin
+               tx_char           <= hex_to_ascii(ptn_opc_cnt_i[27:24]);
+               tx_load           <= 1'b1;
+               cmdState          <= UART_GETPTN5;
+            end  // end of UART_GETOPC2 case.
+            UART_GETPTN5: begin
+               tx_char           <= hex_to_ascii(ptn_opc_cnt_i[23:20]);
+               tx_load           <= 1'b1;
+               cmdState          <= UART_GETPTN4;
+            end  // end of UART_GETOPC1 case.
+            UART_GETPTN4: begin
+               tx_char           <= hex_to_ascii(ptn_opc_cnt_i[19:16]);
+               tx_load           <= 1'b1;
+               cmdState          <= UART_GETPTN4;
+            end
             UART_GETPTN3: begin
-               tx_char           <= hex_to_ascii(PTN_OPCODES[15:12]);
+               tx_char           <= hex_to_ascii(ptn_opc_cnt_i[15:12]);
                tx_load           <= 1'b1;
                cmdState          <= UART_GETPTN2;
             end  // end of UART_GETOPC3 case.
             UART_GETPTN2: begin
-               tx_char           <= hex_to_ascii(PTN_OPCODES[11:8]);
+               tx_char           <= hex_to_ascii(ptn_opc_cnt_i[11:8]);
                tx_load           <= 1'b1;
                cmdState          <= UART_GETPTN1;
             end  // end of UART_GETOPC2 case.
             UART_GETPTN1: begin
-               tx_char           <= hex_to_ascii(PTN_OPCODES[7:4]);
+               tx_char           <= hex_to_ascii(ptn_opc_cnt_i[7:4]);
                tx_load           <= 1'b1;
                cmdState          <= UART_GETPTN0;
             end  // end of UART_GETOPC1 case.
             UART_GETPTN0: begin
-               tx_char           <= hex_to_ascii(PTN_OPCODES[3:0]);
+               tx_char           <= hex_to_ascii(ptn_opc_cnt_i[3:0]);
                tx_load           <= 1'b1;
                cmdState          <= UART_SEND_CR;
             end
             UART_GETARG3: begin
-               tx_char           <= hex_to_ascii(ARG16[15:12]);
+               tx_char           <= hex_to_ascii(sys_stat_vec_i[15:12]);
                tx_load           <= 1'b1;
                cmdState          <= UART_GETARG2;
             end  // end of UART_GETARG3 case.
             UART_GETARG2: begin
-               tx_char           <= hex_to_ascii(ARG16[11:8]);
+               tx_char           <= hex_to_ascii(sys_stat_vec_i[11:8]);
                tx_load           <= 1'b1;
                cmdState          <= UART_GETARG1;
             end  // end of UART_GETARG2 case.
             UART_GETARG1: begin
-               tx_char           <= hex_to_ascii(ARG16[7:4]);
+               tx_char           <= hex_to_ascii(sys_stat_vec_i[7:4]);
                tx_load           <= 1'b1;
                cmdState          <= UART_GETARG0;
             end  // end of UART_GETARG1 case.
             UART_GETARG0: begin
-               tx_char           <= hex_to_ascii(ARG16[3:0]);
+               tx_char           <= hex_to_ascii(sys_stat_vec_i[3:0]);
                tx_load           <= 1'b1;
                cmdState          <= UART_SEND_CR;
             end
@@ -590,10 +535,10 @@ module uart
             end  // end of "default" case.
          endcase  // end of (cmdState).
       end
-   end   // end of always @(posedge CLK).
+   end   // end of always @(posedge clk_i).
 			
-   always @(posedge CLK) begin
-      if (RST_SYN2) begin
+   always @(posedge clk_i) begin
+      if (rst_i) begin
          refclkstate             <= 1'b0;
          refclkdiv               <= 7'b0;
       end
@@ -606,25 +551,25 @@ module uart
             refclkdiv            <= refclkdiv - 7'b0000_0001;
          end
       end
-   end  // end of always @(posedge CLK)
+   end  // end of always @(posedge clk_i)
 
 
    rcvr #(.BAUD_DIV(BAUD_DIV))
-   rcv1(// connections to rcvr.v
-       .rxd(DBG_UART_TXO),                  // RX serial input
-       .clk(CLK),                           // 100MHz clock
-       .rst(RST_SYN2),                      // no reset for now?
+   rcv1(                                    // connections to rcvr.v
+       .rxd(RxD_i),                         // RX serial input
+       .clk(clk_i),                         // 100MHz clock
+       .rst(rst_i),                         // 
        .do(rx_charw),                       // RX data
        .drdy(drdy)                          // data ready
       );
 
    xmtr #(.BAUD_DIV(BAUD_DIV))
-   xmt1(// connections to xmtr.v
+   xmt1(                                    // connections to xmtr.v
        .tbre(tbre),                         // transmit buffer empty
-       .txd(DBG_UART_RXI),                  // serial TX out
+       .txd(TxD_o),                         // serial TX out
        .din(tx_din),                        // TX data in
-       .rst(RST_SYN2),                      // no reset for now?
-       .clk(CLK),                           // 100MHz clock
+       .rst(rst_i),                         // 
+       .clk(clk_i),                         // 100MHz clock
        .tx_stb(tx_stb)                      // single-clock TX strobe
     );
 
@@ -659,10 +604,10 @@ module uart
    endfunction
 
 
-   assign  UART1_CTL        = uart_wr_ctlr;
-   assign  LEDG             = ledsgr;
-   assign  LED              = uart_wr_leds;
-   assign  REFCLK_O         = refclkstate;
-   assign  DBG_STATE        = {DBG_UART_TXO, DBG_UART_RXI, dbgOutw[4:0]};
+   assign  version_w = `VERSION;
+
+   assign  hw_ctl_o    = uart_wr_ctlr;
+   assign  refclk_o    = refclkstate;
+   assign  dbg_vec     = {drdy, tx_load, cmdState != UART_IDLE, cmdState == UART_GETVER3};
 
 endmodule

@@ -55,6 +55,10 @@
 `define ERR_PATTERN_RUNNING     8'h1f
 `define ERR_RSP_FIFO_FULL       8'h20
 
+`define ERR_PTN_FIFO_FULL       8'h30   // Pattern processor error, opcode fifo is full
+
+
+
 // Overall state definitions
 `define STATE_RESET             16'h0001    
 `define STATE_INITIALIZING      16'h0002
@@ -70,5 +74,8 @@
 `define STATE_PTN_BUSY          16'h0800
 `define STATE_SPI_BUSY          16'h1000
 `define STATE_RSP_READY         16'h2000
+
+// default response length, status code, pad byte, 2 data length bytes are minimum.
+`define DEFAULT_RESPONSE_LENGTH 16'h0004
 
 `endif
