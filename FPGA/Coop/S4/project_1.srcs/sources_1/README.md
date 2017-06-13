@@ -1,2 +1,0 @@
-# sango
-sango related projects
