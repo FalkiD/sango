@@ -1,4 +1,5 @@
-This is the main directory for the Sango S4 FPGA.
+This is Coop's main directory for the Sango S4 FPGA:
+---------------------------------------------------
 
 branch Coop20170517  --->  master :
     The first refactoring branch that moved opcode processor 
