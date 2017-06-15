@@ -176,7 +176,7 @@ module s4
   output             ACTIVE_LEDn,        //  T14   O       
 
   inout              MMC_CLK,            //  N11   I        MCU<-->MMC-Slave I/F
-  output             MMC_IRQn,           //  P8    O       
+  output             MMC_IRQn,           //  P8    O        MCU SDIO_SD pin, low==MMC card present       
   inout              MMC_CMD,            //  R7    I       
 
   inout              MMC_DAT7,           //  R6    IO      
@@ -862,6 +862,9 @@ always @(posedge clk050)
   assign MMC_CLK_i    = MMC_CLK;
   assign MMC_CMD_i    = MMC_CMD;
   assign MMC_DAT_i    = {MMC_DAT7, MMC_DAT6, MMC_DAT5, MMC_DAT4, MMC_DAT3, MMC_DAT2, MMC_DAT1, MMC_DAT0};
+
+  // MMC_IRQn connected to MCU SD_CD, must be low. Can remove later when MMC driver sw fixed
+  assign MMC_IRQn = 1'b0;   //  P8    O      Assert Card Present always
     
   // 31-Mar-2017 Add SPI instances to debug on S4
   //////////////////////////////////////////////////////
