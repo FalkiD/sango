@@ -10,47 +10,47 @@ create_project -in_memory -part xc7a35tftg256-2
 set_param project.singleFileAddWarning.threshold 0
 set_param project.compositeFile.enableAutoGeneration 0
 set_param synth.vivado.isSynthRun true
-set_property webtalk.parent_dir C:/Users/jlcooper/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4/S4.cache/wt [current_project]
-set_property parent.project_path C:/Users/jlcooper/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4/S4.xpr [current_project]
+set_property webtalk.parent_dir C:/work/github/FPGA/Coop/S4/S4.cache/wt [current_project]
+set_property parent.project_path C:/work/github/FPGA/Coop/S4/S4.xpr [current_project]
 set_property default_lib xil_defaultlib [current_project]
 set_property target_language Verilog [current_project]
-set_property ip_output_repo c:/Users/jlcooper/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4/S4.cache/ip [current_project]
+set_property ip_output_repo c:/work/github/FPGA/Coop/S4/S4.cache/ip [current_project]
 set_property ip_cache_permissions {read write} [current_project]
 read_verilog {
-  C:/Users/jlcooper/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4/S4.srcs/sources_1/status.h
-  C:/Users/jlcooper/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4/S4.srcs/sources_1/opcodes.h
+  C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/status.h
+  C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/opcodes.h
 }
-set_property file_type "Verilog Header" [get_files C:/Users/jlcooper/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4/S4.srcs/sources_1/status.h]
-set_property file_type "Verilog Header" [get_files C:/Users/jlcooper/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4/S4.srcs/sources_1/opcodes.h]
+set_property file_type "Verilog Header" [get_files C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/status.h]
+set_property file_type "Verilog Header" [get_files C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/opcodes.h]
 read_verilog -library xil_defaultlib {
-  C:/Users/jlcooper/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4/S4.srcs/sources_1/xmtr.v
-  C:/Users/jlcooper/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4/S4.srcs/sources_1/rcvr.v
-  C:/Users/jlcooper/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4/S4.srcs/sources_1/spi_master.v
-  C:/Users/jlcooper/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4/S4.srcs/sources_1/uart.v
-  C:/Users/jlcooper/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4/S4.srcs/sources_1/opcodes.v
-  C:/Users/jlcooper/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4/S4.srcs/sources_1/version.v
-  C:/Users/jlcooper/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4/S4.srcs/sources_1/s4.v
+  C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/xmtr.v
+  C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/rcvr.v
+  C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/spi_master.v
+  C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/uart.v
+  C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/opcodes.v
+  C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/version.v
+  C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v
 }
 read_vhdl -library xil_defaultlib {
-  C:/Users/jlcooper/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4/S4.srcs/sources_1/block_ram_pack.vhd
-  C:/Users/jlcooper/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4/S4.srcs/sources_1/convert_pack.vhd
-  C:/Users/jlcooper/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4/S4.srcs/sources_1/fifo_pack.vhd
-  C:/Users/jlcooper/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd
-  C:/Users/jlcooper/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4/S4.srcs/sources_1/dds_pack.vhd
-  C:/Users/jlcooper/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4/S4.srcs/sources_1/signal_conditioning_pack.vhd
-  C:/Users/jlcooper/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4/S4.srcs/sources_1/sd_host_pack.vhd
-  C:/Users/jlcooper/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4/S4.srcs/sources_1/uart_sqclk_pack.vhd
-  C:/Users/jlcooper/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4/S4.srcs/sources_1/auto_baud_pack.vhd
-  C:/Users/jlcooper/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4/S4.srcs/sources_1/async_syscon_pack.vhd
-  C:/Users/jlcooper/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4/S4.srcs/sources_1/flancter_pack.vhd
-  C:/Users/jlcooper/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4/S4.srcs/sources_1/sd_card_pack.vhd
-  C:/Users/jlcooper/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd
+  C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/block_ram_pack.vhd
+  C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/convert_pack.vhd
+  C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/fifo_pack.vhd
+  C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd
+  C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/dds_pack.vhd
+  C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/signal_conditioning_pack.vhd
+  C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_host_pack.vhd
+  C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/uart_sqclk_pack.vhd
+  C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/auto_baud_pack.vhd
+  C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/async_syscon_pack.vhd
+  C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/flancter_pack.vhd
+  C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_card_pack.vhd
+  C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd
 }
 foreach dcp [get_files -quiet -all *.dcp] {
   set_property used_in_implementation false $dcp
 }
-read_xdc C:/Users/jlcooper/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4/S4.srcs/constr_1/s4.xdc
-set_property used_in_implementation false [get_files C:/Users/jlcooper/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4/S4.srcs/constr_1/s4.xdc]
+read_xdc C:/work/github/FPGA/Coop/S4/S4.srcs/constr_1/s4.xdc
+set_property used_in_implementation false [get_files C:/work/github/FPGA/Coop/S4/S4.srcs/constr_1/s4.xdc]
 
 
 synth_design -top s4 -part xc7a35tftg256-2
