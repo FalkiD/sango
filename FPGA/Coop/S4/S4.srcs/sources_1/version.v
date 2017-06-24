@@ -28,4 +28,4 @@
 //
 //------------------------------------------------------------------------------
 
-`define VERSION 16'h1_00_3     // V.vv.r FPGA development revision
+`define VERSION 16'h1_00_4     // V.vv.r FPGA development revision
