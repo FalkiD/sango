@@ -52,12 +52,12 @@ set rc [catch {
   set_param xicom.use_bs_reader 1
   set_property design_mode GateLvl [current_fileset]
   set_param project.singleFileAddWarning.threshold 0
-  set_property webtalk.parent_dir C:/Users/jlcooper/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4/S4.cache/wt [current_project]
-  set_property parent.project_path C:/Users/jlcooper/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4/S4.xpr [current_project]
-  set_property ip_output_repo C:/Users/jlcooper/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4/S4.cache/ip [current_project]
+  set_property webtalk.parent_dir C:/work/github/FPGA/Coop/S4/S4.cache/wt [current_project]
+  set_property parent.project_path C:/work/github/FPGA/Coop/S4/S4.xpr [current_project]
+  set_property ip_output_repo C:/work/github/FPGA/Coop/S4/S4.cache/ip [current_project]
   set_property ip_cache_permissions {read write} [current_project]
-  add_files -quiet C:/Users/jlcooper/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4/S4.runs/synth_1/s4.dcp
-  read_xdc C:/Users/jlcooper/Documents/Ampleon/s4x7/Sango_GitHub/sango/FPGA/Coop/S4/S4.srcs/constr_1/s4.xdc
+  add_files -quiet C:/work/github/FPGA/Coop/S4/S4.runs/synth_1/s4.dcp
+  read_xdc C:/work/github/FPGA/Coop/S4/S4.srcs/constr_1/s4.xdc
   link_design -top s4 -part xc7a35tftg256-2
   write_hwdef -file s4.hwdef
   close_msg_db -file init_design.pb

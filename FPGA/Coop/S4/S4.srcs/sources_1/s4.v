@@ -179,7 +179,7 @@ module s4
   output             ACTIVE_LEDn,        //  T14   O       
 
   inout              MMC_CLK,            //  N11   I        MCU<-->MMC-Slave I/F
-  output             MMC_IRQn,           //  P8    O        MCU SDIO_SD pin; low=MMC_Card_Present.
+  output             MMC_IRQn,           //  P8    O        MCU SDIO_SD pin, low==MMC card present       
   inout              MMC_CMD,            //  R7    I       
 
   inout              MMC_DAT7,           //  R6    IO      
@@ -866,8 +866,9 @@ always @(posedge clk050)
   assign MMC_CMD_i    = MMC_CMD;
   assign MMC_DAT_i    = {MMC_DAT7, MMC_DAT6, MMC_DAT5, MMC_DAT4, MMC_DAT3, MMC_DAT2, MMC_DAT1, MMC_DAT0};
 
-  assign MMC_IRQn     = 1'b0;    // MCU SDIO_SD pin; low=MMC_Card_Present.
-      
+  // MMC_IRQn connected to MCU SD_CD, must be low. Can remove later when MMC driver sw fixed
+  assign MMC_IRQn = 1'b0;   //  P8    O      Assert Card Present always
+    
   // 31-Mar-2017 Add SPI instances to debug on S4
   //////////////////////////////////////////////////////
   // SPI instance for debugging S4
@@ -974,9 +975,9 @@ always @(posedge clk050)
    
    assign ACTIVE_LEDn = tdbgr[255]?count2[24]:count2[25];
    
-//   assign FPGA_MCU4 = count4[15];    //  50MHz div'd by 2^16.
-//   assign FPGA_MCU3 = count3[15];    // 200MHz div'd by 2^16.
-    
+   // 22-Jun have to scope MMC signals
+   assign FPGA_MCU4 = MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.
+   assign FPGA_MCU3 = MMC_CMD; //count3[15];    // 200MHz div'd by 2^16.
 
   endmodule
 

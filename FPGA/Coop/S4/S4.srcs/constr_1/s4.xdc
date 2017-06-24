@@ -44,12 +44,14 @@ set property PULLUP [get_ports {MMC_DAT7}]
 
 set_property PACKAGE_PIN R7 [get_ports {MMC_CMD}]
 set_property IOSTANDARD LVCMOS33 [get_ports {MMC_CMD}]
+set property PULLUP [get_ports {MMC_CMD}]
 
 set_property PACKAGE_PIN P8 [get_ports {MMC_IRQn}]
 set_property IOSTANDARD LVCMOS33 [get_ports {MMC_IRQn}]
 
 set_property PACKAGE_PIN N11 [get_ports {MMC_CLK}]
 set_property IOSTANDARD LVCMOS33 [get_ports {MMC_CLK}]
+#set property PULLUP [get_ports {MMC_CLK}]
 # MMC clock signal -- The use of this property was "highly discouraged"    zzm01
 #set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets {jb_IBUF[6]}]
 
