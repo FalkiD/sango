@@ -40,7 +40,7 @@
 // Hierarchy:                                                         Scope:
 // ----------------------------------------------------------------   -----------------------------------------------------------
 //    s4.v                                                            (s4 )    
-//        version.v                                                   (NOTE: included by every non-ip *.v)
+//        version.v                                                   (NOTE: included by most/every non-ip *.v)
 // 
 //        
 //        mmc_tester                     mmc_test_pack.vhd            (s4 ....mmc_tester_0)
@@ -111,6 +111,8 @@
 // Revision 1.00.1  04/11/2017 JLC Cont'd by adding HW debug UART.
 // Revision 1.00.2  04/25/2017 JLC Updated mmc_tester w/ RMR's dbg_spi_* and DBG_enables interface.
 // Revision 1.00.3  05/23/2017 JLC Updated mmc_tester w/ RMR's dbg_spi_* and DBG_enables interface.
+// Revision 1.00.3  06/12/2017 JLC Updated mmc_tester w/ RMR's dbg_spi_* and DBG_enables interface.
+// Revision 1.00.4  06/13/2017 JLC Updated HW debug UART (256 bit ctl r/w bus).
 //
 //
 // Additional Comments: General structure/sequence:
@@ -156,9 +158,10 @@
 `define MS001      1500000/20       // 1.5ms 
 */
 
-// >>>>> `define's <<<<<
+// >>>>> Coop's `define's <<<<<
 // 
-`define JLC_TEMP_NO_L12 1              // Temp workaround depop'd L12. JLC 03/17/2017    JLC_TEMP_CLK
+`define JLC_TEMP_NO_L12 1              // Temp workaround depop'd L12. JLC 03/17/2017    JLC_TEMP_NO_L12> (causes <JLC_TEMP_CLK>)
+`define JLC_TEMP_CLK 1                 //                                                JLC_TEMP_CLK
 `define GLBL_CLK_FREQ_BRD 100000000.0  //  "       "        "      "                     JLC_TEMP_CLK
 `define GLBL_CLK_FREQ_MCU 102000000.0  //  "       "        "      "                     JLC_TEMP_CLK
 `define CLKFB_FACTOR_BRD 10.000        //  "       "        "      "                     JLC_TEMP_CLK
@@ -170,7 +173,7 @@
 
 module s4  
 (
-  // commented out as per <JLC_TEMP_NO_L12>
+  // commented out as per <JLC_TEMP_NO_L12> and <JLC_TEMP_CLK>
   //input              FPGA_CLK,           //  P10   I        + Diff FPGA CLK From S4 Board U34/Si53307
   //input              FPGA_CLKn,          //  N10   I        - and A3/100MHx Oscillator can.
   output             ACTIVE_LEDn,        //  T14   O       
@@ -245,143 +248,141 @@ module s4
 //----------------------------------------------------------------------------------------------
 
 // Local signals
-wire        clk_diff_rcvd;
-wire        clkin;
-wire        clkfbprebufg;
-wire        clk100prebufg;
-wire        clk200prebufg;
-wire        clk050prebufg;
-wire        clkfb;
-wire        clk100;
-wire        clk200;
-wire        clk050;
+wire         clk_diff_rcvd;
+wire         clkin;
+wire         clkfbprebufg;
+wire         clk100prebufg;
+wire         clk200prebufg;
+wire         clk050prebufg;
+wire         clkfb;
+wire         clk100;
+wire         clk200;
+wire         clk050;
 
 // <JLC_TEMP_RST>
-wire        dbg_sys_rst_i;
-
-reg  [ 9:0] dbg_sys_rst_sr;
-reg         dbg_sys_rst;
-reg         dbg_sys_rst_n;
+wire         dbg_sys_rst_i;
+reg  [9:0]   dbg_sys_rst_sr;
+reg          dbg_sys_rst;
+reg          dbg_sys_rst_n;
 
 // <JLC_TEMP_DBG>
-reg  [39:0] count1;
-reg  [25:0] count2;
-reg  [15:0] count3;
-reg  [15:0] count4;
+reg  [39:0]  count1;
+reg  [25:0]  count2;
+reg          count2tc = 1'b0;
+reg  [15:0]  count3;
+reg  [15:0]  count4;
 
-wire        sys_clk;
-wire        sys_rst_n;
-wire [15:0] led_l;
-wire        mmcm_rst_i;
-wire        mmcm_pwrdn_i;
-wire        mmcm_locked_o;
+wire         sys_clk;
+wire         sys_rst_n;
+wire         mmcm_rst_i;
+wire         mmcm_pwrdn_i;
+wire         mmcm_locked_o;
 
 // MMC tester
-wire        mmc_clk;
-wire        mmc_clk_oe;
-wire        mmc_cmd;
-wire        mmc_cmd_oe;
-wire        mmc_cmd_zzz;
-wire        mmc_cmd_choice;
-wire  [7:0] mmc_dat;
-wire  [7:0] mmc_dat_zzz;
-wire  [7:0] mmc_dat_choice1;
-wire  [7:0] mmc_dat_choice2;
-reg   [7:0] mmc_dat_choice3;
-wire        mmc_od_mode;
-wire        mmc_dat_oe;
-wire  [1:0] mmc_dat_siz;
-wire        mmc_tlm;
+wire         mmc_clk;
+wire         mmc_clk_oe;
+wire         mmc_cmd;
+wire         mmc_cmd_oe;
+wire         mmc_cmd_zzz;
+wire         mmc_cmd_choice;
+wire  [7:0]  mmc_dat;
+wire  [7:0]  mmc_dat_zzz;
+wire  [7:0]  mmc_dat_choice1;
+wire  [7:0]  mmc_dat_choice2;
+reg   [7:0]  mmc_dat_choice3;
+wire         mmc_od_mode;
+wire         mmc_dat_oe;
+wire  [1:0]  mmc_dat_siz;
+wire         mmc_tlm;
 
 // MMC card I/O proxy signals
-wire        MMC_CLK_io;
-wire        MMC_CMD_io;
-wire  [7:0] MMC_DAT_io;
-wire        MMC_CLK_i;
-wire        MMC_CMD_i;
-wire  [7:0] MMC_DAT_i;
+wire         MMC_CLK_io;
+wire         MMC_CMD_io;
+wire  [7:0]  MMC_DAT_io;
+wire         MMC_CLK_i;
+wire         MMC_CMD_i;
+wire  [7:0]  MMC_DAT_i;
 
 // Backside HW signals  
-reg  [15:0] tdbg_reg;
-wire [15:0] tdbg_w;
+wire [255:0] tdbgw;
+reg  [255:0] tdbgr;
 
-wire        syscon_rxd;
-wire        syscon_txd;
+wire         syscon_rxd;
+wire         syscon_txd;
 
 // opcode processor wires:
-wire        opc_enable_w;
-wire [7:0]  opc_fifo_dat_w;
+wire         opc_enable_w;
+wire [7:0]   opc_fifo_dat_w;
 
-wire        opc_fifo_dat_w;          // fifo read data bus
-wire        opc_fifo_ren_w;          // fifo read line
-wire        opc_fifo_rmt_w;          // fifo empty flag
+//wire         opc_fifo_dat_w;          // fifo read data bus  commented out JLC 06/16/2017
+wire         opc_fifo_ren_w;          // fifo read line
+wire         opc_fifo_rmt_w;          // fifo empty flag
 wire [`GLBL_RSP_FILL_LEVEL_BITS-1:0] opc_fifo_rfl_w;   // fifo fill level
 
-wire [15:0] opc_sys_st_w;            // s4 system state (e.g. running a pattern)
-wire [31:0] opc_mode_w;              // MODE opcode can set system-wide flags
+wire [15:0]  opc_sys_st_w;            // s4 system state (e.g. running a pattern)
+wire [31:0]  opc_mode_w;              // MODE opcode can set system-wide flags
 
-wire [7:0]  opc_rspf_w;              // to fifo, response bytes(status, measurements, echo, etc)
-wire        opc_rspf_we_w;           // response fifo write enable
-wire        opc_rspf_mt_w;           // response fifo empty flag
-wire        opc_rspf_fl_w;           // response fifo full  flag
-wire        opc_rspf_rdy_w;          // response fifo is waiting
+wire [7:0]   opc_rspf_w;              // to fifo, response bytes(status, measurements, echo, etc)
+wire         opc_rspf_we_w;           // response fifo write enable
+wire         opc_rspf_mt_w;           // response fifo empty flag
+wire         opc_rspf_fl_w;           // response fifo full  flag
+wire         opc_rspf_rdy_w;          // response fifo is waiting
 wire [`GLBL_RSP_FILL_LEVEL_BITS-1:0] opc_rsp_lng_w;    // update response length when response is ready
 wire [`GLBL_RSP_FILL_LEVEL_BITS-1:0] opc_rsp_cnt_w;    // response fifo count, opcode processor asserts 
 
-wire [31:0] frequency_w;             // to fifo, frequency output in MHz
-wire        frq_wr_en_w;             // frequency fifo write enable
-wire        frq_fifo_empty_w;        // frequency fifo empty flag
-wire        frq_fifo_full_w;         // frequency fifo full flag
+wire [31:0]  frequency_w;             // to fifo, frequency output in MHz
+wire         frq_wr_en_w;             // frequency fifo write enable
+wire         frq_fifo_empty_w;        // frequency fifo empty flag
+wire         frq_fifo_full_w;         // frequency fifo full flag
 
-wire [31:0] power_w;                 // to fifo, power output in dBm
-wire        pwr_wr_en_w;             // power fifo write enable
-wire        pwr_fifo_empty_w;        // power fifo empty flag
-wire        pwr_fifo_full_w;         // power fifo full flag
+wire [31:0]  power_w;                 // to fifo, power output in dBm
+wire         pwr_wr_en_w;             // power fifo write enable
+wire         pwr_fifo_empty_w;        // power fifo empty flag
+wire         pwr_fifo_full_w;         // power fifo full flag
 
       // phase is X7 only, do later
-wire [31:0] phase_w;                 // to fifo, phase output in degrees
-wire        phs_wr_en_w;             // phase fifo write enable
-wire        phs_fifo_empty_w;        // phase fifo empty flag
-wire        phs_fifo_full_w;         // phase fifo full flag
+wire [31:0]  phase_w;                 // to fifo, phase output in degrees
+wire         phs_wr_en_w;             // phase fifo write enable
+wire         phs_fifo_empty_w;        // phase fifo empty flag
+wire         phs_fifo_full_w;         // phase fifo full flag
 
-wire [63:0] pulse_w;                 // to fifo, pulse opcode
-wire        pulse_wr_en_w;           // pulse fifo write enable
-wire        pulse_fifo_empty_w;      // pulse fifo empty flag
-wire        pulse_fifo_full_w;       // pulse fifo full flag
+wire [63:0]  pulse_w;                 // to fifo, pulse opcode
+wire         pulse_wr_en_w;           // pulse fifo write enable
+wire         pulse_fifo_empty_w;      // pulse fifo empty flag
+wire         pulse_fifo_full_w;       // pulse fifo full flag
 
-wire [15:0] bias_w;                  // to fifo, bias opcode
-wire        bias_wr_en_w;            // bias fifo write enable
-wire        bias_fifo_empty_w;       // bias fifo empty flag
-wire        bias_fifo_full_w;        // bias fifo full flag
+wire [15:0]  bias_w;                  // to fifo, bias opcode
+wire         bias_wr_en_w;            // bias fifo write enable
+wire         bias_fifo_empty_w;       // bias fifo empty flag
+wire         bias_fifo_full_w;        // bias fifo full flag
 
       // pattern opcodes are saved in pattern RAM.
-wire        ptn_wr_en_w;             // opcode processor saves pattern opcodes to pattern RAM 
-wire [15:0] ptn_addr_w;              // address 
-wire [95:0] ptn_data_w;              // 12 bytes, 3 bytes patClk tick, 9 bytes for opcode, length, and data   
-wire [95:0] ptn_data_w;              // 12 bytes, 3 bytes patClk tick, 9 bytes for opcode, length, and data   
+wire         ptn_wr_en_w;             // opcode processor saves pattern opcodes to pattern RAM 
+wire [15:0]  ptn_addr_w;              // address 
+wire [95:0]  ptn_data_w;              // 12 bytes, 3 bytes patClk tick, 9 bytes for opcode, length, and data   
 
-wire        ptn_processor_en_w;      // Run pattern processor 
-wire [15:0] ptn_start_addr_w;        // address 
+wire         ptn_processor_en_w;      // Run pattern processor 
+wire [15:0]  ptn_start_addr_w;        // address 
 
-wire [31:0] opcode_counter_w;        // count opcodes for status info                     
-wire [7:0]  status_w;                // NULL opcode terminates, done=0, or error code
-wire [6:0]  state_w;                 // For debugger display
+wire [31:0]  opcode_counter_w;        // count opcodes for status info                     
+wire [7:0]   status_w;                // NULL opcode terminates, done=0, or error code
+wire [6:0]   state_w;                 // For debugger display
     
 //    // Debugging
-wire [7:0]  last_opcode_w;
-wire [15:0] last_length_w;
+wire [7:0]   last_opcode_w;
+wire [15:0]  last_length_w;
 
-wire [31:0] opc_oc_cnt_w; 
+wire [31:0]  opc_oc_cnt_w; 
 
 // SPI debugging connections for w 03000030 command
 // Write up to 14 byte to SPI device
-wire [7:0]  arr_spi_bytes [13:0];
-wire [3:0]  dbg_spi_bytes;      // bytes to send
-reg  [3:0]  dbg_spi_count;      // down counter
-wire        dbg_spi_start;
-reg         dbg_spi_done;
-wire [2:0]  dbg_spi_device;     // 1=VGA, 2=SYN, 3=DDS, 4=ZMON
-wire [15:0] dbg_enables;       // toggle various enables/wires
+wire [7:0]   arr_spi_bytes [13:0];
+wire [3:0]   dbg_spi_bytes;      // bytes to send
+reg  [3:0]   dbg_spi_count;      // down counter
+wire         dbg_spi_start;
+reg          dbg_spi_done;
+wire [2:0]   dbg_spi_device;     // 1=VGA, 2=SYN, 3=DDS, 4=ZMON
+wire [15:0]  dbg_enables;       // toggle various enables/wires
 
 
 //------------------------------------------------------------------------
@@ -429,9 +430,9 @@ assign  mmcm_pwrdn_i  = 1'b0;
 
 MMCME2_BASE #(
   .BANDWIDTH("OPTIMIZED"), // Jitter programming (OPTIMIZED, HIGH, LOW)
-  .CLKFBOUT_MULT_F(`CLKFB_FACTOR_MCU),  // Multiply value for all CLKOUT (2.000-64.000)   = Fpfd/Fclkin1
+  .CLKFBOUT_MULT_F(`CLKFB_FACTOR_MCU),  // Multiply value for all CLKOUT (2.000-64.000)   = Fpfd/Fclkin1  <JLC_TEMP_CLK>
   .CLKFBOUT_PHASE(0.000),  // Phase offset in degrees of CLKFB (-360.000-360.000).
-  .CLKIN1_PERIOD(9.800),  // Input clock period in ns to ps resolution (i.e. 33.333 is 30 MHz).
+  .CLKIN1_PERIOD(9.800),  // Input clock period in ns to ps resolution (i.e. 33.333 is 30 MHz).           <JLC_TEMP_CLK>
   // CLKOUT0_DIVIDE - CLKOUT6_DIVIDE: Divide amount for each CLKOUT (1-128)
   .CLKOUT0_DIVIDE_F(10),   // 1000MHz / 10.0 = 100MHz  Divide amount for CLKOUT0 (1.000-128.000).
   .CLKOUT1_DIVIDE(5),      // 1000MHz /  5.0 = 200MHz
@@ -532,10 +533,12 @@ always @(posedge sys_clk)
 //
 always @(posedge sys_clk)
   if (!sys_rst_n) begin
-    count2 <= 0;
+    count2     <= 0;
+    count2tc   <= 1'b0;
   end
   else begin
-    count2 <= count2+1;
+    count2     <= count2+1;
+    count2tc   <= (count2 == 26'h3FFFFFF);
   end
 
 
@@ -588,7 +591,7 @@ always @(posedge clk050)
     .resp_o            (syscon_txd),
 
     // Board related
-    .led_o             (led_l[0]),
+    .led_o             (),
 
     // Interface for SD/MMC traffic logging
     // via asynchronous serial transmission
@@ -902,9 +905,9 @@ always @(posedge clk050)
   localparam BIT_DDS_SYNC         = 16'h0200;
   localparam BIT_DDS_PS0          = 16'h0400;
   localparam BIT_DDS_PS1          = 16'h0800;
-  localparam BIT_ZMON_EN          = 16'h1000;
+  localparam BIT_ZMON_EN          = 16'h1000;                            // <JLC_TEMP_ZMON_EN>
   
-  localparam BIT_TEMP_SYS_RST     = 16'h8000;  // <JLC_TEMP_RST>
+  localparam BIT_TEMP_SYS_RST     = 16'h8000;                            // <JLC_TEMP_RST>
   
   assign RF_GATE = dbg_enables & BIT_RF_GATE ? 1'b1 : 1'b0;
   assign RF_GATE2 = dbg_enables & BIT_RF_GATE2 ? 1'b1 : 1'b0;
@@ -934,38 +937,43 @@ always @(posedge clk050)
 // ******************************************************************************
 
   uart #(
-    .VRSN                       (`VERSION)
+    .VRSN                       (`VERSION),
+    .CLK_FREQ                   (`GLBL_CLK_FREQ_MCU),    // <JLC_TEMP_CLK
+    .BAUD                       (115200)
   ) hwdbg_uart
   (                                                      // diag/debug control signal outputs
     // infrastructure, etc.
     .clk_i                      (sys_clk),               // 
-    .rst_i                      (!sys_rst_n),             // 
-    .refclk_o                   (),                      // temporary test output
+    .rst_i                      (!sys_rst_n),            // 
+    .rx_enbl                    (count2tc),
     .RxD_i                      (FPGA_RXD2),             // "RxD" from USB serial bridge to FPGA
     .TxD_o                      (FPGA_TXD2),             // "TxD" from FPGA to USB serial bridge
+    .dbg0_o                     (FPGA_MCU2),             //  1-bit output: debug outpin #0.
+    .dbg1_o                     (FPGA_MCU3),             //  1-bit output: debug outpin #1.
+    .dbg2_o                     (FPGA_MCU4),             //  1-bit output: debug outpin #2.
     
+    // diag/debug control signal outputs
+    .hw_ctl_o                   (tdbgw),                 // 16-bit output: control functions.
+
     // diag/debug status  signal inputs
-    .hw_stat_i                  (tdbg_reg),
+    .hw_stat_i                  (tdbgr),
     .gp_opc_cnt_i               (opc_oc_cnt_w),          // count of opcodes processed from top level
     .ptn_opc_cnt_i              (32'hdeadbeef),          // 32-bit input:  count of pattern opcodes processed from top level
-    .sys_stat_vec_i             (opc_sys_st_w),          // 16-bit input:  status to show, system_state for now
-    .hw_ctl_o                   (tdbg_w),                // 16-bit output: control functions.
-    .dbg_o                      (FPGA_MCU2)              //  1-bit output: debug outpin..
-
+    .sys_stat_vec_i             (opc_sys_st_w)           // 16-bit input:  status to show, system_state for now
    );
 
    // Snapshot:  capture data for R & S commands.   
    always @(posedge sys_clk) begin
       if (!sys_rst_n) begin
-         tdbg_reg                  <= 16'h0000;
+         tdbgr                     <= 256'b0;
       end
       else begin
-         tdbg_reg                  <= tdbg_w;
+         tdbgr                     <= tdbgw;
       end
    end  // end of always @ (posedge clk).
    
    
-   assign ACTIVE_LEDn = tdbg_reg[15]?count2[24]:count2[25];
+   assign ACTIVE_LEDn = tdbgr[255]?count2[24]:count2[25];
    
    // 22-Jun have to scope MMC signals
    assign FPGA_MCU4 = MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.
