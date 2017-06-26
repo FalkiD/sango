@@ -312,7 +312,6 @@ wire        syscon_txd;
 wire        opc_enable_w;
 wire [7:0]  opc_fifo_dat_w;
 
-wire        opc_fifo_dat_w;          // fifo read data bus
 wire        opc_fifo_ren_w;          // fifo read line
 wire        opc_fifo_rmt_w;          // fifo empty flag
 wire [`GLBL_RSP_FILL_LEVEL_BITS-1:0] opc_fifo_rfl_w;   // fifo fill level
@@ -357,7 +356,6 @@ wire        bias_fifo_full_w;        // bias fifo full flag
       // pattern opcodes are saved in pattern RAM.
 wire        ptn_wr_en_w;             // opcode processor saves pattern opcodes to pattern RAM 
 wire [15:0] ptn_addr_w;              // address 
-wire [95:0] ptn_data_w;              // 12 bytes, 3 bytes patClk tick, 9 bytes for opcode, length, and data   
 wire [95:0] ptn_data_w;              // 12 bytes, 3 bytes patClk tick, 9 bytes for opcode, length, and data   
 
 wire        ptn_processor_en_w;      // Run pattern processor 
