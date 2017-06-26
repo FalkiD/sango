@@ -164,7 +164,7 @@
 `define CLKFB_FACTOR_BRD 10.000        //  "       "        "      "                     JLC_TEMP_CLK
 `define CLKFB_FACTOR_MCU 9.800         //  "       "        "      "                     JLC_TEMP_CLK
 `define GLBL_MMC_FILL_LEVEL_BITS 16
-`define GLBL_RSP_FILL_LEVEL_BITS 10
+`define GLBL_RSP_FILL_LEVEL_BITS 16
 
 // -----------------------------------------------------------------------------
 
@@ -325,7 +325,7 @@ wire        opc_rspf_mt_w;           // response fifo empty flag
 wire        opc_rspf_fl_w;           // response fifo full  flag
 wire        opc_rspf_rdy_w;          // response fifo is waiting
 wire [`GLBL_RSP_FILL_LEVEL_BITS-1:0] opc_rsp_lng_w;    // update response length when response is ready
-wire [`GLBL_RSP_FILL_LEVEL_BITS-1:0] opc_rsp_cnt_w;    // response fifo count, opcode processor asserts 
+wire [`GLBL_MMC_FILL_LEVEL_BITS-1:0] opc_rsp_cnt_w;    // response fifo count, opcode processor asserts 
 
 wire [31:0] frequency_w;             // to fifo, frequency output in MHz
 wire        frq_wr_en_w;             // frequency fifo write enable
@@ -377,6 +377,7 @@ wire [7:0]  arr_spi_bytes [13:0];
 wire [3:0]  dbg_spi_bytes;      // bytes to send
 reg  [3:0]  dbg_spi_count;      // down counter
 wire        dbg_spi_start;
+wire        dbg_spi_busy;
 reg         dbg_spi_done;
 wire [2:0]  dbg_spi_device;     // 1=VGA, 2=SYN, 3=DDS, 4=ZMON
 wire [15:0] dbg_enables;       // toggle various enables/wires
@@ -586,7 +587,7 @@ always @(posedge clk050)
     .resp_o            (syscon_txd),
 
     // Board related
-    .led_o             (led_l[0]),
+    .led_o             (led_l),
 
     // Interface for SD/MMC traffic logging
     // via asynchronous serial transmission
@@ -671,7 +672,7 @@ always @(posedge clk050)
 
     .enable                     (opc_enable_w),     // 
 
-    .fifo_dat_i                 (opc_fif_dat_w),    // fifo read data bus
+    .fifo_dat_i                 (opc_fifo_dat_w),   // fifo read data bus
     .fifo_rd_en_o               (opc_fifo_ren_w),   // fifo read line
     .fifo_rd_empty_i            (opc_fifo_rmt_w),   // fifo empty flag
     .fifo_rd_count_i            (opc_fifo_rfl_w),   // fifo fill level
