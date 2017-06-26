@@ -1,0 +1,187 @@
+-- Simulation Input File
+-- For "uart_ascii_control_port"
+--
+-- u = UART transmit data
+-- <time delay> is relative time which elapses before next line is processed.
+--
+-- Format:
+--
+-- u <time delay> xyz ...          Where wwwwwwww = relative time and (x, y, z...) = ASCII characters
+-- A single Carriage Return is sent at the end of each line (at the ';' character)
+
+-- 21-Feb-2017 Begin debug of opcode processor in simulation
+-- This set of commands is useful to exercise the module under test
+d 10 us ;            -- Initial delay
+u 0.5 ms ;            -- <CR> (Allows autobaud to obtain lock on baud rate.)
+u 0.5 ms w 3000009 010624DE; -- Set DDS for sd_clk_o of 400kHz
+
+--u 0.5 ms w 300002C 0ffaa; -- Set enables
+--u 0.5 ms w 3000030 01 06 05 06 07 08 09 0A; -- Write 6 bytes to SPI device 1
+
+-- 23-Jun Send S4 MCU startup CMD0, CMD1 sequence
+-- Note:S4 MCU does this at 20MHz
+u 0.5 ms w 300000E 200; -- Set host DMA address at 0x200
+u 0.5 ms w 3000000 200 0; -- Set blk_size=512, blk_count=0
+u 0.5 ms w 3000002 0 00000000; -- Write CMD0 (RESET, no response)
+u 0.5 ms w 3000002 1 00000000; -- Write CMD1 (SEND_OP_COND)
+u 3.0 ms r 3000004 4; --Read CMD response
+u 3.0 ms r 3000022 6; --Read FPGA counters
+u 0.5 ms w 3000022 130; -- Enable read telemetry
+u 5.0 ms r0 300002a 0C; --Read 12 words of telemetry
+u 0.5 ms w 3000002 1 00FF8000; -- Write CMD1 (SEND_OP_COND) (ocr_pwrup_done)
+u 3.0 ms r 3000004 4; --Read CMD response
+u 4.0 ms r 3000022 6; --Read FPGA counters
+u 4.0 ms r0 300002a 8; --Read 8 words of telemetry
+
+--u 0.5 ms w 3000002 2 00000000; -- Write CMD2 (ALL_SEND_CID, long response)
+--u 0.5 ms w 3000002 3 00050000; -- Write CMD3 (SET_RELATIVE_ADDRESS)
+--u 0.5 ms w 3000002 7 00050000; -- Write CMD7 (SELECT) GOES TO CARD_TRAN
+--u 0.5 ms w 3000008 7D000001; -- Set controller timeout=32000, bus size
+--u 0.5 ms w 3000002 6 03B70100; -- Write CMD6 (SWITCH) set bus width
+--u 0.5 ms w 3000009 80000000; -- Set DDS for sd_clk_o of 50MHz
+--u 0.5 ms w 300000E 200; -- Set DMA address at 0x200
+--u 1.0 ms w 4000000 04 04 00 9F A0 92 00 00 ; --FREQ opcode, 2460MHz 
+--u 3.0 ms r 4000000 06; -- Read from host BRAM
+--u 3.0 ms r 4000200 06; -- Read from host BRAM
+--u 0.5 ms r 3000030 4; -- opcode processor status before block written
+--u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--u 0.5 ms w 3000002 19 00000200; -- Write CMD25 to MMC address 0200, FIFO begin(WRITE_MULTIPLE_BLOCK)
+--u 0.5 ms w 3000002 C 00000000; -- Write CMD12 (STOP_TRANSMISSION, arg=stuff bits)
+--d 2.0 ms
+--u 2.0 ms r 3000030 10; -- Read opcode processor status
+-- DMA address still set at 200 u 0.5 ms w 300000E 200; -- Set DMA address at 0x200
+--u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--u 2.0 ms w 3000002 12 00000200; -- Write CMD18 (READ_MULTIPLE_BLOCK)
+--u 0.5 ms w 3000002 C 00000000; -- Write CMD12 (STOP_TRANSMISSION, arg=stuff bits)
+--u 6.0 ms r 4000200 20; --Read data from host adapter  
+
+--u 6.0 ms r 4000220 20; --Read data from host adapter  
+--u 1.0 ms r 4000240 20; --Read data from host adapter  
+--u 1.0 ms r 4000260 20; --Read data from host adapter  
+--u 1.0 ms r 4000280 20; --Read data from host adapter  
+--u 1.0 ms r 40002A0 20; --Read data from host adapter  
+--u 1.0 ms r 40002C0 20; --Read data from host adapter  
+--u 1.0 ms r 40002E0 20; --Read data from host adapter  
+--u 1.0 ms r 4000300 20; --Read data from host adapter  
+--u 1.0 ms r 4000320 20; --Read data from host adapter  
+--u 1.0 ms r 4000340 20; --Read data from host adapter  
+--u 1.0 ms r 4000360 20; --Read data from host adapter  
+--u 1.0 ms r 4000380 20; --Read data from host adapter  
+--u 1.0 ms r 40003A0 20; --Read data from host adapter  
+--u 6.0 ms r 40003C0 20; --Read data from host adapter  
+--u 6.0 ms r 40003E0 20; --Read data from host adapter  
+--
+--u 1.0 ms r0 300002F 4; -- Read 4 card data pipe FIFO values
+--u 0.5 ms w 300000E 0; -- Set DMA address at 0x00
+--u 0.5 ms w 3000002 12 00000200; -- Write CMD18 (READ_MULTIPLE_BLOCK)
+--u 0.5 ms w 3000002 C 00000000; -- Write CMD12 (STOP_TRANSMISSION, arg=stuff bits)
+--u 1.0 ms r 4000000 2; --Read status  
+--
+--u 0.5 ms w 3000002 19 00000200 04 04 05 04 03 02; -- Write CMD25 (WRITE_MULTIPLE_BLOCK)
+--u 0.5 ms w 3000002 C 00000000; -- Write CMD12 (STOP_TRANSMISSION, arg=stuff bits)
+--u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--u 0.5 ms w 3000002 12 00000200; -- Write CMD18 (READ_MULTIPLE_BLOCK)
+--u 0.5 ms w 3000002 C 00000000; -- Write CMD12 (STOP_TRANSMISSION, arg=stuff bits)
+
+-- This set of commands is useful to verify operation of the system controller module.
+--d  10 us;             -- Delay
+--u 300 us ;            -- <CR> (Allows autobaud to obtain lock on baud rate.)
+--u 300 us i;           -- i<CR>
+--u 600 us r 00;        -- read in src region, qty unspecified. (POR default is used.)
+--u 600 us r 00 2;      -- read in src region
+--u 600 us r 10 2;      -- read in dst region
+--u 600 us r;           -- read in dst region, use same qty as previous command, with sequential address.
+--u 2.1 ms r 00 31;     -- read across src, dst, misc and beyond, resulting in bus error message
+--u 300 us f 14 55 4;   -- fill in dst region
+--u 300 us f 18 AA 4;   -- fill
+--u 300 us w 1c 01 23;  -- write
+--u 300 us w 00 45 67;  -- write
+--u 300 us y 0r 45 67;  -- write, should cause "c?" message
+--u 300 us w 0r 45 67;  -- write, should cause "a?" message
+--u 300 us w 00 t5 67;  -- write, should cause "d?" message
+--u 300 us f 00 45 poo;  -- fill, should cause "q?" message
+
+---- This set of commands is useful to exercise the module under test
+--d 10 us ;            -- Initial delay
+--u 0.5 ms ;            -- <CR> (Allows autobaud to obtain lock on baud rate.)
+----u 0.5 ms w 3000022 3; -- Activate host and slave modes
+----u 3.0 ms r 3000000 10; -- read MMC host registers
+----u 3.0 ms r 3000010 10; -- read MMC slave registers
+----u 3.0 ms r 3000020 10; -- read MMC test registers
+--u 0.5 ms w 3000009 010624DE; -- Set DDS for sd_clk_o of 400kHz
+--u 0.5 ms w 300000E 200; -- Set host DMA address at 0x200
+--u 0.5 ms w 3000000 200 0; -- Set blk_size=512, blk_count=0
+--u 0.5 ms w 3000002 0 00000000; -- Write CMD0 (RESET, no response)
+--u 0.5 ms w 3000002 1 00FF8000; -- Write CMD1 (SEND_OP_COND)
+--u 0.5 ms w 3000002 1 00FF8000; -- Write CMD1 (SEND_OP_COND) (ocr_pwrup_done)
+--u 0.5 ms w 3000002 2 00000000; -- Write CMD2 (ALL_SEND_CID, long response)
+--u 0.5 ms w 3000002 3 00050000; -- Write CMD3 (SET_RELATIVE_ADDRESS)
+--u 0.5 ms w 3000002 7 00050000; -- Write CMD7 (SELECT) GOES TO CARD_TRAN
+--u 0.5 ms w 3000008 7D000001; -- Set controller timeout=32000, bus size
+--u 0.5 ms w 3000002 6 03B70100; -- Write CMD6 (SWITCH) set bus width
+--u 0.5 ms w 3000009 80000000; -- Set DDS for sd_clk_o of 50MHz
+----u 0.5 ms w 3000002 8 000001AA; -- Write CMD8 (SEND_EXT_CSD, arg=stuff bits, read data)
+----d 100 us ;
+----u 16.0 ms r 4000200 40; -- Read first 64 EXT_CSD values
+----u 1.0 ms r 40002B7 1; -- Read BUS_WIDTH value
+----u 1.0 ms r 40003FE 2; -- Read last two EXT_CSD values
+--u 0.5 ms w 3000001 8; -- Set blk_count
+--u 0.5 ms w 300000E 00; -- Set DMA address at 0x00
+----u 0.5 ms w 3000002 10 00000200; -- Write CMD16 (SET_BLOCK_SIZE)
+--u 1.5 ms w 3000002 12 00000000; -- Write CMD18 (READ_MULTIPLE_BLOCK)
+--u 0.5 ms w 3000002 0C 00000000; -- Write CMD12 (STOP_TRANSMISSION, arg=stuff bits)
+--u 1.5 ms w 3000002 12 00000000; -- Write CMD18 (READ_MULTIPLE_BLOCK)
+--u 0.5 ms w 3000002 0C 00000000; -- Write CMD12 (STOP_TRANSMISSION, arg=stuff bits)
+--u 0.5 ms w 3000002 19 00004000; -- Write CMD25 (WRITE_MULTIPLE_BLOCK)
+--u 0.5 ms w 3000002 0C 00000000; -- Write CMD12 (STOP_TRANSMISSION, arg=stuff bits)
+--u 1.5 ms w 3000002 0D 00050000; -- Write CMD13 (SEND_STATUS)
+--u 1.5 ms w 3000002 12 00000000; -- Write CMD18 (READ_MULTIPLE_BLOCK)
+--u 0.5 ms w 3000002 0C 00000000; -- Write CMD12 (STOP_TRANSMISSION, arg=stuff bits)
+--u 1.5 ms w 3000002 0D 00050000; -- Write CMD13 (SEND_STATUS)
+--u 1.5 ms w 3000002 12 00000000; -- Write CMD18 (READ_MULTIPLE_BLOCK)
+--u 0.5 ms w 3000002 0C 00000000; -- Write CMD12 (STOP_TRANSMISSION, arg=stuff bits)
+----u 0.5 ms w 3000002 17 00000020; -- Write CMD23 (SET_BLOCK_COUNT)
+----u 1.5 ms w 3000002 12 00000000; -- Write CMD18 (READ_MULTIPLE_BLOCK)
+----u 6.0 ms r 5004000 20; -- Read the card RAM
+----u 6.0 ms r 5004200 20; -- Read the card RAM
+----u 6.0 ms r 5004400 20; -- Read the card RAM
+----u 6.0 ms r 5004600 20; -- Read the card RAM
+--u 0.5 ms w 3000022 100; -- Enable register access to log data
+--u 12.0 ms r0 300002A 180; -- Read the log
+--u 0.5 ms w 3000002 19 00000800; -- Write CMD25 (WRITE_MULTIPLE_BLOCK)
+--u 0.5 ms w 3000002 0C 00000000; -- Write CMD12 (STOP_TRANSMISSION, arg=stuff bits)
+--u 1.0 ms r 5000800 2; -- Read first two card data pipe BRAM values
+--u 1.0 ms r 50009FE 2; -- Read last two card data pipe BRAM values
+--u 0.5 ms w 300000E 1000; -- Set DMA address at 0x1000
+--u 0.5 ms w 3000001 2; -- Set to receive 2 blocks
+--u 0.5 ms w 3000002 17 00000002; -- Write CMD23 (SET_BLOCK_COUNT)
+--u 0.5 ms w 3000002 12 00000600; -- Write CMD18 (READ_MULTIPLE_BLOCK)
+--u 0.5 ms w 3000002 C 00000000; -- Write CMD12 (STOP_TRANSMISSION, arg=stuff bits)
+--u 1.0 ms r 4001000 2; -- Read first two host data sector BRAM values
+--u 1.0 ms r 40011FE 2; -- Read last  two host data sector BRAM values
+--u 1.0 ms r 4001200 2; -- Read first two host data sector BRAM values
+--u 1.0 ms r 40013FE 2; -- Read last  two host data sector BRAM values
+--u 0.5 ms w 3000002 0 00000000; -- Write CMD0 (RESET, no response)
+--u 0.5 ms w 3000002 1 00FF8080; -- Write CMD1 (SEND_OP_COND)
+--u 1.0 ms r 3000004 4; -- Read CMD Response
+--u 0.5 ms w 3000002 2 00000000; -- Write CMD2 (ALL_SEND_CID, long response)
+--u 1.0 ms r 3000004 4; -- Read CMD Response
+--u 0.5 ms w 3000002 3 00050000; -- Write CMD3 (SET_RELATIVE_ADDRESS)
+--u 1.0 ms r 3000004 4; -- Read CMD Response
+--u 0.5 ms w 3000002 D 00050000; -- Write CMD13 (SEND_STATUS)
+--u 1.0 ms r 3000004 4; -- Read CMD Response
+--u 0.5 ms w 3000002 7 00050000; -- Write CMD7 (SELECT) GOES TO CARD_TRAN
+--u 1.0 ms r 3000004 4; -- Read CMD Response
+--u 0.5 ms w 3000008 7D000002; -- Set controller timeout=32000, bus size
+--u 0.5 ms w 3000002 6 03B70200; -- Write CMD6 (SWITCH) set bus size
+--u 0.5 ms w 3000002 13 0; -- Write CMD19 (BUSTEST_W) GOES TO CARD_BTST
+--u 1.0 ms r 3000004 4; -- Read CMD Response
+--u 0.5 ms w 3000002 0E 0; -- Write CMD14 (BUSTEST_R) GOES TO CARD_TRAN
+--u 1.0 ms r 3000004 4; -- Read CMD Response
+--u 0.5 ms w 3000002 19 00010000; -- Write CMD25 (WRITE_MULTIPLE_BLOCK)
+--u 0.5 ms w 3000002 C 00000000; -- Write CMD12 (STOP_TRANSMISSION, arg=stuff bits)
+--u 0.5 ms w 3000022 100; -- Enable register access of TLM data
+--u 20.0 ms r0 300002A 80; -- Read TLM data
+--u 16.0 ms r0 300002F 40; -- Read 64 card data pipe FIFO values
+
+

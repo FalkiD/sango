@@ -1,0 +1,78 @@
+-- Simulation Input File
+-- For "sim_bus_control_port"
+--
+-- b = bus command
+-- <time delay> is relative time which elapses before next line is processed.
+--
+-- Format:
+--
+-- b <time delay> c aaaa dddd qq
+--
+-- A single Carriage Return is sent at the end of each line (at the ';' character)
+
+-- This set of commands is useful to verify operation of the system controller module.
+--d  10 us;             -- Delay
+--b 300 us ;            -- <CR> (Allows autobaud to obtain lock on baud rate.)
+--b 300 us i;           -- i<CR>
+--b 600 us r 00;        -- read in src region, qty unspecified. (POR default is used.)
+--b 600 us r 00 2;      -- read in src region
+--b 600 us r 10 2;      -- read in dst region
+--b 600 us r;           -- read in dst region, use same qty as previous command, with sequential address.
+--b 2.1 ms r 00 31;     -- read across src, dst, misc and beyond, resulting in bus error message
+--b 300 us f 14 55 4;   -- fill in dst region
+--b 300 us f 18 AA 4;   -- fill
+--b 300 us w 1c 01 23;  -- write
+--b 300 us w 00 45 67;  -- write
+--b 300 us y 0r 45 67;  -- write, should cause "c?" message
+--b 300 us w 0r 45 67;  -- write, should cause "a?" message
+--b 300 us w 00 t5 67;  -- write, should cause "d?" message
+--b 300 us f 00 45 g7;  -- fill, should cause "q?" message
+
+-- This set of commands is useful to exercise the module under test
+d 10 us ;            -- Initial delay
+--b  5 us i;           -- i<CR>
+b  5 us w 3000009 00346DC6; -- Set DDS for sd_clk_o of 400kHz
+b  5 us w 300000E 200; -- Set DMA address at 0x200
+b 15 us r 3000000 10; -- Read registers
+b  10 us w 3000000 200 0; -- Set BLK_SIZE=512, BLK_COUNT=0
+b 300 us w 3000002 000 00000000; -- Write CMD0 (RESET, no response)
+b 300 us w 3000002 119 00FF8000; -- Write CMD1 (SEND_OP_COND, short response)
+b  10 us r 3000004 4; -- Read CMD Response
+b 500 us w 3000002 21A 00000000; -- Write CMD2 (ALL_SEND_CID, long response)
+b  10 us r 3000004 4; -- Read CMD Response
+b 300 us w 3000002 319 00050000; -- Write CMD3 (SET_RELATIVE_ADDRESS, short response)
+b  10 us r 3000004 4; -- Read CMD Response
+--b 300 us w 3000002 D19 00050000; -- Write CMD13 (SEND_STATUS, short response)
+--b  10 us r 3000004 4; -- Read CMD Response
+b 300 us w 3000002 719 00050000; -- Write CMD7 (SELECT, short response) GOES TO CARD_TRAN
+b  10 us r 3000004 4; -- Read CMD Response
+b   5 us w 3000008 7D000001; -- Set controller timeout=32000, bus size
+b 300 us w 3000002 619 03B70100; -- Write CMD6 (SWITCH, short response) set bus width
+b  10 us r 3000004 4; -- Read CMD Response
+b 300 us w 3000002 839 000001AA; -- Write CMD8 (SEND_EXT_CSD, short response, arg=stuff bits, read data)
+b  10 us r 3000004 4; -- Read CMD Response
+b   5 us w 3000009 189374BC; -- Set DDS for sd_clk_o of 48MHz
+d 100 us ;
+b  10 us r 4000200 40; -- Read first 64 EXT_CSD values
+b  10 us r 40002B7 1; -- Read BUS_WIDTH value
+b  10 us r 40003FE 2; -- Read last two EXT_CSD values
+b   5 us w 300000E 200; -- Set DMA address at 0x200
+b  30 us w 3000002 1959 00010000; -- Write CMD25 (WRITE_MULTIPLE_BLOCK)
+b   5 us w 3000002 0C19 00000000; -- Write CMD12 (STOP_TRANSMISSION, arg=stuff bits)
+b   5 us w 3000002 000 00000000; -- Write CMD0 (RESET, no response)
+b   5 us w 3000002 119 00FF8080; -- Write CMD1 (SEND_OP_COND, short response)
+b  10 us r 3000004 4; -- Read CMD Response
+b  15 us w 3000002 21A 00000000; -- Write CMD2 (ALL_SEND_CID, long response)
+b  10 us r 3000004 4; -- Read CMD Response
+b   5 us w 3000002 319 00050000; -- Write CMD3 (SET_RELATIVE_ADDRESS, short response)
+b  10 us r 3000004 4; -- Read CMD Response
+b   5 us w 3000002 D19 00050000; -- Write CMD13 (SEND_STATUS, short response)
+b  10 us r 3000004 4; -- Read CMD Response
+b   5 us w 3000002 719 00050000; -- Write CMD7 (SELECT, short response) GOES TO CARD_TRAN
+b  10 us r 3000004 4; -- Read CMD Response
+b   5 us w 3000008 7D000000; -- Set controller timeout=32000, bus size
+b   5 us w 3000002 619 03B70000; -- Write CMD6 (SWITCH, short response) set bus size
+b  15 us w 3000002 1959 00010000; -- Write CMD25 (WRITE_MULTIPLE_BLOCK)
+b   5 us w 3000002 0C19 00000000; -- Write CMD12 (STOP_TRANSMISSION, arg=stuff bits)
+
+
