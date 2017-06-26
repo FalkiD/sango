@@ -3,10 +3,10 @@
 <!--The data in this file is primarily intended for consumption by Xilinx tools.
 The structure and the elements are likely to change over the next few releases.
 This means code written to parse this file will need to be revisited each subsequent release.-->
-<application name="pa" timeStamp="Mon Jun 26 07:57:39 2017">
+<application name="pa" timeStamp="Mon Jun 26 08:49:26 2017">
 <section name="Project Information" visible="false">
 <property name="ProjectID" value="e3d96b5f03a9477f97e221ccb79f3dbb" type="ProjectID"/>
-<property name="ProjectIteration" value="22" type="ProjectIteration"/>
+<property name="ProjectIteration" value="23" type="ProjectIteration"/>
 </section>
 <section name="PlanAhead Usage" visible="true">
 <item name="Project Data">
@@ -30,20 +30,20 @@ This means code written to parse this file will need to be revisited each subseq
 <property name="ProgramCfgMem" value="3" type="JavaHandler"/>
 <property name="ProgramDevice" value="2" type="JavaHandler"/>
 <property name="RefreshDevice" value="4" type="JavaHandler"/>
-<property name="RunBitgen" value="19" type="JavaHandler"/>
+<property name="RunBitgen" value="20" type="JavaHandler"/>
 <property name="RunImplementation" value="3" type="JavaHandler"/>
 <property name="RunScript" value="6" type="JavaHandler"/>
 <property name="RunSynthesis" value="2" type="JavaHandler"/>
 <property name="SaveFileProxyHandler" value="1" type="JavaHandler"/>
-<property name="ShowView" value="5" type="JavaHandler"/>
-<property name="ViewTaskProjectManager" value="13" type="JavaHandler"/>
+<property name="ShowView" value="6" type="JavaHandler"/>
+<property name="ViewTaskProjectManager" value="14" type="JavaHandler"/>
 </item>
 <item name="Gui Resources Info">
-<property name="AbstractFileView_RELOAD" value="7" type="GuiResourceData"/>
+<property name="AbstractFileView_RELOAD" value="8" type="GuiResourceData"/>
 <property name="AddSrcWizard_SPECIFY_HDL_AND_NETLIST_FILES_OR_DIRECTORIES" value="1" type="GuiResourceData"/>
-<property name="BaseDialog_CANCEL" value="5" type="GuiResourceData"/>
-<property name="BaseDialog_OK" value="23" type="GuiResourceData"/>
-<property name="BaseDialog_YES" value="15" type="GuiResourceData"/>
+<property name="BaseDialog_CANCEL" value="6" type="GuiResourceData"/>
+<property name="BaseDialog_OK" value="24" type="GuiResourceData"/>
+<property name="BaseDialog_YES" value="16" type="GuiResourceData"/>
 <property name="CfgMemPartChooser_DENSITY_CHOOSER" value="2" type="GuiResourceData"/>
 <property name="CfgMemPartChooser_MANUFACTURER_CHOOSER" value="3" type="GuiResourceData"/>
 <property name="CfgMemPartChooser_TABLE" value="3" type="GuiResourceData"/>
@@ -53,12 +53,13 @@ This means code written to parse this file will need to be revisited each subseq
 <property name="CommandsInput_TYPE_TCL_COMMAND_HERE" value="2" type="GuiResourceData"/>
 <property name="ConstraintsChooserPanel_ADD_FILES" value="1" type="GuiResourceData"/>
 <property name="FileSetPanel_FILE_SET_PANEL_TREE" value="59" type="GuiResourceData"/>
-<property name="FlowNavigatorTreePanel_FLOW_NAVIGATOR_TREE" value="43" type="GuiResourceData"/>
+<property name="FlowNavigatorTreePanel_FLOW_NAVIGATOR_TREE" value="45" type="GuiResourceData"/>
 <property name="GettingStartedView_CREATE_NEW_PROJECT" value="4" type="GuiResourceData"/>
 <property name="GettingStartedView_OPEN_PROJECT" value="2" type="GuiResourceData"/>
 <property name="GettingStartedView_RECENT_PROJECTS" value="4" type="GuiResourceData"/>
-<property name="HCodeEditor_SEARCH_TEXT_COMBO_BOX" value="60" type="GuiResourceData"/>
+<property name="HCodeEditor_SEARCH_TEXT_COMBO_BOX" value="69" type="GuiResourceData"/>
 <property name="HardwareTreePanel_HARDWARE_TREE_TABLE" value="13" type="GuiResourceData"/>
+<property name="LogMonitor_MONITOR" value="1" type="GuiResourceData"/>
 <property name="MainMenuMgr_FILE" value="6" type="GuiResourceData"/>
 <property name="MainMenuMgr_FLOW" value="2" type="GuiResourceData"/>
 <property name="MainMenuMgr_OPEN_RECENT_PROJECT" value="2" type="GuiResourceData"/>

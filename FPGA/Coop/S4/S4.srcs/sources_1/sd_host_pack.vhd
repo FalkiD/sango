@@ -321,7 +321,7 @@ int_status_o <= int_status_reg;
 
 
 --sd cmd input pad register
-process(sd_clk, sys_rst)  -- JLC added sys_rst to sensitivity list.
+process(sd_clk)
 begin
   if (sys_rst='1') then
     cmd_dat_reg <= '0';
