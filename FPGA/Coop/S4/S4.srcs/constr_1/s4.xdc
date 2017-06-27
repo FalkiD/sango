@@ -9,9 +9,9 @@
 # ---------------------------------------------------------------------------
 
 #FPGA_CLK / FPGA_CLKn
-//set_property -dict {PACKAGE_PIN D4 IOSTANDARD LVDS_25} [get_ports FPGA_CLK]
-//create_clock -period 10.000 -name FPGA_CLK_pin -waveform {0.000 5.000} -add [get_ports FPGA_CLK]
-//set_property -dict {PACKAGE_PIN C4 IOSTANDARD LVDS_25} [get_ports FPGA_CLKn]
+#set_property -dict {PACKAGE_PIN D4 IOSTANDARD LVDS_25} [get_ports FPGA_CLK]
+#create_clock -period 10.000 -name FPGA_CLK_pin -waveform {0.000 5.000} -add [get_ports FPGA_CLK]
+#set_property -dict {PACKAGE_PIN C4 IOSTANDARD LVDS_25} [get_ports FPGA_CLKn]
 
 # ---------------------------------------------------------------------------
 # MMC Interface I/Os
@@ -61,7 +61,7 @@ set_property IOSTANDARD LVCMOS33 [get_ports {MMC_CLK}]
 # ---------------------------------------------------------------------------
 
 set_property -dict {PACKAGE_PIN N14 IOSTANDARD LVCMOS33} [get_ports FPGA_MCLK]
-//create_clock -period 10.000 -name FPGA_MCLK -waveform {0.000 5.000} -add [get_ports FPGA_MCLK]
+#create_clock -period 10.000 -name FPGA_MCLK -waveform {0.000 5.000} -add [get_ports FPGA_MCLK]
 
 set_property PACKAGE_PIN T13 [get_ports {MCU_TRIG}]
 set_property IOSTANDARD LVCMOS33 [get_ports {MCU_TRIG}]
