@@ -262,8 +262,8 @@ wire        clk050;
 wire        dbg_sys_rst_i;
 
 reg  [ 9:0] dbg_sys_rst_sr = 0;
-reg         dbg_sys_rst;
-reg         dbg_sys_rst_n;
+//reg         dbg_sys_rst;
+reg         dbg_sys_rst_n = 1'b1;
 
 // <JLC_TEMP_DBG>
 reg  [39:0] count1;
@@ -517,9 +517,7 @@ begin
   dbg_sys_rst_n <= !(&{!dbg_sys_rst_sr[9], | dbg_sys_rst_sr[8:0]});  // output 9 ticks of dbg_sys_rst_n == 1'b0.
 end
 
-assign sys_rst_n = dbg_sys_rst_n;
-
-
+assign sys_rst_n = MCU_TRIG ? 1'b0 : dbg_sys_rst_n;
 
 // Create a "time-alive" counter.
 //   2^40 @ 100MHz wraps at ~3.05 hours.
@@ -921,7 +919,7 @@ always @(posedge clk050)
   assign DDS_PS0 = dbg_enables & BIT_DDS_PS0 ? 1'b1 : 1'b0;
   assign DDS_PS1 = dbg_enables & BIT_DDS_PS1 ? 1'b1 : 1'b0;
   assign ZMON_EN = dbg_enables & BIT_ZMON_EN ? 1'b1 : 1'b0;              // <JLC_TEMP_ZMON_EN>
-  assign dbg_sys_rst_i = dbg_enables & BIT_TEMP_SYS_RST ? 1'b1 : MCU_TRIG;   // <JLC_TEMP_RST>
+  assign dbg_sys_rst_i = dbg_enables & BIT_TEMP_SYS_RST ? 1'b1 : 1'b0;   // <JLC_TEMP_RST>
 
   // FPGA_RXD/TXD to/from MMC UART RXD/TXD
   assign syscon_rxd = FPGA_RXD;
