@@ -1,4 +1,5 @@
 //------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 // (C) Copyright 2017, Ampleon Inc.
 //     All rights reserved.
 //
@@ -158,6 +159,7 @@
 
 // >>>>> `define's <<<<<
 // 
+`define JLC_TEMP_NO_MMCM 1             // 1 -> Don't use MMCME2_BASE; Use 100MHz straight in.  0 -> Use MMCME2_BASE.
 `define JLC_TEMP_NO_L12 1              // Temp workaround depop'd L12. JLC 03/17/2017    JLC_TEMP_CLK
 `define GLBL_CLK_FREQ_BRD 100000000.0  //  "       "        "      "                     JLC_TEMP_CLK
 `define GLBL_CLK_FREQ_MCU 102000000.0  //  "       "        "      "                     JLC_TEMP_CLK
@@ -175,9 +177,9 @@ module s4
   //input              FPGA_CLKn,          //  N10   I        - and A3/100MHx Oscillator can.
   output             ACTIVE_LEDn,        //  T14   O       
 
-  inout              MMC_CLK,            //  N11   I        MCU<-->MMC-Slave I/F
+  inout              MMC_CLK,            //  N11   IO        MCU<-->MMC-Slave I/F
   output             MMC_IRQn,           //  P8    O        MCU SDIO_SD pin, low==MMC card present       
-  inout              MMC_CMD,            //  R7    I       
+  inout              MMC_CMD,            //  R7    IO       
 
   inout              MMC_DAT7,           //  R6    IO      
   inout              MMC_DAT6,           //  T5    IO      
@@ -259,7 +261,7 @@ wire        clk050;
 // <JLC_TEMP_RST>
 wire        dbg_sys_rst_i;
 
-reg  [ 9:0] dbg_sys_rst_sr;
+reg  [ 9:0] dbg_sys_rst_sr = 0;
 reg         dbg_sys_rst;
 reg         dbg_sys_rst_n;
 
@@ -294,11 +296,6 @@ wire  [1:0] mmc_dat_siz;
 wire        mmc_tlm;
 
 // MMC card I/O proxy signals
-wire        MMC_CLK_io;
-wire        MMC_CMD_io;
-wire  [7:0] MMC_DAT_io;
-wire        MMC_CLK_i;
-wire        MMC_CMD_i;
 wire  [7:0] MMC_DAT_i;
 
 // Backside HW signals  
@@ -426,6 +423,8 @@ assign  mmcm_pwrdn_i  = 1'b0;
 //
 //
 
+//  <JLC_TEMP_NO_MMCM>
+`ifndef JLC_TEMP_NO_MMCM
 MMCME2_BASE #(
   .BANDWIDTH("OPTIMIZED"), // Jitter programming (OPTIMIZED, HIGH, LOW)
   .CLKFBOUT_MULT_F(`CLKFB_FACTOR_MCU),  // Multiply value for all CLKOUT (2.000-64.000)   = Fpfd/Fclkin1
@@ -488,6 +487,15 @@ MMCME2_BASE_inst (
 );
 // End of MMCME2_BASE_inst instantiation
 
+  BUFG BUFG_clkfb  (.I(clkfbprebufg),  .O(clkfb));
+  BUFG BUFG_clk100 (.I(clk100prebufg), .O(clk100));
+  BUFG BUFG_clk200 (.I(clk200prebufg), .O(clk200));
+  BUFG BUFG_clk050 (.I(clk050prebufg), .O(clk050));
+  assign sys_clk   = clk100;
+`else
+  assign sys_clk   = clkin;
+`endif
+
 //  <JLC_TEMP_NO_L12>
 `ifndef JLC_TEMP_NO_L12
   IBUFGDS IBUFGDS_clkin  (.I(FPGA_CLK), .IB(FPGA_CLKn), .O(clk_diff_rcvd));
@@ -496,11 +504,11 @@ MMCME2_BASE_inst (
   BUFG BUFG_clkin  (.I(FPGA_MCLK),   .O(clkin));
 `endif
 
-  BUFG BUFG_clkfb  (.I(clkfbprebufg),  .O(clkfb));
-  BUFG BUFG_clk100 (.I(clk100prebufg), .O(clk100));
-  BUFG BUFG_clk200 (.I(clk200prebufg), .O(clk200));
-  BUFG BUFG_clk050 (.I(clk050prebufg), .O(clk050));
-  assign sys_clk   = clk100;
+//  BUFG BUFG_clkfb  (.I(clkfbprebufg),  .O(clkfb));
+//  BUFG BUFG_clk100 (.I(clk100prebufg), .O(clk100));
+//  BUFG BUFG_clk200 (.I(clk200prebufg), .O(clk200));
+//  BUFG BUFG_clk050 (.I(clk050prebufg), .O(clk050)); 
+//  assign sys_clk   = clk100;
 
 // Create a "hwdbg dbg_sys_rst_n" synchronous self-timed pulse. <JLC_TEMP_RST>
 always @(posedge sys_clk)
@@ -596,13 +604,13 @@ always @(posedge clk050)
 
     // Tester Function Enables
     .slave_en_i        (1'b1),
-    .host_en_i         (1'b0),
+    .host_en_i         (1'b1),
 
     // SD/MMC card signals
-    .mmc_clk_i         (MMC_CLK_i),
+    .mmc_clk_i         (MMC_CLK),
     .mmc_clk_o         (mmc_clk),
     .mmc_clk_oe_o      (mmc_clk_oe),
-    .mmc_cmd_i         (MMC_CMD_i),
+    .mmc_cmd_i         (MMC_CMD),
     .mmc_cmd_o         (mmc_cmd),
     .mmc_cmd_oe_o      (mmc_cmd_oe),
     .mmc_dat_i         (MMC_DAT_i),
@@ -824,11 +832,11 @@ always @(posedge clk050)
 
   // Implement MMC card tri-state drivers at the top level
     // Drive the clock output when needed
-  assign MMC_CLK_io = mmc_clk_oe?(!mmc_clk):1'bZ;
+  assign MMC_CLK = mmc_clk_oe?mmc_clk:1'bZ;
     // Create mmc command signals
   assign mmc_cmd_zzz    = mmc_cmd?1'bZ:1'b0;
   assign mmc_cmd_choice = mmc_od_mode?mmc_cmd_zzz:mmc_cmd;
-  assign MMC_CMD_io = mmc_cmd_oe?mmc_cmd_choice:1'bZ;
+  assign MMC_CMD = mmc_cmd_oe?mmc_cmd_choice:1'bZ;
     // Create "open drain" data vector
   genvar j;
   for(j=0;j<8;j=j+1) begin
@@ -843,23 +851,16 @@ always @(posedge clk050)
     else if (mmc_dat_siz==1) mmc_dat_choice3 <= {4'bZ,mmc_dat_choice2[3:0]};
     else                     mmc_dat_choice3 <= mmc_dat_choice2;
 
-  assign MMC_DAT_io = mmc_dat_choice3;
-  
-   // Map the MMC output proxies to actual FPGA I/O pins
-  assign MMC_CLK      = MMC_CLK_io;
-  assign MMC_CMD      = MMC_CMD_io;
-  assign MMC_DAT7     = MMC_DAT_io[7];
-  assign MMC_DAT6     = MMC_DAT_io[6];
-  assign MMC_DAT5     = MMC_DAT_io[5];
-  assign MMC_DAT4     = MMC_DAT_io[4];
-  assign MMC_DAT3     = MMC_DAT_io[3];
-  assign MMC_DAT2     = MMC_DAT_io[2];
-  assign MMC_DAT1     = MMC_DAT_io[1];
-  assign MMC_DAT0     = MMC_DAT_io[0];
+  assign MMC_DAT7     = mmc_dat_choice3[7];
+  assign MMC_DAT6     = mmc_dat_choice3[6];
+  assign MMC_DAT5     = mmc_dat_choice3[5];
+  assign MMC_DAT4     = mmc_dat_choice3[4];
+  assign MMC_DAT3     = mmc_dat_choice3[3];
+  assign MMC_DAT2     = mmc_dat_choice3[2];
+  assign MMC_DAT1     = mmc_dat_choice3[1];
+  assign MMC_DAT0     = mmc_dat_choice3[0];
   
    // Map the MMC input  proxies to actual FPGA I/O pins
-  assign MMC_CLK_i    = !MMC_CLK;
-  assign MMC_CMD_i    = MMC_CMD;
   assign MMC_DAT_i    = {MMC_DAT7, MMC_DAT6, MMC_DAT5, MMC_DAT4, MMC_DAT3, MMC_DAT2, MMC_DAT1, MMC_DAT0};
 
   // MMC_IRQn connected to MCU SD_CD, must be low. Can remove later when MMC driver sw fixed
@@ -905,6 +906,8 @@ always @(posedge clk050)
   
   localparam BIT_TEMP_SYS_RST     = 16'h8000;  // <JLC_TEMP_RST>
   
+  assign dbg_enables = 16'h0000;
+
   assign RF_GATE = dbg_enables & BIT_RF_GATE ? 1'b1 : 1'b0;
   assign RF_GATE2 = dbg_enables & BIT_RF_GATE2 ? 1'b1 : 1'b0;
   assign VGA_VSW = dbg_enables & BIT_VGA_VSW ? 1'b1 : 1'b0;
@@ -918,7 +921,7 @@ always @(posedge clk050)
   assign DDS_PS0 = dbg_enables & BIT_DDS_PS0 ? 1'b1 : 1'b0;
   assign DDS_PS1 = dbg_enables & BIT_DDS_PS1 ? 1'b1 : 1'b0;
   assign ZMON_EN = dbg_enables & BIT_ZMON_EN ? 1'b1 : 1'b0;              // <JLC_TEMP_ZMON_EN>
-  assign dbg_sys_rst_i = dbg_enables & BIT_TEMP_SYS_RST ? 1'b1 : 1'b0;   // <JLC_TEMP_RST>
+  assign dbg_sys_rst_i = dbg_enables & BIT_TEMP_SYS_RST ? 1'b1 : MCU_TRIG;   // <JLC_TEMP_RST>
 
   // FPGA_RXD/TXD to/from MMC UART RXD/TXD
   assign syscon_rxd = FPGA_RXD;
@@ -967,8 +970,8 @@ always @(posedge clk050)
    assign ACTIVE_LEDn = tdbg_reg[15]?count2[24]:count2[25];
    
    // 22-Jun have to scope MMC signals
-   assign FPGA_MCU4 = MMC_CLK_i; //count4[15];    //  50MHz div'd by 2^16.
-   assign FPGA_MCU3 = MMC_CMD; //count3[15];    // 200MHz div'd by 2^16.
+   //assign FPGA_MCU4 = MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.
+   //assign FPGA_MCU3 = MMC_CMD; //count3[15];    // 200MHz div'd by 2^16.
 
   endmodule
 
