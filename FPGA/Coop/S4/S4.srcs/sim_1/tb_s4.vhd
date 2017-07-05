@@ -57,8 +57,8 @@ port (
   TRIG_OUT      : out std_logic;              --  M16   O       
   TRIG_IN       : in  std_logic;              --  N13   I  
 
-  UART_RSP_o      : out std_logic;             --  N16   O        MMC UART
-  UART_CMD_i      : in  std_logic;           --  P15   I        MMC UART
+  FPGA_TXD      : out std_logic;             --  N16   O        MMC UART
+  FPGA_RXD      : in  std_logic;           --  P15   I        MMC UART
 
                                          --     FPGA_MCLK is temporarily 102MHz LVCMOS33 FPGA Clk Input.  <JLC_TEMP_NO_L12>
   FPGA_MCLK     : in  std_logic;            --  R13   I                       
@@ -106,30 +106,6 @@ port (
 
   FPGA_TXD2     : out std_logic;            --  R11   O        HW DBG UART
   FPGA_RXD2     : in  std_logic             --  R10   I        HW DBG UART
--- Arty board:
---  CLK        : in  std_logic;
---  ck_rst     : in  std_logic;
---  SW         : in  unsigned(3 downto 0);
---  BTN        : in  unsigned(3 downto 0);
---  UART_CMD_i : in  std_logic;
---  UART_RSP_o : out std_logic;
---  RGB0_Blue  : out std_logic;
---  RGB0_Green : out std_logic;
---  RGB0_Red   : out std_logic;
---  RGB1_Blue  : out std_logic;
---  RGB1_Green : out std_logic;
---  RGB1_Red   : out std_logic;
---  RGB2_Blue  : out std_logic;
---  RGB2_Green : out std_logic;
---  RGB2_Red   : out std_logic;
---  RGB3_Blue  : out std_logic;
---  RGB3_Green : out std_logic;
---  RGB3_Red   : out std_logic;
---  LED        : out unsigned(3 downto 0);
---  ja         : inout unsigned(7 downto 0);
---  jb         : inout unsigned(7 downto 0);
---  jc         : inout unsigned(7 downto 0);
---  jd         : inout unsigned(7 downto 0)
 );
 end component;
 
@@ -163,7 +139,7 @@ end component;
   signal FPGA_MCU2     : std_logic := '0';                       --  P11   O
   signal FPGA_MCU3     : std_logic := '0';                --  R12   O    
   signal FPGA_MCU4     : std_logic := '0';                --  R13   O        
-  signal MCU_TRIG      : std_logic := '0';                 --  T13   I       
+  signal MCU_TRIG      : std_logic := '0';                --  T13   I       
 
   signal VGA_MOSI      : std_logic := '0';                 --  B7    O        RF Power Setting SPI
   signal VGA_SCLK      : std_logic := '0';                 --  B6    O        I/F
@@ -200,43 +176,11 @@ end component;
   signal ADCR_SDO      : std_logic := '0';                 --  P1    I
   signal ADCTRIG       : std_logic := '0';                  --  T12   I        CPU ZMon Req
 
--- Arty signals:
---  signal CLK        : std_logic;
---  signal ck_rst     : std_logic;
---  signal SW         : unsigned(3 downto 0);
---  signal BTN        : unsigned(3 downto 0);
---  signal UART_CMD_i : std_logic;
---  signal UART_RSP_o : std_logic;
---  signal RGB0_Blue  : std_logic;
---  signal RGB0_Green : std_logic;
---  signal RGB0_Red   : std_logic;
---  signal RGB1_Blue  : std_logic;
---  signal RGB1_Green : std_logic;
---  signal RGB1_Red   : std_logic;
---  signal RGB2_Blue  : std_logic;
---  signal RGB2_Green : std_logic;
---  signal RGB2_Red   : std_logic;
---  signal RGB3_Blue  : std_logic;
---  signal RGB3_Green : std_logic;
---  signal RGB3_Red   : std_logic;
---  signal LED        : unsigned(3 downto 0);
---  signal ja         : unsigned(7 downto 0);
---  signal jb         : unsigned(7 downto 0);
---  signal jc         : unsigned(7 downto 0);
---  signal jd         : unsigned(7 downto 0);
+-- uart_sim_control_port signals:
+  signal CLK        : std_logic;
+  signal ck_rst     : std_logic;
 
 begin
-
-  ------------------------------------------------------------------------
-  -- Set up independent DUT clock
-  dut_clk_proc : process
-    variable PS_PER_SECOND : real := 1.0E+12;
-    variable half_period : time := integer(PS_PER_SECOND/(2.0*real(DUT_CLKRATE))) * 1 ps;
-  begin
-     --wait for 1/2 of the clock period;
-     wait for half_period;
-     dut_clk <= not dut_clk;
-  end process;
 
   ------------------------------------------------------------------------
   -- Instantiate a control port
@@ -262,13 +206,13 @@ begin
 
   ------------------------------------------------------------------------
   -- Instantiate Unit Under Test
-  dut_0 : top
+  dut_0 : s4
   port map(
       ACTIVE_LEDn =>  open,        --  T14   O
     
-      MMC_CLK     => MMC_CLK,      --  N11   I        MCU<-->MMC-Slave I/F 
+      MMC_CLK     => MMC_CLK,      --  N11   IO        MCU<-->MMC-Slave I/F 
       MMC_IRQn    => MMC_IRQn,        --  P8    O        MCU SDIO_SD pin, low==MMC card present       
-      MMC_CMD     => MMC_CMD,      --  R7    I       
+      MMC_CMD     => MMC_CMD,      --  R7    IO       
     
       MMC_DAT7    => MMC_DAT7,      --  R6    IO      
       MMC_DAT6    => MMC_DAT6,      --  T5    IO      
@@ -280,10 +224,10 @@ begin
       MMC_DAT0    => MMC_DAT0,                         --  P8    IO      
     
       TRIG_OUT    => open,              --  M16   O       
-      TRIG_IN     => open,              --  N13   I  
+      TRIG_IN     => '0',              --  N13   I  
     
-      UART_RSP_o    => UART_RSP_o,             --  N16   O        MMC UART
-      UART_CMD_i    => UART_CMD_i,           --  P15   I        MMC UART
+      FPGA_TXD    => UART_RSP_o,             --  N16   O        MMC UART
+      FPGA_RXD    => UART_CMD_i,           --  P15   I        MMC UART
     
                                              --     FPGA_MCLK is temporarily 102MHz LVCMOS33 FPGA Clk Input.  <JLC_TEMP_NO_L12>
       FPGA_MCLK   => CLK,            --  R13   I                       
@@ -330,31 +274,8 @@ begin
       ADCTRIG     => ADCTRIG,              --  T12   I        CPU ZMon Req
     
       FPGA_TXD2   => open,            --  R11   O        HW DBG UART
-      FPGA_RXD2   => open             --  R10   I        HW DBG UART
+      FPGA_RXD2   => '1'             --  R10   I        HW DBG UART
 
---    CLK        => CLK,
---    ck_rst     => ck_rst,
---    SW         => SW,
---    BTN        => BTN,
---    UART_CMD_i => UART_CMD_i,
---    UART_RSP_o => UART_RSP_o,
---    RGB0_Blue  => RGB0_Blue,
---    RGB0_Green => RGB0_Green,
---    RGB0_Red   => RGB0_Red,
---    RGB1_Blue  => RGB1_Blue,
---    RGB1_Green => RGB1_Green,
---    RGB1_Red   => RGB1_Red,
---    RGB2_Blue  => RGB2_Blue,
---    RGB2_Green => RGB2_Green,
---    RGB2_Red   => RGB2_Red,
---    RGB3_Blue  => RGB3_Blue,
---    RGB3_Green => RGB3_Green,
---    RGB3_Red   => RGB3_Red,
---    LED        => LED,
---    ja         => ja,
---    jb         => jb,
---    jc         => jc,
---    jd         => jd
   );
 
 -- Apply pullups to unused FPGA inputs
@@ -366,15 +287,56 @@ begin
 --SW <= "0110";
 
 -- Separate pullups
-pu1  : pullup1 port map(pin => MMC_CLK); -- MMC clk
-pu2  : pullup1 port map(pin => MMC_CMD); -- MMC cmd
-pu3  : pullup1 port map(pin => MMC_DAT0); -- MMC data[0]
-pu4  : pullup1 port map(pin => MMC_DAT1); -- MMC data[6]
-pu5  : pullup1 port map(pin => MMC_DAT2); -- MMC data[4]
-pu6  : pullup1 port map(pin => MMC_DAT3); -- MMC data[2]
-pu7  : pullup1 port map(pin => MMC_DAT4); -- MMC data[1]
-pu8  : pullup1 port map(pin => MMC_DAT5); -- MMC data[7]
-pu9  : pullup1 port map(pin => MMC_DAT6); -- MMC data[5]
-pu10 : pullup1 port map(pin => MMC_DAT7); -- MMC data[3]
+pu1  : pullup1 port map(pin => MMC_CLK);
+pu2  : pullup1 port map(pin => MMC_CMD);
+pu3  : pullup1 port map(pin => MMC_DAT0);
+pu4  : pullup1 port map(pin => MMC_DAT1);
+pu5  : pullup1 port map(pin => MMC_DAT2);
+pu6  : pullup1 port map(pin => MMC_DAT3);
+pu7  : pullup1 port map(pin => MMC_DAT4);
+pu8  : pullup1 port map(pin => MMC_DAT5);
+pu9  : pullup1 port map(pin => MMC_DAT6);
+pu10 : pullup1 port map(pin => MMC_DAT7);
+
+  ------------------------------------------------------------------------
+  -- Set up independent DUT clock
+  dut_clk_proc : process
+    variable PS_PER_SECOND : real := 1.0E+12;
+    variable half_period : time := integer(PS_PER_SECOND/(2.0*real(DUT_CLKRATE))) * 1 ps;
+    variable counter : integer := 10;    -- assert MCU_TRIG for 5 clocks at startup
+  begin
+     --wait for 1/2 of the clock period;
+     wait for half_period;
+     dut_clk <= not dut_clk;
+     FPGA_MCLK <= not dut_clk;
+     if(counter = 10) then
+       counter := counter - 1;
+       MCU_TRIG <= '1';
+     elsif (counter > 0) then
+       counter := counter - 1;
+     else
+       MCU_TRIG <= '0';
+     end if;
+  end process;
+
+  -- Use MCU_TRIG as global reset
+--  reset_proc: process
+--    variable counter : integer := 5;    -- assert MCU_TRIG for 5 clocks at startup
+--  begin
+--    counter := counter - 1;
+--  end process;
+
+--     if(counter = '5') begin
+--       MCU_TRIG <= '1';
+--       counter <= counter - 1;
+--     end
+--     else if(counter > '0') begin
+--       counter <= counter - 1;
+--     end
+--     else begin
+--       MCU_TRIG <= '0';
+--       counter <= '0';
+--     end
+
 
 end struct;
