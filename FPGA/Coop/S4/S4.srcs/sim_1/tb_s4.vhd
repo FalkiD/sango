@@ -319,24 +319,18 @@ pu10 : pullup1 port map(pin => MMC_DAT7);
      end if;
   end process;
 
-  -- Use MCU_TRIG as global reset
+--  -- Use MCU_TRIG as global reset
 --  reset_proc: process
---    variable counter : integer := 5;    -- assert MCU_TRIG for 5 clocks at startup
+--    variable counter : integer := 10;    -- assert MCU_TRIG for 5 clocks at startup
 --  begin
---    counter := counter - 1;
---  end process;
-
---     if(counter = '5') begin
+--     if(counter = 10) then
+--       counter := counter - 1;
 --       MCU_TRIG <= '1';
---       counter <= counter - 1;
---     end
---     else if(counter > '0') begin
---       counter <= counter - 1;
---     end
---     else begin
+--     elsif (counter > 0) then
+--       counter := counter - 1;
+--     else
 --       MCU_TRIG <= '0';
---       counter <= '0';
---     end
-
+--     end if;
+--  end process;
 
 end struct;
