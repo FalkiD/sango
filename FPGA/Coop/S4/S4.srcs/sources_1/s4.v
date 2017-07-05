@@ -972,8 +972,8 @@ always @(posedge clk050)
    assign ACTIVE_LEDn = tdbg_reg[15]?count2[24]:count2[25];
    
    // 22-Jun have to scope MMC signals
-   //assign FPGA_MCU4 = MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.
-   //assign FPGA_MCU3 = MMC_CMD; //count3[15];    // 200MHz div'd by 2^16.
+   assign FPGA_MCU4 = MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.
+   assign FPGA_MCU3 = MMC_CMD; //count3[15];    // 200MHz div'd by 2^16.
 
   endmodule
 
