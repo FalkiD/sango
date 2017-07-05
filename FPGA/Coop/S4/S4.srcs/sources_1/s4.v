@@ -602,7 +602,11 @@ always @(posedge clk050)
 
     // Tester Function Enables
     .slave_en_i        (1'b1),
+`ifdef XILINX_SIMULATOR
     .host_en_i         (1'b1),
+`else
+    .host_en_i         (1'b0),
+`endif
 
     // SD/MMC card signals
     .mmc_clk_i         (MMC_CLK),
