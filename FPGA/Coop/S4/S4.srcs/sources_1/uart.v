@@ -22,7 +22,7 @@
 // 0.00.3  2017-06-13 (JLC) Expanded ctl/stat widths to 8 addressable 32-bit words
 //
 //----------------------------------------------------------------------------------
-`include "timescale.v"
+
 
 module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115200)
   (
@@ -343,17 +343,11 @@ module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115
                      UART_CHAR_LC: begin
                         cmdState    <= UART_GETOPC7;
                      end
-                     UART_CHAR_CR: begin
-                        cmdState    <= UART_SEND_LF;
-                     end
                      UART_CHAR_UA: begin
                         cmdState    <= UART_SETAWR0;
                      end
                      UART_CHAR_LA: begin
                         cmdState    <= UART_SETAWR0;
-                     end
-                     UART_CHAR_CR: begin
-                        cmdState    <= UART_SEND_LF;
                      end
                      default: begin
                         // Just ignore all other command chars.
@@ -684,6 +678,35 @@ module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115
                   cmdState          <= UART_SEND_CR;
                end
             end  // end of case UART_SETAWR1.
+            UART_TEST0: begin
+               tx_char              <= UART_CHAR_OK0;
+               tx_load              <= 1'b1;
+               cmdState             <= UART_TEST1;
+            end  // end of UART_TEST0 case.
+            UART_TEST1: begin
+               tx_char              <= UART_CHAR_OK1;
+               tx_load              <= 1'b1;
+               cmdState             <= UART_TEST1;
+            end  // end of UART_TEST1 case.
+            UART_TEST2: begin
+               tx_char              <= UART_CHAR_OK2;
+               tx_load              <= 1'b1;
+               cmdState             <= UART_SEND_CR;
+            end  // end of UART_TEST2 case.
+            UART_SEND_CR: begin
+               tx_char              <= UART_CHAR_CR;
+               tx_load              <= 1'b1;
+               cmdState             <= UART_SEND_LF;
+            end  // end of UART_SEND_CR case.
+            UART_SEND_LF: begin
+               tx_char              <= UART_CHAR_LF;
+               tx_load              <= 1'b1;
+               cmdState             <= UART_IDLE;
+            end  // end of UART_SEND_LF case.
+            default: begin
+               // put bad state debug/error code here
+               cmdState             <= UART_IDLE;
+            end
          endcase  // end of (cmdState).
       end
    end   // end of always @(posedge clk_i).
