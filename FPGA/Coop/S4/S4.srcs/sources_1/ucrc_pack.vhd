@@ -412,11 +412,11 @@ begin
         match_o <= '0';
       elsif sys_clk_en = '1' then
         crc <= crca(dw);
---        if crca(dw) = zero then
+        if crca(dw) = zero then
           match_o <= '1';
---        else
---          match_o <= '0';
---        end if;
+        else
+          match_o <= '0';
+        end if;
       end if;
     end if;
   end process;
