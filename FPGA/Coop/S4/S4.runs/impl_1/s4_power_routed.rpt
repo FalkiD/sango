@@ -1,7 +1,7 @@
 Copyright 1986-2016 Xilinx, Inc. All Rights Reserved.
 ----------------------------------------------------------------------------------------------------------------------------
 | Tool Version     : Vivado v.2016.4 (win64) Build 1756540 Mon Jan 23 19:11:23 MST 2017
-| Date             : Thu Jun 22 16:08:24 2017
+| Date             : Thu Jul 06 13:09:39 2017
 | Host             : ANA00075 running 64-bit major release  (build 9200)
 | Command          : report_power -file s4_power_routed.rpt -pb s4_power_summary_routed.pb -rpx s4_power_routed.rpx
 | Design           : s4
@@ -30,12 +30,12 @@ Table of Contents
 ----------
 
 +--------------------------+-------+
-| Total On-Chip Power (W)  | 0.128 |
-| Dynamic (W)              | 0.055 |
+| Total On-Chip Power (W)  | 0.170 |
+| Dynamic (W)              | 0.097 |
 | Device Static (W)        | 0.073 |
 | Effective TJA (C/W)      | 4.9   |
-| Max Ambient (C)          | 84.4  |
-| Junction Temperature (C) | 25.6  |
+| Max Ambient (C)          | 84.2  |
+| Junction Temperature (C) | 25.8  |
 | Confidence Level         | Low   |
 | Setting File             | ---   |
 | Simulation Activity File | ---   |
@@ -49,22 +49,21 @@ Table of Contents
 +--------------------------+-----------+----------+-----------+-----------------+
 | On-Chip                  | Power (W) | Used     | Available | Utilization (%) |
 +--------------------------+-----------+----------+-----------+-----------------+
-| Clocks                   |     0.000 |        3 |       --- |             --- |
-| Slice Logic              |     0.001 |     9640 |       --- |             --- |
-|   LUT as Logic           |    <0.001 |     4513 |     20800 |           21.70 |
+| Clocks                   |     0.006 |        4 |       --- |             --- |
+| Slice Logic              |     0.015 |     9603 |       --- |             --- |
+|   LUT as Logic           |     0.014 |     4497 |     20800 |           21.62 |
 |   CARRY4                 |    <0.001 |      487 |      8150 |            5.98 |
-|   Register               |    <0.001 |     3329 |     41600 |            8.00 |
-|   F7/F8 Muxes            |    <0.001 |      129 |     32600 |            0.40 |
-|   BUFG                   |    <0.001 |        5 |        32 |           15.63 |
+|   Register               |    <0.001 |     3307 |     41600 |            7.95 |
+|   F7/F8 Muxes            |    <0.001 |      123 |     32600 |            0.38 |
+|   BUFG                   |    <0.001 |        2 |        32 |            6.25 |
 |   LUT as Distributed RAM |    <0.001 |       28 |      9600 |            0.29 |
 |   Others                 |     0.000 |       86 |       --- |             --- |
 |   LUT as Shift Register  |     0.000 |        1 |      9600 |            0.01 |
-| Signals                  |    <0.001 |     7115 |       --- |             --- |
-| Block RAM                |    <0.001 |       27 |        50 |           54.00 |
-| MMCM                     |     0.052 |        1 |         5 |           20.00 |
-| I/O                      |    <0.001 |       45 |       170 |           26.47 |
+| Signals                  |     0.014 |     7098 |       --- |             --- |
+| Block RAM                |     0.059 |       27 |        50 |           54.00 |
+| I/O                      |     0.003 |       46 |       170 |           27.06 |
 | Static Power             |     0.073 |          |           |                 |
-| Total                    |     0.128 |          |           |                 |
+| Total                    |     0.170 |          |           |                 |
 +--------------------------+-----------+----------+-----------+-----------------+
 
 
@@ -74,16 +73,16 @@ Table of Contents
 +-----------+-------------+-----------+-------------+------------+
 | Source    | Voltage (V) | Total (A) | Dynamic (A) | Static (A) |
 +-----------+-------------+-----------+-------------+------------+
-| Vccint    |       1.000 |     0.013 |       0.002 |      0.010 |
-| Vccaux    |       1.800 |     0.042 |       0.029 |      0.013 |
-| Vcco33    |       3.300 |     0.001 |       0.000 |      0.001 |
+| Vccint    |       1.000 |     0.099 |       0.089 |      0.010 |
+| Vccaux    |       1.800 |     0.013 |       0.000 |      0.013 |
+| Vcco33    |       3.300 |     0.002 |       0.001 |      0.001 |
 | Vcco25    |       2.500 |     0.000 |       0.000 |      0.000 |
 | Vcco18    |       1.800 |     0.000 |       0.000 |      0.000 |
 | Vcco15    |       1.500 |     0.000 |       0.000 |      0.000 |
 | Vcco135   |       1.350 |     0.000 |       0.000 |      0.000 |
 | Vcco12    |       1.200 |     0.000 |       0.000 |      0.000 |
 | Vccaux_io |       1.800 |     0.000 |       0.000 |      0.000 |
-| Vccbram   |       1.000 |     0.001 |       0.000 |      0.001 |
+| Vccbram   |       1.000 |     0.006 |       0.005 |      0.001 |
 | MGTAVcc   |       1.000 |     0.000 |       0.000 |      0.000 |
 | MGTAVtt   |       1.200 |     0.000 |       0.000 |      0.000 |
 | Vccadc    |       1.800 |     0.020 |       0.000 |      0.020 |
@@ -127,9 +126,11 @@ Table of Contents
 2.2 Clock Constraints
 ---------------------
 
-+-------+--------+-----------------+
-| Clock | Domain | Constraint (ns) |
-+-------+--------+-----------------+
++-----------+-----------+-----------------+
+| Clock     | Domain    | Constraint (ns) |
++-----------+-----------+-----------------+
+| FPGA_MCLK | FPGA_MCLK |            10.0 |
++-----------+-----------+-----------------+
 
 
 3. Detailed Reports
@@ -141,7 +142,7 @@ Table of Contents
 +----------------------------------+-----------+
 | Name                             | Power (W) |
 +----------------------------------+-----------+
-| s4                               |     0.055 |
+| s4                               |     0.097 |
 |   MMC_CLK_IOBUF_inst             |     0.000 |
 |   MMC_CMD_IOBUF_inst             |    <0.001 |
 |   MMC_DAT0_IOBUF_inst            |    <0.001 |
@@ -152,21 +153,21 @@ Table of Contents
 |   MMC_DAT5_IOBUF_inst            |    <0.001 |
 |   MMC_DAT6_IOBUF_inst            |    <0.001 |
 |   MMC_DAT7_IOBUF_inst            |    <0.001 |
-|   hwdbg_uart                     |    <0.001 |
+|   hwdbg_uart                     |     0.003 |
 |     rcv1                         |    <0.001 |
 |     tx_fifo_reg_0_63_0_2         |    <0.001 |
 |     tx_fifo_reg_0_63_3_5         |    <0.001 |
 |     tx_fifo_reg_0_63_6_7         |    <0.001 |
 |     xmt1                         |    <0.001 |
-|   mmc_tester_0                   |     0.002 |
+|   mmc_tester_0                   |     0.090 |
 |     auto_baud1                   |    <0.001 |
-|     host_0_bram_0                |    <0.001 |
-|     mmc_slave                    |    <0.001 |
-|       fifo_from_mmc              |    <0.001 |
-|         fifo_ram                 |    <0.001 |
+|     host_0_bram_0                |     0.009 |
+|     mmc_slave                    |     0.039 |
+|       fifo_from_mmc              |     0.032 |
+|         fifo_ram                 |     0.031 |
 |       fifo_to_mmc                |    <0.001 |
-|         fifo_ram                 |     0.000 |
-|       mmc_1                      |    <0.001 |
+|         fifo_ram                 |    <0.001 |
+|       mmc_1                      |     0.006 |
 |         R1_responder             |    <0.001 |
 |           crc0                   |    <0.001 |
 |         R2_CID_responder         |    <0.001 |
@@ -177,7 +178,7 @@ Table of Contents
 |         cmd_receiver             |    <0.001 |
 |           crc0                   |    <0.001 |
 |         ext_csd_ram              |    <0.001 |
-|         sd_card_d_handler        |    <0.001 |
+|         sd_card_d_handler        |     0.002 |
 |           sd_crc_gen[0].crc_unit |    <0.001 |
 |           sd_crc_gen[1].crc_unit |    <0.001 |
 |           sd_crc_gen[2].crc_unit |    <0.001 |
@@ -186,15 +187,15 @@ Table of Contents
 |           sd_crc_gen[5].crc_unit |    <0.001 |
 |           sd_crc_gen[6].crc_unit |    <0.001 |
 |           sd_crc_gen[7].crc_unit |    <0.001 |
-|       pipe_ram                   |    <0.001 |
+|       pipe_ram                   |     0.001 |
 |     reg_dbus_size_reset          |    <0.001 |
-|     sd_host_0                    |    <0.001 |
-|       cmd_host_0                 |    <0.001 |
+|     sd_host_0                    |     0.011 |
+|       cmd_host_0                 |     0.005 |
 |         crc0                     |    <0.001 |
 |       cmd_int_rst_edge_detect    |    <0.001 |
 |       data_int_rst_edge_detect   |    <0.001 |
 |       sd_clk_dds                 |    <0.001 |
-|       sd_data_host0              |    <0.001 |
+|       sd_data_host0              |     0.004 |
 |         sd_crc_gen[0].crc_unit   |    <0.001 |
 |         sd_crc_gen[1].crc_unit   |    <0.001 |
 |         sd_crc_gen[2].crc_unit   |    <0.001 |
@@ -203,8 +204,8 @@ Table of Contents
 |         sd_crc_gen[5].crc_unit   |    <0.001 |
 |         sd_crc_gen[6].crc_unit   |    <0.001 |
 |         sd_crc_gen[7].crc_unit   |    <0.001 |
-|     syscon1                      |    <0.001 |
-|       syscon1                    |    <0.001 |
+|     syscon1                      |     0.008 |
+|       syscon1                    |     0.007 |
 |         cmd_buffer_reg_0_127_0_0 |    <0.001 |
 |         cmd_buffer_reg_0_127_1_1 |    <0.001 |
 |         cmd_buffer_reg_0_127_2_2 |    <0.001 |
@@ -213,7 +214,7 @@ Table of Contents
 |         cmd_buffer_reg_0_127_5_5 |    <0.001 |
 |         cmd_buffer_reg_0_127_6_6 |    <0.001 |
 |         cmd_buffer_reg_0_127_7_7 |    <0.001 |
-|       uart1                      |    <0.001 |
+|       uart1                      |     0.001 |
 |         rx1                      |    <0.001 |
 |         tx1                      |    <0.001 |
 |     t_rx_crc_bdcount_reset       |    <0.001 |
@@ -223,8 +224,8 @@ Table of Contents
 |     test_cmd_receiver            |    <0.001 |
 |       crc0                       |    <0.001 |
 |     tlm_1us_unit                 |    <0.001 |
-|     tlm_fifo_unit                |    <0.001 |
-|       fifo_ram                   |    <0.001 |
+|     tlm_fifo_unit                |     0.019 |
+|       fifo_ram                   |     0.017 |
 |     tlm_start_pulser             |    <0.001 |
 |   syn_spi                        |    <0.001 |
 +----------------------------------+-----------+

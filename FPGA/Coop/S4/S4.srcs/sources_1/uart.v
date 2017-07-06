@@ -22,7 +22,7 @@
 // 0.00.3  2017-06-13 (JLC) Expanded ctl/stat widths to 8 addressable 32-bit words
 //
 //----------------------------------------------------------------------------------
-
+`include "timescale.v"
 
 module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115200)
   (

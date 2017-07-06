@@ -20,6 +20,7 @@
 // 0.00.0  2016-08-04 (JLC) Modified for current project.
 //
 //------------------------------------------------------------------------------
+`include "timescale.v"
 
 module rcvr #(parameter BAUD_DIV = 867) // ((BAUD_DIV = 100MHz) / (BAUD = 115200)) - 1
    (// connections to uart.v

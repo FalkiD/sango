@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <GenRun Id="synth_1" LaunchPart="xc7a35tftg256-2" LaunchTime="1498161597">
-  <File Type="RDS-PROPCONSTRS" Name="s4_drc_synth.rpt"/>
   <File Type="PA-TCL" Name="s4.tcl"/>
+  <File Type="RDS-PROPCONSTRS" Name="s4_drc_synth.rpt"/>
   <File Type="RDS-RDS" Name="s4.vds"/>
   <File Type="RDS-UTIL" Name="s4_utilization_synth.rpt"/>
   <File Type="RDS-UTIL-PB" Name="s4_utilization_synth.pb"/>
@@ -67,6 +67,13 @@
     <File Path="$PSRCDIR/sources_1/async_syscon_pack.vhd">
       <FileInfo>
         <Attr Name="UsedIn" Val="synthesis"/>
+        <Attr Name="UsedIn" Val="simulation"/>
+      </FileInfo>
+    </File>
+    <File Path="$PSRCDIR/sources_1/timescale.v">
+      <FileInfo>
+        <Attr Name="UsedIn" Val="synthesis"/>
+        <Attr Name="UsedIn" Val="implementation"/>
         <Attr Name="UsedIn" Val="simulation"/>
       </FileInfo>
     </File>

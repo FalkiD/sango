@@ -24,7 +24,7 @@ else
 fi
 export LD_LIBRARY_PATH
 
-HD_PWD='C:/work/github/FPGA/Coop/S4/S4.runs/impl_1'
+HD_PWD='C:/work/github/Master/FPGA/Coop/S4/S4.runs/impl_1'
 cd "$HD_PWD"
 
 HD_LOG=runme.log
@@ -41,7 +41,7 @@ EAStep()
 }
 
 # pre-commands:
-/bin/touch .init_design.begin.rst
+/bin/touch .write_bitstream.begin.rst
 EAStep vivado -log s4.vdi -applog -m64 -product Vivado -messageDb vivado.pb -mode batch -source s4.tcl -notrace
 
 

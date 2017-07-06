@@ -1521,9 +1521,14 @@ begin
   end process;
   -- Create a signal that, when high, indicates that the SD/MMC command
   -- event filter criteria have been met.
+--  t_rx_capture <= '1' when (t_rx_cmd_done='1' and t_rx_cmd_filter>"10000000") else
+--                  '1' when (t_rx_cmd_done='1' and t_rx_cmd_filter=t_rx_cmd_raw(47 downto 40)) else
+--                  '0';
+-- John C sent this capture filter bugfix 24-Jun-2017
   t_rx_capture <= '1' when (t_rx_cmd_done='1' and t_rx_cmd_filter>"10000000") else
-                  '1' when (t_rx_cmd_done='1' and t_rx_cmd_filter=t_rx_cmd_raw(47 downto 40)) else
-                  '0';
+                '1' when (t_rx_cmd_done='1' and t_rx_cmd_filter(6)=t_rx_cmd_raw(46) and t_rx_cmd_filter(5 downto 0)="111111") else
+                '1' when (t_rx_cmd_done='1' and t_rx_cmd_filter=t_rx_cmd_raw(47 downto 40)) else
+                '0';
 
   -- Derive dstart_wait values, used in detecting valid data transfer
   -- start bits.  Tune these values as needed, based on the sector

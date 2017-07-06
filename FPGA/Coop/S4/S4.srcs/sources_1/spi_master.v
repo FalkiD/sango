@@ -91,6 +91,7 @@
 // Code from https://embeddedmicro.com/tutorials/mojo/serial-peripheral-interface-spi
 // In this case CPOL = 0 and CPHA = 1, ie SCK low is idle, data sampled falling edge
 //
+`include "timescale.v"
 
 module spi #(parameter CLK_DIV = 2)(
     input clk,

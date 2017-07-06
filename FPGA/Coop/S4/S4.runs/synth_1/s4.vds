@@ -2,12 +2,12 @@
 # Vivado v2016.4 (64-bit)
 # SW Build 1756540 on Mon Jan 23 19:11:23 MST 2017
 # IP Build 1755317 on Mon Jan 23 20:30:07 MST 2017
-# Start of session at: Thu Jun 22 15:59:58 2017
-# Process ID: 8300
-# Current directory: C:/work/github/FPGA/Coop/S4/S4.runs/synth_1
+# Start of session at: Thu Jul 06 13:00:21 2017
+# Process ID: 10936
+# Current directory: C:/work/github/Master/FPGA/Coop/S4/S4.runs/synth_1
 # Command line: vivado.exe -log s4.vds -product Vivado -mode batch -messageDb vivado.pb -notrace -source s4.tcl
-# Log file: C:/work/github/FPGA/Coop/S4/S4.runs/synth_1/s4.vds
-# Journal file: C:/work/github/FPGA/Coop/S4/S4.runs/synth_1\vivado.jou
+# Log file: C:/work/github/Master/FPGA/Coop/S4/S4.runs/synth_1/s4.vds
+# Journal file: C:/work/github/Master/FPGA/Coop/S4/S4.runs/synth_1\vivado.jou
 #-----------------------------------------------------------
 source s4.tcl -notrace
 Command: synth_design -top s4 -part xc7a35tftg256-2
@@ -15,18 +15,11 @@ Starting synth_design
 Attempting to get a license for feature 'Synthesis' and/or device 'xc7a35t'
 INFO: [Common 17-349] Got license for feature 'Synthesis' and/or device 'xc7a35t'
 INFO: Launching helper process for spawning children vivado processes
-INFO: Helper process launched with PID 22892 
-WARNING: [Synth 8-1082] opc_fifo_dat_w was previously declared with a range [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:315]
-WARNING: [Synth 8-976] opc_fifo_dat_w has already been declared [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:315]
-WARNING: [Synth 8-2654] second declaration of opc_fifo_dat_w ignored [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:315]
-INFO: [Synth 8-994] opc_fifo_dat_w is declared here [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:313]
-WARNING: [Synth 8-976] ptn_data_w has already been declared [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:361]
-WARNING: [Synth 8-2654] second declaration of ptn_data_w ignored [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:361]
-INFO: [Synth 8-994] ptn_data_w is declared here [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:360]
+INFO: Helper process launched with PID 21576 
 ---------------------------------------------------------------------------------
-Starting RTL Elaboration : Time (s): cpu = 00:00:05 ; elapsed = 00:00:06 . Memory (MB): peak = 293.348 ; gain = 83.160
+Starting RTL Elaboration : Time (s): cpu = 00:00:05 ; elapsed = 00:00:07 . Memory (MB): peak = 282.977 ; gain = 73.281
 ---------------------------------------------------------------------------------
-INFO: [Synth 8-638] synthesizing module 's4' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:171]
+INFO: [Synth 8-638] synthesizing module 's4' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:173]
 	Parameter SPI_VGA bound to: 4'b0001 
 	Parameter SPI_SYN bound to: 4'b0010 
 	Parameter SPI_DDS bound to: 4'b0011 
@@ -45,39 +38,8 @@ INFO: [Synth 8-638] synthesizing module 's4' [C:/work/github/FPGA/Coop/S4/S4.src
 	Parameter BIT_DDS_PS1 bound to: 16'b0000100000000000 
 	Parameter BIT_ZMON_EN bound to: 16'b0001000000000000 
 	Parameter BIT_TEMP_SYS_RST bound to: 16'b1000000000000000 
-INFO: [Synth 8-638] synthesizing module 'MMCME2_BASE' [C:/Xilinx/Vivado/2016.4/scripts/rt/data/unisim_comp.v:20534]
-	Parameter BANDWIDTH bound to: OPTIMIZED - type: string 
-	Parameter CLKFBOUT_MULT_F bound to: 9.800000 - type: float 
-	Parameter CLKFBOUT_PHASE bound to: 0.000000 - type: float 
-	Parameter CLKIN1_PERIOD bound to: 9.800000 - type: float 
-	Parameter CLKOUT0_DIVIDE_F bound to: 10.000000 - type: float 
-	Parameter CLKOUT0_DUTY_CYCLE bound to: 0.500000 - type: float 
-	Parameter CLKOUT0_PHASE bound to: 0.000000 - type: float 
-	Parameter CLKOUT1_DIVIDE bound to: 5 - type: integer 
-	Parameter CLKOUT1_DUTY_CYCLE bound to: 0.500000 - type: float 
-	Parameter CLKOUT1_PHASE bound to: 0.000000 - type: float 
-	Parameter CLKOUT2_DIVIDE bound to: 20 - type: integer 
-	Parameter CLKOUT2_DUTY_CYCLE bound to: 0.500000 - type: float 
-	Parameter CLKOUT2_PHASE bound to: 0.000000 - type: float 
-	Parameter CLKOUT3_DIVIDE bound to: 1 - type: integer 
-	Parameter CLKOUT3_DUTY_CYCLE bound to: 0.500000 - type: float 
-	Parameter CLKOUT3_PHASE bound to: 0.000000 - type: float 
-	Parameter CLKOUT4_CASCADE bound to: FALSE - type: string 
-	Parameter CLKOUT4_DIVIDE bound to: 1 - type: integer 
-	Parameter CLKOUT4_DUTY_CYCLE bound to: 0.500000 - type: float 
-	Parameter CLKOUT4_PHASE bound to: 0.000000 - type: float 
-	Parameter CLKOUT5_DIVIDE bound to: 1 - type: integer 
-	Parameter CLKOUT5_DUTY_CYCLE bound to: 0.500000 - type: float 
-	Parameter CLKOUT5_PHASE bound to: 0.000000 - type: float 
-	Parameter CLKOUT6_DIVIDE bound to: 1 - type: integer 
-	Parameter CLKOUT6_DUTY_CYCLE bound to: 0.500000 - type: float 
-	Parameter CLKOUT6_PHASE bound to: 0.000000 - type: float 
-	Parameter DIVCLK_DIVIDE bound to: 1 - type: integer 
-	Parameter REF_JITTER1 bound to: 0.010000 - type: float 
-	Parameter STARTUP_WAIT bound to: FALSE - type: string 
-INFO: [Synth 8-256] done synthesizing module 'MMCME2_BASE' (1#1) [C:/Xilinx/Vivado/2016.4/scripts/rt/data/unisim_comp.v:20534]
 INFO: [Synth 8-638] synthesizing module 'BUFG' [C:/Xilinx/Vivado/2016.4/scripts/rt/data/unisim_comp.v:607]
-INFO: [Synth 8-256] done synthesizing module 'BUFG' (2#1) [C:/Xilinx/Vivado/2016.4/scripts/rt/data/unisim_comp.v:607]
+INFO: [Synth 8-256] done synthesizing module 'BUFG' (1#1) [C:/Xilinx/Vivado/2016.4/scripts/rt/data/unisim_comp.v:607]
 INFO: [Synth 8-638] synthesizing module 'mmc_tester' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:813]
 	Parameter SYS_CLK_RATE bound to: 102000000.000000 - type: float 
 	Parameter SYS_LEDS bound to: 16 - type: integer 
@@ -97,7 +59,7 @@ INFO: [Synth 8-638] synthesizing module 'auto_baud_with_tracking' [C:/work/githu
 	Parameter FPGA_CLKRATE bound to: 102000000.000000 - type: float 
 	Parameter MIN_BAUDRATE bound to: 9600.000000 - type: float 
 	Parameter DELTA_THRESHOLD bound to: 200 - type: integer 
-INFO: [Synth 8-256] done synthesizing module 'auto_baud_with_tracking' (3#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/auto_baud_pack.vhd:210]
+INFO: [Synth 8-256] done synthesizing module 'auto_baud_with_tracking' (2#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/auto_baud_pack.vhd:210]
 	Parameter ECHO_COMMANDS bound to: 1 - type: integer 
 	Parameter ADR_DIGITS bound to: 8 - type: integer 
 	Parameter DAT_DIGITS bound to: 8 - type: integer 
@@ -118,11 +80,11 @@ INFO: [Synth 8-3491] module 'uart_sqclk' declared at 'C:/work/github/FPGA/Coop/S
 INFO: [Synth 8-638] synthesizing module 'uart_sqclk' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/uart_sqclk_pack.vhd:204]
 INFO: [Synth 8-3491] module 'async_tx_sqclk' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/uart_sqclk_pack.vhd:304' bound to instance 'tx1' of component 'async_tx_sqclk' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/uart_sqclk_pack.vhd:210]
 INFO: [Synth 8-638] synthesizing module 'async_tx_sqclk' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/uart_sqclk_pack.vhd:325]
-INFO: [Synth 8-256] done synthesizing module 'async_tx_sqclk' (4#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/uart_sqclk_pack.vhd:325]
+INFO: [Synth 8-256] done synthesizing module 'async_tx_sqclk' (3#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/uart_sqclk_pack.vhd:325]
 INFO: [Synth 8-3491] module 'async_rx_sqclk' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/uart_sqclk_pack.vhd:487' bound to instance 'rx1' of component 'async_rx_sqclk' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/uart_sqclk_pack.vhd:229]
 INFO: [Synth 8-638] synthesizing module 'async_rx_sqclk' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/uart_sqclk_pack.vhd:511]
-INFO: [Synth 8-256] done synthesizing module 'async_rx_sqclk' (5#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/uart_sqclk_pack.vhd:511]
-INFO: [Synth 8-256] done synthesizing module 'uart_sqclk' (6#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/uart_sqclk_pack.vhd:204]
+INFO: [Synth 8-256] done synthesizing module 'async_rx_sqclk' (4#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/uart_sqclk_pack.vhd:511]
+INFO: [Synth 8-256] done synthesizing module 'uart_sqclk' (5#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/uart_sqclk_pack.vhd:204]
 	Parameter ADR_DIGITS bound to: 8 - type: integer 
 	Parameter DAT_DIGITS bound to: 8 - type: integer 
 	Parameter QTY_DIGITS bound to: 4 - type: integer 
@@ -137,12 +99,12 @@ INFO: [Synth 8-638] synthesizing module 'ascii_syscon' [C:/work/github/FPGA/Coop
 	Parameter CMD_BUFFER_SIZE bound to: 128 - type: integer 
 	Parameter WATCHDOG_VALUE bound to: 2000 - type: integer 
 	Parameter DISPLAY_FIELDS bound to: 4 - type: integer 
-INFO: [Synth 8-256] done synthesizing module 'ascii_syscon' (7#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/async_syscon_pack.vhd:330]
-INFO: [Synth 8-256] done synthesizing module 'async_syscon' (8#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/async_syscon_pack.vhd:1073]
+INFO: [Synth 8-256] done synthesizing module 'ascii_syscon' (6#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/async_syscon_pack.vhd:330]
+INFO: [Synth 8-256] done synthesizing module 'async_syscon' (7#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/async_syscon_pack.vhd:1073]
 INFO: [Synth 8-226] default block is never used [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1231]
 INFO: [Synth 8-3491] module 'flancter_rising_pulseout' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/flancter_pack.vhd:344' bound to instance 't_rx_gdcount_reset' of component 'flancter_rising_pulseout' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1384]
 INFO: [Synth 8-638] synthesizing module 'flancter_rising_pulseout' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/flancter_pack.vhd:357]
-INFO: [Synth 8-256] done synthesizing module 'flancter_rising_pulseout' (9#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/flancter_pack.vhd:357]
+INFO: [Synth 8-256] done synthesizing module 'flancter_rising_pulseout' (8#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/flancter_pack.vhd:357]
 INFO: [Synth 8-3491] module 'flancter_rising_pulseout' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/flancter_pack.vhd:344' bound to instance 't_rx_crc_bdcount_reset' of component 'flancter_rising_pulseout' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1396]
 INFO: [Synth 8-3491] module 'flancter_rising_pulseout' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/flancter_pack.vhd:344' bound to instance 't_rx_stp_bdcount_reset' of component 'flancter_rising_pulseout' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1408]
 INFO: [Synth 8-3491] module 'flancter_rising_pulseout' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/flancter_pack.vhd:344' bound to instance 't_rx_dat_count_reset' of component 'flancter_rising_pulseout' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1420]
@@ -155,17 +117,17 @@ INFO: [Synth 8-3491] module 'ucrc_ser' declared at 'C:/work/github/FPGA/Coop/S4/
 INFO: [Synth 8-638] synthesizing module 'ucrc_ser' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
 	Parameter POLYNOMIAL bound to: 7'b0001001 
 	Parameter INIT_VALUE bound to: 7'b0000000 
-INFO: [Synth 8-256] done synthesizing module 'ucrc_ser' (10#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
-INFO: [Synth 8-256] done synthesizing module 'mmc_test_cmd_rx' (11#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:250]
+INFO: [Synth 8-256] done synthesizing module 'ucrc_ser' (9#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
+INFO: [Synth 8-256] done synthesizing module 'mmc_test_cmd_rx' (10#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:250]
 	Parameter OUTPUT_FREQ bound to: 1000000.000000 - type: float 
 	Parameter SYS_CLK_RATE bound to: 102000000.000000 - type: float 
 	Parameter ACC_BITS bound to: 32 - type: integer 
-INFO: [Synth 8-3491] module 'dds_constant_squarewave' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/dds_pack.vhd:214' bound to instance 'tlm_1us_unit' of component 'dds_constant_squarewave' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1602]
+INFO: [Synth 8-3491] module 'dds_constant_squarewave' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/dds_pack.vhd:214' bound to instance 'tlm_1us_unit' of component 'dds_constant_squarewave' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1607]
 INFO: [Synth 8-638] synthesizing module 'dds_constant_squarewave' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/dds_pack.vhd:232]
 	Parameter OUTPUT_FREQ bound to: 1000000.000000 - type: float 
 	Parameter SYS_CLK_RATE bound to: 102000000.000000 - type: float 
 	Parameter ACC_BITS bound to: 32 - type: integer 
-INFO: [Synth 8-256] done synthesizing module 'dds_constant_squarewave' (12#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/dds_pack.vhd:232]
+INFO: [Synth 8-256] done synthesizing module 'dds_constant_squarewave' (11#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/dds_pack.vhd:232]
 	Parameter USE_BRAM bound to: 1 - type: integer 
 	Parameter WIDTH bound to: 8 - type: integer 
 	Parameter DEPTH bound to: 16384 - type: integer 
@@ -173,7 +135,7 @@ INFO: [Synth 8-256] done synthesizing module 'dds_constant_squarewave' (12#1) [C
 	Parameter PF_FULL_POINT bound to: 16368 - type: integer 
 	Parameter PF_FLAG_POINT bound to: 8192 - type: integer 
 	Parameter PF_EMPTY_POINT bound to: 1 - type: integer 
-INFO: [Synth 8-3491] module 'swiss_army_fifo' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/fifo_pack.vhd:658' bound to instance 'tlm_fifo_unit' of component 'swiss_army_fifo' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1630]
+INFO: [Synth 8-3491] module 'swiss_army_fifo' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/fifo_pack.vhd:658' bound to instance 'tlm_fifo_unit' of component 'swiss_army_fifo' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1635]
 INFO: [Synth 8-638] synthesizing module 'swiss_army_fifo' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/fifo_pack.vhd:690]
 	Parameter USE_BRAM bound to: 1 - type: integer 
 	Parameter WIDTH bound to: 8 - type: integer 
@@ -202,10 +164,10 @@ INFO: [Synth 8-638] synthesizing module 'swiss_army_ram' [C:/work/github/FPGA/Co
 	Parameter FIL_WIDTH bound to: 32 - type: integer 
 	Parameter ADR_WIDTH bound to: 14 - type: integer 
 	Parameter DAT_WIDTH bound to: 8 - type: integer 
-INFO: [Synth 8-256] done synthesizing module 'swiss_army_ram' (13#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/block_ram_pack.vhd:372]
-INFO: [Synth 8-256] done synthesizing module 'swiss_army_fifo' (14#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/fifo_pack.vhd:690]
-INFO: [Synth 8-3491] module 'async_tx_sqclk' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/uart_sqclk_pack.vhd:304' bound to instance 'tlm_tx_unit' of component 'async_tx_sqclk' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1667]
-INFO: [Synth 8-3491] module 'flancter_rising_pulseout' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/flancter_pack.vhd:344' bound to instance 'tlm_start_pulser' of component 'flancter_rising_pulseout' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1738]
+INFO: [Synth 8-256] done synthesizing module 'swiss_army_ram' (12#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/block_ram_pack.vhd:372]
+INFO: [Synth 8-256] done synthesizing module 'swiss_army_fifo' (13#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/fifo_pack.vhd:690]
+INFO: [Synth 8-3491] module 'async_tx_sqclk' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/uart_sqclk_pack.vhd:304' bound to instance 'tlm_tx_unit' of component 'async_tx_sqclk' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1672]
+INFO: [Synth 8-3491] module 'flancter_rising_pulseout' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/flancter_pack.vhd:344' bound to instance 'tlm_start_pulser' of component 'flancter_rising_pulseout' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1743]
 	Parameter USE_BRAM bound to: 1 - type: integer 
 	Parameter WRITETHRU bound to: 1 - type: integer 
 	Parameter USE_FILE bound to: 1 - type: integer 
@@ -215,7 +177,7 @@ INFO: [Synth 8-3491] module 'flancter_rising_pulseout' declared at 'C:/work/gith
 	Parameter FIL_WIDTH bound to: 32 - type: integer 
 	Parameter ADR_WIDTH bound to: 14 - type: integer 
 	Parameter DAT_WIDTH bound to: 8 - type: integer 
-INFO: [Synth 8-3491] module 'swiss_army_ram' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/block_ram_pack.vhd:343' bound to instance 'host_0_bram_0' of component 'swiss_army_ram' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1757]
+INFO: [Synth 8-3491] module 'swiss_army_ram' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/block_ram_pack.vhd:343' bound to instance 'host_0_bram_0' of component 'swiss_army_ram' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1762]
 INFO: [Synth 8-638] synthesizing module 'swiss_army_ram__parameterized1' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/block_ram_pack.vhd:372]
 	Parameter USE_BRAM bound to: 1 - type: integer 
 	Parameter WRITETHRU bound to: 1 - type: integer 
@@ -226,21 +188,20 @@ INFO: [Synth 8-638] synthesizing module 'swiss_army_ram__parameterized1' [C:/wor
 	Parameter FIL_WIDTH bound to: 32 - type: integer 
 	Parameter ADR_WIDTH bound to: 14 - type: integer 
 	Parameter DAT_WIDTH bound to: 8 - type: integer 
-INFO: [Synth 8-256] done synthesizing module 'swiss_army_ram__parameterized1' (14#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/block_ram_pack.vhd:372]
-INFO: [Synth 8-3491] module 'sd_controller_8bit_bram' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_host_pack.vhd:1112' bound to instance 'sd_host_0' of component 'sd_controller_8bit_bram' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1795]
+INFO: [Synth 8-256] done synthesizing module 'swiss_army_ram__parameterized1' (13#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/block_ram_pack.vhd:372]
+INFO: [Synth 8-3491] module 'sd_controller_8bit_bram' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_host_pack.vhd:1112' bound to instance 'sd_host_0' of component 'sd_controller_8bit_bram' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1800]
 INFO: [Synth 8-638] synthesizing module 'sd_controller_8bit_bram' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_host_pack.vhd:1148]
 	Parameter ACC_BITS bound to: 32 - type: integer 
 INFO: [Synth 8-3491] module 'dds_squarewave' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/dds_pack.vhd:303' bound to instance 'sd_clk_dds' of component 'dds_squarewave' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_host_pack.vhd:1350]
 INFO: [Synth 8-638] synthesizing module 'dds_squarewave' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/dds_pack.vhd:322]
 	Parameter ACC_BITS bound to: 32 - type: integer 
-INFO: [Synth 8-256] done synthesizing module 'dds_squarewave' (15#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/dds_pack.vhd:322]
+INFO: [Synth 8-256] done synthesizing module 'dds_squarewave' (14#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/dds_pack.vhd:322]
 INFO: [Synth 8-3491] module 'sd_cmd_host' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_host_pack.vhd:155' bound to instance 'cmd_host_0' of component 'sd_cmd_host' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_host_pack.vhd:1370]
 INFO: [Synth 8-638] synthesizing module 'sd_cmd_host' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_host_pack.vhd:178]
-WARNING: [Synth 8-614] signal 'sys_rst' is read in the process but is not in the sensitivity list [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_host_pack.vhd:324]
 	Parameter POLYNOMIAL bound to: 7'b0001001 
 	Parameter INIT_VALUE bound to: 7'b0000000 
 INFO: [Synth 8-3491] module 'ucrc_ser' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:131' bound to instance 'crc0' of component 'ucrc_ser' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_host_pack.vhd:337]
-INFO: [Synth 8-256] done synthesizing module 'sd_cmd_host' (16#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_host_pack.vhd:178]
+INFO: [Synth 8-256] done synthesizing module 'sd_cmd_host' (15#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_host_pack.vhd:178]
 INFO: [Synth 8-3491] module 'sd_data_8bit_host' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_host_pack.vhd:559' bound to instance 'sd_data_host0' of component 'sd_data_8bit_host' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_host_pack.vhd:1487]
 INFO: [Synth 8-638] synthesizing module 'sd_data_8bit_host' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_host_pack.vhd:590]
 	Parameter POLYNOMIAL bound to: 16'b0001000000100001 
@@ -249,73 +210,73 @@ INFO: [Synth 8-3491] module 'ucrc_ser' declared at 'C:/work/github/FPGA/Coop/S4/
 INFO: [Synth 8-638] synthesizing module 'ucrc_ser__parameterized2' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
 	Parameter POLYNOMIAL bound to: 16'b0001000000100001 
 	Parameter INIT_VALUE bound to: 16'b0000000000000000 
-INFO: [Synth 8-256] done synthesizing module 'ucrc_ser__parameterized2' (16#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
+INFO: [Synth 8-256] done synthesizing module 'ucrc_ser__parameterized2' (15#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
 	Parameter POLYNOMIAL bound to: 16'b0001000000100001 
 	Parameter INIT_VALUE bound to: 16'b0000000000000000 
 INFO: [Synth 8-3491] module 'ucrc_ser' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:131' bound to instance 'crc_unit' of component 'ucrc_ser' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_host_pack.vhd:639]
 INFO: [Synth 8-638] synthesizing module 'ucrc_ser__parameterized4' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
 	Parameter POLYNOMIAL bound to: 16'b0001000000100001 
 	Parameter INIT_VALUE bound to: 16'b0000000000000000 
-INFO: [Synth 8-256] done synthesizing module 'ucrc_ser__parameterized4' (16#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
+INFO: [Synth 8-256] done synthesizing module 'ucrc_ser__parameterized4' (15#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
 	Parameter POLYNOMIAL bound to: 16'b0001000000100001 
 	Parameter INIT_VALUE bound to: 16'b0000000000000000 
 INFO: [Synth 8-3491] module 'ucrc_ser' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:131' bound to instance 'crc_unit' of component 'ucrc_ser' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_host_pack.vhd:639]
 INFO: [Synth 8-638] synthesizing module 'ucrc_ser__parameterized6' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
 	Parameter POLYNOMIAL bound to: 16'b0001000000100001 
 	Parameter INIT_VALUE bound to: 16'b0000000000000000 
-INFO: [Synth 8-256] done synthesizing module 'ucrc_ser__parameterized6' (16#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
+INFO: [Synth 8-256] done synthesizing module 'ucrc_ser__parameterized6' (15#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
 	Parameter POLYNOMIAL bound to: 16'b0001000000100001 
 	Parameter INIT_VALUE bound to: 16'b0000000000000000 
 INFO: [Synth 8-3491] module 'ucrc_ser' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:131' bound to instance 'crc_unit' of component 'ucrc_ser' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_host_pack.vhd:639]
 INFO: [Synth 8-638] synthesizing module 'ucrc_ser__parameterized8' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
 	Parameter POLYNOMIAL bound to: 16'b0001000000100001 
 	Parameter INIT_VALUE bound to: 16'b0000000000000000 
-INFO: [Synth 8-256] done synthesizing module 'ucrc_ser__parameterized8' (16#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
+INFO: [Synth 8-256] done synthesizing module 'ucrc_ser__parameterized8' (15#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
 	Parameter POLYNOMIAL bound to: 16'b0001000000100001 
 	Parameter INIT_VALUE bound to: 16'b0000000000000000 
 INFO: [Synth 8-3491] module 'ucrc_ser' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:131' bound to instance 'crc_unit' of component 'ucrc_ser' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_host_pack.vhd:639]
 INFO: [Synth 8-638] synthesizing module 'ucrc_ser__parameterized10' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
 	Parameter POLYNOMIAL bound to: 16'b0001000000100001 
 	Parameter INIT_VALUE bound to: 16'b0000000000000000 
-INFO: [Synth 8-256] done synthesizing module 'ucrc_ser__parameterized10' (16#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
+INFO: [Synth 8-256] done synthesizing module 'ucrc_ser__parameterized10' (15#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
 	Parameter POLYNOMIAL bound to: 16'b0001000000100001 
 	Parameter INIT_VALUE bound to: 16'b0000000000000000 
 INFO: [Synth 8-3491] module 'ucrc_ser' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:131' bound to instance 'crc_unit' of component 'ucrc_ser' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_host_pack.vhd:639]
 INFO: [Synth 8-638] synthesizing module 'ucrc_ser__parameterized12' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
 	Parameter POLYNOMIAL bound to: 16'b0001000000100001 
 	Parameter INIT_VALUE bound to: 16'b0000000000000000 
-INFO: [Synth 8-256] done synthesizing module 'ucrc_ser__parameterized12' (16#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
+INFO: [Synth 8-256] done synthesizing module 'ucrc_ser__parameterized12' (15#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
 	Parameter POLYNOMIAL bound to: 16'b0001000000100001 
 	Parameter INIT_VALUE bound to: 16'b0000000000000000 
 INFO: [Synth 8-3491] module 'ucrc_ser' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:131' bound to instance 'crc_unit' of component 'ucrc_ser' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_host_pack.vhd:639]
 INFO: [Synth 8-638] synthesizing module 'ucrc_ser__parameterized14' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
 	Parameter POLYNOMIAL bound to: 16'b0001000000100001 
 	Parameter INIT_VALUE bound to: 16'b0000000000000000 
-INFO: [Synth 8-256] done synthesizing module 'ucrc_ser__parameterized14' (16#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
+INFO: [Synth 8-256] done synthesizing module 'ucrc_ser__parameterized14' (15#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
 	Parameter POLYNOMIAL bound to: 16'b0001000000100001 
 	Parameter INIT_VALUE bound to: 16'b0000000000000000 
 INFO: [Synth 8-3491] module 'ucrc_ser' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:131' bound to instance 'crc_unit' of component 'ucrc_ser' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_host_pack.vhd:639]
 INFO: [Synth 8-638] synthesizing module 'ucrc_ser__parameterized16' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
 	Parameter POLYNOMIAL bound to: 16'b0001000000100001 
 	Parameter INIT_VALUE bound to: 16'b0000000000000000 
-INFO: [Synth 8-256] done synthesizing module 'ucrc_ser__parameterized16' (16#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
-INFO: [Synth 8-256] done synthesizing module 'sd_data_8bit_host' (17#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_host_pack.vhd:590]
+INFO: [Synth 8-256] done synthesizing module 'ucrc_ser__parameterized16' (15#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
+INFO: [Synth 8-256] done synthesizing module 'sd_data_8bit_host' (16#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_host_pack.vhd:590]
 	Parameter DETECT_RISING bound to: 1 - type: integer 
 	Parameter DETECT_FALLING bound to: 0 - type: integer 
 INFO: [Synth 8-3491] module 'edge_detector' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/signal_conditioning_pack.vhd:161' bound to instance 'cmd_int_rst_edge_detect' of component 'edge_detector' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_host_pack.vhd:1523]
 INFO: [Synth 8-638] synthesizing module 'edge_detector' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/signal_conditioning_pack.vhd:181]
 	Parameter DETECT_RISING bound to: 1 - type: integer 
 	Parameter DETECT_FALLING bound to: 0 - type: integer 
-INFO: [Synth 8-256] done synthesizing module 'edge_detector' (18#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/signal_conditioning_pack.vhd:181]
+INFO: [Synth 8-256] done synthesizing module 'edge_detector' (17#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/signal_conditioning_pack.vhd:181]
 	Parameter DETECT_RISING bound to: 1 - type: integer 
 	Parameter DETECT_FALLING bound to: 0 - type: integer 
 INFO: [Synth 8-3491] module 'edge_detector' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/signal_conditioning_pack.vhd:161' bound to instance 'data_int_rst_edge_detect' of component 'edge_detector' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_host_pack.vhd:1541]
-INFO: [Synth 8-256] done synthesizing module 'sd_controller_8bit_bram' (19#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_host_pack.vhd:1148]
+INFO: [Synth 8-256] done synthesizing module 'sd_controller_8bit_bram' (18#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_host_pack.vhd:1148]
 	Parameter EXT_CSD_INIT_FILE bound to: ext_csd_init.txt - type: string 
 	Parameter FIFO_DEPTH bound to: 65536 - type: integer 
 	Parameter FILL_LEVEL_BITS bound to: 16 - type: integer 
 	Parameter RAM_ADR_WIDTH bound to: 9 - type: integer 
-INFO: [Synth 8-3491] module 'mmc_data_pipe' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_card_pack.vhd:2699' bound to instance 'mmc_slave' of component 'mmc_data_pipe' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1830]
+INFO: [Synth 8-3491] module 'mmc_data_pipe' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_card_pack.vhd:2699' bound to instance 'mmc_slave' of component 'mmc_data_pipe' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1835]
 INFO: [Synth 8-638] synthesizing module 'mmc_data_pipe' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_card_pack.vhd:2760]
 	Parameter EXT_CSD_INIT_FILE bound to: ext_csd_init.txt - type: string 
 	Parameter FIFO_DEPTH bound to: 65536 - type: integer 
@@ -379,13 +340,13 @@ INFO: [Synth 8-638] synthesizing module 'swiss_army_ram__parameterized3' [C:/wor
 	Parameter FIL_WIDTH bound to: 8 - type: integer 
 	Parameter ADR_WIDTH bound to: 9 - type: integer 
 	Parameter DAT_WIDTH bound to: 8 - type: integer 
-INFO: [Synth 8-256] done synthesizing module 'swiss_army_ram__parameterized3' (19#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/block_ram_pack.vhd:372]
+INFO: [Synth 8-256] done synthesizing module 'swiss_army_ram__parameterized3' (18#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/block_ram_pack.vhd:372]
 INFO: [Synth 8-3491] module 'sd_card_cmd_rx' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_card_pack.vhd:259' bound to instance 'cmd_receiver' of component 'sd_card_cmd_rx' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_card_pack.vhd:1642]
 INFO: [Synth 8-638] synthesizing module 'sd_card_cmd_rx' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_card_pack.vhd:278]
 	Parameter POLYNOMIAL bound to: 7'b0001001 
 	Parameter INIT_VALUE bound to: 7'b0000000 
 INFO: [Synth 8-3491] module 'ucrc_ser' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:131' bound to instance 'crc0' of component 'ucrc_ser' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_card_pack.vhd:295]
-INFO: [Synth 8-256] done synthesizing module 'sd_card_cmd_rx' (20#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_card_pack.vhd:278]
+INFO: [Synth 8-256] done synthesizing module 'sd_card_cmd_rx' (19#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_card_pack.vhd:278]
 INFO: [Synth 8-226] default block is never used [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_card_pack.vhd:1743]
 	Parameter N_CR bound to: 5 - type: integer 
 	Parameter RESP_PYLD_LEN bound to: 32 - type: integer 
@@ -400,7 +361,7 @@ INFO: [Synth 8-638] synthesizing module 'sd_card_responder' [C:/work/github/FPGA
 	Parameter POLYNOMIAL bound to: 7'b0001001 
 	Parameter INIT_VALUE bound to: 7'b0000000 
 INFO: [Synth 8-3491] module 'ucrc_ser' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:131' bound to instance 'crc0' of component 'ucrc_ser' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_card_pack.vhd:497]
-INFO: [Synth 8-256] done synthesizing module 'sd_card_responder' (21#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_card_pack.vhd:479]
+INFO: [Synth 8-256] done synthesizing module 'sd_card_responder' (20#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_card_pack.vhd:479]
 	Parameter N_CR bound to: 5 - type: integer 
 	Parameter RESP_PYLD_LEN bound to: 120 - type: integer 
 	Parameter CRC_OFFSET bound to: 8 - type: integer 
@@ -414,7 +375,7 @@ INFO: [Synth 8-638] synthesizing module 'sd_card_responder__parameterized1' [C:/
 	Parameter POLYNOMIAL bound to: 7'b0001001 
 	Parameter INIT_VALUE bound to: 7'b0000000 
 INFO: [Synth 8-3491] module 'ucrc_ser' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:131' bound to instance 'crc0' of component 'ucrc_ser' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_card_pack.vhd:497]
-INFO: [Synth 8-256] done synthesizing module 'sd_card_responder__parameterized1' (21#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_card_pack.vhd:479]
+INFO: [Synth 8-256] done synthesizing module 'sd_card_responder__parameterized1' (20#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_card_pack.vhd:479]
 	Parameter N_CR bound to: 5 - type: integer 
 	Parameter RESP_PYLD_LEN bound to: 120 - type: integer 
 	Parameter CRC_OFFSET bound to: 8 - type: integer 
@@ -428,7 +389,7 @@ INFO: [Synth 8-638] synthesizing module 'sd_card_responder__parameterized3' [C:/
 	Parameter POLYNOMIAL bound to: 7'b0001001 
 	Parameter INIT_VALUE bound to: 7'b0000000 
 INFO: [Synth 8-3491] module 'ucrc_ser' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:131' bound to instance 'crc0' of component 'ucrc_ser' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_card_pack.vhd:497]
-INFO: [Synth 8-256] done synthesizing module 'sd_card_responder__parameterized3' (21#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_card_pack.vhd:479]
+INFO: [Synth 8-256] done synthesizing module 'sd_card_responder__parameterized3' (20#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_card_pack.vhd:479]
 	Parameter N_CR bound to: 5 - type: integer 
 	Parameter RESP_PYLD_LEN bound to: 32 - type: integer 
 	Parameter CRC_OFFSET bound to: 0 - type: integer 
@@ -442,7 +403,7 @@ INFO: [Synth 8-638] synthesizing module 'sd_card_responder__parameterized5' [C:/
 	Parameter POLYNOMIAL bound to: 7'b0001001 
 	Parameter INIT_VALUE bound to: 7'b0000000 
 INFO: [Synth 8-3491] module 'ucrc_ser' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:131' bound to instance 'crc0' of component 'ucrc_ser' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_card_pack.vhd:497]
-INFO: [Synth 8-256] done synthesizing module 'sd_card_responder__parameterized5' (21#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_card_pack.vhd:479]
+INFO: [Synth 8-256] done synthesizing module 'sd_card_responder__parameterized5' (20#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_card_pack.vhd:479]
 	Parameter N_CR bound to: 5 - type: integer 
 	Parameter RESP_PYLD_LEN bound to: 32 - type: integer 
 	Parameter CRC_OFFSET bound to: 0 - type: integer 
@@ -467,58 +428,58 @@ INFO: [Synth 8-3491] module 'ucrc_ser' declared at 'C:/work/github/FPGA/Coop/S4/
 INFO: [Synth 8-638] synthesizing module 'ucrc_ser__parameterized23' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
 	Parameter POLYNOMIAL bound to: 16'b0001000000100001 
 	Parameter INIT_VALUE bound to: 16'b0000000000000000 
-INFO: [Synth 8-256] done synthesizing module 'ucrc_ser__parameterized23' (21#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
+INFO: [Synth 8-256] done synthesizing module 'ucrc_ser__parameterized23' (20#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
 	Parameter POLYNOMIAL bound to: 16'b0001000000100001 
 	Parameter INIT_VALUE bound to: 16'b0000000000000000 
 INFO: [Synth 8-3491] module 'ucrc_ser' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:131' bound to instance 'crc_unit' of component 'ucrc_ser' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_card_pack.vhd:689]
 INFO: [Synth 8-638] synthesizing module 'ucrc_ser__parameterized25' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
 	Parameter POLYNOMIAL bound to: 16'b0001000000100001 
 	Parameter INIT_VALUE bound to: 16'b0000000000000000 
-INFO: [Synth 8-256] done synthesizing module 'ucrc_ser__parameterized25' (21#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
+INFO: [Synth 8-256] done synthesizing module 'ucrc_ser__parameterized25' (20#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
 	Parameter POLYNOMIAL bound to: 16'b0001000000100001 
 	Parameter INIT_VALUE bound to: 16'b0000000000000000 
 INFO: [Synth 8-3491] module 'ucrc_ser' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:131' bound to instance 'crc_unit' of component 'ucrc_ser' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_card_pack.vhd:689]
 INFO: [Synth 8-638] synthesizing module 'ucrc_ser__parameterized27' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
 	Parameter POLYNOMIAL bound to: 16'b0001000000100001 
 	Parameter INIT_VALUE bound to: 16'b0000000000000000 
-INFO: [Synth 8-256] done synthesizing module 'ucrc_ser__parameterized27' (21#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
+INFO: [Synth 8-256] done synthesizing module 'ucrc_ser__parameterized27' (20#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
 	Parameter POLYNOMIAL bound to: 16'b0001000000100001 
 	Parameter INIT_VALUE bound to: 16'b0000000000000000 
 INFO: [Synth 8-3491] module 'ucrc_ser' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:131' bound to instance 'crc_unit' of component 'ucrc_ser' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_card_pack.vhd:689]
 INFO: [Synth 8-638] synthesizing module 'ucrc_ser__parameterized29' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
 	Parameter POLYNOMIAL bound to: 16'b0001000000100001 
 	Parameter INIT_VALUE bound to: 16'b0000000000000000 
-INFO: [Synth 8-256] done synthesizing module 'ucrc_ser__parameterized29' (21#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
+INFO: [Synth 8-256] done synthesizing module 'ucrc_ser__parameterized29' (20#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
 	Parameter POLYNOMIAL bound to: 16'b0001000000100001 
 	Parameter INIT_VALUE bound to: 16'b0000000000000000 
 INFO: [Synth 8-3491] module 'ucrc_ser' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:131' bound to instance 'crc_unit' of component 'ucrc_ser' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_card_pack.vhd:689]
 INFO: [Synth 8-638] synthesizing module 'ucrc_ser__parameterized31' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
 	Parameter POLYNOMIAL bound to: 16'b0001000000100001 
 	Parameter INIT_VALUE bound to: 16'b0000000000000000 
-INFO: [Synth 8-256] done synthesizing module 'ucrc_ser__parameterized31' (21#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
+INFO: [Synth 8-256] done synthesizing module 'ucrc_ser__parameterized31' (20#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
 	Parameter POLYNOMIAL bound to: 16'b0001000000100001 
 	Parameter INIT_VALUE bound to: 16'b0000000000000000 
 INFO: [Synth 8-3491] module 'ucrc_ser' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:131' bound to instance 'crc_unit' of component 'ucrc_ser' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_card_pack.vhd:689]
 INFO: [Synth 8-638] synthesizing module 'ucrc_ser__parameterized33' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
 	Parameter POLYNOMIAL bound to: 16'b0001000000100001 
 	Parameter INIT_VALUE bound to: 16'b0000000000000000 
-INFO: [Synth 8-256] done synthesizing module 'ucrc_ser__parameterized33' (21#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
+INFO: [Synth 8-256] done synthesizing module 'ucrc_ser__parameterized33' (20#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
 	Parameter POLYNOMIAL bound to: 16'b0001000000100001 
 	Parameter INIT_VALUE bound to: 16'b0000000000000000 
 INFO: [Synth 8-3491] module 'ucrc_ser' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:131' bound to instance 'crc_unit' of component 'ucrc_ser' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_card_pack.vhd:689]
 INFO: [Synth 8-638] synthesizing module 'ucrc_ser__parameterized35' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
 	Parameter POLYNOMIAL bound to: 16'b0001000000100001 
 	Parameter INIT_VALUE bound to: 16'b0000000000000000 
-INFO: [Synth 8-256] done synthesizing module 'ucrc_ser__parameterized35' (21#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
+INFO: [Synth 8-256] done synthesizing module 'ucrc_ser__parameterized35' (20#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
 	Parameter POLYNOMIAL bound to: 16'b0001000000100001 
 	Parameter INIT_VALUE bound to: 16'b0000000000000000 
 INFO: [Synth 8-3491] module 'ucrc_ser' declared at 'C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:131' bound to instance 'crc_unit' of component 'ucrc_ser' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_card_pack.vhd:689]
 INFO: [Synth 8-638] synthesizing module 'ucrc_ser__parameterized37' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
 	Parameter POLYNOMIAL bound to: 16'b0001000000100001 
 	Parameter INIT_VALUE bound to: 16'b0000000000000000 
-INFO: [Synth 8-256] done synthesizing module 'ucrc_ser__parameterized37' (21#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
-INFO: [Synth 8-256] done synthesizing module 'sd_card_data_unit' (22#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_card_pack.vhd:637]
-INFO: [Synth 8-256] done synthesizing module 'sd_card_emulator' (23#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_card_pack.vhd:1350]
+INFO: [Synth 8-256] done synthesizing module 'ucrc_ser__parameterized37' (20#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/ucrc_pack.vhd:153]
+INFO: [Synth 8-256] done synthesizing module 'sd_card_data_unit' (21#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_card_pack.vhd:637]
+INFO: [Synth 8-256] done synthesizing module 'sd_card_emulator' (22#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_card_pack.vhd:1350]
 	Parameter USE_BRAM bound to: 1 - type: integer 
 	Parameter WIDTH bound to: 8 - type: integer 
 	Parameter DEPTH bound to: 65536 - type: integer 
@@ -555,8 +516,8 @@ INFO: [Synth 8-638] synthesizing module 'swiss_army_ram__parameterized5' [C:/wor
 	Parameter FIL_WIDTH bound to: 32 - type: integer 
 	Parameter ADR_WIDTH bound to: 16 - type: integer 
 	Parameter DAT_WIDTH bound to: 8 - type: integer 
-INFO: [Synth 8-256] done synthesizing module 'swiss_army_ram__parameterized5' (23#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/block_ram_pack.vhd:372]
-INFO: [Synth 8-256] done synthesizing module 'swiss_army_fifo_cdc' (24#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/fifo_pack.vhd:928]
+INFO: [Synth 8-256] done synthesizing module 'swiss_army_ram__parameterized5' (22#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/block_ram_pack.vhd:372]
+INFO: [Synth 8-256] done synthesizing module 'swiss_army_fifo_cdc' (23#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/fifo_pack.vhd:928]
 	Parameter USE_BRAM bound to: 1 - type: integer 
 	Parameter WIDTH bound to: 8 - type: integer 
 	Parameter DEPTH bound to: 65536 - type: integer 
@@ -585,9 +546,9 @@ INFO: [Synth 8-638] synthesizing module 'swiss_army_ram__parameterized7' [C:/wor
 	Parameter FIL_WIDTH bound to: 32 - type: integer 
 	Parameter ADR_WIDTH bound to: 9 - type: integer 
 	Parameter DAT_WIDTH bound to: 8 - type: integer 
-INFO: [Synth 8-256] done synthesizing module 'swiss_army_ram__parameterized7' (24#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/block_ram_pack.vhd:372]
-INFO: [Synth 8-256] done synthesizing module 'mmc_data_pipe' (25#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_card_pack.vhd:2760]
-WARNING: [Synth 8-614] signal 'opc_rsp_ready' is read in the process but is not in the sensitivity list [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1896]
+INFO: [Synth 8-256] done synthesizing module 'swiss_army_ram__parameterized7' (23#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/block_ram_pack.vhd:372]
+INFO: [Synth 8-256] done synthesizing module 'mmc_data_pipe' (24#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/sd_card_pack.vhd:2760]
+WARNING: [Synth 8-614] signal 'opc_rsp_ready' is read in the process but is not in the sensitivity list [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1901]
 WARNING: [Synth 8-3848] Net opc_status in module/entity mmc_tester does not have driver. [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:992]
 WARNING: [Synth 8-3848] Net opc_enable_o in module/entity mmc_tester does not have driver. [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:768]
 WARNING: [Synth 8-3848] Net opc_fif_dat_o in module/entity mmc_tester does not have driver. [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:769]
@@ -607,12 +568,10 @@ WARNING: [Synth 8-3848] Net opc_rsp_ready in module/entity mmc_tester does not h
 WARNING: [Synth 8-3848] Net s_fif_we in module/entity mmc_tester does not have driver. [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:872]
 WARNING: [Synth 8-3848] Net s_fif_wr in module/entity mmc_tester does not have driver. [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1003]
 WARNING: [Synth 8-3848] Net s_fif_rd in module/entity mmc_tester does not have driver. [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:871]
-INFO: [Synth 8-256] done synthesizing module 'mmc_tester' (26#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:813]
-WARNING: [Synth 8-689] width (1) of port connection 'led_o' does not match port width (16) of module 'mmc_tester' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:591]
-WARNING: [Synth 8-689] width (10) of port connection 'opc_rsp_cnt_o' does not match port width (16) of module 'mmc_tester' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:631]
-WARNING: [Synth 8-350] instance 'mmc_tester_0' of module 'mmc_tester' requires 56 connections, but only 55 given [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:580]
+INFO: [Synth 8-256] done synthesizing module 'mmc_tester' (25#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:813]
+WARNING: [Synth 8-350] instance 'mmc_tester_0' of module 'mmc_tester' requires 56 connections, but only 55 given [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
 INFO: [Synth 8-638] synthesizing module 'opcodes' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/opcodes.v:62]
-	Parameter RSP_FILL_LEVEL_BITS bound to: 10 - type: integer 
+	Parameter RSP_FILL_LEVEL_BITS bound to: 16 - type: integer 
 	Parameter HUNDRED_MS bound to: 10000000 - type: integer 
 	Parameter TWOFIFTY_MS bound to: 50000000 - type: integer 
 INFO: [Synth 8-155] case statement is not full and has no default [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/opcodes.v:684]
@@ -622,8 +581,7 @@ Warning: Trying to implement RAM in registers. Block RAM or DRAM implementation 
 	2: Unable to determine number of words or word size in RAM. 
 	3: No valid read/write found for RAM. 
 RAM dissolved into registers
-INFO: [Synth 8-256] done synthesizing module 'opcodes' (27#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/opcodes.v:62]
-WARNING: [Synth 8-689] width (1) of port connection 'fifo_dat_i' does not match port width (8) of module 'opcodes' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:676]
+INFO: [Synth 8-256] done synthesizing module 'opcodes' (26#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/opcodes.v:62]
 INFO: [Synth 8-638] synthesizing module 'spi' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/spi_master.v:95]
 	Parameter CLK_DIV bound to: 3 - type: integer 
 	Parameter IDLE_COUNTER bound to: 1 - type: integer 
@@ -632,10 +590,10 @@ INFO: [Synth 8-638] synthesizing module 'spi' [C:/work/github/FPGA/Coop/S4/S4.sr
 	Parameter WAIT_HALF bound to: 2'b01 
 	Parameter TRANSFER bound to: 2'b10 
 	Parameter IDLE_WAIT bound to: 3'b011 
-INFO: [Synth 8-256] done synthesizing module 'spi' (28#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/spi_master.v:95]
-INFO: [Synth 8-155] case statement is not full and has no default [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:782]
+INFO: [Synth 8-256] done synthesizing module 'spi' (27#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/spi_master.v:95]
+INFO: [Synth 8-155] case statement is not full and has no default [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:791]
 INFO: [Synth 8-638] synthesizing module 'uart' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/uart.v:33]
-	Parameter VRSN bound to: 16'b0001000000000011 
+	Parameter VRSN bound to: 16'b0001000000000100 
 	Parameter I2C_DIV bound to: 254 - type: integer 
 	Parameter SPI_DIV bound to: 101 - type: integer 
 	Parameter REF_DIV bound to: 50 - type: integer 
@@ -715,18 +673,17 @@ INFO: [Synth 8-638] synthesizing module 'uart' [C:/work/github/FPGA/Coop/S4/S4.s
 	Parameter UART_CHAR_OK2 bound to: 8'b00100001 
 INFO: [Synth 8-638] synthesizing module 'rcvr' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/rcvr.v:24]
 	Parameter BAUD_DIV bound to: 884 - type: integer 
-INFO: [Synth 8-256] done synthesizing module 'rcvr' (29#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/rcvr.v:24]
+INFO: [Synth 8-256] done synthesizing module 'rcvr' (28#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/rcvr.v:24]
 INFO: [Synth 8-638] synthesizing module 'xmtr' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/xmtr.v:24]
 	Parameter BAUD_DIV bound to: 884 - type: integer 
-INFO: [Synth 8-256] done synthesizing module 'xmtr' (30#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/xmtr.v:24]
-INFO: [Synth 8-256] done synthesizing module 'uart' (31#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/uart.v:33]
-WARNING: [Synth 8-3848] Net TRIG_OUT in module/entity s4 does not have driver. [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:191]
-WARNING: [Synth 8-3848] Net CONV in module/entity s4 does not have driver. [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:235]
-WARNING: [Synth 8-3848] Net ADC_SCLK in module/entity s4 does not have driver. [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:236]
-WARNING: [Synth 8-3848] Net SPI_MISO in module/entity s4 does not have driver. [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:743]
-WARNING: [Synth 8-3848] Net opc_fif_dat_w in module/entity s4 does not have driver. [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:676]
-WARNING: [Synth 8-3848] Net opc_fifo_rfl_w in module/entity s4 does not have driver. [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:318]
-INFO: [Synth 8-256] done synthesizing module 's4' (32#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:171]
+INFO: [Synth 8-256] done synthesizing module 'xmtr' (29#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/xmtr.v:24]
+INFO: [Synth 8-256] done synthesizing module 'uart' (30#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/uart.v:33]
+WARNING: [Synth 8-3848] Net TRIG_OUT in module/entity s4 does not have driver. [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:193]
+WARNING: [Synth 8-3848] Net CONV in module/entity s4 does not have driver. [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:237]
+WARNING: [Synth 8-3848] Net ADC_SCLK in module/entity s4 does not have driver. [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:238]
+WARNING: [Synth 8-3848] Net SPI_MISO in module/entity s4 does not have driver. [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:752]
+WARNING: [Synth 8-3848] Net opc_fifo_rfl_w in module/entity s4 does not have driver. [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:314]
+INFO: [Synth 8-256] done synthesizing module 's4' (31#1) [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:173]
 WARNING: [Synth 8-3917] design s4 has port MMC_IRQn driven by constant 0
 WARNING: [Synth 8-3331] design mmc_tester has unconnected port opc_enable_o
 WARNING: [Synth 8-3331] design mmc_tester has unconnected port opc_fif_dat_o[7]
@@ -830,7 +787,7 @@ WARNING: [Synth 8-3331] design mmc_tester has unconnected port opc_rspf_i[2]
 WARNING: [Synth 8-3331] design mmc_tester has unconnected port opc_rspf_i[1]
 INFO: [Common 17-14] Message 'Synth 8-3331' appears 100 times and further instances of the messages will be disabled. Use the Tcl command set_msg_config to change the current settings.
 ---------------------------------------------------------------------------------
-Finished RTL Elaboration : Time (s): cpu = 00:05:04 ; elapsed = 00:05:19 . Memory (MB): peak = 654.215 ; gain = 444.027
+Finished RTL Elaboration : Time (s): cpu = 00:05:22 ; elapsed = 00:05:37 . Memory (MB): peak = 656.609 ; gain = 446.914
 ---------------------------------------------------------------------------------
 
 Report Check Netlist: 
@@ -839,50 +796,50 @@ Report Check Netlist:
 +------+------------------+-------+---------+-------+------------------+
 |1     |multi_driven_nets |      0|        0|Passed |Multi driven nets |
 +------+------------------+-------+---------+-------+------------------+
-WARNING: [Synth 8-3295] tying undriven pin mmc_slave:wr_en_i to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1830]
-WARNING: [Synth 8-3295] tying undriven pin mmc_slave:wr_dat_i[7] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1830]
-WARNING: [Synth 8-3295] tying undriven pin mmc_slave:wr_dat_i[6] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1830]
-WARNING: [Synth 8-3295] tying undriven pin mmc_slave:wr_dat_i[5] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1830]
-WARNING: [Synth 8-3295] tying undriven pin mmc_slave:wr_dat_i[4] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1830]
-WARNING: [Synth 8-3295] tying undriven pin mmc_slave:wr_dat_i[3] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1830]
-WARNING: [Synth 8-3295] tying undriven pin mmc_slave:wr_dat_i[2] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1830]
-WARNING: [Synth 8-3295] tying undriven pin mmc_slave:wr_dat_i[1] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1830]
-WARNING: [Synth 8-3295] tying undriven pin mmc_slave:wr_dat_i[0] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1830]
-WARNING: [Synth 8-3295] tying undriven pin mmc_slave:rd_en_i to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1830]
-WARNING: [Synth 8-3295] tying undriven pin mmc_tester_0:switch_i[7] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:580]
-WARNING: [Synth 8-3295] tying undriven pin mmc_tester_0:switch_i[6] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:580]
-WARNING: [Synth 8-3295] tying undriven pin mmc_tester_0:switch_i[5] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:580]
-WARNING: [Synth 8-3295] tying undriven pin mmc_tester_0:switch_i[4] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:580]
-WARNING: [Synth 8-3295] tying undriven pin mmc_tester_0:switch_i[3] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:580]
-WARNING: [Synth 8-3295] tying undriven pin mmc_tester_0:switch_i[2] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:580]
-WARNING: [Synth 8-3295] tying undriven pin mmc_tester_0:switch_i[1] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:580]
-WARNING: [Synth 8-3295] tying undriven pin mmc_tester_0:switch_i[0] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:580]
-WARNING: [Synth 8-3295] tying undriven pin opcode_processor:fifo_dat_i[0] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:670]
-WARNING: [Synth 8-3295] tying undriven pin opcode_processor:fifo_rd_count_i[9] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:670]
-WARNING: [Synth 8-3295] tying undriven pin opcode_processor:fifo_rd_count_i[8] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:670]
-WARNING: [Synth 8-3295] tying undriven pin opcode_processor:fifo_rd_count_i[7] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:670]
-WARNING: [Synth 8-3295] tying undriven pin opcode_processor:fifo_rd_count_i[6] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:670]
-WARNING: [Synth 8-3295] tying undriven pin opcode_processor:fifo_rd_count_i[5] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:670]
-WARNING: [Synth 8-3295] tying undriven pin opcode_processor:fifo_rd_count_i[4] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:670]
-WARNING: [Synth 8-3295] tying undriven pin opcode_processor:fifo_rd_count_i[3] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:670]
-WARNING: [Synth 8-3295] tying undriven pin opcode_processor:fifo_rd_count_i[2] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:670]
-WARNING: [Synth 8-3295] tying undriven pin opcode_processor:fifo_rd_count_i[1] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:670]
-WARNING: [Synth 8-3295] tying undriven pin opcode_processor:fifo_rd_count_i[0] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:670]
-WARNING: [Synth 8-3295] tying undriven pin syn_spi:miso to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:753]
+WARNING: [Synth 8-3295] tying undriven pin mmc_slave:wr_en_i to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1835]
+WARNING: [Synth 8-3295] tying undriven pin mmc_slave:wr_dat_i[7] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1835]
+WARNING: [Synth 8-3295] tying undriven pin mmc_slave:wr_dat_i[6] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1835]
+WARNING: [Synth 8-3295] tying undriven pin mmc_slave:wr_dat_i[5] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1835]
+WARNING: [Synth 8-3295] tying undriven pin mmc_slave:wr_dat_i[4] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1835]
+WARNING: [Synth 8-3295] tying undriven pin mmc_slave:wr_dat_i[3] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1835]
+WARNING: [Synth 8-3295] tying undriven pin mmc_slave:wr_dat_i[2] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1835]
+WARNING: [Synth 8-3295] tying undriven pin mmc_slave:wr_dat_i[1] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1835]
+WARNING: [Synth 8-3295] tying undriven pin mmc_slave:wr_dat_i[0] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1835]
+WARNING: [Synth 8-3295] tying undriven pin mmc_slave:rd_en_i to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/mmc_test_pack.vhd:1835]
+WARNING: [Synth 8-3295] tying undriven pin mmc_tester_0:switch_i[7] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+WARNING: [Synth 8-3295] tying undriven pin mmc_tester_0:switch_i[6] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+WARNING: [Synth 8-3295] tying undriven pin mmc_tester_0:switch_i[5] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+WARNING: [Synth 8-3295] tying undriven pin mmc_tester_0:switch_i[4] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+WARNING: [Synth 8-3295] tying undriven pin mmc_tester_0:switch_i[3] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+WARNING: [Synth 8-3295] tying undriven pin mmc_tester_0:switch_i[2] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+WARNING: [Synth 8-3295] tying undriven pin mmc_tester_0:switch_i[1] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+WARNING: [Synth 8-3295] tying undriven pin mmc_tester_0:switch_i[0] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+WARNING: [Synth 8-3295] tying undriven pin opcode_processor:fifo_rd_count_i[15] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:679]
+WARNING: [Synth 8-3295] tying undriven pin opcode_processor:fifo_rd_count_i[14] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:679]
+WARNING: [Synth 8-3295] tying undriven pin opcode_processor:fifo_rd_count_i[13] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:679]
+WARNING: [Synth 8-3295] tying undriven pin opcode_processor:fifo_rd_count_i[12] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:679]
+WARNING: [Synth 8-3295] tying undriven pin opcode_processor:fifo_rd_count_i[11] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:679]
+WARNING: [Synth 8-3295] tying undriven pin opcode_processor:fifo_rd_count_i[10] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:679]
+WARNING: [Synth 8-3295] tying undriven pin opcode_processor:fifo_rd_count_i[9] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:679]
+WARNING: [Synth 8-3295] tying undriven pin opcode_processor:fifo_rd_count_i[8] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:679]
+WARNING: [Synth 8-3295] tying undriven pin opcode_processor:fifo_rd_count_i[7] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:679]
+WARNING: [Synth 8-3295] tying undriven pin opcode_processor:fifo_rd_count_i[6] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:679]
+WARNING: [Synth 8-3295] tying undriven pin opcode_processor:fifo_rd_count_i[5] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:679]
+WARNING: [Synth 8-3295] tying undriven pin opcode_processor:fifo_rd_count_i[4] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:679]
+WARNING: [Synth 8-3295] tying undriven pin opcode_processor:fifo_rd_count_i[3] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:679]
+WARNING: [Synth 8-3295] tying undriven pin opcode_processor:fifo_rd_count_i[2] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:679]
+WARNING: [Synth 8-3295] tying undriven pin opcode_processor:fifo_rd_count_i[1] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:679]
+WARNING: [Synth 8-3295] tying undriven pin opcode_processor:fifo_rd_count_i[0] to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:679]
+WARNING: [Synth 8-3295] tying undriven pin syn_spi:miso to constant 0 [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:762]
 ---------------------------------------------------------------------------------
-Finished RTL Optimization Phase 1 : Time (s): cpu = 00:05:06 ; elapsed = 00:05:20 . Memory (MB): peak = 654.215 ; gain = 444.027
+Finished RTL Optimization Phase 1 : Time (s): cpu = 00:05:24 ; elapsed = 00:05:38 . Memory (MB): peak = 656.609 ; gain = 446.914
 ---------------------------------------------------------------------------------
-INFO: [Netlist 29-17] Analyzing 1 Unisim elements for replacement
-INFO: [Netlist 29-28] Unisim Transformation completed in 0 CPU seconds
 INFO: [Device 21-403] Loading part xc7a35tftg256-2
 INFO: [Project 1-570] Preparing netlist for logic optimization
 
 Processing XDC Constraints
 Initializing timing engine
 Parsing XDC File [C:/work/github/FPGA/Coop/S4/S4.srcs/constr_1/s4.xdc]
-CRITICAL WARNING: [Designutils 20-1307] Command '//set_property' is not supported in the xdc constraint file. [C:/work/github/FPGA/Coop/S4/S4.srcs/constr_1/s4.xdc:12]
-CRITICAL WARNING: [Designutils 20-1307] Command '//create_clock' is not supported in the xdc constraint file. [C:/work/github/FPGA/Coop/S4/S4.srcs/constr_1/s4.xdc:13]
-CRITICAL WARNING: [Designutils 20-1307] Command '//set_property' is not supported in the xdc constraint file. [C:/work/github/FPGA/Coop/S4/S4.srcs/constr_1/s4.xdc:14]
 wrong # args: should be "set varName ?newValue?"
 wrong # args: should be "set varName ?newValue?"
 wrong # args: should be "set varName ?newValue?"
@@ -892,32 +849,30 @@ wrong # args: should be "set varName ?newValue?"
 wrong # args: should be "set varName ?newValue?"
 wrong # args: should be "set varName ?newValue?"
 wrong # args: should be "set varName ?newValue?"
-CRITICAL WARNING: [Designutils 20-1307] Command '//create_clock' is not supported in the xdc constraint file. [C:/work/github/FPGA/Coop/S4/S4.srcs/constr_1/s4.xdc:64]
 Finished Parsing XDC File [C:/work/github/FPGA/Coop/S4/S4.srcs/constr_1/s4.xdc]
 INFO: [Project 1-236] Implementation specific constraints were found while reading constraint file [C:/work/github/FPGA/Coop/S4/S4.srcs/constr_1/s4.xdc]. These constraints will be ignored for synthesis but will be used in implementation. Impacted constraints are listed in the file [.Xil/s4_propImpl.xdc].
 Resolution: To avoid this warning, move constraints listed in [.Xil/s4_propImpl.xdc] to another XDC file and exclude this new file from synthesis with the used_in_synthesis property (File Properties dialog in GUI) and re-run elaboration/synthesis.
 Completed Processing XDC Constraints
 
 INFO: [Project 1-111] Unisim Transformation Summary:
-  A total of 1 instances were transformed.
-  MMCME2_BASE => MMCME2_ADV: 1 instances
+No Unisim elements were transformed.
 
-Constraint Validation Runtime : Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.008 . Memory (MB): peak = 780.633 ; gain = 0.000
+Constraint Validation Runtime : Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.010 . Memory (MB): peak = 780.836 ; gain = 0.000
 ---------------------------------------------------------------------------------
-Finished Constraint Validation : Time (s): cpu = 00:05:16 ; elapsed = 00:05:31 . Memory (MB): peak = 780.633 ; gain = 570.445
+Finished Constraint Validation : Time (s): cpu = 00:05:35 ; elapsed = 00:05:50 . Memory (MB): peak = 780.836 ; gain = 571.141
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Loading Part and Timing Information
 ---------------------------------------------------------------------------------
 Loading part: xc7a35tftg256-2
 ---------------------------------------------------------------------------------
-Finished Loading Part and Timing Information : Time (s): cpu = 00:05:16 ; elapsed = 00:05:31 . Memory (MB): peak = 780.633 ; gain = 570.445
+Finished Loading Part and Timing Information : Time (s): cpu = 00:05:35 ; elapsed = 00:05:50 . Memory (MB): peak = 780.836 ; gain = 571.141
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Applying 'set_property' XDC Constraints
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished applying 'set_property' XDC Constraints : Time (s): cpu = 00:05:16 ; elapsed = 00:05:31 . Memory (MB): peak = 780.633 ; gain = 570.445
+Finished applying 'set_property' XDC Constraints : Time (s): cpu = 00:05:35 ; elapsed = 00:05:50 . Memory (MB): peak = 780.836 ; gain = 571.141
 ---------------------------------------------------------------------------------
 INFO: [Synth 8-5818] HDL ADVISOR - The operator resource <adder> is shared. To prevent sharing consider applying a KEEP on the output of the operator [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/auto_baud_pack.vhd:265]
 INFO: [Synth 8-5544] ROM "half_measurement" won't be mapped to Block RAM because address size (4) smaller than threshold (5)
@@ -1180,7 +1135,7 @@ INFO: [Synth 8-3971] The signal ram1_reg was recognized as a true dual port RAM 
 ---------------------------------------------------------------------------------------------------
 INFO: [Synth 8-3354] encoded FSM with state register 'spi_state_reg' using encoding 'sequential' in module 's4'
 ---------------------------------------------------------------------------------
-Finished RTL Optimization Phase 2 : Time (s): cpu = 00:05:25 ; elapsed = 00:05:40 . Memory (MB): peak = 780.633 ; gain = 570.445
+Finished RTL Optimization Phase 2 : Time (s): cpu = 00:05:44 ; elapsed = 00:06:00 . Memory (MB): peak = 780.836 ; gain = 571.141
 ---------------------------------------------------------------------------------
 
 Report RTL Partitions: 
@@ -1197,7 +1152,7 @@ Detailed RTL Component Info :
 	   3 Input     32 Bit       Adders := 2     
 	   2 Input     24 Bit       Adders := 1     
 	   3 Input     18 Bit       Adders := 2     
-	   2 Input     16 Bit       Adders := 6     
+	   2 Input     16 Bit       Adders := 9     
 	   2 Input     15 Bit       Adders := 16    
 	   3 Input     15 Bit       Adders := 2     
 	   2 Input     14 Bit       Adders := 4     
@@ -1205,7 +1160,7 @@ Detailed RTL Component Info :
 	   2 Input     13 Bit       Adders := 2     
 	   2 Input     12 Bit       Adders := 1     
 	   2 Input     11 Bit       Adders := 1     
-	   2 Input     10 Bit       Adders := 4     
+	   2 Input     10 Bit       Adders := 1     
 	   2 Input      9 Bit       Adders := 1     
 	   2 Input      8 Bit       Adders := 33    
 	   2 Input      7 Bit       Adders := 4     
@@ -1229,13 +1184,13 @@ Detailed RTL Component Info :
 	               40 Bit    Registers := 5     
 	               32 Bit    Registers := 21    
 	               24 Bit    Registers := 2     
-	               16 Bit    Registers := 35    
+	               16 Bit    Registers := 38    
 	               15 Bit    Registers := 4     
 	               14 Bit    Registers := 5     
 	               13 Bit    Registers := 2     
 	               12 Bit    Registers := 3     
 	               11 Bit    Registers := 1     
-	               10 Bit    Registers := 7     
+	               10 Bit    Registers := 4     
 	                9 Bit    Registers := 4     
 	                8 Bit    Registers := 68    
 	                7 Bit    Registers := 14    
@@ -1267,11 +1222,12 @@ Detailed RTL Component Info :
 	   2 Input     24 Bit        Muxes := 7     
 	   2 Input     18 Bit        Muxes := 2     
 	  29 Input     16 Bit        Muxes := 1     
-	   2 Input     16 Bit        Muxes := 45    
+	   2 Input     16 Bit        Muxes := 47    
 	   4 Input     16 Bit        Muxes := 1     
 	   5 Input     16 Bit        Muxes := 2     
 	  11 Input     16 Bit        Muxes := 3     
 	  16 Input     16 Bit        Muxes := 1     
+	  15 Input     16 Bit        Muxes := 2     
 	   2 Input     15 Bit        Muxes := 12    
 	   3 Input     15 Bit        Muxes := 2     
 	   4 Input     14 Bit        Muxes := 2     
@@ -1283,8 +1239,7 @@ Detailed RTL Component Info :
 	   3 Input     12 Bit        Muxes := 1     
 	   2 Input     12 Bit        Muxes := 1     
 	   2 Input     11 Bit        Muxes := 3     
-	   2 Input     10 Bit        Muxes := 12    
-	  15 Input     10 Bit        Muxes := 1     
+	   2 Input     10 Bit        Muxes := 10    
 	   2 Input      9 Bit        Muxes := 5     
 	   4 Input      9 Bit        Muxes := 1     
 	   6 Input      9 Bit        Muxes := 1     
@@ -1340,7 +1295,7 @@ Detailed RTL Component Info :
 	  16 Input      2 Bit        Muxes := 1     
 	  15 Input      2 Bit        Muxes := 4     
 	  42 Input      2 Bit        Muxes := 1     
-	   2 Input      1 Bit        Muxes := 577   
+	   2 Input      1 Bit        Muxes := 578   
 	   4 Input      1 Bit        Muxes := 36    
 	   5 Input      1 Bit        Muxes := 32    
 	  29 Input      1 Bit        Muxes := 8     
@@ -2054,17 +2009,19 @@ Detailed RTL Component Info :
 	   3 Input      2 Bit        Muxes := 1     
 	  11 Input      1 Bit        Muxes := 10    
 	  16 Input      1 Bit        Muxes := 19    
-	   2 Input      1 Bit        Muxes := 25    
+	   2 Input      1 Bit        Muxes := 26    
 	   4 Input      1 Bit        Muxes := 3     
 Module opcodes 
 Detailed RTL Component Info : 
 +---Adders : 
 	   2 Input     32 Bit       Adders := 3     
-	   2 Input     10 Bit       Adders := 4     
+	   2 Input     16 Bit       Adders := 3     
+	   2 Input     10 Bit       Adders := 1     
 +---Registers : 
 	               64 Bit    Registers := 1     
 	               32 Bit    Registers := 4     
-	               10 Bit    Registers := 4     
+	               16 Bit    Registers := 3     
+	               10 Bit    Registers := 1     
 	                8 Bit    Registers := 3     
 	                7 Bit    Registers := 2     
 	                1 Bit    Registers := 4     
@@ -2073,8 +2030,8 @@ Detailed RTL Component Info :
 	  15 Input     64 Bit        Muxes := 1     
 	   2 Input     32 Bit        Muxes := 2     
 	  15 Input     32 Bit        Muxes := 2     
-	   2 Input     10 Bit        Muxes := 2     
-	  15 Input     10 Bit        Muxes := 1     
+	   2 Input     16 Bit        Muxes := 2     
+	  15 Input     16 Bit        Muxes := 2     
 	   2 Input      8 Bit        Muxes := 1     
 	   2 Input      7 Bit        Muxes := 5     
 	  15 Input      7 Bit        Muxes := 2     
@@ -2207,6 +2164,19 @@ INFO: [Synth 8-5545] ROM "counter" won't be mapped to RAM because address size (
 INFO: [Synth 8-5545] ROM "state" won't be mapped to RAM because address size (32) is larger than maximum supported(25)
 INFO: [Synth 8-5587] ROM size for "hwdbg_uart/cmdState" is below threshold of ROM address width. It will be mapped to LUTs
 WARNING: [Synth 8-3917] design s4 has port MMC_IRQn driven by constant 0
+WARNING: [Synth 8-3917] design s4 has port VGA_VSW driven by constant 0
+WARNING: [Synth 8-3917] design s4 has port VGA_VSWn driven by constant 1
+WARNING: [Synth 8-3917] design s4 has port SYN_MUTE driven by constant 1
+WARNING: [Synth 8-3917] design s4 has port DDS_IORST driven by constant 0
+WARNING: [Synth 8-3917] design s4 has port DDS_IOUP driven by constant 0
+WARNING: [Synth 8-3917] design s4 has port DDS_SYNC driven by constant 0
+WARNING: [Synth 8-3917] design s4 has port DDS_PS0 driven by constant 0
+WARNING: [Synth 8-3917] design s4 has port DDS_PS1 driven by constant 0
+WARNING: [Synth 8-3917] design s4 has port RF_GATE driven by constant 0
+WARNING: [Synth 8-3917] design s4 has port RF_GATE2 driven by constant 0
+WARNING: [Synth 8-3917] design s4 has port DRV_BIAS_EN driven by constant 0
+WARNING: [Synth 8-3917] design s4 has port PA_BIAS_EN driven by constant 0
+WARNING: [Synth 8-3917] design s4 has port ZMON_EN driven by constant 0
 INFO: [Synth 8-3971] The signal host_0_bram_0/ram1_reg was recognized as a true dual port RAM template.
 INFO: [Synth 8-3971] The signal ext_csd_ram/ram1_reg was recognized as a true dual port RAM template.
 INFO: [Synth 8-3971] The signal pipe_ram/ram1_reg was recognized as a true dual port RAM template.
@@ -2284,16 +2254,22 @@ INFO: [Synth 8-3333] propagating constant 0 across sequential element (\opcode_p
 INFO: [Synth 8-3333] propagating constant 0 across sequential element (\opcode_processor/counter_reg[2] )
 INFO: [Synth 8-3333] propagating constant 0 across sequential element (\opcode_processor/counter_reg[1] )
 INFO: [Synth 8-3333] propagating constant 0 across sequential element (\opcode_processor/counter_reg[0] )
-INFO: [Synth 8-3333] propagating constant 0 across sequential element (\opcode_processor/rsp_length_reg[3] )
+INFO: [Synth 8-3333] propagating constant 0 across sequential element (\opcode_processor/rsp_length_reg[6] )
+INFO: [Synth 8-3333] propagating constant 0 across sequential element (\opcode_processor/rsp_length_reg[7] )
 INFO: [Synth 8-3333] propagating constant 0 across sequential element (\opcode_processor/rsp_length_reg[4] )
-INFO: [Synth 8-3333] propagating constant 0 across sequential element (\opcode_processor/rsp_length_reg[2] )
+INFO: [Synth 8-3333] propagating constant 0 across sequential element (\opcode_processor/rsp_length_reg[5] )
 INFO: [Synth 8-3333] propagating constant 0 across sequential element (\opcode_processor/rsp_length_reg[0] )
 INFO: [Synth 8-3333] propagating constant 0 across sequential element (\opcode_processor/rsp_length_reg[1] )
-INFO: [Synth 8-3333] propagating constant 0 across sequential element (\opcode_processor/rsp_length_reg[9] )
+INFO: [Synth 8-3333] propagating constant 0 across sequential element (\opcode_processor/rsp_length_reg[2] )
+INFO: [Synth 8-3333] propagating constant 0 across sequential element (\opcode_processor/rsp_length_reg[3] )
+INFO: [Synth 8-3333] propagating constant 0 across sequential element (\opcode_processor/rsp_length_reg[15] )
+INFO: [Synth 8-3333] propagating constant 0 across sequential element (\opcode_processor/rsp_length_reg[14] )
+INFO: [Synth 8-3333] propagating constant 0 across sequential element (\opcode_processor/rsp_length_reg[12] )
+INFO: [Synth 8-3333] propagating constant 0 across sequential element (\opcode_processor/rsp_length_reg[13] )
 INFO: [Synth 8-3333] propagating constant 0 across sequential element (\opcode_processor/rsp_length_reg[8] )
-INFO: [Synth 8-3333] propagating constant 0 across sequential element (\opcode_processor/rsp_length_reg[7] )
-INFO: [Synth 8-3333] propagating constant 0 across sequential element (\opcode_processor/rsp_length_reg[5] )
-INFO: [Synth 8-3333] propagating constant 0 across sequential element (\opcode_processor/rsp_length_reg[6] )
+INFO: [Synth 8-3333] propagating constant 0 across sequential element (\opcode_processor/rsp_length_reg[9] )
+INFO: [Synth 8-3333] propagating constant 0 across sequential element (\opcode_processor/rsp_length_reg[10] )
+INFO: [Synth 8-3333] propagating constant 0 across sequential element (\opcode_processor/rsp_length_reg[11] )
 INFO: [Synth 8-3886] merging instance 'opcode_processor/opcode_reg[5]' (FDRE) to 'opcode_processor/opcode_reg[0]'
 INFO: [Synth 8-3886] merging instance 'opcode_processor/opcode_reg[6]' (FDRE) to 'opcode_processor/opcode_reg[0]'
 INFO: [Synth 8-3886] merging instance 'opcode_processor/opcode_reg[4]' (FDRE) to 'opcode_processor/opcode_reg[0]'
@@ -2313,12 +2289,6 @@ INFO: [Synth 8-3333] propagating constant 0 across sequential element (\opcode_p
 INFO: [Synth 8-3886] merging instance 'opcode_processor/opcode_reg[2]' (FDRE) to 'opcode_processor/opcode_reg[3]'
 INFO: [Synth 8-3333] propagating constant 0 across sequential element (\opcode_processor/opcode_reg[3] )
 INFO: [Synth 8-3333] propagating constant 0 across sequential element (\opcode_processor/state_reg[5] )
-INFO: [Synth 8-3333] propagating constant 0 across sequential element (\opcode_processor/state_reg[6] )
-INFO: [Synth 8-3333] propagating constant 0 across sequential element (\opcode_processor/state_reg[4] )
-INFO: [Synth 8-3333] propagating constant 0 across sequential element (\opcode_processor/state_reg[3] )
-INFO: [Synth 8-3333] propagating constant 0 across sequential element (\opcode_processor/state_reg[2] )
-INFO: [Synth 8-3333] propagating constant 0 across sequential element (\opcode_processor/state_reg[1] )
-INFO: [Synth 8-3333] propagating constant 0 across sequential element (\opcode_processor/opcode_counter_o_reg[31] )
 INFO: [Common 17-14] Message 'Synth 8-3333' appears 100 times and further instances of the messages will be disabled. Use the Tcl command set_msg_config to change the current settings.
 INFO: [Synth 8-3886] merging instance 'mmc_tester_0/sd_host_0/cmd_host_0/resp_len_reg[0]' (FDCE) to 'mmc_tester_0/sd_host_0/cmd_host_0/resp_len_reg[5]'
 INFO: [Synth 8-3886] merging instance 'mmc_tester_0/sd_host_0/cmd_host_0/resp_len_reg[1]' (FDCE) to 'mmc_tester_0/sd_host_0/cmd_host_0/resp_len_reg[5]'
@@ -2349,12 +2319,21 @@ INFO: [Synth 8-3886] merging instance 'mmc_tester_0/sd_host_0/cmd_host_0/resp_le
 INFO: [Synth 8-3886] merging instance 'mmc_tester_0/sd_host_0/cmd_host_0/resp_len_reg[28]' (FDCE) to 'mmc_tester_0/sd_host_0/cmd_host_0/resp_len_reg[31]'
 INFO: [Synth 8-3886] merging instance 'mmc_tester_0/sd_host_0/cmd_host_0/resp_len_reg[29]' (FDCE) to 'mmc_tester_0/sd_host_0/cmd_host_0/resp_len_reg[31]'
 INFO: [Synth 8-3886] merging instance 'mmc_tester_0/sd_host_0/cmd_host_0/resp_len_reg[30]' (FDCE) to 'mmc_tester_0/sd_host_0/cmd_host_0/resp_len_reg[31]'
-INFO: [Synth 8-3886] merging instance 'mmc_tester_0/sd_host_0/cmd_host_0/response_3_o_reg[5]' (FDCE) to 'mmc_tester_0/sd_host_0/cmd_host_0/response_3_o_reg[7]'
-INFO: [Synth 8-3886] merging instance 'mmc_tester_0/sd_host_0/cmd_host_0/response_3_o_reg[4]' (FDCE) to 'mmc_tester_0/sd_host_0/cmd_host_0/response_3_o_reg[6]'
 INFO: [Synth 8-3886] merging instance 'mmc_tester_0/sd_host_0/cmd_host_0/response_3_o_reg[3]' (FDCE) to 'mmc_tester_0/sd_host_0/cmd_host_0/response_3_o_reg[7]'
-INFO: [Synth 8-3886] merging instance 'mmc_tester_0/sd_host_0/cmd_host_0/response_3_o_reg[7]' (FDCE) to 'mmc_tester_0/sd_host_0/cmd_host_0/response_3_o_reg[1]'
+INFO: [Synth 8-3886] merging instance 'mmc_tester_0/sd_host_0/cmd_host_0/response_3_o_reg[4]' (FDCE) to 'mmc_tester_0/sd_host_0/cmd_host_0/response_3_o_reg[6]'
+INFO: [Synth 8-3886] merging instance 'mmc_tester_0/sd_host_0/cmd_host_0/response_3_o_reg[5]' (FDCE) to 'mmc_tester_0/sd_host_0/cmd_host_0/response_3_o_reg[7]'
 INFO: [Synth 8-3886] merging instance 'mmc_tester_0/sd_host_0/cmd_host_0/response_3_o_reg[6]' (FDCE) to 'mmc_tester_0/sd_host_0/cmd_host_0/response_3_o_reg[2]'
+INFO: [Synth 8-3886] merging instance 'mmc_tester_0/sd_host_0/cmd_host_0/response_3_o_reg[7]' (FDCE) to 'mmc_tester_0/sd_host_0/cmd_host_0/response_3_o_reg[1]'
 INFO: [Synth 8-3886] merging instance 'mmc_tester_0/sd_host_0/cmd_host_0/response_3_o_reg[2]' (FDCE) to 'mmc_tester_0/sd_host_0/cmd_host_0/response_3_o_reg[0]'
+INFO: [Synth 8-3886] merging instance 'dbg_sys_rst_sr_reg[1]' (FD) to 'dbg_sys_rst_sr_reg[0]'
+INFO: [Synth 8-3886] merging instance 'dbg_sys_rst_sr_reg[0]' (FD) to 'dbg_sys_rst_sr_reg[2]'
+INFO: [Synth 8-3886] merging instance 'dbg_sys_rst_sr_reg[2]' (FD) to 'dbg_sys_rst_sr_reg[3]'
+INFO: [Synth 8-3886] merging instance 'dbg_sys_rst_sr_reg[4]' (FD) to 'dbg_sys_rst_sr_reg[3]'
+INFO: [Synth 8-3886] merging instance 'dbg_sys_rst_sr_reg[5]' (FD) to 'dbg_sys_rst_sr_reg[3]'
+INFO: [Synth 8-3886] merging instance 'dbg_sys_rst_sr_reg[6]' (FD) to 'dbg_sys_rst_sr_reg[3]'
+INFO: [Synth 8-3886] merging instance 'dbg_sys_rst_sr_reg[3]' (FD) to 'dbg_sys_rst_sr_reg[7]'
+INFO: [Synth 8-3886] merging instance 'dbg_sys_rst_sr_reg[7]' (FD) to 'dbg_sys_rst_sr_reg[8]'
+INFO: [Synth 8-3886] merging instance 'dbg_sys_rst_sr_reg[9]' (FD) to 'dbg_sys_rst_sr_reg[8]'
 WARNING: [Synth 8-3332] Sequential element (uart1/rx1/rx_sr_reg[8]) is unused and will be removed from module async_syscon.
 WARNING: [Synth 8-3332] Sequential element (syscon1/cmd_done_o_reg) is unused and will be removed from module async_syscon.
 WARNING: [Synth 8-3332] Sequential element (tx_clk_r1_reg) is unused and will be removed from module async_tx_sqclk.
@@ -2452,13 +2431,61 @@ WARNING: [Synth 8-3332] Sequential element (reg_dbus_size_reset/pulse_s_r1_reg) 
 WARNING: [Synth 8-3332] Sequential element (reg_dbus_size_reset/pulse_s_r2_reg) is unused and will be removed from module mmc_tester.
 WARNING: [Synth 8-3332] Sequential element (tlm_start_pulser/pulse_s_r1_reg) is unused and will be removed from module mmc_tester.
 WARNING: [Synth 8-3332] Sequential element (tlm_start_pulser/pulse_s_r2_reg) is unused and will be removed from module mmc_tester.
+WARNING: [Synth 8-3332] Sequential element (dbg_enables_o_reg[15]) is unused and will be removed from module mmc_tester.
+CRITICAL WARNING: [Synth 8-3352] multi-driven net dbg_enables_o[15] with 1st driver pin 'mmc_tester_0/dbg_enables_o[15]' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-3352] multi-driven net dbg_enables_o[15] with 2nd driver pin 'GND' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-5559] multi-driven net dbg_enables_o[15] is connected to constant driver, other driver is ignored [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
 WARNING: [Synth 8-3332] Sequential element (dbg_enables_o_reg[14]) is unused and will be removed from module mmc_tester.
+CRITICAL WARNING: [Synth 8-3352] multi-driven net dbg_enables_o[14] with 1st driver pin 'mmc_tester_0/dbg_enables_o[14]' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-3352] multi-driven net dbg_enables_o[14] with 2nd driver pin 'GND' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-5559] multi-driven net dbg_enables_o[14] is connected to constant driver, other driver is ignored [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
 WARNING: [Synth 8-3332] Sequential element (dbg_enables_o_reg[13]) is unused and will be removed from module mmc_tester.
-WARNING: [Synth 8-3332] Sequential element (dbg_enables_o_reg[5]) is unused and will be removed from module mmc_tester.
 INFO: [Common 17-14] Message 'Synth 8-3332' appears 100 times and further instances of the messages will be disabled. Use the Tcl command set_msg_config to change the current settings.
+CRITICAL WARNING: [Synth 8-3352] multi-driven net dbg_enables_o[13] with 1st driver pin 'mmc_tester_0/dbg_enables_o[13]' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-3352] multi-driven net dbg_enables_o[13] with 2nd driver pin 'GND' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-5559] multi-driven net dbg_enables_o[13] is connected to constant driver, other driver is ignored [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-3352] multi-driven net dbg_enables_o[12] with 1st driver pin 'mmc_tester_0/dbg_enables_o[12]' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-3352] multi-driven net dbg_enables_o[12] with 2nd driver pin 'GND' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-5559] multi-driven net dbg_enables_o[12] is connected to constant driver, other driver is ignored [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-3352] multi-driven net dbg_enables_o[11] with 1st driver pin 'mmc_tester_0/dbg_enables_o[11]' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-3352] multi-driven net dbg_enables_o[11] with 2nd driver pin 'GND' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-5559] multi-driven net dbg_enables_o[11] is connected to constant driver, other driver is ignored [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-3352] multi-driven net dbg_enables_o[10] with 1st driver pin 'mmc_tester_0/dbg_enables_o[10]' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-3352] multi-driven net dbg_enables_o[10] with 2nd driver pin 'GND' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-5559] multi-driven net dbg_enables_o[10] is connected to constant driver, other driver is ignored [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-3352] multi-driven net dbg_enables_o[9] with 1st driver pin 'mmc_tester_0/dbg_enables_o[9]' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-3352] multi-driven net dbg_enables_o[9] with 2nd driver pin 'GND' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-5559] multi-driven net dbg_enables_o[9] is connected to constant driver, other driver is ignored [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-3352] multi-driven net dbg_enables_o[8] with 1st driver pin 'mmc_tester_0/dbg_enables_o[8]' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-3352] multi-driven net dbg_enables_o[8] with 2nd driver pin 'GND' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-5559] multi-driven net dbg_enables_o[8] is connected to constant driver, other driver is ignored [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-3352] multi-driven net dbg_enables_o[7] with 1st driver pin 'mmc_tester_0/dbg_enables_o[7]' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-3352] multi-driven net dbg_enables_o[7] with 2nd driver pin 'GND' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-5559] multi-driven net dbg_enables_o[7] is connected to constant driver, other driver is ignored [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-3352] multi-driven net dbg_enables_o[6] with 1st driver pin 'mmc_tester_0/dbg_enables_o[6]' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-3352] multi-driven net dbg_enables_o[6] with 2nd driver pin 'GND' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-5559] multi-driven net dbg_enables_o[6] is connected to constant driver, other driver is ignored [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-3352] multi-driven net dbg_enables_o[5] with 1st driver pin 'mmc_tester_0/dbg_enables_o[5]' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-3352] multi-driven net dbg_enables_o[5] with 2nd driver pin 'GND' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-5559] multi-driven net dbg_enables_o[5] is connected to constant driver, other driver is ignored [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-3352] multi-driven net dbg_enables_o[4] with 1st driver pin 'mmc_tester_0/dbg_enables_o[4]' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-3352] multi-driven net dbg_enables_o[4] with 2nd driver pin 'GND' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-5559] multi-driven net dbg_enables_o[4] is connected to constant driver, other driver is ignored [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-3352] multi-driven net dbg_enables_o[3] with 1st driver pin 'mmc_tester_0/dbg_enables_o[3]' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-3352] multi-driven net dbg_enables_o[3] with 2nd driver pin 'GND' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-5559] multi-driven net dbg_enables_o[3] is connected to constant driver, other driver is ignored [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-3352] multi-driven net dbg_enables_o[2] with 1st driver pin 'mmc_tester_0/dbg_enables_o[2]' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-3352] multi-driven net dbg_enables_o[2] with 2nd driver pin 'GND' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-5559] multi-driven net dbg_enables_o[2] is connected to constant driver, other driver is ignored [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-3352] multi-driven net dbg_enables_o[1] with 1st driver pin 'mmc_tester_0/dbg_enables_o[1]' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-3352] multi-driven net dbg_enables_o[1] with 2nd driver pin 'GND' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-5559] multi-driven net dbg_enables_o[1] is connected to constant driver, other driver is ignored [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-3352] multi-driven net dbg_enables_o[0] with 1st driver pin 'mmc_tester_0/dbg_enables_o[0]' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-3352] multi-driven net dbg_enables_o[0] with 2nd driver pin 'GND' [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
+CRITICAL WARNING: [Synth 8-5559] multi-driven net dbg_enables_o[0] is connected to constant driver, other driver is ignored [C:/work/github/FPGA/Coop/S4/S4.srcs/sources_1/s4.v:585]
 INFO: [Synth 8-3886] merging instance 'mmc_tester_0/sd_host_0/cmd_host_0/resp_len_reg[5]' (FDCE) to 'mmc_tester_0/sd_host_0/cmd_host_0/cmd_buff_reg[38]'
 ---------------------------------------------------------------------------------
-Finished Cross Boundary and Area Optimization : Time (s): cpu = 00:06:03 ; elapsed = 00:06:20 . Memory (MB): peak = 780.633 ; gain = 570.445
+Finished Cross Boundary and Area Optimization : Time (s): cpu = 00:06:39 ; elapsed = 00:06:56 . Memory (MB): peak = 780.836 ; gain = 571.141
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start ROM, RAM, DSP and Shift Register Reporting
@@ -2512,10 +2539,10 @@ Start Timing Optimization
 Start Applying XDC Timing Constraints
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished Applying XDC Timing Constraints : Time (s): cpu = 00:06:13 ; elapsed = 00:06:30 . Memory (MB): peak = 855.723 ; gain = 645.535
+Finished Applying XDC Timing Constraints : Time (s): cpu = 00:06:49 ; elapsed = 00:07:07 . Memory (MB): peak = 856.613 ; gain = 646.918
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished Timing Optimization : Time (s): cpu = 00:06:15 ; elapsed = 00:06:32 . Memory (MB): peak = 858.578 ; gain = 648.391
+Finished Timing Optimization : Time (s): cpu = 00:06:51 ; elapsed = 00:07:08 . Memory (MB): peak = 859.414 ; gain = 649.719
 ---------------------------------------------------------------------------------
 
 Report RTL Partitions: 
@@ -2574,7 +2601,7 @@ INFO: [Synth 8-4480] The timing for the instance mmc_tester_0/mmc_slave/fifo_to_
 INFO: [Synth 8-4480] The timing for the instance mmc_tester_0/mmc_slave/pipe_ram/ram1_reg (implemented as a block RAM) might be sub-optimal as no optional output register could be merged into the block ram. Providing additional output register may help in improving timing.
 INFO: [Synth 8-4480] The timing for the instance mmc_tester_0/mmc_slave/pipe_ram/ram1_reg (implemented as a block RAM) might be sub-optimal as no optional output register could be merged into the block ram. Providing additional output register may help in improving timing.
 ---------------------------------------------------------------------------------
-Finished Technology Mapping : Time (s): cpu = 00:06:20 ; elapsed = 00:06:37 . Memory (MB): peak = 904.668 ; gain = 694.480
+Finished Technology Mapping : Time (s): cpu = 00:06:57 ; elapsed = 00:07:14 . Memory (MB): peak = 905.777 ; gain = 696.082
 ---------------------------------------------------------------------------------
 
 Report RTL Partitions: 
@@ -2598,7 +2625,7 @@ Start Final Netlist Cleanup
 Finished Final Netlist Cleanup
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished IO Insertion : Time (s): cpu = 00:06:21 ; elapsed = 00:06:38 . Memory (MB): peak = 904.668 ; gain = 694.480
+Finished IO Insertion : Time (s): cpu = 00:06:58 ; elapsed = 00:07:15 . Memory (MB): peak = 905.777 ; gain = 696.082
 ---------------------------------------------------------------------------------
 
 Report Check Netlist: 
@@ -2611,7 +2638,7 @@ Report Check Netlist:
 Start Renaming Generated Instances
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished Renaming Generated Instances : Time (s): cpu = 00:06:21 ; elapsed = 00:06:39 . Memory (MB): peak = 904.668 ; gain = 694.480
+Finished Renaming Generated Instances : Time (s): cpu = 00:06:58 ; elapsed = 00:07:16 . Memory (MB): peak = 905.777 ; gain = 696.082
 ---------------------------------------------------------------------------------
 
 Report RTL Partitions: 
@@ -2623,25 +2650,25 @@ Report RTL Partitions:
 Start Rebuilding User Hierarchy
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished Rebuilding User Hierarchy : Time (s): cpu = 00:06:22 ; elapsed = 00:06:39 . Memory (MB): peak = 904.668 ; gain = 694.480
+Finished Rebuilding User Hierarchy : Time (s): cpu = 00:06:59 ; elapsed = 00:07:16 . Memory (MB): peak = 905.777 ; gain = 696.082
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Renaming Generated Ports
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished Renaming Generated Ports : Time (s): cpu = 00:06:22 ; elapsed = 00:06:39 . Memory (MB): peak = 904.668 ; gain = 694.480
+Finished Renaming Generated Ports : Time (s): cpu = 00:06:59 ; elapsed = 00:07:16 . Memory (MB): peak = 905.777 ; gain = 696.082
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Handling Custom Attributes
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished Handling Custom Attributes : Time (s): cpu = 00:06:23 ; elapsed = 00:06:40 . Memory (MB): peak = 904.668 ; gain = 694.480
+Finished Handling Custom Attributes : Time (s): cpu = 00:06:59 ; elapsed = 00:07:17 . Memory (MB): peak = 905.777 ; gain = 696.082
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Renaming Generated Nets
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished Renaming Generated Nets : Time (s): cpu = 00:06:23 ; elapsed = 00:06:40 . Memory (MB): peak = 904.668 ; gain = 694.480
+Finished Renaming Generated Nets : Time (s): cpu = 00:06:59 ; elapsed = 00:07:17 . Memory (MB): peak = 905.777 ; gain = 696.082
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start ROM, RAM, DSP and Shift Register Reporting
@@ -2668,60 +2695,59 @@ Report BlackBoxes:
 +-+--------------+----------+
 
 Report Cell Usage: 
-+------+------------+------+
-|      |Cell        |Count |
-+------+------------+------+
-|1     |BUFG        |     7|
-|2     |CARRY4      |   481|
-|3     |LUT1        |   976|
-|4     |LUT2        |  1057|
-|5     |LUT3        |   817|
-|6     |LUT4        |  1030|
-|7     |LUT5        |   592|
-|8     |LUT6        |  1739|
-|9     |MMCME2_BASE |     1|
-|10    |MUXF7       |   104|
-|11    |MUXF8       |    17|
-|12    |RAM128X1S   |     8|
-|13    |RAM64M      |     3|
-|14    |RAMB18E1    |     1|
-|15    |RAMB18E1_1  |     1|
-|16    |RAMB36E1    |     4|
-|17    |RAMB36E1_1  |     1|
-|18    |RAMB36E1_2  |     1|
-|19    |RAMB36E1_3  |     1|
-|20    |RAMB36E1_4  |     1|
-|21    |RAMB36E1_5  |     9|
-|22    |RAMB36E1_6  |     9|
-|23    |SRL16E      |     1|
-|24    |XORCY       |     6|
-|25    |FDCE        |  2389|
-|26    |FDPE        |   544|
-|27    |FDRE        |   355|
-|28    |FDSE        |    41|
-|29    |IBUF        |     3|
-|30    |IOBUF       |    10|
-|31    |OBUF        |    29|
-|32    |OBUFT       |     3|
-+------+------------+------+
++------+-----------+------+
+|      |Cell       |Count |
++------+-----------+------+
+|1     |BUFG       |     3|
+|2     |CARRY4     |   481|
+|3     |LUT1       |   975|
+|4     |LUT2       |  1065|
+|5     |LUT3       |   825|
+|6     |LUT4       |  1021|
+|7     |LUT5       |   550|
+|8     |LUT6       |  1772|
+|9     |MUXF7      |   100|
+|10    |MUXF8      |    15|
+|11    |RAM128X1S  |     8|
+|12    |RAM64M     |     3|
+|13    |RAMB18E1   |     1|
+|14    |RAMB18E1_1 |     1|
+|15    |RAMB36E1   |     4|
+|16    |RAMB36E1_1 |     1|
+|17    |RAMB36E1_2 |     1|
+|18    |RAMB36E1_3 |     1|
+|19    |RAMB36E1_4 |     1|
+|20    |RAMB36E1_5 |     9|
+|21    |RAMB36E1_6 |     9|
+|22    |SRL16E     |     1|
+|23    |XORCY      |     6|
+|24    |FDCE       |  2376|
+|25    |FDPE       |   544|
+|26    |FDRE       |   344|
+|27    |FDSE       |    41|
+|28    |IBUF       |     4|
+|29    |IOBUF      |    10|
+|30    |OBUF       |    29|
+|31    |OBUFT      |     3|
++------+-----------+------+
 
 Report Instance Areas: 
 +------+-----------------------------------+----------------------------------+------+
 |      |Instance                           |Module                            |Cells |
 +------+-----------------------------------+----------------------------------+------+
-|1     |top                                |                                  | 10241|
-|2     |  hwdbg_uart                       |uart                              |   425|
-|3     |    rcv1                           |rcvr                              |   127|
+|1     |top                                |                                  | 10204|
+|2     |  hwdbg_uart                       |uart                              |   421|
+|3     |    rcv1                           |rcvr                              |   128|
 |4     |    xmt1                           |xmtr                              |    85|
-|5     |  mmc_tester_0                     |mmc_tester                        |  9601|
+|5     |  mmc_tester_0                     |mmc_tester                        |  9585|
 |6     |    auto_baud1                     |auto_baud_with_tracking           |   291|
 |7     |    host_0_bram_0                  |swiss_army_ram__parameterized1    |    10|
-|8     |    mmc_slave                      |mmc_data_pipe                     |  3264|
-|9     |      fifo_from_mmc                |swiss_army_fifo_cdc               |   160|
-|10    |        fifo_ram                   |swiss_army_ram__parameterized5_12 |    51|
-|11    |      fifo_to_mmc                  |swiss_army_fifo_cdc_7             |   116|
+|8     |    mmc_slave                      |mmc_data_pipe                     |  3266|
+|9     |      fifo_from_mmc                |swiss_army_fifo_cdc               |   159|
+|10    |        fifo_ram                   |swiss_army_ram__parameterized5_12 |    50|
+|11    |      fifo_to_mmc                  |swiss_army_fifo_cdc_7             |   117|
 |12    |        fifo_ram                   |swiss_army_ram__parameterized5    |     2|
-|13    |      mmc_1                        |sd_card_emulator                  |  2987|
+|13    |      mmc_1                        |sd_card_emulator                  |  2989|
 |14    |        R1_responder               |sd_card_responder                 |   138|
 |15    |          crc0                     |ucrc_ser_11                       |    29|
 |16    |        R2_CID_responder           |sd_card_responder__parameterized1 |   308|
@@ -2729,9 +2755,9 @@ Report Instance Areas:
 |18    |        R2_CSD_responder           |sd_card_responder__parameterized3 |   306|
 |19    |          crc0                     |ucrc_ser_9                        |    23|
 |20    |        R3_responder               |sd_card_responder__parameterized5 |   105|
-|21    |        cmd_receiver               |sd_card_cmd_rx                    |   457|
-|22    |          crc0                     |ucrc_ser_8                        |   202|
-|23    |        ext_csd_ram                |swiss_army_ram__parameterized3    |    26|
+|21    |        cmd_receiver               |sd_card_cmd_rx                    |   454|
+|22    |          crc0                     |ucrc_ser_8                        |   200|
+|23    |        ext_csd_ram                |swiss_army_ram__parameterized3    |    25|
 |24    |        sd_card_d_handler          |sd_card_data_unit                 |  1135|
 |25    |          \sd_crc_gen[0].crc_unit  |ucrc_ser__parameterized23         |    35|
 |26    |          \sd_crc_gen[1].crc_unit  |ucrc_ser__parameterized25         |    36|
@@ -2744,12 +2770,12 @@ Report Instance Areas:
 |33    |      pipe_ram                     |swiss_army_ram__parameterized7    |     1|
 |34    |    reg_dbus_size_reset            |flancter_rising_pulseout          |    11|
 |35    |    sd_host_0                      |sd_controller_8bit_bram           |  3307|
-|36    |      cmd_host_0                   |sd_cmd_host                       |  1758|
+|36    |      cmd_host_0                   |sd_cmd_host                       |  1757|
 |37    |        crc0                       |ucrc_ser_6                        |    18|
 |38    |      cmd_int_rst_edge_detect      |edge_detector                     |     2|
 |39    |      data_int_rst_edge_detect     |edge_detector_5                   |     1|
 |40    |      sd_clk_dds                   |dds_squarewave                    |   119|
-|41    |      sd_data_host0                |sd_data_8bit_host                 |  1143|
+|41    |      sd_data_host0                |sd_data_8bit_host                 |  1142|
 |42    |        \sd_crc_gen[0].crc_unit    |ucrc_ser__parameterized2          |    34|
 |43    |        \sd_crc_gen[1].crc_unit    |ucrc_ser__parameterized4          |    35|
 |44    |        \sd_crc_gen[2].crc_unit    |ucrc_ser__parameterized6          |    36|
@@ -2758,8 +2784,8 @@ Report Instance Areas:
 |47    |        \sd_crc_gen[5].crc_unit    |ucrc_ser__parameterized12         |    34|
 |48    |        \sd_crc_gen[6].crc_unit    |ucrc_ser__parameterized14         |    37|
 |49    |        \sd_crc_gen[7].crc_unit    |ucrc_ser__parameterized16         |    36|
-|50    |    syscon1                        |async_syscon                      |  1337|
-|51    |      syscon1                      |ascii_syscon                      |  1057|
+|50    |    syscon1                        |async_syscon                      |  1331|
+|51    |      syscon1                      |ascii_syscon                      |  1051|
 |52    |      uart1                        |uart_sqclk                        |   277|
 |53    |        rx1                        |async_rx_sqclk                    |   214|
 |54    |        tx1                        |async_tx_sqclk                    |    63|
@@ -2767,7 +2793,7 @@ Report Instance Areas:
 |56    |    t_rx_dat_count_reset           |flancter_rising_pulseout_1        |    52|
 |57    |    t_rx_gdcount_reset             |flancter_rising_pulseout_2        |    51|
 |58    |    t_rx_stp_bdcount_reset         |flancter_rising_pulseout_3        |    51|
-|59    |    test_cmd_receiver              |mmc_test_cmd_rx                   |   204|
+|59    |    test_cmd_receiver              |mmc_test_cmd_rx                   |   205|
 |60    |      crc0                         |ucrc_ser                          |    19|
 |61    |    tlm_1us_unit                   |dds_constant_squarewave           |   112|
 |62    |    tlm_fifo_unit                  |swiss_army_fifo                   |   260|
@@ -2776,28 +2802,27 @@ Report Instance Areas:
 |65    |  syn_spi                          |spi                               |    49|
 +------+-----------------------------------+----------------------------------+------+
 ---------------------------------------------------------------------------------
-Finished Writing Synthesis Report : Time (s): cpu = 00:06:23 ; elapsed = 00:06:40 . Memory (MB): peak = 904.668 ; gain = 694.480
+Finished Writing Synthesis Report : Time (s): cpu = 00:07:00 ; elapsed = 00:07:17 . Memory (MB): peak = 905.777 ; gain = 696.082
 ---------------------------------------------------------------------------------
-Synthesis finished with 0 errors, 0 critical warnings and 699 warnings.
-Synthesis Optimization Runtime : Time (s): cpu = 00:01:10 ; elapsed = 00:06:30 . Memory (MB): peak = 904.668 ; gain = 568.063
-Synthesis Optimization Complete : Time (s): cpu = 00:06:23 ; elapsed = 00:06:40 . Memory (MB): peak = 904.668 ; gain = 694.480
+Synthesis finished with 0 errors, 48 critical warnings and 738 warnings.
+Synthesis Optimization Runtime : Time (s): cpu = 00:01:29 ; elapsed = 00:07:06 . Memory (MB): peak = 905.777 ; gain = 571.855
+Synthesis Optimization Complete : Time (s): cpu = 00:07:00 ; elapsed = 00:07:17 . Memory (MB): peak = 905.777 ; gain = 696.082
 INFO: [Project 1-571] Translating synthesized netlist
 INFO: [Netlist 29-17] Analyzing 540 Unisim elements for replacement
-INFO: [Netlist 29-28] Unisim Transformation completed in 0 CPU seconds
+INFO: [Netlist 29-28] Unisim Transformation completed in 1 CPU seconds
 INFO: [Project 1-570] Preparing netlist for logic optimization
 INFO: [Opt 31-138] Pushed 1 inverter(s) to 4 load pin(s).
 INFO: [Project 1-111] Unisim Transformation Summary:
-  A total of 28 instances were transformed.
+  A total of 27 instances were transformed.
   (MUXCY,XORCY) => CARRY4: 6 instances
   IOBUF => IOBUF (IBUF, OBUFT): 10 instances
-  MMCME2_BASE => MMCME2_ADV: 1 instances
   RAM128X1S => RAM128X1S (MUXF7, RAMS64E, RAMS64E): 8 instances
   RAM64M => RAM64M (RAMD64E, RAMD64E, RAMD64E, RAMD64E): 3 instances
 
 INFO: [Common 17-83] Releasing license: Synthesis
-657 Infos, 271 Warnings, 4 Critical Warnings and 0 Errors encountered.
+660 Infos, 279 Warnings, 48 Critical Warnings and 0 Errors encountered.
 synth_design completed successfully
-synth_design: Time (s): cpu = 00:06:25 ; elapsed = 00:06:41 . Memory (MB): peak = 904.668 ; gain = 694.480
-INFO: [Common 17-1381] The checkpoint 'C:/work/github/FPGA/Coop/S4/S4.runs/synth_1/s4.dcp' has been generated.
-report_utilization: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.074 . Memory (MB): peak = 904.668 ; gain = 0.000
-INFO: [Common 17-206] Exiting Vivado at Thu Jun 22 16:06:44 2017...
+synth_design: Time (s): cpu = 00:07:03 ; elapsed = 00:07:18 . Memory (MB): peak = 905.777 ; gain = 696.082
+INFO: [Common 17-1381] The checkpoint 'C:/work/github/Master/FPGA/Coop/S4/S4.runs/synth_1/s4.dcp' has been generated.
+report_utilization: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.077 . Memory (MB): peak = 905.777 ; gain = 0.000
+INFO: [Common 17-206] Exiting Vivado at Thu Jul 06 13:07:44 2017...
