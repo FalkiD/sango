@@ -19,13 +19,15 @@
 // Purpose:    s4 board fpga.
 // -----------------------------------------------------------------------------
 // Revisions:
-// 0.00.1  early/2016 RMR File Created
-// 0.00.1  08/24/2016 JLC Included in debug repository w/ visual changes.
-// 1.00.1  03/07/2017 JLC Began converting from tb_arty.v/arty_main.v to initial S4 board (s4.v).
-// 1.00.1  04/11/2017 JLC Cont'd by adding HW debug UART.
-// 1.00.2  04/25/2017 JLC Updated mmc_tester w/ RMR's dbg_spi_* and DBG_enables interface.
-// 1.00.3  05/23/2017 JLC Updated mmc_tester w/ RMR's dbg_spi_* and DBG_enables interface.
+// Revision 0.00.1  early/2016 RMR File Created
+// Revision 0.00.1  08/24/2016 JLC Included in debug repository w/ visual changes.
+// Revision 1.00.1  03/07/2017 JLC Began converting from tb_arty.v/arty_main.v to initial S4 board (s4.v).
+// Revision 1.00.1  04/11/2017 JLC Cont'd by adding HW debug UART.
+// Revision 1.00.2  04/25/2017 JLC Updated mmc_tester w/ RMR's dbg_spi_* and DBG_enables interface.
+// Revision 1.00.3  06/12/2017 JLC Updated mmc_tester w/ RMR's dbg_spi_* and DBG_enables interface.
+// Revision 1.00.4  06/13/2017 JLC Updated HW debug UART (256 bit ctl r/w bus).
+// Revision 1.00.5  06/28/2017 JLC Reinplemented `define JLC_TEMP_NO_MMCM.
 //
 //------------------------------------------------------------------------------
 
-`define VERSION 16'h1_00_4     // V.vv.r FPGA development revision
+`define VERSION 16'h1_00_5     // V.vv.r FPGA development revision

@@ -9,9 +9,9 @@
 # ---------------------------------------------------------------------------
 
 #FPGA_CLK / FPGA_CLKn
-//set_property -dict {PACKAGE_PIN D4 IOSTANDARD LVDS_25} [get_ports FPGA_CLK]
-//create_clock -period 10.000 -name FPGA_CLK_pin -waveform {0.000 5.000} -add [get_ports FPGA_CLK]
-//set_property -dict {PACKAGE_PIN C4 IOSTANDARD LVDS_25} [get_ports FPGA_CLKn]
+#set_property -dict {PACKAGE_PIN D4 IOSTANDARD LVDS_25} [get_ports FPGA_CLK]
+#create_clock -period 10.000 -name FPGA_CLK_pin -waveform {0.000 5.000} -add [get_ports FPGA_CLK]
+#set_property -dict {PACKAGE_PIN C4 IOSTANDARD LVDS_25} [get_ports FPGA_CLKn]
 
 # ---------------------------------------------------------------------------
 # MMC Interface I/Os
@@ -51,7 +51,6 @@ set_property IOSTANDARD LVCMOS33 [get_ports {MMC_IRQn}]
 
 set_property PACKAGE_PIN N11 [get_ports {MMC_CLK}]
 set_property IOSTANDARD LVCMOS33 [get_ports {MMC_CLK}]
-#set property PULLUP [get_ports {MMC_CLK}]
 # MMC clock signal -- The use of this property was "highly discouraged"    zzm01
 #set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets {jb_IBUF[6]}]
 
@@ -61,7 +60,7 @@ set_property IOSTANDARD LVCMOS33 [get_ports {MMC_CLK}]
 # ---------------------------------------------------------------------------
 
 set_property -dict {PACKAGE_PIN N14 IOSTANDARD LVCMOS33} [get_ports FPGA_MCLK]
-//create_clock -period 10.000 -name FPGA_MCLK -waveform {0.000 5.000} -add [get_ports FPGA_MCLK]
+create_clock -period 10.000 -name FPGA_MCLK -waveform {0.000 5.000} -add [get_ports FPGA_MCLK]
 
 set_property PACKAGE_PIN T13 [get_ports {MCU_TRIG}]
 set_property IOSTANDARD LVCMOS33 [get_ports {MCU_TRIG}]
@@ -207,5 +206,7 @@ set_property IOSTANDARD LVCMOS33 [get_ports {SYN_MUTE}]
 # FPGA Chip-Level Config Constraints
 # ---------------------------------------------------------------------------
 
+set_property CFGBVS VCCO [current_design]
+set_property CONFIG_VOLTAGE 3.3 [current_design]
 set_property BITSTREAM.CONFIG.CONFIGRATE 33 [current_design]
 set_property CONFIG_MODE SPIx4 [current_design]
