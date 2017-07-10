@@ -38,6 +38,8 @@ module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115
     
     // diag/debug control signal outputs
     output      [255:0]   hw_ctl_o,
+    output                extd_fifo_wr_stb_o,
+    output      [3:0]     extd_fifo_wr_addr_o,
      
     // diag/debug status  signal inputs
     input       [255:0]   hw_stat_i,
@@ -50,36 +52,36 @@ module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115
    localparam  BAUD_DIV           = CLK_FREQ / BAUD - 1;
 
    // UART state machine state declarations (probably should be mutable as macros):
-   localparam  UART_IDLE          = 8'b0000_0000;
+   localparam  UART_IDLE          = 8'b0000_0000;    // UART_IDLE is the reset and resting state.
    localparam  UART_WAIT_PROMPT   = 8'b0000_0001;
    localparam  UART_SEND_CR       = 8'b0000_0010;
    localparam  UART_SEND_LF       = 8'b0000_0011;
-   localparam  UART_BADCHAR       = 8'b0000_0100;
-   localparam  UART_BADSTATE      = 8'b0000_0101;
-   localparam  UART_TEST0         = 8'b0000_1000;
+   localparam  UART_BADCHAR       = 8'b0000_0100;    // UART_BADCHAR  is an error state.
+   localparam  UART_BADSTATE      = 8'b0000_0101;    // UART_BADSTATE is an error state.
+   localparam  UART_TEST0         = 8'b0000_1000;    // UART_TEST* receives [x|X] and returns "OK!"
    localparam  UART_TEST1         = 8'b0000_1001;
    localparam  UART_TEST2         = 8'b0000_1010;
-   localparam  UART_GETSTAT0      = 8'b0001_0000;
-   localparam  UART_GETSTAT1      = 8'b0001_0001;
+   localparam  UART_GETSTAT0      = 8'b0001_0000;    // UART_SETCTL* retrieves 1-of-8 32bit dbg status regs
+   localparam  UART_GETSTAT1      = 8'b0001_0001;    //     [0:7] specified by UART_GETADDR.
    localparam  UART_GETSTAT2      = 8'b0001_0010;
    localparam  UART_GETSTAT3      = 8'b0001_0011;
    localparam  UART_GETSTAT4      = 8'b0001_0100;
    localparam  UART_GETSTAT5      = 8'b0001_0101;
    localparam  UART_GETSTAT6      = 8'b0001_0110;
    localparam  UART_GETSTAT7      = 8'b0001_0111;
-   localparam  UART_GETADDR       = 8'b0001_1000;
-   localparam  UART_GETCLN        = 8'b0001_1001;
-   localparam  UART_SETCTL0       = 8'b0010_0000;
-   localparam  UART_SETCTL1       = 8'b0010_0001;
+   localparam  UART_GETADDR       = 8'b0001_1000;    // UART_GETADDR selects 1-of-8 [0:7] 32bit dbg status regs.
+   localparam  UART_GETDLM        = 8'b0001_1001;    // UART_GETDLM receives the delimiter [\b|:].
+   localparam  UART_SETCTL0       = 8'b0010_0000;    // UART_SETCTL* writes 1-of-8 32bit control regs
+   localparam  UART_SETCTL1       = 8'b0010_0001;    //     [0:7] specified by UART_SETADDR.
    localparam  UART_SETCTL2       = 8'b0010_0010;
    localparam  UART_SETCTL3       = 8'b0010_0011;
    localparam  UART_SETCTL4       = 8'b0010_0100;
    localparam  UART_SETCTL5       = 8'b0010_0101;
    localparam  UART_SETCTL6       = 8'b0010_0110;
    localparam  UART_SETCTL7       = 8'b0010_0111;
-   localparam  UART_SETADDR       = 8'b0010_1000;
-   localparam  UART_SETCLN        = 8'b0010_1001;
-   localparam  UART_GETOPC0       = 8'b0011_0000;
+   localparam  UART_SETADDR       = 8'b0010_1000;    // UART_SETADDR selects 1-of-8 [0:7] 32bit control regs.
+   localparam  UART_SETDLM        = 8'b0010_1001;    // UART_SETDLM  sends a ':' for formatting
+   localparam  UART_GETOPC0       = 8'b0011_0000;    // UART_GETOPC* retieves RMR's 32bit "opcode count".
    localparam  UART_GETOPC1       = 8'b0011_0001;
    localparam  UART_GETOPC2       = 8'b0011_0010;
    localparam  UART_GETOPC3       = 8'b0011_0011;
@@ -87,7 +89,8 @@ module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115
    localparam  UART_GETOPC5       = 8'b0011_0101;
    localparam  UART_GETOPC6       = 8'b0011_0110;
    localparam  UART_GETOPC7       = 8'b0011_0111;
-   localparam  UART_GETPTN0       = 8'b0011_1000;
+   localparam  UART_PTNUSC        = 8'b0000_1011;    // UART_PTNUSC puts a '_' between opcode & pattern counts.
+   localparam  UART_GETPTN0       = 8'b0011_1000;    // UART_GETPTN* retieves RMR's 32bit "pattern count".
    localparam  UART_GETPTN1       = 8'b0011_1001;
    localparam  UART_GETPTN2       = 8'b0011_1010;
    localparam  UART_GETPTN3       = 8'b0011_1011;
@@ -95,16 +98,17 @@ module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115
    localparam  UART_GETPTN5       = 8'b0011_1101;
    localparam  UART_GETPTN6       = 8'b0011_1110;
    localparam  UART_GETPTN7       = 8'b0011_1111;
-   localparam  UART_PTNUSC        = 8'b0111_0100;
-   localparam  UART_GETARG3       = 8'b0100_0000;
+   localparam  UART_GETARG3       = 8'b0100_0000;    // UART_GETARG* retrieves RMR's 16bit "Status".
    localparam  UART_GETARG2       = 8'b0100_0001;
    localparam  UART_GETARG1       = 8'b0100_0010;
    localparam  UART_GETARG0       = 8'b0100_0011;
-   localparam  UART_GETVER0       = 8'b0101_0000;
+   localparam  UART_GETVER0       = 8'b0101_0000;    // UART_GETVER* retrieves the 16bit FPGA version #.
    localparam  UART_GETVER1       = 8'b0101_0001;
    localparam  UART_GETVER2       = 8'b0101_0010;
    localparam  UART_GETVER3       = 8'b0101_0011;
-
+   localparam  UART_EXTDWR0       = 8'b0110_0000;    // UART_EXTDAWR* write to FIFO 0-of-f [0:15] destination FIFOs.
+   localparam  UART_EXTDWR1       = 8'b0110_0001;
+   
   
    // ASCII Char Codes
    localparam  UART_CHAR_CR       = 8'h0d;    // CR                             NOTE:  btn[3] is used as reset!
@@ -114,6 +118,10 @@ module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115
    localparam  UART_CHAR_SNAFU    = 8'h21;    // '@'
    localparam  UART_CHAR_USC      = 8'h5f;    // _
    localparam  UART_CHAR_SP       = 8'h20;    // SP (space)
+   localparam  UART_CHAR_UA       = 8'h41;    // 'A' | 'a':  Set AutoWrite
+   localparam  UART_CHAR_LA       = 8'h61;
+   localparam  UART_CHAR_UFW      = 8'h46;    // 'F' | 'f':  Set AutoWrite
+   localparam  UART_CHAR_LFW      = 8'h66;
    localparam  UART_CHAR_UV       = 8'h56;    // 'V' | 'v':  Get Version
    localparam  UART_CHAR_LV       = 8'h76;
    localparam  UART_CHAR_UR       = 8'h52;    // 'R' | 'r':  Read Diag Data
@@ -124,16 +132,19 @@ module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115
    localparam  UART_CHAR_LL       = 8'h6C;
    localparam  UART_CHAR_UW       = 8'h57;    // 'W' | 'w':  Write Diag Data
    localparam  UART_CHAR_LW       = 8'h77;
-   localparam  UART_CHAR_UX       = 8'h58;    // 'X' | 'x':  No-Op               (just a test)
+   localparam  UART_CHAR_UX       = 8'h58;    // 'X' | 'x':  1st char of extended write.
    localparam  UART_CHAR_LX       = 8'h78;
    localparam  UART_CHAR_UC       = 8'h43;    // 'C' | 'c':  Show count of opcodes_Underscore_countOfPatternOpcodes
    localparam  UART_CHAR_LC       = 8'h63;
    localparam  UART_CHAR_US       = 8'h53;    // 'S' | 's':  Show 16-bit instance arg data
    localparam  UART_CHAR_LS       = 8'h73;
+   localparam  UART_CHAR_TST      = 8'h3f;    // '?'
    localparam  UART_CHAR_OK0      = 8'h4F;    // 'O'
    localparam  UART_CHAR_OK1      = 8'h4B;    // 'K'
    localparam  UART_CHAR_OK2      = 8'h21;    // '!'
    localparam  UART_CHAR_CLN      = 8'h3A;    // ':'
+   localparam  UART_CHAR_PLUS     = 8'h2B;    // '+'
+   localparam  UART_CHAR_MINUS    = 8'h2D;    // '-'
    
 
    reg  [31:0]            uart_rd_stat [7:0];
@@ -143,6 +154,11 @@ module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115
    reg                    uart_wr_ctl_stb    = 1'b0;
    reg                    uart_wr_ctl_stbr   = 1'b0;
    wire                   uart_wr_ctl_stbw   = uart_wr_ctl_stbr & ~uart_wr_ctl_stb;
+
+   reg                    extd_fifo_wr_stb   = 1'b0;   
+   reg                    extd_fifo_wr_stbr  = 1'b0;   
+   reg                    extd_fifo_wr_stbrr = 1'b0;   
+   reg  [3:0]             extd_fifo_wr_addr  = 4'h0;
 
    reg  [7:0]             tx_char            = 8'b0;
    reg  [7:0]             rx_charr           = 8'b0;
@@ -248,7 +264,11 @@ module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115
          uart_wr_ctlr            <= 256'b0;
          uart_wr_ctl_stb         <= 1'b0;          // 1-tick strobe for writing control data.
          uart_wr_ctl_stbr        <= 1'b0;          // 1-tick strobe for writing control data (delayed 1-tick).
-      end
+         extd_fifo_wr_addr       <= 4'hF;
+         extd_fifo_wr_stb        <= 1'b0;
+         extd_fifo_wr_stbr       <= 1'b0;
+         extd_fifo_wr_stbrr      <= 1'b0;
+         end
       else begin
          // clears for one-tick signals
          rdStatStb               <= 1'b0;
@@ -257,6 +277,9 @@ module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115
 	     dbg0r                   <= 1'b0;
          uart_wr_ctl_stb         <= 1'b0;
          uart_wr_ctl_stbr        <= uart_wr_ctl_stb;
+         extd_fifo_wr_stb        <= 1'b0;
+         extd_fifo_wr_stbr       <= extd_fifo_wr_stb;
+         extd_fifo_wr_stbrr      <= extd_fifo_wr_stbr;
          if (uart_wr_ctl_stbw == 1'b1) begin
             uart_wr_ctlr         <= {uart_wr_ctl[7],uart_wr_ctl[6],uart_wr_ctl[5],uart_wr_ctl[4],
                                      uart_wr_ctl[3],uart_wr_ctl[2],uart_wr_ctl[1],uart_wr_ctl[0]};
@@ -265,7 +288,8 @@ module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115
    
          // "every-time" assignments
          cmdStater                  <= cmdState;
-         
+         extd_fifo_wr_stb           <= 1'b0;
+
          dbg1r                      <= rxdbg0w;
          dbg2r                      <= rxdbg1w;
 
@@ -321,8 +345,11 @@ module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115
                      UART_CHAR_LC: begin
                         cmdState    <= UART_GETOPC7;
                      end
-                     UART_CHAR_CR: begin
-                        cmdState    <= UART_SEND_LF;
+                     UART_CHAR_UFW: begin
+                        cmdState    <= UART_EXTDWR0;
+                     end
+                     UART_CHAR_LFW: begin
+                        cmdState    <= UART_EXTDWR0;
                      end
                      default: begin
                         // Just ignore all other command chars.
@@ -359,7 +386,7 @@ module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115
                   uart_csr_addr     <= ascii_to_hex(rx_charw);
                   if (rx_charw[7:3] == 5'b0011_0)
                   begin
-                     cmdState       <= UART_GETCLN;
+                     cmdState       <= UART_GETDLM;
                   end
                   else
                   begin
@@ -367,11 +394,11 @@ module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115
                   end
                end
             end  // end of UART_GETADDR case.
-            UART_GETCLN: begin
+            UART_GETDLM: begin
                tx_char              <= UART_CHAR_CLN;
                tx_load              <= 1'b1;
                cmdState             <= UART_GETSTAT7;
-            end  // end of UART_GETCLN case.
+            end  // end of UART_GETDLM case.
             UART_GETSTAT7: begin
                tx_char              <= hex_to_ascii(uart_rd_stat[uart_csr_addr][31:28]);
                tx_load              <= 1'b1;
@@ -418,9 +445,10 @@ module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115
                end
                else begin
                   uart_csr_addr <= ascii_to_hex(rx_charw);
+                  extd_fifo_wr_addr <= ascii_to_hex(rx_charw);
                   if (rx_charw[7:3] == 5'b0011_0)
                   begin
-                     cmdState       <= UART_SETCLN;
+                     cmdState       <= UART_SETDLM;
                   end
                   else
                   begin
@@ -428,12 +456,12 @@ module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115
                   end
                end
             end  // end of UART_SETADDR case.
-            UART_SETCLN: begin
+            UART_SETDLM: begin
                if (drdy == 1'b0) begin
-                  cmdState          <= UART_SETCLN;
+                  cmdState          <= UART_SETDLM;
                end
                else begin
-                  if (rx_charw == UART_CHAR_CLN)
+                  if ((rx_charw == UART_CHAR_CLN) || (rx_charw == UART_CHAR_SP))
                   begin
                      cmdState       <= UART_SETCTL7;
                   end
@@ -442,7 +470,7 @@ module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115
                      cmdState       <= UART_BADCHAR;
                   end
                end
-            end  // end of UART_SETCLN case.
+            end  // end of UART_SETDLM case.
             UART_SETCTL7: begin
                if (drdy == 1'b0) begin
                   cmdState          <= UART_SETCTL7;
@@ -621,32 +649,38 @@ module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115
                tx_load              <= 1'b1;
                cmdState             <= UART_SEND_CR;
             end
+            UART_EXTDWR0: begin
+               if (drdy == 1'b0) begin
+                  cmdState          <= UART_EXTDWR0;
+               end
+               else if (rx_charw == UART_CHAR_CR) begin
+                  extd_fifo_wr_stb  <= 1'b1;
+                  cmdState          <= UART_SEND_CR;
+               end
+               else begin
+                  extd_fifo_wr_addr <= ascii_to_hex(rx_charw);
+                  cmdState          <= UART_EXTDWR1;
+               end
+            end  // end of case UART_EXTDWR0.
+            UART_EXTDWR1: begin
+               extd_fifo_wr_stb  <= 1'b1;
+               cmdState          <= UART_SEND_CR;
+            end  // end of case UART_EXTDWR1.
             UART_TEST0: begin
                tx_char              <= UART_CHAR_OK0;
                tx_load              <= 1'b1;
                cmdState             <= UART_TEST1;
-            end  // end of case UART_TEST0.
+            end  // end of UART_TEST0 case.
             UART_TEST1: begin
                tx_char              <= UART_CHAR_OK1;
                tx_load              <= 1'b1;
                cmdState             <= UART_TEST2;
-            end  // end of case UART_TEST1.
+            end  // end of UART_TEST1 case.
             UART_TEST2: begin
                tx_char              <= UART_CHAR_OK2;
                tx_load              <= 1'b1;
                cmdState             <= UART_SEND_CR;
-            end  // end of case UART_TEST2.
-            UART_BADCHAR: begin
-               tx_char              <= UART_CHAR_WTF;
-               tx_load              <= 1'b1;
-               cmdState             <= UART_SEND_CR;
-            end  // end of case UART_BADCHAR.
-            UART_BADSTATE: begin
-               tx_char              <= UART_CHAR_SNAFU;
-               tx_load              <= 1'b1;
-               dbg0r                <= 1'b1;
-               cmdState             <= UART_SEND_CR;
-            end  // end of case UART_BADSTATE.
+            end  // end of UART_TEST2 case.
             UART_SEND_CR: begin
                tx_char              <= UART_CHAR_CR;
                tx_load              <= 1'b1;
@@ -658,8 +692,9 @@ module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115
                cmdState             <= UART_IDLE;
             end  // end of UART_SEND_LF case.
             default: begin
-               cmdState             <= UART_BADSTATE;
-            end  // end of "default" case.
+               // put bad state debug/error code here
+               cmdState             <= UART_IDLE;
+            end
          endcase  // end of (cmdState).
       end
    end   // end of always @(posedge clk_i).
@@ -718,11 +753,13 @@ module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115
    endfunction
 
 
-   assign  version_w   = VRSN;
+   assign  version_w              = VRSN;
 
-   assign  hw_ctl_o    = uart_wr_ctlr;
-   assign  dbg0_o      = txdbg0w;
-   assign  dbg1_o      = tx_stb;
-   assign  dbg2_o      = tbre;
+   assign  hw_ctl_o               = uart_wr_ctlr;
+   assign  extd_fifo_wr_stb_o     = extd_fifo_wr_stbr & ~extd_fifo_wr_stbrr;
+   assign  extd_fifo_wr_addr_o    = extd_fifo_wr_addr;
+   assign  dbg0_o                 = extd_fifo_wr_stbr & ~extd_fifo_wr_stbrr;
+   assign  dbg1_o                 = cmdState == UART_EXTDWR0;
+   assign  dbg2_o                 = (extd_fifo_wr_addr == 4'b0111);
 
 endmodule

@@ -113,7 +113,7 @@
 // Revision 1.00.3  05/23/2017 JLC Updated mmc_tester w/ RMR's dbg_spi_* and DBG_enables interface.
 // Revision 1.00.3  06/12/2017 JLC Updated mmc_tester w/ RMR's dbg_spi_* and DBG_enables interface.
 // Revision 1.00.4  06/13/2017 JLC Updated HW debug UART (256 bit ctl r/w bus).
-//
+// Revision 1.00.5  06/28/2017 JLC Reinplemented `define JLC_TEMP_NO_MMCM.
 //
 // Additional Comments: General structure/sequence:
 //   Fifo's at top level for: opcodes and opcode processor output
@@ -160,8 +160,9 @@
 
 // >>>>> Coop's `define's <<<<<
 // 
+`define JLC_TEMP_NO_MMCM 1             // 1 -> Don't use MMCME2_BASE; Use 100MHz straight in.  0 -> Use MMCME2_BASE.
 `define JLC_TEMP_NO_L12 1              // Temp workaround depop'd L12. JLC 03/17/2017    JLC_TEMP_NO_L12> (causes <JLC_TEMP_CLK>)
-`define JLC_TEMP_CLK 1                 //                                                JLC_TEMP_CLK
+`define JLC_TEMP_CLK 1                 //  "       "        "      "                     JLC_TEMP_CLK
 `define GLBL_CLK_FREQ_BRD 100000000.0  //  "       "        "      "                     JLC_TEMP_CLK
 `define GLBL_CLK_FREQ_MCU 102000000.0  //  "       "        "      "                     JLC_TEMP_CLK
 `define CLKFB_FACTOR_BRD 10.000        //  "       "        "      "                     JLC_TEMP_CLK
@@ -179,7 +180,7 @@ module s4
   output             ACTIVE_LEDn,        //  T14   O       
 
   inout              MMC_CLK,            //  N11   I        MCU<-->MMC-Slave I/F
-  output             MMC_IRQn,           //  P8    O        MCU SDIO_SD pin, low==MMC card present       
+  output             MMC_IRQn,           //  P8    O        MCU SDIO_SD pin; low=MMC_Card_Present.
   inout              MMC_CMD,            //  R7    I       
 
   inout              MMC_DAT7,           //  R6    IO      
@@ -261,9 +262,8 @@ wire         clk050;
 
 // <JLC_TEMP_RST>
 wire         dbg_sys_rst_i;
-reg  [9:0]   dbg_sys_rst_sr;
-reg          dbg_sys_rst;
-reg          dbg_sys_rst_n;
+reg  [9:0]   dbg_sys_rst_sr   = 10'b0;
+reg          dbg_sys_rst_n    = 1'b1;
 
 // <JLC_TEMP_DBG>
 reg  [39:0]  count1;
@@ -330,10 +330,10 @@ wire         opc_rspf_rdy_w;          // response fifo is waiting
 wire [`GLBL_RSP_FILL_LEVEL_BITS-1:0] opc_rsp_lng_w;    // update response length when response is ready
 wire [`GLBL_RSP_FILL_LEVEL_BITS-1:0] opc_rsp_cnt_w;    // response fifo count, opcode processor asserts 
 
-wire [31:0]  frequency_w;             // to fifo, frequency output in MHz
-wire         frq_wr_en_w;             // frequency fifo write enable
-wire         frq_fifo_empty_w;        // frequency fifo empty flag
-wire         frq_fifo_full_w;         // frequency fifo full flag
+wire [31:0]  frequency_w;             // to fifo, frequency output in MHz    // zzmf0002
+wire         frq_wr_en_w;             // frequency fifo write enable         // zzmf0002
+wire         frq_fifo_empty_w;        // frequency fifo empty flag           // zzmf0002
+wire         frq_fifo_full_w;         // frequency fifo full flag            // zzmf0002
 
 wire [31:0]  power_w;                 // to fifo, power output in dBm
 wire         pwr_wr_en_w;             // power fifo write enable
@@ -428,6 +428,8 @@ assign  mmcm_pwrdn_i  = 1'b0;
 //
 //
 
+//  <JLC_TEMP_NO_MMCM>
+`ifndef JLC_TEMP_NO_MMCM
 MMCME2_BASE #(
   .BANDWIDTH("OPTIMIZED"), // Jitter programming (OPTIMIZED, HIGH, LOW)
   .CLKFBOUT_MULT_F(`CLKFB_FACTOR_MCU),  // Multiply value for all CLKOUT (2.000-64.000)   = Fpfd/Fclkin1  <JLC_TEMP_CLK>
@@ -490,6 +492,15 @@ MMCME2_BASE_inst (
 );
 // End of MMCME2_BASE_inst instantiation
 
+  BUFG BUFG_clkfb  (.I(clkfbprebufg),  .O(clkfb));
+  BUFG BUFG_clk100 (.I(clk100prebufg), .O(clk100));
+  BUFG BUFG_clk200 (.I(clk200prebufg), .O(clk200));
+  BUFG BUFG_clk050 (.I(clk050prebufg), .O(clk050));
+  assign sys_clk   = clk100;
+`else
+  assign sys_clk   = clkin;
+`endif
+
 //  <JLC_TEMP_NO_L12>
 `ifndef JLC_TEMP_NO_L12
   IBUFGDS IBUFGDS_clkin  (.I(FPGA_CLK), .IB(FPGA_CLKn), .O(clk_diff_rcvd));
@@ -497,12 +508,6 @@ MMCME2_BASE_inst (
 `else
   BUFG BUFG_clkin  (.I(FPGA_MCLK),   .O(clkin));
 `endif
-
-  BUFG BUFG_clkfb  (.I(clkfbprebufg),  .O(clkfb));
-  BUFG BUFG_clk100 (.I(clk100prebufg), .O(clk100));
-  BUFG BUFG_clk200 (.I(clk200prebufg), .O(clk200));
-  BUFG BUFG_clk050 (.I(clk050prebufg), .O(clk050));
-  assign sys_clk   = clk100;
 
 // Create a "hwdbg dbg_sys_rst_n" synchronous self-timed pulse. <JLC_TEMP_RST>
 always @(posedge sys_clk)
@@ -693,12 +698,10 @@ always @(posedge clk050)
     .response_fifo_count_i      (opc_rsp_cnt_w),    // response fifo count, opcode processor asserts 
 // response_ready when fifo_length==response_length
 
-//    .frequency_o,  // to fifo, frequency output in MHz
-
-//    .frequency_o,  // to fifo, frequency output in MHz
-//    .frq_wr_en_o,         // frequency fifo write enable
-//    .frq_fifo_empty_i,         // frequency fifo empty flag
-//    .frq_fifo_full_i,          // frequency fifo full flag
+//    .frequency_o,  // to fifo, frequency output in MHz           //zzmf0003
+//    .frq_wr_en_o,         // frequency fifo write enable         //zzmf0003
+//    .frq_fifo_empty_i,         // frequency fifo empty flag      //zzmf0003
+//    .frq_fifo_full_i,          // frequency fifo full flag       //zzmf0003
                                                     
 //    .power_o,      // to fifo, power output in dBm
 //    .reg pwr_wr_en_o,         // power fifo write enable
@@ -866,9 +869,8 @@ always @(posedge clk050)
   assign MMC_CMD_i    = MMC_CMD;
   assign MMC_DAT_i    = {MMC_DAT7, MMC_DAT6, MMC_DAT5, MMC_DAT4, MMC_DAT3, MMC_DAT2, MMC_DAT1, MMC_DAT0};
 
-  // MMC_IRQn connected to MCU SD_CD, must be low. Can remove later when MMC driver sw fixed
-  assign MMC_IRQn = 1'b0;   //  P8    O      Assert Card Present always
-    
+  assign MMC_IRQn     = 1'b0;    // MCU SDIO_SD pin; low=MMC_Card_Present.
+      
   // 31-Mar-2017 Add SPI instances to debug on S4
   //////////////////////////////////////////////////////
   // SPI instance for debugging S4
@@ -948,6 +950,8 @@ always @(posedge clk050)
     .rx_enbl                    (count2tc),
     .RxD_i                      (FPGA_RXD2),             // "RxD" from USB serial bridge to FPGA
     .TxD_o                      (FPGA_TXD2),             // "TxD" from FPGA to USB serial bridge
+    .extd_fifo_wr_stb_o         (),
+    .extd_fifo_wr_addr_o        (),
     .dbg0_o                     (FPGA_MCU2),             //  1-bit output: debug outpin #0.
     .dbg1_o                     (FPGA_MCU3),             //  1-bit output: debug outpin #1.
     .dbg2_o                     (FPGA_MCU4),             //  1-bit output: debug outpin #2.
@@ -975,9 +979,9 @@ always @(posedge clk050)
    
    assign ACTIVE_LEDn = tdbgr[255]?count2[24]:count2[25];
    
-   // 22-Jun have to scope MMC signals
-   assign FPGA_MCU4 = MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.
-   assign FPGA_MCU3 = MMC_CMD; //count3[15];    // 200MHz div'd by 2^16.
+//   assign FPGA_MCU4 = count4[15];    //  50MHz div'd by 2^16.
+//   assign FPGA_MCU3 = count3[15];    // 200MHz div'd by 2^16.
+    
 
   endmodule
 
