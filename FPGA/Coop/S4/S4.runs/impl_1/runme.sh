@@ -24,7 +24,7 @@ else
 fi
 export LD_LIBRARY_PATH
 
-HD_PWD='C:/work/github/Master/FPGA/Coop/S4/S4.runs/impl_1'
+HD_PWD='C:/work/github/Rick11Jul/FPGA/Coop/S4/S4.runs/impl_1'
 cd "$HD_PWD"
 
 HD_LOG=runme.log

@@ -704,6 +704,7 @@ use work.async_syscon_pack.all;
     HOST_RAM_ADR_BITS   : natural := 14; -- Determines amount of BRAM in MMC host
     MMC_FIFO_DEPTH      : integer := 2048;
     MMC_FILL_LEVEL_BITS : integer := 14; -- Should be at least int(floor(log2(FIFO_DEPTH))+1.0)
+    RSP_FILL_LEVEL_BITS : integer := 10; 
     MMC_RAM_ADR_BITS    : integer := 14  -- 16 Kilobytes
   );
   port (
@@ -758,7 +759,7 @@ use work.async_syscon_pack.all;
     opc_rspf_fl_o  : out std_logic;
     opc_rspf_rdy_i : in  std_logic;
     -- opc_rsp_len_i  : in  std_logic(MMC_FILL_LEVEL_BITS-1 downto 0);   
-    opc_rsp_cnt_o  : out unsigned(MMC_FILL_LEVEL_BITS-1 downto 0);
+    opc_rsp_cnt_o  : out unsigned(RSP_FILL_LEVEL_BITS-1 downto 0);
     opc_oc_cnt_i   : in  unsigned(31 downto 0);
     
     -- Debugging
@@ -1521,14 +1522,9 @@ begin
   end process;
   -- Create a signal that, when high, indicates that the SD/MMC command
   -- event filter criteria have been met.
---  t_rx_capture <= '1' when (t_rx_cmd_done='1' and t_rx_cmd_filter>"10000000") else
---                  '1' when (t_rx_cmd_done='1' and t_rx_cmd_filter=t_rx_cmd_raw(47 downto 40)) else
---                  '0';
--- John C sent this capture filter bugfix 24-Jun-2017
   t_rx_capture <= '1' when (t_rx_cmd_done='1' and t_rx_cmd_filter>"10000000") else
-                '1' when (t_rx_cmd_done='1' and t_rx_cmd_filter(6)=t_rx_cmd_raw(46) and t_rx_cmd_filter(5 downto 0)="111111") else
-                '1' when (t_rx_cmd_done='1' and t_rx_cmd_filter=t_rx_cmd_raw(47 downto 40)) else
-                '0';
+                  '1' when (t_rx_cmd_done='1' and t_rx_cmd_filter=t_rx_cmd_raw(47 downto 40)) else
+                  '0';
 
   -- Derive dstart_wait values, used in detecting valid data transfer
   -- start bits.  Tune these values as needed, based on the sector

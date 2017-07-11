@@ -42,7 +42,6 @@ proc step_failed { step } {
   close $ch
 }
 
-set_msg_config -id {Common 17-41} -limit 10000000
 set_msg_config -id {HDL 9-1061} -limit 100000
 set_msg_config -id {HDL 9-1654} -limit 100000
 
@@ -51,9 +50,18 @@ set ACTIVE_STEP write_bitstream
 set rc [catch {
   create_msg_db write_bitstream.pb
   open_checkpoint s4_routed.dcp
-  set_property webtalk.parent_dir C:/work/github/Master/FPGA/Coop/S4/S4.cache/wt [current_project]
+  set_property webtalk.parent_dir C:/work/github/Rick11Jul/FPGA/Coop/S4/S4.cache/wt [current_project]
   catch { write_mem_info -force s4.mmi }
   write_bitstream -force -no_partial_bitfile s4.bit 
+  set src_rc [catch { 
+    puts "source C:/work/github/Rick11Jul/FPGA/Coop/S4/write_bindir.tcl"
+    source C:/work/github/Rick11Jul/FPGA/Coop/S4/write_bindir.tcl
+  } _RESULT] 
+  if {$src_rc} { 
+    send_msg_id runtcl-1 error "$_RESULT"
+    send_msg_id runtcl-2 error "sourcing script C:/work/github/Rick11Jul/FPGA/Coop/S4/write_bindir.tcl failed"
+    return -code error
+  }
   catch { write_sysdef -hwdef s4.hwdef -bitfile s4.bit -meminfo s4.mmi -file s4.sysdef }
   catch {write_debug_probes -quiet -force debug_nets}
   close_msg_db -file write_bitstream.pb

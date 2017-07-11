@@ -27,7 +27,9 @@
 // Revision 1.00.3  06/12/2017 JLC Updated mmc_tester w/ RMR's dbg_spi_* and DBG_enables interface.
 // Revision 1.00.4  06/13/2017 JLC Updated HW debug UART (256 bit ctl r/w bus).
 // Revision 1.00.5  06/28/2017 JLC Reinplemented `define JLC_TEMP_NO_MMCM.
+// Revision 1.00.6  07/10/2017 JLC Working w/ RMR @ Ampleon #1.  Updated HWDBG extended fifo writes.
+// Revision 1.00.7  07/10/2017 JLC Working w/ RMR @ Ampleon #2:  RSP_FILL_LEVEL_BITS fix
 //
 //------------------------------------------------------------------------------
 
-`define VERSION 16'h1_00_5     // V.vv.r FPGA development revision
+`define VERSION 16'h1_00_7     // V.vv.r FPGA development revision

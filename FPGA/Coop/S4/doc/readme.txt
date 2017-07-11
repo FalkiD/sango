@@ -1,1 +1,0 @@
-Establish doc subdirectory.

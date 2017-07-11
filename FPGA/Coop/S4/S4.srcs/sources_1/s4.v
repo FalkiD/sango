@@ -129,9 +129,9 @@
 // 
 // -----------------------------------------------------------------------------
 
-`include "timescale.v"
 `include "version.v"
 `include "status.h"
+`include "timescale.v"
 
 // -----------------------------------------------------------------------------
 // `define's
@@ -169,7 +169,7 @@
 `define CLKFB_FACTOR_BRD 10.000        //  "       "        "      "                     JLC_TEMP_CLK
 `define CLKFB_FACTOR_MCU 9.800         //  "       "        "      "                     JLC_TEMP_CLK
 `define GLBL_MMC_FILL_LEVEL_BITS 16
-`define GLBL_RSP_FILL_LEVEL_BITS 16
+`define GLBL_RSP_FILL_LEVEL_BITS 10
 
 // -----------------------------------------------------------------------------
 
@@ -263,10 +263,8 @@ wire         clk050;
 
 // <JLC_TEMP_RST>
 wire         dbg_sys_rst_i;
-
-reg  [ 9:0] dbg_sys_rst_sr = 0;
-//reg         dbg_sys_rst;
-reg         dbg_sys_rst_n = 1'b1;
+reg  [9:0]   dbg_sys_rst_sr   = 10'b0;
+reg          dbg_sys_rst_n    = 1'b1;
 
 // <JLC_TEMP_DBG>
 reg  [39:0]  count1;
@@ -299,6 +297,11 @@ wire  [1:0]  mmc_dat_siz;
 wire         mmc_tlm;
 
 // MMC card I/O proxy signals
+wire         MMC_CLK_io;
+wire         MMC_CMD_io;
+wire  [7:0]  MMC_DAT_io;
+wire         MMC_CLK_i;
+wire         MMC_CMD_i;
 wire  [7:0]  MMC_DAT_i;
 
 // Backside HW signals  
@@ -312,6 +315,7 @@ wire         syscon_txd;
 wire         opc_enable_w;
 wire [7:0]   opc_fifo_dat_w;
 
+//wire         opc_fifo_dat_w;          // fifo read data bus  commented out JLC 06/16/2017
 wire         opc_fifo_ren_w;          // fifo read line
 wire         opc_fifo_rmt_w;          // fifo empty flag
 wire [`GLBL_RSP_FILL_LEVEL_BITS-1:0] opc_fifo_rfl_w;   // fifo fill level
@@ -377,11 +381,20 @@ wire [7:0]   arr_spi_bytes [13:0];
 wire [3:0]   dbg_spi_bytes;      // bytes to send
 reg  [3:0]   dbg_spi_count;      // down counter
 wire         dbg_spi_start;
-wire         dbg_spi_busy;
 reg          dbg_spi_done;
 wire [2:0]   dbg_spi_device;     // 1=VGA, 2=SYN, 3=DDS, 4=ZMON
 wire [15:0]  dbg_enables;       // toggle various enables/wires
 
+   wire                   opc_fifo_wr_en;    // ZZM wr enable to opcode input fifo.
+   wire                   opc_fifo_rd_en;    // ZZM
+   wire [7:0]             opc_fifo_dat_i;    // ZZM
+   reg                    opc_fifo_wr_enr;   // ZZM
+   reg                    opc_fifo_wr_enrr;  // ZZM
+   reg                    opc_fifo_rd_enr;   // ZZM
+   reg                    opc_fifo_rd_enrr;  // ZZM
+   wire [9:0]             opcode_fifo_count; // ZZM
+   wire                   opcode_fifo_empty; // ZZM
+   wire                   extd_fifo_wr_stb_w;// ZZM
 
 //------------------------------------------------------------------------
 // Start of logic
@@ -514,7 +527,9 @@ begin
   dbg_sys_rst_n <= !(&{!dbg_sys_rst_sr[9], | dbg_sys_rst_sr[8:0]});  // output 9 ticks of dbg_sys_rst_n == 1'b0.
 end
 
-assign sys_rst_n = MCU_TRIG ? 1'b0 : dbg_sys_rst_n;
+assign sys_rst_n = dbg_sys_rst_n;
+
+
 
 // Create a "time-alive" counter.
 //   2^40 @ 100MHz wraps at ~3.05 hours.
@@ -567,6 +582,39 @@ always @(posedge clk050)
   end
 
 
+    // Instantiate VHDL fifo that the MMC slave core 
+    // (or debugging array) is using to store opcodes
+    swiss_army_fifo #(
+      .USE_BRAM(1),
+      .WIDTH(8),
+      .DEPTH(512),
+      .FILL_LEVEL_BITS(10),
+      .PF_FULL_POINT(511),
+      .PF_FLAG_POINT(256),
+      .PF_EMPTY_POINT(1)
+    ) input_opcodes(
+        .sys_rst_n(sys_rst_n),
+        .sys_clk(sys_clk),
+        .sys_clk_en(1'b1),
+        
+        .reset_i(1'b0),
+        
+        .fifo_wr_i(opc_fifo_wr_en),           // ZZM comes from HWDBG ext'd extd_fifo_addr_wr_stb
+        .fifo_din(opc_fifo_dat_i),            // ZZM comes from HWDBG ext'd hw_ctl_o[71:64]
+        
+        .fifo_rd_i(opcode_fifo_rd_en),        // ZZM comes from HWDBG ext'd hw_ctl_o[254] shaped to 1-tick.
+        .fifo_dout(opcode_fifo_data_out),     // ZZM goes to HWDBG uart hw_stat_i[119:112]
+        
+        .fifo_fill_level(opcode_fifo_count),  // ZZM goes to HWDBG uart hw_stat_i[104:96]
+        .fifo_full(opcode_fifo_full),
+        .fifo_empty(opcode_fifo_empty),
+        .fifo_pf_full(),
+        .fifo_pf_flag(),
+        .fifo_pf_empty()           
+    );
+
+
+
 // ******************************************************************************
 // *                                                                            *
 // *  mmc_tester:  The MMC Slave + Related Debug/Test HW                        *
@@ -580,6 +628,7 @@ always @(posedge clk050)
     .HOST_RAM_ADR_BITS    (14), // Determines amount of BRAM in MMC host
     .MMC_FIFO_DEPTH       (65536), // (2048),
     .MMC_FILL_LEVEL_BITS  (`GLBL_MMC_FILL_LEVEL_BITS),    // (16),
+    .RSP_FILL_LEVEL_BITS   (`GLBL_RSP_FILL_LEVEL_BITS),    // (10),
     .MMC_RAM_ADR_BITS     (9)      // 512 bytes, 1st sector (17)
   ) mmc_tester_0 (
 
@@ -601,17 +650,13 @@ always @(posedge clk050)
 
     // Tester Function Enables
     .slave_en_i        (1'b1),
-`ifdef XILINX_SIMULATOR
-    .host_en_i         (1'b1),
-`else
     .host_en_i         (1'b0),
-`endif
 
     // SD/MMC card signals
-    .mmc_clk_i         (MMC_CLK),
+    .mmc_clk_i         (MMC_CLK_i),
     .mmc_clk_o         (mmc_clk),
     .mmc_clk_oe_o      (mmc_clk_oe),
-    .mmc_cmd_i         (MMC_CMD),
+    .mmc_cmd_i         (MMC_CMD_i),
     .mmc_cmd_o         (mmc_cmd),
     .mmc_cmd_oe_o      (mmc_cmd_oe),
     .mmc_dat_i         (MMC_DAT_i),
@@ -623,7 +668,7 @@ always @(posedge clk050)
     // opcode_processor (instantiation of opcodes module) refactored to top level (arty_main.v or s4.v).
     .opc_enable_o      (opc_enable_w),
 
-    .opc_fif_dat_o     (opc_fifo_dat_w),
+    .opc_fif_dat_o     (opc_fif_dat_w),
     .opc_fif_ren_i     (opc_fifo_ren_w),
     .opc_fif_rmt_o     (opc_fifo_rmt_w),
     .opc_rd_cnt_o      (),
@@ -831,11 +876,11 @@ always @(posedge clk050)
 
   // Implement MMC card tri-state drivers at the top level
     // Drive the clock output when needed
-  assign MMC_CLK = mmc_clk_oe?mmc_clk:1'bZ;
+  assign MMC_CLK_io = mmc_clk_oe?mmc_clk:1'bZ;
     // Create mmc command signals
   assign mmc_cmd_zzz    = mmc_cmd?1'bZ:1'b0;
   assign mmc_cmd_choice = mmc_od_mode?mmc_cmd_zzz:mmc_cmd;
-  assign MMC_CMD = mmc_cmd_oe?mmc_cmd_choice:1'bZ;
+  assign MMC_CMD_io = mmc_cmd_oe?mmc_cmd_choice:1'bZ;
     // Create "open drain" data vector
   genvar j;
   for(j=0;j<8;j=j+1) begin
@@ -850,19 +895,25 @@ always @(posedge clk050)
     else if (mmc_dat_siz==1) mmc_dat_choice3 <= {4'bZ,mmc_dat_choice2[3:0]};
     else                     mmc_dat_choice3 <= mmc_dat_choice2;
 
-  assign MMC_DAT7     = mmc_dat_choice3[7];
-  assign MMC_DAT6     = mmc_dat_choice3[6];
-  assign MMC_DAT5     = mmc_dat_choice3[5];
-  assign MMC_DAT4     = mmc_dat_choice3[4];
-  assign MMC_DAT3     = mmc_dat_choice3[3];
-  assign MMC_DAT2     = mmc_dat_choice3[2];
-  assign MMC_DAT1     = mmc_dat_choice3[1];
-  assign MMC_DAT0     = mmc_dat_choice3[0];
+  assign MMC_DAT_io = mmc_dat_choice3;
+  
+   // Map the MMC output proxies to actual FPGA I/O pins
+  assign MMC_CLK      = MMC_CLK_io;
+  assign MMC_CMD      = MMC_CMD_io;
+  assign MMC_DAT7     = MMC_DAT_io[7];
+  assign MMC_DAT6     = MMC_DAT_io[6];
+  assign MMC_DAT5     = MMC_DAT_io[5];
+  assign MMC_DAT4     = MMC_DAT_io[4];
+  assign MMC_DAT3     = MMC_DAT_io[3];
+  assign MMC_DAT2     = MMC_DAT_io[2];
+  assign MMC_DAT1     = MMC_DAT_io[1];
+  assign MMC_DAT0     = MMC_DAT_io[0];
   
    // Map the MMC input  proxies to actual FPGA I/O pins
+  assign MMC_CLK_i    = MMC_CLK;
+  assign MMC_CMD_i    = MMC_CMD;
   assign MMC_DAT_i    = {MMC_DAT7, MMC_DAT6, MMC_DAT5, MMC_DAT4, MMC_DAT3, MMC_DAT2, MMC_DAT1, MMC_DAT0};
 
-  // MMC_IRQn connected to MCU SD_CD, must be low. Can remove later when MMC driver sw fixed
   assign MMC_IRQn     = 1'b0;    // MCU SDIO_SD pin; low=MMC_Card_Present.
       
   // 31-Mar-2017 Add SPI instances to debug on S4
@@ -903,10 +954,8 @@ always @(posedge clk050)
   localparam BIT_DDS_PS1          = 16'h0800;
   localparam BIT_ZMON_EN          = 16'h1000;                            // <JLC_TEMP_ZMON_EN>
   
-  localparam BIT_TEMP_SYS_RST     = 16'h8000;  // <JLC_TEMP_RST>
+  localparam BIT_TEMP_SYS_RST     = 16'h8000;                            // <JLC_TEMP_RST>
   
-  assign dbg_enables = 16'h0000;
-
   assign RF_GATE = dbg_enables & BIT_RF_GATE ? 1'b1 : 1'b0;
   assign RF_GATE2 = dbg_enables & BIT_RF_GATE2 ? 1'b1 : 1'b0;
   assign VGA_VSW = dbg_enables & BIT_VGA_VSW ? 1'b1 : 1'b0;
@@ -946,11 +995,11 @@ always @(posedge clk050)
     .rx_enbl                    (count2tc),
     .RxD_i                      (FPGA_RXD2),             // "RxD" from USB serial bridge to FPGA
     .TxD_o                      (FPGA_TXD2),             // "TxD" from FPGA to USB serial bridge
-    .auto_fifo_wr_stb_o         (),
-    .auto_fifo_wr_addr_o        (),
-    .dbg0_o                     (FPGA_MCU2),             //  1-bit output: debug outpin #0.
-    .dbg1_o                     (), //FPGA_MCU3),             //  1-bit output: debug outpin #1.
-    .dbg2_o                     (), //FPGA_MCU4),             //  1-bit output: debug outpin #2.
+    .extd_fifo_wr_stb_o         (extd_fifo_wr_stb_w),
+    .extd_fifo_wr_addr_o        (),
+    .dbg0_o                     (),                      //  1-bit output: debug outpin #0.
+    .dbg1_o                     (),                      //  1-bit output: debug outpin #1.
+    .dbg2_o                     (),                      //  1-bit output: debug outpin #2.
     
     // diag/debug control signal outputs
     .hw_ctl_o                   (tdbgw),                 // 16-bit output: control functions.
@@ -962,22 +1011,34 @@ always @(posedge clk050)
     .sys_stat_vec_i             (opc_sys_st_w)           // 16-bit input:  status to show, system_state for now
    );
 
-   // Snapshot:  capture data for R & S commands.   
+   // Snapshot:  capture data for R & S commands.   ZZM changes are incl'd in always block below.
    always @(posedge sys_clk) begin
       if (!sys_rst_n) begin
          tdbgr                     <= 256'b0;
+         opc_fifo_wr_enr           <= 1'b0;
+         opc_fifo_wr_enrr          <= 1'b0;
+         opc_fifo_rd_enr           <= 1'b0;
+         opc_fifo_rd_enrr          <= 1'b0;
       end
       else begin
-         tdbgr                     <= tdbgw;
+         tdbgr                     <= {tdbgw[255:120], opcode_fifo_data_out, opcode_fifo_empty, 5'b0, opcode_fifo_count, tdbgw[95:0]};
+         opc_fifo_wr_enr           <= extd_fifo_wr_stb_w;  // ZZM stb_w is a 1-tick signal.
+         opc_fifo_wr_enrr          <= opc_fifo_wr_enr;
+         opc_fifo_rd_enr           <= tdbgw[254];
+         opc_fifo_rd_enrr          <= opc_fifo_rd_enr;
       end
    end  // end of always @ (posedge clk).
    
-   
+   assign opc_fifo_dat_i = tdbgw[71:64];                            // ZZM
+   assign opc_fifo_wr_en = opc_fifo_wr_enrr;                        // ZZM
+   assign opc_fifo_rd_en = opc_fifo_rd_enr & ~opc_fifo_rd_enrr;     // ZZM
+        
    assign ACTIVE_LEDn = tdbgr[255]?count2[24]:count2[25];
    
-   // 22-Jun have to scope MMC signals
-   assign FPGA_MCU4 = MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.
-   assign FPGA_MCU3 = MMC_CMD; //count3[15];    // 200MHz div'd by 2^16.    
+   assign FPGA_MCU2 = opc_fifo_wr_enrr;    // ZZM
+   assign FPGA_MCU3 = opc_fifo_rd_en;      // ZZM
+   assign FPGA_MCU4 = opcode_fifo_empty;   // ZZM
+    
 
   endmodule
 

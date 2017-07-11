@@ -23,6 +23,7 @@
 //
 //----------------------------------------------------------------------------------
 
+`include "timescale.v"        // Every source file needs this include
 
 module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115200)
   (
@@ -38,8 +39,8 @@ module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115
     
     // diag/debug control signal outputs
     output      [255:0]   hw_ctl_o,
-    output                auto_fifo_wr_stb_o,
-    output      [3:0]     auto_fifo_wr_addr_o,
+    output                extd_fifo_wr_stb_o,
+    output      [3:0]     extd_fifo_wr_addr_o,
      
     // diag/debug status  signal inputs
     input       [255:0]   hw_stat_i,
@@ -106,8 +107,8 @@ module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115
    localparam  UART_GETVER1       = 8'b0101_0001;
    localparam  UART_GETVER2       = 8'b0101_0010;
    localparam  UART_GETVER3       = 8'b0101_0011;
-   localparam  UART_SETAWR0       = 8'b0110_0000;    // UART_SETAWR* enables or disables  auto-writes (to FIFO) for 1-of-8 [0:7] destination FIFOs.
-   localparam  UART_SETAWR1       = 8'b0110_0000;
+   localparam  UART_EXTDWR0       = 8'b0110_0000;    // UART_EXTDAWR* write to FIFO 0-of-f [0:15] destination FIFOs.
+   localparam  UART_EXTDWR1       = 8'b0110_0001;
    
   
    // ASCII Char Codes
@@ -120,6 +121,8 @@ module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115
    localparam  UART_CHAR_SP       = 8'h20;    // SP (space)
    localparam  UART_CHAR_UA       = 8'h41;    // 'A' | 'a':  Set AutoWrite
    localparam  UART_CHAR_LA       = 8'h61;
+   localparam  UART_CHAR_UFW      = 8'h46;    // 'F' | 'f':  Set AutoWrite
+   localparam  UART_CHAR_LFW      = 8'h66;
    localparam  UART_CHAR_UV       = 8'h56;    // 'V' | 'v':  Get Version
    localparam  UART_CHAR_LV       = 8'h76;
    localparam  UART_CHAR_UR       = 8'h52;    // 'R' | 'r':  Read Diag Data
@@ -130,12 +133,13 @@ module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115
    localparam  UART_CHAR_LL       = 8'h6C;
    localparam  UART_CHAR_UW       = 8'h57;    // 'W' | 'w':  Write Diag Data
    localparam  UART_CHAR_LW       = 8'h77;
-   localparam  UART_CHAR_UX       = 8'h58;    // 'X' | 'x':  No-Op               (just a test)
+   localparam  UART_CHAR_UX       = 8'h58;    // 'X' | 'x':  1st char of extended write.
    localparam  UART_CHAR_LX       = 8'h78;
    localparam  UART_CHAR_UC       = 8'h43;    // 'C' | 'c':  Show count of opcodes_Underscore_countOfPatternOpcodes
    localparam  UART_CHAR_LC       = 8'h63;
    localparam  UART_CHAR_US       = 8'h53;    // 'S' | 's':  Show 16-bit instance arg data
    localparam  UART_CHAR_LS       = 8'h73;
+   localparam  UART_CHAR_TST      = 8'h3f;    // '?'
    localparam  UART_CHAR_OK0      = 8'h4F;    // 'O'
    localparam  UART_CHAR_OK1      = 8'h4B;    // 'K'
    localparam  UART_CHAR_OK2      = 8'h21;    // '!'
@@ -152,11 +156,10 @@ module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115
    reg                    uart_wr_ctl_stbr   = 1'b0;
    wire                   uart_wr_ctl_stbw   = uart_wr_ctl_stbr & ~uart_wr_ctl_stb;
 
-   reg                    auto_fifo_wr_stb   = 1'b0;   
-   reg                    auto_fifo_wr_stbr  = 1'b0;   
-   reg                    auto_fifo_wr_stbrr = 1'b0;   
-   reg                    auto_fifo_wr_mode  = 1'b0;
-   reg  [3:0]             auto_fifo_wr_addr  = 4'h0;
+   reg                    extd_fifo_wr_stb   = 1'b0;   
+   reg                    extd_fifo_wr_stbr  = 1'b0;   
+   reg                    extd_fifo_wr_stbrr = 1'b0;   
+   reg  [3:0]             extd_fifo_wr_addr  = 4'h0;
 
    reg  [7:0]             tx_char            = 8'b0;
    reg  [7:0]             rx_charr           = 8'b0;
@@ -262,11 +265,10 @@ module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115
          uart_wr_ctlr            <= 256'b0;
          uart_wr_ctl_stb         <= 1'b0;          // 1-tick strobe for writing control data.
          uart_wr_ctl_stbr        <= 1'b0;          // 1-tick strobe for writing control data (delayed 1-tick).
-         auto_fifo_wr_mode       <= 1'b0;
-         auto_fifo_wr_addr       <= 4'hF;
-         auto_fifo_wr_stb        <= 1'b0;
-         auto_fifo_wr_stbr       <= 1'b0;
-         auto_fifo_wr_stbrr      <= 1'b0;
+         extd_fifo_wr_addr       <= 4'hF;
+         extd_fifo_wr_stb        <= 1'b0;
+         extd_fifo_wr_stbr       <= 1'b0;
+         extd_fifo_wr_stbrr      <= 1'b0;
          end
       else begin
          // clears for one-tick signals
@@ -276,9 +278,9 @@ module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115
 	     dbg0r                   <= 1'b0;
          uart_wr_ctl_stb         <= 1'b0;
          uart_wr_ctl_stbr        <= uart_wr_ctl_stb;
-         auto_fifo_wr_stb        <= 1'b0;
-         auto_fifo_wr_stbr       <= auto_fifo_wr_stb;
-         auto_fifo_wr_stbrr      <= auto_fifo_wr_stbr;
+         extd_fifo_wr_stb        <= 1'b0;
+         extd_fifo_wr_stbr       <= extd_fifo_wr_stb;
+         extd_fifo_wr_stbrr      <= extd_fifo_wr_stbr;
          if (uart_wr_ctl_stbw == 1'b1) begin
             uart_wr_ctlr         <= {uart_wr_ctl[7],uart_wr_ctl[6],uart_wr_ctl[5],uart_wr_ctl[4],
                                      uart_wr_ctl[3],uart_wr_ctl[2],uart_wr_ctl[1],uart_wr_ctl[0]};
@@ -287,7 +289,8 @@ module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115
    
          // "every-time" assignments
          cmdStater                  <= cmdState;
-         
+         extd_fifo_wr_stb           <= 1'b0;
+
          dbg1r                      <= rxdbg0w;
          dbg2r                      <= rxdbg1w;
 
@@ -343,11 +346,11 @@ module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115
                      UART_CHAR_LC: begin
                         cmdState    <= UART_GETOPC7;
                      end
-                     UART_CHAR_UA: begin
-                        cmdState    <= UART_SETAWR0;
+                     UART_CHAR_UFW: begin
+                        cmdState    <= UART_EXTDWR0;
                      end
-                     UART_CHAR_LA: begin
-                        cmdState    <= UART_SETAWR0;
+                     UART_CHAR_LFW: begin
+                        cmdState    <= UART_EXTDWR0;
                      end
                      default: begin
                         // Just ignore all other command chars.
@@ -443,6 +446,7 @@ module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115
                end
                else begin
                   uart_csr_addr <= ascii_to_hex(rx_charw);
+                  extd_fifo_wr_addr <= ascii_to_hex(rx_charw);
                   if (rx_charw[7:3] == 5'b0011_0)
                   begin
                      cmdState       <= UART_SETDLM;
@@ -538,9 +542,6 @@ module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115
                else begin
                   uart_wr_ctl[uart_csr_addr][ 3: 0] <= ascii_to_hex(rx_charw);
                   uart_wr_ctl_stb   <= 1'b1;
-                  if ((uart_csr_addr[ 3: 0] == auto_fifo_wr_addr) && (auto_fifo_wr_mode == 1'b1)) begin
-                     auto_fifo_wr_stb  <= 1'b1;
-                  end
                   cmdState          <= UART_SEND_CR;
                end
             end  // end of case UART_SETCTL0.
@@ -649,35 +650,23 @@ module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115
                tx_load              <= 1'b1;
                cmdState             <= UART_SEND_CR;
             end
-            UART_SETAWR0: begin
+            UART_EXTDWR0: begin
                if (drdy == 1'b0) begin
-                  cmdState          <= UART_SETAWR0;
+                  cmdState          <= UART_EXTDWR0;
                end
-               else begin
-                  case (rx_charw)
-                     UART_CHAR_PLUS: begin
-                        auto_fifo_wr_mode <= 1'b0;
-                        cmdState    <= UART_SEND_CR;
-                     end
-                     UART_CHAR_MINUS: begin
-                        auto_fifo_wr_mode <= 1'b1;
-                        cmdState    <= UART_SETAWR1;
-                     end
-                     default: begin
-                        cmdState    <= UART_BADCHAR;
-                     end
-                  endcase  // end of case (rx_charw)
-               end
-            end  // end of case UART_SETAWR0.
-            UART_SETAWR1: begin
-               if (drdy == 1'b0) begin
-                  cmdState          <= UART_SETAWR1;
-               end
-               else begin
-                  auto_fifo_wr_addr <= ascii_to_hex(rx_charw);
+               else if (rx_charw == UART_CHAR_CR) begin
+                  extd_fifo_wr_stb  <= 1'b1;
                   cmdState          <= UART_SEND_CR;
                end
-            end  // end of case UART_SETAWR1.
+               else begin
+                  extd_fifo_wr_addr <= ascii_to_hex(rx_charw);
+                  cmdState          <= UART_EXTDWR1;
+               end
+            end  // end of case UART_EXTDWR0.
+            UART_EXTDWR1: begin
+               extd_fifo_wr_stb  <= 1'b1;
+               cmdState          <= UART_SEND_CR;
+            end  // end of case UART_EXTDWR1.
             UART_TEST0: begin
                tx_char              <= UART_CHAR_OK0;
                tx_load              <= 1'b1;
@@ -686,7 +675,7 @@ module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115
             UART_TEST1: begin
                tx_char              <= UART_CHAR_OK1;
                tx_load              <= 1'b1;
-               cmdState             <= UART_TEST1;
+               cmdState             <= UART_TEST2;
             end  // end of UART_TEST1 case.
             UART_TEST2: begin
                tx_char              <= UART_CHAR_OK2;
@@ -709,7 +698,7 @@ module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115
             end
          endcase  // end of (cmdState).
       end
-   end   // end of always @(posedge clk_i).
+   end   // end of always @(posedge clk_i) ... Command State Machine ...
 			
 
    rcvr #(.BAUD_DIV(BAUD_DIV))
@@ -768,10 +757,10 @@ module uart #( parameter VRSN      = 16'h9876, CLK_FREQ  = 100000000, BAUD = 115
    assign  version_w              = VRSN;
 
    assign  hw_ctl_o               = uart_wr_ctlr;
-   assign  auto_fifo_wr_stb_o     = auto_fifo_wr_stbr & ~auto_fifo_wr_stbrr;
-   assign  auto_fifo_wr_addr_o    = auto_fifo_wr_addr;
-   assign  dbg0_o                 = txdbg0w;
-   assign  dbg1_o                 = tx_stb;
-   assign  dbg2_o                 = tbre;
+   assign  extd_fifo_wr_stb_o     = extd_fifo_wr_stbr & ~extd_fifo_wr_stbrr;
+   assign  extd_fifo_wr_addr_o    = extd_fifo_wr_addr;
+   assign  dbg0_o                 = extd_fifo_wr_stbr & ~extd_fifo_wr_stbrr;
+   assign  dbg1_o                 = cmdState == UART_EXTDWR0;
+   assign  dbg2_o                 = (extd_fifo_wr_addr == 4'b0111);
 
 endmodule

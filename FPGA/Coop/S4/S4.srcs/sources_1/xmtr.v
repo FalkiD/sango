@@ -20,7 +20,7 @@
 // 0.00.0  2016-08-04 (JLC) Modified for current project.
 //
 //------------------------------------------------------------------------------
-`include "timescale.v"
+//`include "timescale.v"
 
 module xmtr #(parameter BAUD_DIV = 867) // BAUD_DIV = 100MHz / 57600 - 1
    (
