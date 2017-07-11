@@ -98,44 +98,8 @@ package mmc_test_pack is
     dbg_spi_busy_i      : in  std_logic;
     dbg_enables_o       : out unsigned(15 downto 0)  --toggle various enables/wires
     -- opcode_processor : (instance of "opcodes") refactored to top level.
-  );
-  end component;
+    -- add items here if mmc debugger needs access (opcode processor entries)
 
-  -- Declare opcode processor
-  component opcodes 
-  generic (
-    RSP_FILL_LEVEL_BITS : integer -- Should be at least int(floor(log2(FIFO_DEPTH))+1.0)
-  );
-  port (
-    clk                 : in  std_logic;
-    rst_n               : in  std_logic;
-    enable              : in  std_logic;
-
-    fifo_dat_i          : in  unsigned(7 downto 0);
-    fifo_rd_en_o        : out std_logic;
-    fifo_rd_empty_i     : in  std_logic;
-    fifo_rd_count_i     : in  unsigned(RSP_FILL_LEVEL_BITS-1 downto 0); 
-
-    system_state_i      : in  unsigned(15 downto 0);
-    mode_o              : out unsigned(31 downto 0);
-
-    response_o              : out unsigned(7 downto 0);
-    response_wr_en_o        : out std_logic;
-    response_fifo_empty_i   : in  std_logic;
-    response_fifo_full_i    : in  std_logic;
-    response_ready_o        : out std_logic;
-    response_length_o       : out unsigned(RSP_FILL_LEVEL_BITS-1 downto 0);
-    response_fifo_count_i   : in  unsigned(RSP_FILL_LEVEL_BITS-1 downto 0); 
-
---    frequency_o             : out unsigned(31 downto 0);
---    frq_wr_en_o             : out std_logic;
-
---    power_o                 : out unsigned(31 downto 0);
---    pwr_wr_en_o             : out std_logic;
-
-    opcode_counter_o        : out unsigned(31 downto 0);                     
-    status_o                : out unsigned(7 downto 0);
-    state_o                 : out unsigned(6 downto 0)
   );
   end component;
 

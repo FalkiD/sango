@@ -314,6 +314,7 @@ wire         syscon_txd;
 // opcode processor wires:
 wire         opc_enable_w;
 wire [7:0]   opc_fifo_dat_w;
+wire [7:0]   opc_fif_dat_w;             // mmc_tester opcode fifo writes can go here 
 
 //wire         opc_fifo_dat_w;          // fifo read data bus  commented out JLC 06/16/2017
 wire         opc_fifo_ren_w;          // fifo read line
@@ -389,6 +390,7 @@ wire [15:0]  dbg_enables;       // toggle various enables/wires
    wire                   opc_fifo_wr_en;    // ZZM wr enable to opcode input fifo.
    wire                   opc_fifo_rd_en;    // ZZM
    wire [7:0]             opc_fifo_dat_i;    // ZZM
+   wire [7:0]             opc_fifo_dat_o;    // ZZM
    reg                    opc_fifo_wr_enr;   // ZZM
    reg                    opc_fifo_wr_enrr;  // ZZM
    reg                    opc_fifo_rd_enr;   // ZZM
@@ -604,7 +606,7 @@ always @(posedge clk050)
         .fifo_din(opc_fifo_dat_i),            // ZZM comes from HWDBG ext'd hw_ctl_o[71:64]
         
         .fifo_rd_i(opc_fifo_rd_en),           // ZZM comes from HWDBG ext'd hw_ctl_o[254] shaped to 1-tick.
-        .fifo_dout(opcode_fifo_data_out),     // ZZM goes to HWDBG uart hw_stat_i[119:112]
+        .fifo_dout(opc_fifo_dat_o),     // ZZM goes to HWDBG uart hw_stat_i[119:112]
         
         .fifo_fill_level(opcode_fifo_count),  // ZZM goes to HWDBG uart hw_stat_i[104:96]
         .fifo_full(opcode_fifo_full),
@@ -642,6 +644,7 @@ always @(posedge clk050)
     .resp_o            (syscon_txd),
 
     // Board related
+    .switch_i           (),
     .led_o             (),
 
     // Interface for SD/MMC traffic logging
@@ -1026,7 +1029,7 @@ always @(posedge clk050)
          opc_fifo_rd_enrr          <= 1'b0;
       end
       else begin
-         tdbgr                     <= {tdbgw[255:120], opcode_fifo_data_out, opcode_fifo_empty, 5'b0, opcode_fifo_count, tdbgw[95:0]};
+         tdbgr                     <= {tdbgw[255:120], opc_fifo_dat_o, opcode_fifo_empty, 5'b0, opcode_fifo_count, tdbgw[95:0]};
          opc_fifo_wr_enr           <= extd_fifo_wr_stb_w;  // ZZM stb_w is a 1-tick signal.
          opc_fifo_wr_enrr          <= opc_fifo_wr_enr;
          opc_fifo_rd_enr           <= tdbgw[254];
