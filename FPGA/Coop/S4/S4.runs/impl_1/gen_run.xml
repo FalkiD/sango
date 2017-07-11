@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<GenRun Id="impl_1" LaunchPart="xc7a35tftg256-2" LaunchTime="1499787168">
+<GenRun Id="impl_1" LaunchPart="xc7a35tftg256-2" LaunchTime="1499789038">
   <File Type="PWROPT-DRC" Name="s4_drc_pwropted.rpt"/>
   <File Type="OPT-METHODOLOGY-DRC" Name="s4_methodology_drc_opted.rpt"/>
   <File Type="INIT-TIMING" Name="s4_timing_summary_init.rpt"/>
@@ -251,6 +251,6 @@
     <Step Id="phys_opt_design"/>
     <Step Id="route_design"/>
     <Step Id="post_route_phys_opt_design"/>
-    <Step Id="write_bitstream" PostStepTclHook="C:/work/github/Rick11Jul/FPGA/Coop/S4/write_bindir.tcl"/>
+    <Step Id="write_bitstream"/>
   </Strategy>
 </GenRun>

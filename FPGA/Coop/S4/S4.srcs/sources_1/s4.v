@@ -381,6 +381,7 @@ wire [7:0]   arr_spi_bytes [13:0];
 wire [3:0]   dbg_spi_bytes;      // bytes to send
 reg  [3:0]   dbg_spi_count;      // down counter
 wire         dbg_spi_start;
+wire         dbg_spi_busy;
 reg          dbg_spi_done;
 wire [2:0]   dbg_spi_device;     // 1=VGA, 2=SYN, 3=DDS, 4=ZMON
 wire [15:0]  dbg_enables;       // toggle various enables/wires
@@ -602,7 +603,7 @@ always @(posedge clk050)
         .fifo_wr_i(opc_fifo_wr_en),           // ZZM comes from HWDBG ext'd extd_fifo_addr_wr_stb
         .fifo_din(opc_fifo_dat_i),            // ZZM comes from HWDBG ext'd hw_ctl_o[71:64]
         
-        .fifo_rd_i(opcode_fifo_rd_en),        // ZZM comes from HWDBG ext'd hw_ctl_o[254] shaped to 1-tick.
+        .fifo_rd_i(opc_fifo_rd_en),           // ZZM comes from HWDBG ext'd hw_ctl_o[254] shaped to 1-tick.
         .fifo_dout(opcode_fifo_data_out),     // ZZM goes to HWDBG uart hw_stat_i[119:112]
         
         .fifo_fill_level(opcode_fifo_count),  // ZZM goes to HWDBG uart hw_stat_i[104:96]
@@ -650,7 +651,11 @@ always @(posedge clk050)
 
     // Tester Function Enables
     .slave_en_i        (1'b1),
+`ifdef XILINX_SIMULATOR
+    .host_en_i         (1'b1),
+`else
     .host_en_i         (1'b0),
+`endif
 
     // SD/MMC card signals
     .mmc_clk_i         (MMC_CLK_i),
@@ -1037,8 +1042,7 @@ always @(posedge clk050)
    
    assign FPGA_MCU2 = opc_fifo_wr_enrr;    // ZZM
    assign FPGA_MCU3 = opc_fifo_rd_en;      // ZZM
-   assign FPGA_MCU4 = opcode_fifo_empty;   // ZZM
-    
+   assign FPGA_MCU4 = opcode_fifo_empty;   // ZZM    
 
   endmodule
 

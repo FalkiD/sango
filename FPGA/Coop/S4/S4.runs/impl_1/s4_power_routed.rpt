@@ -1,7 +1,7 @@
 Copyright 1986-2016 Xilinx, Inc. All Rights Reserved.
 ----------------------------------------------------------------------------------------------------------------------------
 | Tool Version     : Vivado v.2016.4 (win64) Build 1756540 Mon Jan 23 19:11:23 MST 2017
-| Date             : Tue Jul 11 11:34:42 2017
+| Date             : Tue Jul 11 12:12:52 2017
 | Host             : ANA00075 running 64-bit major release  (build 9200)
 | Command          : report_power -file s4_power_routed.rpt -pb s4_power_summary_routed.pb -rpx s4_power_routed.rpx
 | Design           : s4
@@ -30,7 +30,7 @@ Table of Contents
 ----------
 
 +--------------------------+-------+
-| Total On-Chip Power (W)  | 0.145 |
+| Total On-Chip Power (W)  | 0.146 |
 | Dynamic (W)              | 0.072 |
 | Device Static (W)        | 0.073 |
 | Effective TJA (C/W)      | 4.9   |
@@ -50,20 +50,20 @@ Table of Contents
 | On-Chip                  | Power (W) | Used     | Available | Utilization (%) |
 +--------------------------+-----------+----------+-----------+-----------------+
 | Clocks                   |     0.008 |        4 |       --- |             --- |
-| Slice Logic              |     0.010 |    10797 |       --- |             --- |
-|   LUT as Logic           |     0.009 |     4681 |     20800 |           22.50 |
+| Slice Logic              |     0.010 |    10829 |       --- |             --- |
+|   LUT as Logic           |     0.009 |     4696 |     20800 |           22.58 |
 |   CARRY4                 |    <0.001 |      495 |      8150 |            6.07 |
-|   Register               |    <0.001 |     4222 |     41600 |           10.15 |
+|   Register               |    <0.001 |     4231 |     41600 |           10.17 |
 |   F7/F8 Muxes            |    <0.001 |      158 |     32600 |            0.48 |
 |   LUT as Distributed RAM |    <0.001 |       28 |      9600 |            0.29 |
 |   BUFG                   |    <0.001 |        2 |        32 |            6.25 |
 |   Others                 |     0.000 |       88 |       --- |             --- |
 |   LUT as Shift Register  |     0.000 |        1 |      9600 |            0.01 |
-| Signals                  |     0.010 |     8184 |       --- |             --- |
+| Signals                  |     0.010 |     8213 |       --- |             --- |
 | Block RAM                |     0.042 |     27.5 |        50 |           55.00 |
 | I/O                      |     0.002 |       45 |       170 |           26.47 |
 | Static Power             |     0.073 |          |           |                 |
-| Total                    |     0.145 |          |           |                 |
+| Total                    |     0.146 |          |           |                 |
 +--------------------------+-----------+----------+-----------+-----------------+
 
 
@@ -73,7 +73,7 @@ Table of Contents
 +-----------+-------------+-----------+-------------+------------+
 | Source    | Voltage (V) | Total (A) | Dynamic (A) | Static (A) |
 +-----------+-------------+-----------+-------------+------------+
-| Vccint    |       1.000 |     0.076 |       0.066 |      0.010 |
+| Vccint    |       1.000 |     0.077 |       0.067 |      0.010 |
 | Vccaux    |       1.800 |     0.013 |       0.000 |      0.013 |
 | Vcco33    |       3.300 |     0.002 |       0.001 |      0.001 |
 | Vcco25    |       2.500 |     0.000 |       0.000 |      0.000 |
@@ -161,7 +161,7 @@ Table of Contents
 |     xmt1                         |    <0.001 |
 |   input_opcodes                  |    <0.001 |
 |     fifo_ram                     |    <0.001 |
-|   mmc_tester_0                   |     0.063 |
+|   mmc_tester_0                   |     0.064 |
 |     auto_baud1                   |    <0.001 |
 |     host_0_bram_0                |     0.005 |
 |     mmc_slave                    |     0.031 |
@@ -206,8 +206,8 @@ Table of Contents
 |         sd_crc_gen[5].crc_unit   |    <0.001 |
 |         sd_crc_gen[6].crc_unit   |    <0.001 |
 |         sd_crc_gen[7].crc_unit   |    <0.001 |
-|     syscon1                      |     0.006 |
-|       syscon1                    |     0.005 |
+|     syscon1                      |     0.007 |
+|       syscon1                    |     0.006 |
 |         cmd_buffer_reg_0_127_0_0 |    <0.001 |
 |         cmd_buffer_reg_0_127_1_1 |    <0.001 |
 |         cmd_buffer_reg_0_127_2_2 |    <0.001 |
