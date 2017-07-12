@@ -261,9 +261,13 @@ wire         clk100;
 wire         clk200;
 wire         clk050;
 
+//// Initialize ourselves at startup
+//wire        initialized = 1'b0;
+//reg  [3:0]  init_clks = 4'd10; 
+
 // <JLC_TEMP_RST>
 wire         dbg_sys_rst_i;
-reg  [9:0]   dbg_sys_rst_sr   = 10'b0;
+reg  [9:0]   dbg_sys_rst_sr   = 0; //10'b0;
 reg          dbg_sys_rst_n    = 1'b1;
 
 // <JLC_TEMP_DBG>
@@ -311,10 +315,32 @@ reg  [255:0] tdbgr;
 wire         syscon_rxd;
 wire         syscon_txd;
 
+// 12-Jul LPC MMC interface is not working so we must use UART back door
+// to receive opcodes & send responses
+// Use 16 32-bit words to transfer 64 byte opcode blocks
+wire            opc_load_new = 1'b0;   // Load new opcode block into opcode fifo
+wire [31:0]     opc_data0;
+wire [31:0]     opc_data1;
+wire [31:0]     opc_data2;
+wire [31:0]     opc_data3;
+wire [31:0]     opc_data4;
+wire [31:0]     opc_data5;
+wire [31:0]     opc_data6;
+wire [31:0]     opc_data7;
+wire [31:0]     opc_data8;
+wire [31:0]     opc_data9;
+wire [31:0]     opc_dataA;
+wire [31:0]     opc_dataB;
+wire [31:0]     opc_dataC;
+wire [31:0]     opc_dataD;
+wire [31:0]     opc_dataE;
+wire [31:0]     opc_dataF;
+reg  [31:0]     opc_inreg;  // Mux'd above 16 wires
+
 // opcode processor wires:
-wire         opc_enable = 1'b1;         // always ON for now      
-wire [7:0]   opc_fifo_dat_i;            // mmc_tester opcode fifo writes can go here
-wire         opc_fifo_wen;              // opcode fifo write line
+reg          opc_enable;         // control needed...      
+reg  [7:0]   opc_fifo_dat_i;            // mmc_tester opcode fifo writes can go here
+reg          opc_fifo_wen;              // opcode fifo write line
 wire         opc_fifo_mt;               // opcode fifo empty flag
 wire [`GLBL_RSP_FILL_LEVEL_BITS-1:0] opc_fifo_count;   // opcode fifo fill level
 wire [7:0]   opc_fifo_dat_o;            // opcode processor reads from here
@@ -526,9 +552,7 @@ begin
   dbg_sys_rst_n <= !(&{!dbg_sys_rst_sr[9], | dbg_sys_rst_sr[8:0]});  // output 9 ticks of dbg_sys_rst_n == 1'b0.
 end
 
-assign sys_rst_n = dbg_sys_rst_n;
-
-
+assign sys_rst_n = MCU_TRIG ? 1'b0 : dbg_sys_rst_n;
 
 // Create a "time-alive" counter.
 //   2^40 @ 100MHz wraps at ~3.05 hours.
@@ -580,6 +604,13 @@ always @(posedge clk050)
     count4 <= count4+1;
   end
 
+// Initialize things at startup
+always @(posedge sys_clk) begin
+//  if (!initialized) begin
+
+
+ // end
+end
 
   // Instantiate VHDL fifo that the MMC slave core 
   // (or debugging array) is using to store opcodes
@@ -692,10 +723,28 @@ always @(posedge clk050)
     
     // opcode_processor (instantiation of opcodes module) refactored to top level (arty_main.v or s4.v).
     // connect the mmc fifo's to the opcode processor here.
-    .opc_fif_dat_o     (opc_fifo_dat_i),
-    .opc_fif_wen_o     (opc_fifo_wen),
-    .opc_fif_wmt_i     (opc_fifo_mt),
-    .opc_rd_cnt_i      (opc_fifo_count), 
+    // 12-Jul first article must use back-door UART entry since LPC MMC interface is not working
+    .bkd_opc_load_new   (opc_load_new),
+    .bkd_opc_data0_o    (opc_data0),
+    .bkd_opc_data1_o    (opc_data1),
+    .bkd_opc_data2_o    (opc_data2),
+    .bkd_opc_data3_o    (opc_data3),
+    .bkd_opc_data4_o    (opc_data4),
+    .bkd_opc_data5_o    (opc_data5),
+    .bkd_opc_data6_o    (opc_data6),
+    .bkd_opc_data7_o    (opc_data7),
+    .bkd_opc_data8_o    (opc_data8),
+    .bkd_opc_data9_o    (opc_data9),
+    .bkd_opc_dataA_o    (opc_dataA),
+    .bkd_opc_dataB_o    (opc_dataB),
+    .bkd_opc_dataC_o    (opc_dataC),
+    .bkd_opc_dataD_o    (opc_dataD),
+    .bkd_opc_dataE_o    (opc_dataE),
+    .bkd_opc_dataF_o    (opc_dataF),
+//    .opc_fif_dat_o     (opc_fifo_dat_i),
+//    .opc_fif_wen_o     (opc_fifo_wen),
+//    .opc_fif_wmt_i     (opc_fifo_mt),
+//    .opc_rd_cnt_i      (opc_fifo_count), 
 //    .opc_sys_st_o      (opc_sys_st_w),
 //    .opc_mode_i        (opc_mode_w),
 //    .opc_rspf_i        (opc_rspf_w),
@@ -868,6 +917,119 @@ always @(posedge clk050)
         end
       end
       endcase
+    end
+  end
+
+  // Load the opcode processor fifo using back-door UART
+  reg  [4:0]    bkd_opc_state;
+  reg  [5:0]    bkd_counter;
+  `define BKD_COUNT 6'd64
+  `define BKD_IDLE  5'd0
+  `define BKD_WR0   5'd1
+  `define BKD_WR1   5'd2
+  `define BKD_WR2   5'd3
+  `define BKD_WR3   5'd4
+  `define BKD_DONE  5'd5
+  always @(posedge sys_clk) begin
+    if(!sys_rst_n) begin
+      //opc_load_new <= 1'b0;
+      bkd_opc_state <= `BKD_IDLE;
+      bkd_counter <= 6'd0;
+      opc_enable <= 1'b0;
+    end
+    else if(opc_load_new == 1'b1) begin
+      case(bkd_opc_state)
+      `BKD_IDLE: begin
+        bkd_counter <= 6'd0;
+        bkd_opc_state <= `BKD_WR0;
+      end
+      `BKD_WR0: begin
+        opc_fifo_dat_i <= opc_inreg[7:0];
+        opc_fifo_wen <= 1'b1;
+        bkd_counter <= bkd_counter + 1;
+        bkd_opc_state <= `BKD_WR1;
+      end
+      `BKD_WR1: begin
+        opc_fifo_dat_i <= opc_inreg[15:8];
+        bkd_counter <= bkd_counter + 1;
+        bkd_opc_state <= `BKD_WR2;
+      end
+      `BKD_WR2: begin
+        opc_fifo_dat_i <= opc_inreg[23:16];
+        bkd_counter <= bkd_counter + 1;
+        bkd_opc_state <= `BKD_WR3;
+      end
+      `BKD_WR3: begin
+        opc_fifo_dat_i <= opc_inreg[31:24];
+        bkd_counter <= bkd_counter + 1;
+        if(bkd_counter == `BKD_COUNT - 1)
+          bkd_opc_state <= `BKD_DONE;
+        else
+          bkd_opc_state <= `BKD_WR0;
+      end
+      `BKD_DONE: begin
+        opc_fifo_wen <= 1'b0;
+        opc_enable <= 1'b1;
+        bkd_opc_state <= `BKD_IDLE;
+      end
+
+//    .opc_fif_dat_o     (),
+//    .opc_fif_wen_o     (opc_fifo_wen),
+//    .opc_fif_wmt_i     (opc_fifo_mt),
+      
+      endcase    
+    end
+  end
+
+  // Mux the 16 opc data wires from mmc_tester UART into one register
+  always @(posedge sys_clk) begin
+    if(bkd_counter < 4) begin
+      opc_inreg <= opc_data0;
+    end
+    else if(bkd_counter < 8) begin
+      opc_inreg <= opc_data1;
+    end
+    else if(bkd_counter < 12) begin
+      opc_inreg <= opc_data2;
+    end
+    else if(bkd_counter < 16) begin
+      opc_inreg <= opc_data3;
+    end
+    else if(bkd_counter < 20) begin
+      opc_inreg <= opc_data4;
+    end
+    else if(bkd_counter < 24) begin
+      opc_inreg <= opc_data5;
+    end
+    else if(bkd_counter < 28) begin
+      opc_inreg <= opc_data6;
+    end
+    else if(bkd_counter < 32) begin
+      opc_inreg <= opc_data7;
+    end
+    else if(bkd_counter < 36) begin
+      opc_inreg <= opc_data8;
+    end
+    else if(bkd_counter < 40) begin
+      opc_inreg <= opc_data9;
+    end
+    else if(bkd_counter < 44) begin
+      opc_inreg <= opc_dataA;
+    end
+    else if(bkd_counter < 48) begin
+      opc_inreg <= opc_dataB;
+    end
+    else if(bkd_counter < 52) begin
+      opc_inreg <= opc_dataC;
+    end
+    else if(bkd_counter < 56) begin
+      opc_inreg <= opc_dataD;
+    end
+    else if(bkd_counter < 60) begin
+      opc_inreg <= opc_dataE;
+    end
+    else begin
+      opc_inreg <= opc_dataF;
     end
   end
 

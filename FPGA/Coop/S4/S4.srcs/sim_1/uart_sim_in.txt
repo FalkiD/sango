@@ -16,22 +16,28 @@ u 0.5 ms ;            -- <CR> (Allows autobaud to obtain lock on baud rate.)
 u 0.5 ms w 3000009 010624DE; -- Set DDS for sd_clk_o of 400kHz
 
 u 0.5 ms w 300002C 03faa; -- Set enables, careful, 0x8000 is RESET
-u 0.5 ms w 3000030 01 06 05 06 07 08 09 0A; -- Write 6 bytes to SPI device 1
+-- u 0.5 ms w 3000040 01 06 05 06 07 08 09 0A; -- Write 6 bytes to SPI device 1
+u 0.5 ms w 3000030 04040404 06060606 05050505; -- Write 12 of 64 bytes to opcode backdoor
+u 0.5 ms w 3000033 04040404 06060606 05050505; -- Write 24 of 64 bytes to opcode backdoor
+u 0.5 ms w 3000036 04040404 06060606 05050505; -- Write 36 of 64 bytes to opcode backdoor
+u 0.5 ms w 3000039 04040404 06060606 05050505; -- Write 48 of 64 bytes to opcode backdoor
+u 0.5 ms w 300003C 04040404 06060606 05050505; -- Write 60 of 64 bytes to opcode backdoor
+u 0.5 ms w 300003F 00000000; -- Write 64 of 64 bytes to opcode backdoor, last byte enables opcode procesor
 
 -- 23-Jun Send S4 MCU startup CMD0, CMD1 sequence
 -- Note:S4 MCU does this at 20MHz
-u 0.5 ms w 300000E 200; -- Set host DMA address at 0x200
-u 0.5 ms w 3000000 200 0; -- Set blk_size=512, blk_count=0
-u 0.5 ms w 3000002 0 00000000; -- Write CMD0 (RESET, no response)
-u 0.5 ms w 3000002 1 00000000; -- Write CMD1 (SEND_OP_COND)
-u 3.0 ms r 3000004 4; --Read CMD response
-u 3.0 ms r 3000022 6; --Read FPGA counters
-u 0.5 ms w 3000022 130; -- Enable read telemetry
-u 5.0 ms r0 300002a 0C; --Read 12 words of telemetry
-u 0.5 ms w 3000002 1 00FF8000; -- Write CMD1 (SEND_OP_COND) (ocr_pwrup_done)
-u 3.0 ms r 3000004 4; --Read CMD response
-u 4.0 ms r 3000022 6; --Read FPGA counters
-u 4.0 ms r0 300002a 8; --Read 8 words of telemetry
+--u 0.5 ms w 300000E 200; -- Set host DMA address at 0x200
+--u 0.5 ms w 3000000 200 0; -- Set blk_size=512, blk_count=0
+--u 0.5 ms w 3000002 0 00000000; -- Write CMD0 (RESET, no response)
+--u 0.5 ms w 3000002 1 00000000; -- Write CMD1 (SEND_OP_COND)
+--u 3.0 ms r 3000004 4; --Read CMD response
+--u 3.0 ms r 3000022 6; --Read FPGA counters
+--u 0.5 ms w 3000022 130; -- Enable read telemetry
+--u 5.0 ms r0 300002a 0C; --Read 12 words of telemetry
+--u 0.5 ms w 3000002 1 00FF8000; -- Write CMD1 (SEND_OP_COND) (ocr_pwrup_done)
+--u 3.0 ms r 3000004 4; --Read CMD response
+--u 4.0 ms r 3000022 6; --Read FPGA counters
+--u 4.0 ms r0 300002a 8; --Read 8 words of telemetry
 
 --u 0.5 ms w 3000002 2 00000000; -- Write CMD2 (ALL_SEND_CID, long response)
 --u 0.5 ms w 3000002 3 00050000; -- Write CMD3 (SET_RELATIVE_ADDRESS)

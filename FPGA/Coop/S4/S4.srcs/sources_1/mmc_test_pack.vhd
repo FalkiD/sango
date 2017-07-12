@@ -103,10 +103,27 @@ package mmc_test_pack is
     -- 12-Jul-2017 For first articles, LPCOpen MMC interface not working,
     -- use the MMC UART to enter 64-byte opcode blocks & read 64-byte responses
     -- Either way, opcode processor i/o goes thru these mmc_tester connections
-    opc_fif_dat_o       : out unsigned( 7 downto 0);     -- write opcodes here
-    opc_fif_wen_o       : out std_logic;                 -- opcode fifo write line
-    opc_fif_wmt_i       : in std_logic;                  -- opcode fifo empty
-    opc_rd_cnt_i        : in unsigned(MMC_FILL_LEVEL_BITS-1 downto 0); -- opcode fifo fill level 
+    bkd_opc_load_new    : out std_logic;
+    bkd_opc_data0_o     : out unsigned(31 downto 0);
+    bkd_opc_data1_o     : out unsigned(31 downto 0);
+    bkd_opc_data2_o     : out unsigned(31 downto 0);
+    bkd_opc_data3_o     : out unsigned(31 downto 0);
+    bkd_opc_data4_o     : out unsigned(31 downto 0);
+    bkd_opc_data5_o     : out unsigned(31 downto 0);
+    bkd_opc_data6_o     : out unsigned(31 downto 0);
+    bkd_opc_data7_o     : out unsigned(31 downto 0);
+    bkd_opc_data8_o     : out unsigned(31 downto 0);
+    bkd_opc_data9_o     : out unsigned(31 downto 0);
+    bkd_opc_dataA_o     : out unsigned(31 downto 0);
+    bkd_opc_dataB_o     : out unsigned(31 downto 0);
+    bkd_opc_dataC_o     : out unsigned(31 downto 0);
+    bkd_opc_dataD_o     : out unsigned(31 downto 0);
+    bkd_opc_dataE_o     : out unsigned(31 downto 0);
+    bkd_opc_dataF_o     : out unsigned(31 downto 0);
+--    opc_fif_dat_o       : out unsigned( 7 downto 0);     -- write opcodes here
+--    opc_fif_wen_o       : out std_logic;                 -- opcode fifo write line
+--    opc_fif_wmt_i       : in std_logic;                  -- opcode fifo empty
+--    opc_rd_cnt_i        : in unsigned(MMC_FILL_LEVEL_BITS-1 downto 0); -- opcode fifo fill level 
     -- probably want opc_fifo_full too
 
 --    opc_sys_st_o   : out unsigned(15 downto 0);
@@ -756,10 +773,28 @@ use work.async_syscon_pack.all;
     -- 12-Jul-2017 For first articles, LPCOpen MMC interface not working,
     -- use the MMC UART to enter 64-byte opcode blocks & read 64-byte responses
     -- Either way, opcode processor i/o goes thru these mmc_tester connections
-    opc_fif_dat_o       : out unsigned( 7 downto 0);     -- write opcodes here
-    opc_fif_wen_o       : out std_logic;                 -- opcode fifo write line
-    opc_fif_wmt_i       : in std_logic;                  -- opcode fifo empty
-    opc_rd_cnt_i        : in unsigned(MMC_FILL_LEVEL_BITS-1 downto 0); -- opcode fifo fill level 
+    -- For first article back door, write 16 32-bit words to s4.v for processing
+    bkd_opc_load_new    : out std_logic;
+    bkd_opc_data0_o     : out unsigned(31 downto 0);
+    bkd_opc_data1_o     : out unsigned(31 downto 0);
+    bkd_opc_data2_o     : out unsigned(31 downto 0);
+    bkd_opc_data3_o     : out unsigned(31 downto 0);
+    bkd_opc_data4_o     : out unsigned(31 downto 0);
+    bkd_opc_data5_o     : out unsigned(31 downto 0);
+    bkd_opc_data6_o     : out unsigned(31 downto 0);
+    bkd_opc_data7_o     : out unsigned(31 downto 0);
+    bkd_opc_data8_o     : out unsigned(31 downto 0);
+    bkd_opc_data9_o     : out unsigned(31 downto 0);
+    bkd_opc_dataA_o     : out unsigned(31 downto 0);
+    bkd_opc_dataB_o     : out unsigned(31 downto 0);
+    bkd_opc_dataC_o     : out unsigned(31 downto 0);
+    bkd_opc_dataD_o     : out unsigned(31 downto 0);
+    bkd_opc_dataE_o     : out unsigned(31 downto 0);
+    bkd_opc_dataF_o     : out unsigned(31 downto 0);
+--    opc_fif_dat_o       : out unsigned( 7 downto 0);     -- write opcodes here
+--    opc_fif_wen_o       : out std_logic;                 -- opcode fifo write line
+--    opc_fif_wmt_i       : in std_logic;                  -- opcode fifo empty
+--    opc_rd_cnt_i        : in unsigned(MMC_FILL_LEVEL_BITS-1 downto 0); -- opcode fifo fill level 
     -- probably want opc_fifo_full too
 
 --    opc_sys_st_o   : out unsigned(15 downto 0);
@@ -960,10 +995,6 @@ architecture beh of mmc_tester is
 --  signal opc_rsp_len        : unsigned(MMC_FILL_LEVEL_BITS-1 downto 0);
   signal s_fif_wr           : unsigned(7 downto 0);
 
---  signal freq_fifo_wr_en    : std_logic;
---  signal power              : unsigned(31 downto 0);
---  signal pwr_fifo_wr_en     : std_logic;
-
   signal dbg_spi_count      : unsigned(3 downto 0); --down counter
   signal dbg_spi_state      : integer;
 
@@ -1142,6 +1173,7 @@ begin
       dbg_spi_device_o <= to_unsigned(0, dbg_spi_device_o'length);
       dbg_enables_o <= to_unsigned(0, dbg_enables_o'length);
       dbg_spi_state <= 0;
+      bkd_opc_load_new <= '0';
     elsif (sys_clk'event and sys_clk='1') then
       -- Default values
       reg_gdcount_clear <= '0';
@@ -1187,110 +1219,45 @@ begin
         end case;
       end if;
       
-      -- Opcode processor register writes, 03000040 x y z ...
+      -- Opcode processor register writes, 03000030 x y z ...
       -- back door to opcode processor
+      -- back door will use 16 32-bit words for a 64 byte opcode block 
       if (o_reg_sel='1' and syscon_we='1') then
         case to_integer(syscon_adr(3 downto 0)) is
           when 16#0# =>
-            dbg_spi_device_o <= syscon_dat_wr(2 downto 0);
-            dbg_spi_start_o <= '0';
+            bkd_opc_load_new <= '0';
+            bkd_opc_data0_o <= syscon_dat_wr(31 downto 0);
           when 16#1# =>
-            dbg_spi_bytes_io <= syscon_dat_wr(3 downto 0);
-            dbg_spi_count <= to_unsigned(1, dbg_spi_count'length);
+            bkd_opc_data1_o <= syscon_dat_wr(31 downto 0);
           when 16#2# =>
-            dbg_spi_data0_o <= syscon_dat_wr(7 downto 0);
-            if(dbg_spi_count = dbg_spi_bytes_io) then
-              dbg_spi_start_o <= '1';
-            else
-              dbg_spi_count <= dbg_spi_count + 1;
-            end if;
+            bkd_opc_data2_o <= syscon_dat_wr(31 downto 0);
           when 16#3# =>
-            dbg_spi_data1_o <= syscon_dat_wr(7 downto 0);
-            if(dbg_spi_count = dbg_spi_bytes_io) then
-              dbg_spi_start_o <= '1';
-            else
-              dbg_spi_count <= dbg_spi_count + 1;
-            end if;
+            bkd_opc_data3_o <= syscon_dat_wr(31 downto 0);
           when 16#4# =>
-            dbg_spi_data2_o <= syscon_dat_wr(7 downto 0);
-            if(dbg_spi_count = dbg_spi_bytes_io) then
-              dbg_spi_start_o <= '1';
-            else
-              dbg_spi_count <= dbg_spi_count + 1;
-            end if;
+            bkd_opc_data4_o <= syscon_dat_wr(31 downto 0);
           when 16#5# =>
-            dbg_spi_data3_o <= syscon_dat_wr(7 downto 0);
-            if(dbg_spi_count = dbg_spi_bytes_io) then
-              dbg_spi_start_o <= '1';
-            else
-              dbg_spi_count <= dbg_spi_count + 1;
-            end if;
+            bkd_opc_data5_o <= syscon_dat_wr(31 downto 0);
           when 16#6# =>
-            dbg_spi_data4_o <= syscon_dat_wr(7 downto 0);
-            if(dbg_spi_count = dbg_spi_bytes_io) then
-              dbg_spi_start_o <= '1';
-            else
-              dbg_spi_count <= dbg_spi_count + 1;
-            end if;
+            bkd_opc_data6_o <= syscon_dat_wr(31 downto 0);
           when 16#7# =>
-            dbg_spi_data5_o <= syscon_dat_wr(7 downto 0);
-            if(dbg_spi_count = dbg_spi_bytes_io) then
-              dbg_spi_start_o <= '1';
-            else
-              dbg_spi_count <= dbg_spi_count + 1;
-            end if;
+            bkd_opc_data7_o <= syscon_dat_wr(31 downto 0);
           when 16#8# =>
-            dbg_spi_data6_o <= syscon_dat_wr(7 downto 0);
-            if(dbg_spi_count = dbg_spi_bytes_io) then
-              dbg_spi_start_o <= '1';
-            else
-              dbg_spi_count <= dbg_spi_count + 1;
-            end if;
+            bkd_opc_data8_o <= syscon_dat_wr(31 downto 0);
           when 16#9# =>
-            dbg_spi_data7_o <= syscon_dat_wr(7 downto 0);
-            if(dbg_spi_count = dbg_spi_bytes_io) then
-              dbg_spi_start_o <= '1';
-            else
-              dbg_spi_count <= dbg_spi_count + 1;
-            end if;
+            bkd_opc_data9_o <= syscon_dat_wr(31 downto 0);
           when 16#A# =>
-            dbg_spi_data8_o <= syscon_dat_wr(7 downto 0);
-            if(dbg_spi_count = dbg_spi_bytes_io) then
-              dbg_spi_start_o <= '1';
-            else
-              dbg_spi_count <= dbg_spi_count + 1;
-            end if;
+            bkd_opc_dataA_o <= syscon_dat_wr(31 downto 0);
           when 16#B# =>
-            dbg_spi_data9_o <= syscon_dat_wr(7 downto 0);
-            if(dbg_spi_count = dbg_spi_bytes_io) then
-              dbg_spi_start_o <= '1';
-            else
-              dbg_spi_count <= dbg_spi_count + 1;
-            end if;
+            bkd_opc_dataB_o <= syscon_dat_wr(31 downto 0);
           when 16#C# =>
-            dbg_spi_dataA_o <= syscon_dat_wr(7 downto 0);
-            if(dbg_spi_count = dbg_spi_bytes_io) then
-              dbg_spi_start_o <= '1';
-            else
-              dbg_spi_count <= dbg_spi_count + 1;
-            end if;
+            bkd_opc_dataC_o <= syscon_dat_wr(31 downto 0);
           when 16#D# =>
-            dbg_spi_dataB_o <= syscon_dat_wr(7 downto 0);
-            if(dbg_spi_count = dbg_spi_bytes_io) then
-              dbg_spi_start_o <= '1';
-            else
-              dbg_spi_count <= dbg_spi_count + 1;
-            end if;
+            bkd_opc_dataD_o <= syscon_dat_wr(31 downto 0);
           when 16#E# =>
-            dbg_spi_dataC_o <= syscon_dat_wr(7 downto 0);
-            if(dbg_spi_count = dbg_spi_bytes_io) then
-              dbg_spi_start_o <= '1';
-            else
-              dbg_spi_count <= dbg_spi_count + 1;
-            end if;
+            bkd_opc_dataE_o <= syscon_dat_wr(31 downto 0);
           when 16#F# =>
-            dbg_spi_dataD_o <= syscon_dat_wr(7 downto 0);
-            dbg_spi_start_o <= '1';
+            bkd_opc_dataF_o <= syscon_dat_wr(31 downto 0);
+            bkd_opc_load_new <= '1';
           when others =>
             null;
           end case;
