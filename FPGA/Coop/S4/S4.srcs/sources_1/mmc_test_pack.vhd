@@ -77,7 +77,7 @@ package mmc_test_pack is
     mmc_dat_oe_o   : out std_logic;
     mmc_od_mode_o  : out std_logic; -- Open drain mode
     mmc_dat_siz_o  : out unsigned(1 downto 0);
-    
+
     dbg_spi_data0_o     : out unsigned(7 downto 0);
     dbg_spi_data1_o     : out unsigned(7 downto 0);
     dbg_spi_data2_o     : out unsigned(7 downto 0);
@@ -96,10 +96,10 @@ package mmc_test_pack is
     dbg_spi_start_o     : inout std_logic;
     dbg_spi_device_o    : out unsigned(2 downto 0); --1=VGA, 2=SYN, 3=DDS, 4=ZMON
     dbg_spi_busy_i      : in  std_logic;
-    dbg_enables_o       : out unsigned(15 downto 0)  --toggle various enables/wires
+    dbg_enables_o       : out unsigned(15 downto 0);  --toggle various enables/wires
     -- opcode_processor : (instance of "opcodes") refactored to top level.
     -- add items here if mmc debugger needs access (opcode processor entries)
-
+    opc_oc_cnt_i        : in  unsigned(31 downto 0)   -- count of opcodes processed
   );
   end component;
 
@@ -707,29 +707,6 @@ use work.async_syscon_pack.all;
     mmc_od_mode_o  : out std_logic; -- Open drain mode
     mmc_dat_siz_o  : out unsigned(1 downto 0);
     
-    -- opcode_processor : opcodes refactored to top level.
-    opc_enable_o   : out std_logic;
-    opc_fif_dat_o  : out unsigned( 7 downto 0);
-    opc_fif_ren_i  : in  std_logic;
-    opc_fif_rmt_o  : out std_logic;
-    opc_rd_cnt_o   : out unsigned(MMC_FILL_LEVEL_BITS-1 downto 0);        -- fifo fill level 
-
-    opc_sys_st_o   : out unsigned(15 downto 0);
-    opc_mode_i     : in  unsigned(31 downto 0);
-    
-    opc_rspf_i     : in  unsigned( 7 downto 0);
-    opc_rspf_we_i  : in  std_logic;
-    opc_rspf_mt_o  : out std_logic;
-    opc_rspf_fl_o  : out std_logic;
-    opc_rspf_rdy_i : in  std_logic;
-    -- opc_rsp_len_i  : in  std_logic(MMC_FILL_LEVEL_BITS-1 downto 0);   
-    opc_rsp_cnt_o  : out unsigned(RSP_FILL_LEVEL_BITS-1 downto 0);
-    opc_oc_cnt_i   : in  unsigned(31 downto 0);
-    
-    -- Debugging
-    opc_status_i   : in  unsigned( 7 downto 0);
-    opc_state_i    : in  unsigned( 6 downto 0);
-    
     -- SPI debugging connections
     dbg_spi_data0_o     : out unsigned(7 downto 0);
     dbg_spi_data1_o     : out unsigned(7 downto 0);
@@ -749,7 +726,30 @@ use work.async_syscon_pack.all;
     dbg_spi_start_o     : inout std_logic;
     dbg_spi_device_o    : out unsigned(2 downto 0); --1=VGA, 2=SYN, 3=DDS, 4=ZMON
     dbg_spi_busy_i      : in  std_logic;            --top level is writing SPI bytes
-    dbg_enables_o       : out unsigned(15 downto 0) --toggle various enables/wires
+    dbg_enables_o       : out unsigned(15 downto 0); --toggle various enables/wires
+
+    -- opcode_processor : opcodes refactored to top level.
+    -- so none of these signals go anywhere
+--    opc_fif_dat_o  : out unsigned( 7 downto 0);     -- write opcodes here
+--    opc_fif_ren_o  : out std_logic;                 -- fifo write line
+--    opc_fif_rmt_i  : in std_logic;                  -- opcode fifo empty
+--    opc_rd_cnt_o   : in unsigned(MMC_FILL_LEVEL_BITS-1 downto 0); -- opcode fifo fill level 
+    -- probably want opc_fifo_full too
+
+--    opc_sys_st_o   : out unsigned(15 downto 0);
+--    opc_mode_i     : in  unsigned(31 downto 0);
+    
+--    opc_rspf_i     : in  unsigned( 7 downto 0);         -- opcode processor response fifo
+--    opc_rspf_re_o  : out std_logic;                     -- response fifo read line             
+--    opc_rspf_mt_i  : in  std_logic;                     -- response fifo empty
+--    opc_rspf_fl_i  : in  std_logic;                     -- response fifo full
+--    opc_rspf_rdy_i : in  std_logic;                     -- response is ready
+--    -- opc_rsp_len_i  : in  std_logic(MMC_FILL_LEVEL_BITS-1 downto 0);   
+--    opc_rsp_cnt_i  : in  unsigned(RSP_FILL_LEVEL_BITS-1 downto 0); -- response length
+    opc_oc_cnt_i   : in  unsigned(31 downto 0)         -- count of opcodes processed
+--    -- Debugging
+--    opc_status_i   : in  unsigned( 7 downto 0);
+--    opc_state_i    : in  unsigned( 6 downto 0);
   );
   end mmc_tester;
 
@@ -1073,6 +1073,21 @@ begin
     u_resize(tlm_r10_dat,32)                       when 16#A#,
     u_resize(s_fif_dat_rd,32)                      when 16#F#,
     str2u("51514343",32)                           when others;
+
+  with to_integer(syscon_adr(3 downto 0)) select
+  o_reg_dat_rd <=
+    u_resize(opc_oc_cnt_i,32)                        when 16#0#,      -- status
+    --u_resize(opc_counter,32)                       when 16#1#,      -- opcode_counter
+    --u_resize(opc_state,32)                         when 16#2#,      -- opcode processor state
+    --u_resize(opc_system_state,32)                  when 16#3#,      -- system_state
+    --u_resize(opc_system_mode,32)                   when 16#4#,      -- mode
+    --u_resize(opc_frq_pwr_status,32)                when 16#5#,      -- freq processor status upper 16, power lower 16
+    --u_resize(opc_phs_pls_status,32)                when 16#6#,      -- phase processor status upper 16, pulse lower 16
+    --u_resize(opc_ptn_dbg_status,32)                when 16#7#,      -- temporarily 'response_ready' pattern processor status upper 16, unused lower 16
+    --u_resize(s_fif_dat_wr_level,32)                when 16#8#,      -- response fifo fill level
+  str2u("51514343",32)                           when others;
+
+
 
 
  -- Handle Local Register Writes

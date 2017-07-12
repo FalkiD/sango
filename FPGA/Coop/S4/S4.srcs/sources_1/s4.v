@@ -673,29 +673,6 @@ always @(posedge clk050)
     .mmc_od_mode_o     (mmc_od_mode),  // open drain mode, applies to sd_cmd_o and sd_dat_o
     .mmc_dat_siz_o     (mmc_dat_siz),
     
-    // opcode_processor (instantiation of opcodes module) refactored to top level (arty_main.v or s4.v).
-    .opc_enable_o      (opc_enable_w),
-
-    .opc_fif_dat_o     (opc_fif_dat_w),
-    .opc_fif_ren_i     (opc_fifo_ren_w),
-    .opc_fif_rmt_o     (opc_fifo_rmt_w),
-    .opc_rd_cnt_o      (),
-    
-    .opc_sys_st_o      (opc_sys_st_w),
-    .opc_mode_i        (opc_mode_w),
-    .opc_rspf_i        (opc_rspf_w),
-    .opc_rspf_we_i     (opc_rspf_we_w),
-    .opc_rspf_mt_o     (opc_rspf_mt_w),
-    .opc_rspf_fl_o     (opc_rspf_fl_w),
-    .opc_rspf_rdy_i    (opc_rspf_rdy_w),
-//    .opc_rsp_len_i  : in  std_logic(MMC_FILL_LEVEL_BITS-1 downto 0);   
-    .opc_rsp_cnt_o     (opc_rsp_cnt_w),
-    .opc_oc_cnt_i      (opc_oc_cnt_w),
-    
-    // Debugging
-    .opc_status_i      (status_w),
-    .opc_state_i       (state_w),
-
     // 31-Mar RMR added a crapload of debug signals
     // signals for spi debug data written to MMC debug terminal (03000030 X Y Z...)
     .dbg_spi_data0_o    (arr_spi_bytes[0]),
@@ -716,7 +693,28 @@ always @(posedge clk050)
     .dbg_spi_start_o    (dbg_spi_start),
     .dbg_spi_device_o   (dbg_spi_device),   // 1=VGA, 2=SYN, 3=DDS, 4=ZMON
     .dbg_spi_busy_i     (dbg_spi_busy),     // asserted while top processes SPI bytes
-    .dbg_enables_o      (dbg_enables)
+    .dbg_enables_o      (dbg_enables),
+    
+    // opcode_processor (instantiation of opcodes module) refactored to top level (arty_main.v or s4.v).
+//    .opc_enable_o      (opc_enable_w),
+
+//    .opc_fif_dat_o     (opc_fif_dat_w),
+//    .opc_fif_ren_i     (opc_fifo_ren_w),
+//    .opc_fif_rmt_o     (opc_fifo_rmt_w),
+//    .opc_rd_cnt_o      (),
+    
+//    .opc_sys_st_o      (opc_sys_st_w),
+//    .opc_mode_i        (opc_mode_w),
+//    .opc_rspf_i        (opc_rspf_w),
+//    .opc_rspf_we_i     (opc_rspf_we_w),
+//    .opc_rspf_mt_o     (opc_rspf_mt_w),
+//    .opc_rspf_fl_o     (opc_rspf_fl_w),
+//    .opc_rspf_rdy_i    (opc_rspf_rdy_w),
+//    .opc_rsp_cnt_o     (opc_rsp_cnt_w),
+    .opc_oc_cnt_i      ({22'd0, opcode_fifo_count})
+//    // Debugging
+//    .opc_status_i      (status_w),
+//    .opc_state_i       (state_w),
     );
 
 // ******************************************************************************
