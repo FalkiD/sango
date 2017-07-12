@@ -312,14 +312,14 @@ wire         syscon_rxd;
 wire         syscon_txd;
 
 // opcode processor wires:
-wire         opc_enable_w;
-wire [7:0]   opc_fifo_dat_w;
-wire [7:0]   opc_fif_dat_w;             // mmc_tester opcode fifo writes can go here 
-
-//wire         opc_fifo_dat_w;          // fifo read data bus  commented out JLC 06/16/2017
-wire         opc_fifo_ren_w;          // fifo read line
-wire         opc_fifo_rmt_w;          // fifo empty flag
-wire [`GLBL_RSP_FILL_LEVEL_BITS-1:0] opc_fifo_rfl_w;   // fifo fill level
+wire         opc_enable = 1'b1;         // always ON for now      
+wire [7:0]   opc_fifo_dat_i;            // mmc_tester opcode fifo writes can go here
+wire         opc_fifo_wen;              // opcode fifo write line
+wire         opc_fifo_mt;               // opcode fifo empty flag
+wire [`GLBL_RSP_FILL_LEVEL_BITS-1:0] opc_fifo_count;   // opcode fifo fill level
+wire [7:0]   opc_fifo_dat_o;            // opcode processor reads from here
+wire         opc_fifo_ren;              // opcode fifo read line 
+wire         opc_fifo_full;             // used?
 
 wire [15:0]  opc_sys_st_w;            // s4 system state (e.g. running a pattern)
 wire [31:0]  opc_mode_w;              // MODE opcode can set system-wide flags
@@ -332,49 +332,44 @@ wire         opc_rspf_rdy_w;          // response fifo is waiting
 wire [`GLBL_RSP_FILL_LEVEL_BITS-1:0] opc_rsp_lng_w;    // update response length when response is ready
 wire [`GLBL_RSP_FILL_LEVEL_BITS-1:0] opc_rsp_cnt_w;    // response fifo count, opcode processor asserts 
 
+// Frequency processor wires
 wire [31:0]  frequency_w;             // to fifo, frequency output in MHz    // zzmf0002
 wire         frq_wr_en_w;             // frequency fifo write enable         // zzmf0002
 wire         frq_fifo_empty_w;        // frequency fifo empty flag           // zzmf0002
 wire         frq_fifo_full_w;         // frequency fifo full flag            // zzmf0002
 
+// Power processor wires
 wire [31:0]  power_w;                 // to fifo, power output in dBm
 wire         pwr_wr_en_w;             // power fifo write enable
 wire         pwr_fifo_empty_w;        // power fifo empty flag
 wire         pwr_fifo_full_w;         // power fifo full flag
 
-      // phase is X7 only, do later
-wire [31:0]  phase_w;                 // to fifo, phase output in degrees
-wire         phs_wr_en_w;             // phase fifo write enable
-wire         phs_fifo_empty_w;        // phase fifo empty flag
-wire         phs_fifo_full_w;         // phase fifo full flag
-
+// Pulse processor wires
 wire [63:0]  pulse_w;                 // to fifo, pulse opcode
 wire         pulse_wr_en_w;           // pulse fifo write enable
 wire         pulse_fifo_empty_w;      // pulse fifo empty flag
 wire         pulse_fifo_full_w;       // pulse fifo full flag
 
+// Bias processor wires
 wire [15:0]  bias_w;                  // to fifo, bias opcode
 wire         bias_wr_en_w;            // bias fifo write enable
 wire         bias_fifo_empty_w;       // bias fifo empty flag
 wire         bias_fifo_full_w;        // bias fifo full flag
 
-      // pattern opcodes are saved in pattern RAM.
+// pattern opcodes are saved in pattern RAM.
 wire         ptn_wr_en_w;             // opcode processor saves pattern opcodes to pattern RAM 
 wire [15:0]  ptn_addr_w;              // address 
 wire [95:0]  ptn_data_w;              // 12 bytes, 3 bytes patClk tick, 9 bytes for opcode, length, and data   
-
 wire         ptn_processor_en_w;      // Run pattern processor 
 wire [15:0]  ptn_start_addr_w;        // address 
 
-wire [31:0]  opcode_counter_w;        // count opcodes for status info                     
-wire [7:0]   status_w;                // NULL opcode terminates, done=0, or error code
-wire [6:0]   state_w;                 // For debugger display
+wire [31:0]  opc_count;               // count opcodes for status info                     
+wire [7:0]   opc_status_w;            // NULL opcode terminates, done=0, or error code
+wire [6:0]   opc_state_w;             // For debugging
     
 //    // Debugging
 wire [7:0]   last_opcode_w;
 wire [15:0]  last_length_w;
-
-wire [31:0]  opc_oc_cnt_w; 
 
 // SPI debugging connections for w 03000030 command
 // Write up to 14 byte to SPI device
@@ -387,17 +382,18 @@ reg          dbg_spi_done;
 wire [2:0]   dbg_spi_device;     // 1=VGA, 2=SYN, 3=DDS, 4=ZMON
 wire [15:0]  dbg_enables;       // toggle various enables/wires
 
-   wire                   opc_fifo_wr_en;    // ZZM wr enable to opcode input fifo.
-   wire                   opc_fifo_rd_en;    // ZZM
-   wire [7:0]             opc_fifo_dat_i;    // ZZM
-   wire [7:0]             opc_fifo_dat_o;    // ZZM
-   reg                    opc_fifo_wr_enr;   // ZZM
-   reg                    opc_fifo_wr_enrr;  // ZZM
-   reg                    opc_fifo_rd_enr;   // ZZM
-   reg                    opc_fifo_rd_enrr;  // ZZM
-   wire [9:0]             opcode_fifo_count; // ZZM
-   wire                   opcode_fifo_empty; // ZZM
-   wire                   extd_fifo_wr_stb_w;// ZZM
+// 11-Jul HWDBG UART work, opc connected to mmc_tester 12-Jul
+//   wire                   opc_fifo_wr_en;    // ZZM wr enable to opcode input fifo.
+//   wire                   opc_fifo_rd_en;    // ZZM
+//   //wire [7:0]             opc_fifo_dat_i;    // ZZM
+//   wire [7:0]             opc_fifo_dat_o;    // ZZM
+//   reg                    opc_fifo_wr_enr;   // ZZM
+//   reg                    opc_fifo_wr_enrr;  // ZZM
+//   reg                    opc_fifo_rd_enr;   // ZZM
+//   reg                    opc_fifo_rd_enrr;  // ZZM
+//   //wire [9:0]             opcode_fifo_count; // ZZM
+//   wire                   opcode_fifo_empty; // ZZM
+//   wire                   extd_fifo_wr_stb_w;// ZZM
 
 //------------------------------------------------------------------------
 // Start of logic
@@ -585,37 +581,36 @@ always @(posedge clk050)
   end
 
 
-    // Instantiate VHDL fifo that the MMC slave core 
-    // (or debugging array) is using to store opcodes
-    swiss_army_fifo #(
-      .USE_BRAM(1),
-      .WIDTH(8),
-      .DEPTH(512),
-      .FILL_LEVEL_BITS(10),
-      .PF_FULL_POINT(511),
-      .PF_FLAG_POINT(256),
-      .PF_EMPTY_POINT(1)
-    ) input_opcodes(
-        .sys_rst_n(sys_rst_n),
-        .sys_clk(sys_clk),
-        .sys_clk_en(1'b1),
+  // Instantiate VHDL fifo that the MMC slave core 
+  // (or debugging array) is using to store opcodes
+  swiss_army_fifo #(
+    .USE_BRAM(1),
+    .WIDTH(8),
+    .DEPTH(512),
+    .FILL_LEVEL_BITS(10),
+    .PF_FULL_POINT(511),
+    .PF_FLAG_POINT(256),
+    .PF_EMPTY_POINT(1)
+  ) input_opcodes(
+      .sys_rst_n(sys_rst_n),
+      .sys_clk(sys_clk),
+      .sys_clk_en(1'b1),
         
-        .reset_i(1'b0),
+      .reset_i(1'b0),
         
-        .fifo_wr_i(opc_fifo_wr_en),           // ZZM comes from HWDBG ext'd extd_fifo_addr_wr_stb
-        .fifo_din(opc_fifo_dat_i),            // ZZM comes from HWDBG ext'd hw_ctl_o[71:64]
+      .fifo_wr_i(opc_fifo_wen),           // 12-Jul moved to mmc_tester  ZZM comes from HWDBG ext'd extd_fifo_addr_wr_stb
+      .fifo_din(opc_fifo_dat_i),          // 12-Jul moved to mmc_tester  ZZM comes from HWDBG ext'd hw_ctl_o[71:64]
         
-        .fifo_rd_i(opc_fifo_rd_en),           // ZZM comes from HWDBG ext'd hw_ctl_o[254] shaped to 1-tick.
-        .fifo_dout(opc_fifo_dat_o),     // ZZM goes to HWDBG uart hw_stat_i[119:112]
+      .fifo_rd_i(opc_fifo_ren),           // 12-Jul moved to opcode processor  ZZM comes from HWDBG ext'd hw_ctl_o[254] shaped to 1-tick.
+      .fifo_dout(opc_fifo_dat_o),         // 12-Jul moved to opcode processor  ZZM goes to HWDBG uart hw_stat_i[119:112]
         
-        .fifo_fill_level(opcode_fifo_count),  // ZZM goes to HWDBG uart hw_stat_i[104:96]
-        .fifo_full(opcode_fifo_full),
-        .fifo_empty(opcode_fifo_empty),
-        .fifo_pf_full(),
-        .fifo_pf_flag(),
-        .fifo_pf_empty()           
-    );
-
+      .fifo_fill_level(opc_fifo_count),   // 12-Jul used in opcode processor  ZZM goes to HWDBG uart hw_stat_i[104:96]
+      .fifo_full(opc_fifo_full),
+      .fifo_empty(opc_fifo_mt),
+      .fifo_pf_full(),
+      .fifo_pf_flag(),
+      .fifo_pf_empty()           
+  );
 
 
 // ******************************************************************************
@@ -696,13 +691,11 @@ always @(posedge clk050)
     .dbg_enables_o      (dbg_enables),
     
     // opcode_processor (instantiation of opcodes module) refactored to top level (arty_main.v or s4.v).
-//    .opc_enable_o      (opc_enable_w),
-
-//    .opc_fif_dat_o     (opc_fif_dat_w),
-//    .opc_fif_ren_i     (opc_fifo_ren_w),
-//    .opc_fif_rmt_o     (opc_fifo_rmt_w),
-//    .opc_rd_cnt_o      (),
-    
+    // connect the mmc fifo's to the opcode processor here.
+    .opc_fif_dat_o     (opc_fifo_dat_i),
+    .opc_fif_wen_o     (opc_fifo_wen),
+    .opc_fif_wmt_i     (opc_fifo_mt),
+    .opc_rd_cnt_i      (opc_fifo_count), 
 //    .opc_sys_st_o      (opc_sys_st_w),
 //    .opc_mode_i        (opc_mode_w),
 //    .opc_rspf_i        (opc_rspf_w),
@@ -711,7 +704,7 @@ always @(posedge clk050)
 //    .opc_rspf_fl_o     (opc_rspf_fl_w),
 //    .opc_rspf_rdy_i    (opc_rspf_rdy_w),
 //    .opc_rsp_cnt_o     (opc_rsp_cnt_w),
-    .opc_oc_cnt_i      ({22'd0, opcode_fifo_count})
+    .opc_oc_cnt_i      (opc_count)
 //    // Debugging
 //    .opc_status_i      (status_w),
 //    .opc_state_i       (state_w),
@@ -730,12 +723,12 @@ always @(posedge clk050)
     .rst_n                      (sys_rst_n),
     .clk                        (sys_clk),
 
-    .enable                     (opc_enable_w),     // 
+    .enable                     (opc_enable),
 
-    .fifo_dat_i                 (opc_fifo_dat_w),    // fifo read data bus
-    .fifo_rd_en_o               (opc_fifo_ren_w),   // fifo read line
-    .fifo_rd_empty_i            (opc_fifo_rmt_w),   // fifo empty flag
-    .fifo_rd_count_i            (opc_fifo_rfl_w),   // fifo fill level
+    .fifo_dat_i                 (opc_fifo_dat_),    // fifo read data bus
+    .fifo_rd_en_o               (opc_fifo_ren),     // fifo read line
+    .fifo_rd_empty_i            (opc_fifo_mt),      // fifo empty flag
+    .fifo_rd_count_i            (opc_fifo_count),   // fifo fill level
 
     .system_state_i             (opc_sys_st_w),     // s4 system state (e.g. running a pattern)
     .mode_o                     (opc_mode_w),       // MODE opcode can set system-wide flags
@@ -759,8 +752,6 @@ always @(posedge clk050)
 //    .pwr_fifo_empty_i,         // power fifo empty flag
 //    .pwr_fifo_full_i,          // power fifo full flag
                                                     
-// phase is X7 only, do later (not included here)
-                                                    
 //    .pulse_o,          // to fifo, pulse opcode
 //    .pulse_wr_en_o,           // pulse fifo write enable
 //    .pulse_fifo_empty_i,           // pulse fifo empty flag
@@ -780,7 +771,7 @@ always @(posedge clk050)
 //    .ptn_processor_en_o,      // Run pattern processor 
 //    .[15:0] ptn_start_addr_o, // address 
                                                     
-    .opcode_counter_o           (opc_oc_cnt_w),     // count opcodes for status info   
+    .opcode_counter_o           (opc_count),     // count opcodes for status info   
                                                         
     // Debugging
     .status_o                   (status_w),         // NULL opcode terminates, done=0, or error code
@@ -1012,7 +1003,7 @@ always @(posedge clk050)
 
     // diag/debug status  signal inputs
     .hw_stat_i                  (tdbgr),
-    .gp_opc_cnt_i               (opc_oc_cnt_w),          // count of opcodes processed from top level
+    .gp_opc_cnt_i               (opc_count),          // count of opcodes processed from top level
     .ptn_opc_cnt_i              (32'hdeadbeef),          // 32-bit input:  count of pattern opcodes processed from top level
     .sys_stat_vec_i             (opc_sys_st_w)           // 16-bit input:  status to show, system_state for now
    );
@@ -1021,29 +1012,31 @@ always @(posedge clk050)
    always @(posedge sys_clk) begin
       if (!sys_rst_n) begin
          tdbgr                     <= 256'b0;
-         opc_fifo_wr_enr           <= 1'b0;
-         opc_fifo_wr_enrr          <= 1'b0;
-         opc_fifo_rd_enr           <= 1'b0;
-         opc_fifo_rd_enrr          <= 1'b0;
+//         opc_fifo_wr_enr           <= 1'b0;
+//         opc_fifo_wr_enrr          <= 1'b0;
+//         opc_fifo_rd_enr           <= 1'b0;
+//         opc_fifo_rd_enrr          <= 1'b0;
       end
       else begin
-         tdbgr                     <= {tdbgw[255:120], opc_fifo_dat_o, opcode_fifo_empty, 5'b0, opcode_fifo_count, tdbgw[95:0]};
-         opc_fifo_wr_enr           <= extd_fifo_wr_stb_w;  // ZZM stb_w is a 1-tick signal.
-         opc_fifo_wr_enrr          <= opc_fifo_wr_enr;
-         opc_fifo_rd_enr           <= tdbgw[254];
-         opc_fifo_rd_enrr          <= opc_fifo_rd_enr;
+         tdbgr                     <= tdbgw; //{tdbgw[255:120], opc_fifo_dat_o, opcode_fifo_empty, 5'b0, opcode_fifo_count, tdbgw[95:0]};
+//         opc_fifo_wr_enr           <= extd_fifo_wr_stb_w;  // ZZM stb_w is a 1-tick signal.
+//         opc_fifo_wr_enrr          <= opc_fifo_wr_enr;
+//         opc_fifo_rd_enr           <= tdbgw[254];
+//         opc_fifo_rd_enrr          <= opc_fifo_rd_enr;
       end
    end  // end of always @ (posedge clk).
    
-   assign opc_fifo_dat_i = tdbgw[71:64];                            // ZZM
-   assign opc_fifo_wr_en = opc_fifo_wr_enrr;                        // ZZM
-   assign opc_fifo_rd_en = opc_fifo_rd_enr & ~opc_fifo_rd_enrr;     // ZZM
+//   assign opc_fifo_dat_i = tdbgw[71:64];                            // ZZM
+//   assign opc_fifo_wr_en = opc_fifo_wr_enrr;                        // ZZM
+//   assign opc_fifo_rd_en = opc_fifo_rd_enr & ~opc_fifo_rd_enrr;     // ZZM
         
    assign ACTIVE_LEDn = tdbgr[255]?count2[24]:count2[25];
    
-   assign FPGA_MCU2 = opc_fifo_wr_enrr;    // ZZM
-   assign FPGA_MCU3 = opc_fifo_rd_en;      // ZZM
-   assign FPGA_MCU4 = opcode_fifo_empty;   // ZZM    
+//   assign FPGA_MCU2 = opc_fifo_wr_enrr;    // ZZM
+//   assign FPGA_MCU3 = opc_fifo_rd_en;      // ZZM
+//   assign FPGA_MCU4 = opcode_fifo_empty;   // ZZM    
+  // 22-Jun have to scope MMC signals
+  assign FPGA_MCU4 = MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.
+  assign FPGA_MCU3 = MMC_CMD; //count3[15];    // 200MHz div'd by 2^16.
 
   endmodule
-

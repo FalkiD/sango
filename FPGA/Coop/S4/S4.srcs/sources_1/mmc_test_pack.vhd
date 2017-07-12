@@ -97,9 +97,32 @@ package mmc_test_pack is
     dbg_spi_device_o    : out unsigned(2 downto 0); --1=VGA, 2=SYN, 3=DDS, 4=ZMON
     dbg_spi_busy_i      : in  std_logic;
     dbg_enables_o       : out unsigned(15 downto 0);  --toggle various enables/wires
+
     -- opcode_processor : (instance of "opcodes") refactored to top level.
-    -- add items here if mmc debugger needs access (opcode processor entries)
-    opc_oc_cnt_i        : in  unsigned(31 downto 0)   -- count of opcodes processed
+    -- connect the mmc fifo's to the opcode processor.
+    -- 12-Jul-2017 For first articles, LPCOpen MMC interface not working,
+    -- use the MMC UART to enter 64-byte opcode blocks & read 64-byte responses
+    -- Either way, opcode processor i/o goes thru these mmc_tester connections
+    opc_fif_dat_o       : out unsigned( 7 downto 0);     -- write opcodes here
+    opc_fif_wen_o       : out std_logic;                 -- opcode fifo write line
+    opc_fif_wmt_i       : in std_logic;                  -- opcode fifo empty
+    opc_rd_cnt_i        : in unsigned(MMC_FILL_LEVEL_BITS-1 downto 0); -- opcode fifo fill level 
+    -- probably want opc_fifo_full too
+
+--    opc_sys_st_o   : out unsigned(15 downto 0);
+--    opc_mode_i     : in  unsigned(31 downto 0);
+    
+--    opc_rspf_i     : in  unsigned( 7 downto 0);         -- opcode processor response fifo
+--    opc_rspf_re_o  : out std_logic;                     -- response fifo read line             
+--    opc_rspf_mt_i  : in  std_logic;                     -- response fifo empty
+--    opc_rspf_fl_i  : in  std_logic;                     -- response fifo full
+--    opc_rspf_rdy_i : in  std_logic;                     -- response is ready
+--    -- opc_rsp_len_i  : in  std_logic(MMC_FILL_LEVEL_BITS-1 downto 0);   
+--    opc_rsp_cnt_i  : in  unsigned(RSP_FILL_LEVEL_BITS-1 downto 0); -- response length
+    opc_oc_cnt_i   : in  unsigned(31 downto 0)         -- count of opcodes processed
+--    -- Debugging
+--    opc_status_i   : in  unsigned( 7 downto 0);
+--    opc_state_i    : in  unsigned( 6 downto 0);
   );
   end component;
 
@@ -729,11 +752,14 @@ use work.async_syscon_pack.all;
     dbg_enables_o       : out unsigned(15 downto 0); --toggle various enables/wires
 
     -- opcode_processor : opcodes refactored to top level.
-    -- so none of these signals go anywhere
---    opc_fif_dat_o  : out unsigned( 7 downto 0);     -- write opcodes here
---    opc_fif_ren_o  : out std_logic;                 -- fifo write line
---    opc_fif_rmt_i  : in std_logic;                  -- opcode fifo empty
---    opc_rd_cnt_o   : in unsigned(MMC_FILL_LEVEL_BITS-1 downto 0); -- opcode fifo fill level 
+    -- connect the mmc fifo's to the opcode processor.
+    -- 12-Jul-2017 For first articles, LPCOpen MMC interface not working,
+    -- use the MMC UART to enter 64-byte opcode blocks & read 64-byte responses
+    -- Either way, opcode processor i/o goes thru these mmc_tester connections
+    opc_fif_dat_o       : out unsigned( 7 downto 0);     -- write opcodes here
+    opc_fif_wen_o       : out std_logic;                 -- opcode fifo write line
+    opc_fif_wmt_i       : in std_logic;                  -- opcode fifo empty
+    opc_rd_cnt_i        : in unsigned(MMC_FILL_LEVEL_BITS-1 downto 0); -- opcode fifo fill level 
     -- probably want opc_fifo_full too
 
 --    opc_sys_st_o   : out unsigned(15 downto 0);
@@ -817,6 +843,9 @@ architecture beh of mmc_tester is
   signal o_reg_sel        : std_logic; -- Opcode processor registers
   signal o_reg_ack        : std_logic; -- Opcode processor register ack
   signal o_reg_dat_rd     : unsigned(31 downto 0); -- Opcode processor register read data
+  signal r_reg_sel        : std_logic; -- SPI debug registers
+  signal r_reg_ack        : std_logic; -- SPI debug register ack
+  signal r_reg_dat_rd     : unsigned(31 downto 0); -- SPI debug register read data
   signal t_reg_sel_r1     : std_logic;
   signal t_reg_ack        : std_logic; -- Test register ack
   signal t_reg_dat_rd     : unsigned(31 downto 0); -- Test register read data
@@ -1033,6 +1062,7 @@ begin
   s_reg_sel <= '1' when syscon_cyc='1' and syscon_adr(31 downto 4)=16#0300001# else '0';
   t_reg_sel <= '1' when syscon_cyc='1' and syscon_adr(31 downto 4)=16#0300002# else '0';
   o_reg_sel <= '1' when syscon_cyc='1' and syscon_adr(31 downto 4)=16#0300003# else '0';
+  r_reg_sel <= '1' when syscon_cyc='1' and syscon_adr(31 downto 4)=16#0300004# else '0';
   h_ram_sel <= '1' when syscon_cyc='1' and syscon_adr(31 downto 24)=16#04# and syscon_adr(23 downto HOST_RAM_ADR_BITS)=0 else '0';
   s_ram_sel <= '1' when syscon_cyc='1' and syscon_adr(31 downto 24)=16#05# and syscon_adr(23 downto MMC_RAM_ADR_BITS)=0 else '0';
 
@@ -1040,6 +1070,7 @@ begin
                    s_reg_dat_rd              when s_reg_sel='1' else
                    t_reg_dat_rd              when t_reg_sel='1' else
                    o_reg_dat_rd              when o_reg_sel='1' else
+                   r_reg_dat_rd              when r_reg_sel='1' else
                    u_resize(h_ram_dat_rd,32) when h_ram_sel='1' else
                    u_resize(s_ram_dat_rd,32) when s_ram_sel='1' else
                    str2u("12340000",32);
@@ -1048,12 +1079,13 @@ begin
                 s_reg_ack when s_reg_sel='1' else
                 t_reg_ack when t_reg_sel='1' else
                 o_reg_ack when o_reg_sel='1' else
+                r_reg_ack when r_reg_sel='1' else
                 h_ram_ack when h_ram_sel='1' else
                 s_ram_ack when s_ram_sel='1' else
                 '0';
 
   syscon_err <= '0' when h_reg_sel='1' or s_reg_sel='1' or t_reg_sel='1' or 
-                 o_reg_sel='1' or h_ram_sel='1' or s_ram_sel='1' else '1';
+                 o_reg_sel='1' or r_reg_sel='1' or h_ram_sel='1' or s_ram_sel='1' else '1';
 
   -- Select data for Local Register Reads
   with to_integer(syscon_adr(3 downto 0)) select
@@ -1086,9 +1118,6 @@ begin
     --u_resize(opc_ptn_dbg_status,32)                when 16#7#,      -- temporarily 'response_ready' pattern processor status upper 16, unused lower 16
     --u_resize(s_fif_dat_wr_level,32)                when 16#8#,      -- response fifo fill level
   str2u("51514343",32)                           when others;
-
-
-
 
  -- Handle Local Register Writes
   process(sys_rst_n,sys_clk)
@@ -1158,7 +1187,8 @@ begin
         end case;
       end if;
       
-      -- spi debug, opcode processor register writes
+      -- Opcode processor register writes, 03000040 x y z ...
+      -- back door to opcode processor
       if (o_reg_sel='1' and syscon_we='1') then
         case to_integer(syscon_adr(3 downto 0)) is
           when 16#0# =>
@@ -1172,91 +1202,199 @@ begin
             if(dbg_spi_count = dbg_spi_bytes_io) then
               dbg_spi_start_o <= '1';
             else
-              dbg_spi_count <= dbg_spi_count + to_unsigned(1, dbg_spi_count'length);
+              dbg_spi_count <= dbg_spi_count + 1;
             end if;
           when 16#3# =>
             dbg_spi_data1_o <= syscon_dat_wr(7 downto 0);
             if(dbg_spi_count = dbg_spi_bytes_io) then
               dbg_spi_start_o <= '1';
             else
-              dbg_spi_count <= dbg_spi_count + to_unsigned(1, dbg_spi_count'length);
+              dbg_spi_count <= dbg_spi_count + 1;
             end if;
           when 16#4# =>
             dbg_spi_data2_o <= syscon_dat_wr(7 downto 0);
             if(dbg_spi_count = dbg_spi_bytes_io) then
               dbg_spi_start_o <= '1';
             else
-              dbg_spi_count <= dbg_spi_count + to_unsigned(1, dbg_spi_count'length);
+              dbg_spi_count <= dbg_spi_count + 1;
             end if;
           when 16#5# =>
             dbg_spi_data3_o <= syscon_dat_wr(7 downto 0);
             if(dbg_spi_count = dbg_spi_bytes_io) then
               dbg_spi_start_o <= '1';
             else
-              dbg_spi_count <= dbg_spi_count + to_unsigned(1, dbg_spi_count'length);
+              dbg_spi_count <= dbg_spi_count + 1;
             end if;
           when 16#6# =>
             dbg_spi_data4_o <= syscon_dat_wr(7 downto 0);
             if(dbg_spi_count = dbg_spi_bytes_io) then
               dbg_spi_start_o <= '1';
             else
-              dbg_spi_count <= dbg_spi_count + to_unsigned(1, dbg_spi_count'length);
+              dbg_spi_count <= dbg_spi_count + 1;
             end if;
           when 16#7# =>
             dbg_spi_data5_o <= syscon_dat_wr(7 downto 0);
             if(dbg_spi_count = dbg_spi_bytes_io) then
               dbg_spi_start_o <= '1';
             else
-              dbg_spi_count <= dbg_spi_count + to_unsigned(1, dbg_spi_count'length);
+              dbg_spi_count <= dbg_spi_count + 1;
             end if;
           when 16#8# =>
             dbg_spi_data6_o <= syscon_dat_wr(7 downto 0);
             if(dbg_spi_count = dbg_spi_bytes_io) then
               dbg_spi_start_o <= '1';
             else
-              dbg_spi_count <= dbg_spi_count + to_unsigned(1, dbg_spi_count'length);
+              dbg_spi_count <= dbg_spi_count + 1;
             end if;
           when 16#9# =>
             dbg_spi_data7_o <= syscon_dat_wr(7 downto 0);
             if(dbg_spi_count = dbg_spi_bytes_io) then
               dbg_spi_start_o <= '1';
             else
-              dbg_spi_count <= dbg_spi_count + to_unsigned(1, dbg_spi_count'length);
+              dbg_spi_count <= dbg_spi_count + 1;
             end if;
           when 16#A# =>
             dbg_spi_data8_o <= syscon_dat_wr(7 downto 0);
             if(dbg_spi_count = dbg_spi_bytes_io) then
               dbg_spi_start_o <= '1';
             else
-              dbg_spi_count <= dbg_spi_count + to_unsigned(1, dbg_spi_count'length);
+              dbg_spi_count <= dbg_spi_count + 1;
             end if;
           when 16#B# =>
             dbg_spi_data9_o <= syscon_dat_wr(7 downto 0);
             if(dbg_spi_count = dbg_spi_bytes_io) then
               dbg_spi_start_o <= '1';
             else
-              dbg_spi_count <= dbg_spi_count + to_unsigned(1, dbg_spi_count'length);
+              dbg_spi_count <= dbg_spi_count + 1;
             end if;
           when 16#C# =>
             dbg_spi_dataA_o <= syscon_dat_wr(7 downto 0);
             if(dbg_spi_count = dbg_spi_bytes_io) then
               dbg_spi_start_o <= '1';
             else
-              dbg_spi_count <= dbg_spi_count + to_unsigned(1, dbg_spi_count'length);
+              dbg_spi_count <= dbg_spi_count + 1;
             end if;
           when 16#D# =>
             dbg_spi_dataB_o <= syscon_dat_wr(7 downto 0);
             if(dbg_spi_count = dbg_spi_bytes_io) then
               dbg_spi_start_o <= '1';
             else
-              dbg_spi_count <= dbg_spi_count + to_unsigned(1, dbg_spi_count'length);
+              dbg_spi_count <= dbg_spi_count + 1;
             end if;
           when 16#E# =>
             dbg_spi_dataC_o <= syscon_dat_wr(7 downto 0);
             if(dbg_spi_count = dbg_spi_bytes_io) then
               dbg_spi_start_o <= '1';
             else
-              dbg_spi_count <= dbg_spi_count + to_unsigned(1, dbg_spi_count'length);
+              dbg_spi_count <= dbg_spi_count + 1;
+            end if;
+          when 16#F# =>
+            dbg_spi_dataD_o <= syscon_dat_wr(7 downto 0);
+            dbg_spi_start_o <= '1';
+          when others =>
+            null;
+          end case;
+      end if;            
+
+      -- spi debug, SPI debug register writes, 03000040 x y z ...
+      if (r_reg_sel='1' and syscon_we='1') then
+        case to_integer(syscon_adr(3 downto 0)) is
+          when 16#0# =>
+            dbg_spi_device_o <= syscon_dat_wr(2 downto 0);
+            dbg_spi_start_o <= '0';
+          when 16#1# =>
+            dbg_spi_bytes_io <= syscon_dat_wr(3 downto 0);
+            dbg_spi_count <= to_unsigned(1, dbg_spi_count'length);
+          when 16#2# =>
+            dbg_spi_data0_o <= syscon_dat_wr(7 downto 0);
+            if(dbg_spi_count = dbg_spi_bytes_io) then
+              dbg_spi_start_o <= '1';
+            else
+              dbg_spi_count <= dbg_spi_count + 1;
+            end if;
+          when 16#3# =>
+            dbg_spi_data1_o <= syscon_dat_wr(7 downto 0);
+            if(dbg_spi_count = dbg_spi_bytes_io) then
+              dbg_spi_start_o <= '1';
+            else
+              dbg_spi_count <= dbg_spi_count + 1;
+            end if;
+          when 16#4# =>
+            dbg_spi_data2_o <= syscon_dat_wr(7 downto 0);
+            if(dbg_spi_count = dbg_spi_bytes_io) then
+              dbg_spi_start_o <= '1';
+            else
+              dbg_spi_count <= dbg_spi_count + 1;
+            end if;
+          when 16#5# =>
+            dbg_spi_data3_o <= syscon_dat_wr(7 downto 0);
+            if(dbg_spi_count = dbg_spi_bytes_io) then
+              dbg_spi_start_o <= '1';
+            else
+              dbg_spi_count <= dbg_spi_count + 1;
+            end if;
+          when 16#6# =>
+            dbg_spi_data4_o <= syscon_dat_wr(7 downto 0);
+            if(dbg_spi_count = dbg_spi_bytes_io) then
+              dbg_spi_start_o <= '1';
+            else
+              dbg_spi_count <= dbg_spi_count + 1;
+            end if;
+          when 16#7# =>
+            dbg_spi_data5_o <= syscon_dat_wr(7 downto 0);
+            if(dbg_spi_count = dbg_spi_bytes_io) then
+              dbg_spi_start_o <= '1';
+            else
+              dbg_spi_count <= dbg_spi_count + 1;
+            end if;
+          when 16#8# =>
+            dbg_spi_data6_o <= syscon_dat_wr(7 downto 0);
+            if(dbg_spi_count = dbg_spi_bytes_io) then
+              dbg_spi_start_o <= '1';
+            else
+              dbg_spi_count <= dbg_spi_count + 1;
+            end if;
+          when 16#9# =>
+            dbg_spi_data7_o <= syscon_dat_wr(7 downto 0);
+            if(dbg_spi_count = dbg_spi_bytes_io) then
+              dbg_spi_start_o <= '1';
+            else
+              dbg_spi_count <= dbg_spi_count + 1;
+            end if;
+          when 16#A# =>
+            dbg_spi_data8_o <= syscon_dat_wr(7 downto 0);
+            if(dbg_spi_count = dbg_spi_bytes_io) then
+              dbg_spi_start_o <= '1';
+            else
+              dbg_spi_count <= dbg_spi_count + 1;
+            end if;
+          when 16#B# =>
+            dbg_spi_data9_o <= syscon_dat_wr(7 downto 0);
+            if(dbg_spi_count = dbg_spi_bytes_io) then
+              dbg_spi_start_o <= '1';
+            else
+              dbg_spi_count <= dbg_spi_count + 1;
+            end if;
+          when 16#C# =>
+            dbg_spi_dataA_o <= syscon_dat_wr(7 downto 0);
+            if(dbg_spi_count = dbg_spi_bytes_io) then
+              dbg_spi_start_o <= '1';
+            else
+              dbg_spi_count <= dbg_spi_count + 1;
+            end if;
+          when 16#D# =>
+            dbg_spi_dataB_o <= syscon_dat_wr(7 downto 0);
+            if(dbg_spi_count = dbg_spi_bytes_io) then
+              dbg_spi_start_o <= '1';
+            else
+              dbg_spi_count <= dbg_spi_count + 1;
+            end if;
+          when 16#E# =>
+            dbg_spi_dataC_o <= syscon_dat_wr(7 downto 0);
+            if(dbg_spi_count = dbg_spi_bytes_io) then
+              dbg_spi_start_o <= '1';
+            else
+              dbg_spi_count <= dbg_spi_count + 1;
             end if;
           when 16#F# =>
             dbg_spi_dataD_o <= syscon_dat_wr(7 downto 0);
@@ -1270,15 +1408,15 @@ begin
       if(dbg_spi_start_o = '1' and dbg_spi_busy_i = '1') then
         dbg_spi_start_o <= '0';     -- clear start
       end if;
-      
+
     end if;
   end process;
   -- Provide test register acknowledge
   t_reg_ack <= '1' when syscon_adr(3 downto 0)=10 and tlm_r10_count=1 else
                '1' when syscon_adr(3 downto 0)/=10 and t_reg_sel='1' and t_reg_sel_r1='0' else
                '0';
-  o_reg_ack <= '1' when syscon_adr(3 downto 0)/=10 and o_reg_sel='1' else
-               '0';
+  o_reg_ack <= o_reg_sel;
+  r_reg_ack <= r_reg_sel;
 
   -- Provide led_reg as output to external LEDs
   led_o <= led_reg;
