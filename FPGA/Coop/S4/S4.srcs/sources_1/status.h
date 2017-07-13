@@ -75,7 +75,7 @@
 `define STATE_SPI_BUSY          16'h1000
 `define STATE_RSP_READY         16'h2000
 
-// default response length, status code, pad byte, 2 data length bytes are minimum.
+// default response length, status code, opcode, 2 data length bytes are minimum.
 `define DEFAULT_RESPONSE_LENGTH 16'h0004
 
 `endif

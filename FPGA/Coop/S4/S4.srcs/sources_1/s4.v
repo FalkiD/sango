@@ -126,6 +126,9 @@
 //   Each SPI device has its own SPI interface fifo at top level. 
 //   SPI data is written by opcode processor into the correct SPI fifo.
 //
+//
+//   13-Jul Debugging note. The fifo_count shown while simulating takes one
+//   extra clock tick to show.   
 // 
 // -----------------------------------------------------------------------------
 
@@ -1024,9 +1027,11 @@ end
   `define BKD_WR1   5'd2
   `define BKD_WR2   5'd3
   `define BKD_WR3   5'd4
-  `define BKD_WTMUX 5'd5
+  `define BKD_NEXT  5'd5
   `define BKD_WRREG 5'd6
   `define BKD_DONE  5'd7
+  `define BKD_SPCR  5'd8
+  `define BKD_BUG   5'd9
   always @(posedge sys_clk) begin
     if(!sys_rst_n) begin
       opc_load_ack <= 1'b0;
@@ -1038,13 +1043,14 @@ end
       if(opc_load_ack == 1'b0) begin    // we haven't loaded opc yet
         case(bkd_opc_state)
         `BKD_IDLE: begin
+          opc_inreg <= opc_dat0;   
           opc_load_ack <= 1'b0;
           bkd_counter <= 6'd0;
           bkd_opc_state <= `BKD_WR0;
         end
         `BKD_WR0: begin
           opc_fifo_dat_i <= opc_inreg[7:0];
-          opc_fifo_wen <= 1'b1;
+          opc_fifo_wen <= 1'b1;     // writes on 1st clock even though count takes another clock to update
           bkd_counter <= bkd_counter + 1;
           bkd_opc_state <= `BKD_WR1;
         end
@@ -1064,9 +1070,26 @@ end
           if(bkd_counter == `BKD_COUNT)
             bkd_opc_state <= `BKD_DONE;
           else
-            bkd_opc_state <= `BKD_WTMUX;
+            bkd_opc_state <= `BKD_NEXT;
         end
-        `BKD_WTMUX: begin // Wait 1 tick for mux
+        `BKD_NEXT: begin // Next word
+          case(bkd_counter) 
+          4:  opc_inreg <= opc_dat1;           
+          8:  opc_inreg <= opc_dat2;           
+          12: opc_inreg <= opc_dat3;           
+          16: opc_inreg <= opc_dat4;           
+          20: opc_inreg <= opc_dat5;           
+          24: opc_inreg <= opc_dat6;           
+          28: opc_inreg <= opc_dat7;           
+          32: opc_inreg <= opc_dat8;           
+          36: opc_inreg <= opc_dat9;           
+          40: opc_inreg <= opc_datA;           
+          44: opc_inreg <= opc_datB;           
+          48: opc_inreg <= opc_datC;           
+          52: opc_inreg <= opc_datD;           
+          56: opc_inreg <= opc_datE;           
+          60: opc_inreg <= opc_datF;
+          endcase
           bkd_opc_state <= `BKD_WR0;
           opc_fifo_wen <= 1'b0;
         end
@@ -1086,57 +1109,6 @@ end
       if(opc_load_ack == 1'b1)
         opc_load_ack <= 1'b0;    
     end 
-  end
-  // Mux the 16 opc data wires from mmc_tester UART into one register
-  always @(posedge sys_clk) begin
-    if(bkd_counter < 4) begin
-      opc_inreg <= opc_dat0;
-    end
-    else if(bkd_counter < 8) begin
-      opc_inreg <= opc_dat1;
-    end
-    else if(bkd_counter < 12) begin
-      opc_inreg <= opc_dat2;
-    end
-    else if(bkd_counter < 16) begin
-      opc_inreg <= opc_dat3;
-    end
-    else if(bkd_counter < 20) begin
-      opc_inreg <= opc_dat4;
-    end
-    else if(bkd_counter < 24) begin
-      opc_inreg <= opc_dat5;
-    end
-    else if(bkd_counter < 28) begin
-      opc_inreg <= opc_dat6;
-    end
-    else if(bkd_counter < 32) begin
-      opc_inreg <= opc_dat7;
-    end
-    else if(bkd_counter < 36) begin
-      opc_inreg <= opc_dat8;
-    end
-    else if(bkd_counter < 40) begin
-      opc_inreg <= opc_dat9;
-    end
-    else if(bkd_counter < 44) begin
-      opc_inreg <= opc_datA;
-    end
-    else if(bkd_counter < 48) begin
-      opc_inreg <= opc_datB;
-    end
-    else if(bkd_counter < 52) begin
-      opc_inreg <= opc_datC;
-    end
-    else if(bkd_counter < 56) begin
-      opc_inreg <= opc_datD;
-    end
-    else if(bkd_counter < 60) begin
-      opc_inreg <= opc_datE;
-    end
-    else begin
-      opc_inreg <= opc_datF;
-    end
   end
 
 
@@ -1169,6 +1141,12 @@ always @(posedge sys_clk) begin
         opc_outreg[7:0] <= opc_rspf_dat_o;
         opc_rspf_ren <= 1'b1;
         bkd_rsp_counter <= bkd_rsp_counter + 1;
+        bkd_rsp_state <= `BKD_SPCR; // Takes extra clk to start reading
+      end
+      `BKD_SPCR: begin
+        bkd_rsp_state <= `BKD_BUG;
+      end
+      `BKD_BUG: begin
         bkd_rsp_state <= `BKD_WR1;
       end
       `BKD_WR1: begin
@@ -1228,57 +1206,6 @@ always @(posedge sys_clk) begin
       opc_rsp_new <= 1'b0;    
   end 
 end
-// Mux the rsp fifo data out to 16 rsp data wires to mmc_tester UART
-//always @(posedge sys_clk) begin
-//  if(bkd_rsp_counter < 4) begin
-//    opc_rsp0 <= opc_outreg;
-//  end
-//  else if(bkd_rsp_counter < 8) begin
-//    opc_rsp1 <= opc_outreg;
-//  end
-//  else if(bkd_rsp_counter < 12) begin
-//    opc_rsp2 <= opc_outreg;
-//  end
-//  else if(bkd_rsp_counter < 16) begin
-//    opc_rsp3 <= opc_outreg;
-//  end
-//  else if(bkd_rsp_counter < 20) begin
-//    opc_rsp4 <= opc_outreg;
-//  end
-//  else if(bkd_rsp_counter < 24) begin
-//    opc_rsp5 <= opc_outreg;
-//  end
-//  else if(bkd_rsp_counter < 28) begin
-//    opc_rsp6 <= opc_outreg;
-//  end
-//  else if(bkd_rsp_counter < 32) begin
-//    opc_rsp7 <= opc_outreg;
-//  end
-//  else if(bkd_rsp_counter < 36) begin
-//    opc_rsp8 <= opc_outreg;
-//  end
-//  else if(bkd_rsp_counter < 40) begin
-//    opc_rsp9 <= opc_outreg;
-//  end
-//  else if(bkd_rsp_counter < 44) begin
-//    opc_rspA <= opc_outreg;
-//  end
-//  else if(bkd_rsp_counter < 48) begin
-//    opc_rspB <= opc_outreg;
-//  end
-//  else if(bkd_rsp_counter < 52) begin
-//    opc_rspC <= opc_outreg;
-//  end
-//  else if(bkd_rsp_counter < 56) begin
-//    opc_rspD <= opc_outreg;
-//  end
-//  else if(bkd_rsp_counter < 60) begin
-//    opc_rspE <= opc_outreg;
-//  end
-//  else begin
-//    opc_rspF <= opc_outreg;
-//  end
-//end
 
 
   // Implement MMC card tri-state drivers at the top level
