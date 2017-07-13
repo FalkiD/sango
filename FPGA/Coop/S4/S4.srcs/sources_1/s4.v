@@ -321,23 +321,43 @@ wire         syscon_txd;
 // Use 16 32-bit words to transfer 64 byte opcode blocks
 wire            opc_load_new;       // Load new opcode block into opcode fifo, from mmc_tester
 reg             opc_load_ack;       // Done loading opcodes block
-wire [31:0]     opc_data0;
-wire [31:0]     opc_data1;
-wire [31:0]     opc_data2;
-wire [31:0]     opc_data3;
-wire [31:0]     opc_data4;
-wire [31:0]     opc_data5;
-wire [31:0]     opc_data6;
-wire [31:0]     opc_data7;
-wire [31:0]     opc_data8;
-wire [31:0]     opc_data9;
-wire [31:0]     opc_dataA;
-wire [31:0]     opc_dataB;
-wire [31:0]     opc_dataC;
-wire [31:0]     opc_dataD;
-wire [31:0]     opc_dataE;
-wire [31:0]     opc_dataF;
+wire [31:0]     opc_dat0;
+wire [31:0]     opc_dat1;
+wire [31:0]     opc_dat2;
+wire [31:0]     opc_dat3;
+wire [31:0]     opc_dat4;
+wire [31:0]     opc_dat5;
+wire [31:0]     opc_dat6;
+wire [31:0]     opc_dat7;
+wire [31:0]     opc_dat8;
+wire [31:0]     opc_dat9;
+wire [31:0]     opc_datA;
+wire [31:0]     opc_datB;
+wire [31:0]     opc_datC;
+wire [31:0]     opc_datD;
+wire [31:0]     opc_datE;
+wire [31:0]     opc_datF;
 reg  [31:0]     opc_inreg;          // Mux'd above 16 wires
+// same for the opcode processor response, goes through mmc_tester debug uart
+reg             opc_rsp_new;       // Send opcode response block to mmc_tester uart
+wire            opc_rsp_ack;       // Done sending response
+reg  [31:0]     opc_rsp0;
+reg  [31:0]     opc_rsp1;
+reg  [31:0]     opc_rsp2;
+reg  [31:0]     opc_rsp3;
+reg  [31:0]     opc_rsp4;
+reg  [31:0]     opc_rsp5;
+reg  [31:0]     opc_rsp6;
+reg  [31:0]     opc_rsp7;
+reg  [31:0]     opc_rsp8;
+reg  [31:0]     opc_rsp9;
+reg  [31:0]     opc_rspA;
+reg  [31:0]     opc_rspB;
+reg  [31:0]     opc_rspC;
+reg  [31:0]     opc_rspD;
+reg  [31:0]     opc_rspE;
+reg  [31:0]     opc_rspF;
+reg  [31:0]     opc_outreg;         // Mux'd above 16 response wires
 
 // opcode processor wires:
 reg          opc_enable;                // control needed...      
@@ -359,7 +379,7 @@ wire         opc_rspf_wen;            // response fifo write enable
 wire         opc_rspf_mt;             // response fifo empty flag
 wire         opc_rspf_fl;             // response fifo full  flag
 wire         opc_rspf_rdy;            // response fifo is waiting
-wire         opc_rspf_ren;            // response fifo read enable
+reg          opc_rspf_ren;            // response fifo read enable
 wire [7:0]   opc_rspf_dat_o;          // response fifo output data, used to generate response block
 wire [`GLBL_RSP_FILL_LEVEL_BITS-1:0] opc_rsp_lng;    // update response length when response is ready
 wire [`GLBL_RSP_FILL_LEVEL_BITS-1:0] opc_rsp_cnt;    // response fifo count, opcode processor asserts 
@@ -773,22 +793,42 @@ end
     // 12-Jul first article must use back-door UART entry since LPC MMC interface is not working
     .bkd_opc_load_new   (opc_load_new),
     .bkd_opc_load_ack   (opc_load_ack),
-    .bkd_opc_data0_o    (opc_data0),
-    .bkd_opc_data1_o    (opc_data1),
-    .bkd_opc_data2_o    (opc_data2),
-    .bkd_opc_data3_o    (opc_data3),
-    .bkd_opc_data4_o    (opc_data4),
-    .bkd_opc_data5_o    (opc_data5),
-    .bkd_opc_data6_o    (opc_data6),
-    .bkd_opc_data7_o    (opc_data7),
-    .bkd_opc_data8_o    (opc_data8),
-    .bkd_opc_data9_o    (opc_data9),
-    .bkd_opc_dataA_o    (opc_dataA),
-    .bkd_opc_dataB_o    (opc_dataB),
-    .bkd_opc_dataC_o    (opc_dataC),
-    .bkd_opc_dataD_o    (opc_dataD),
-    .bkd_opc_dataE_o    (opc_dataE),
-    .bkd_opc_dataF_o    (opc_dataF),
+    .bkd_opc_dat0_o    (opc_dat0),
+    .bkd_opc_dat1_o    (opc_dat1),
+    .bkd_opc_dat2_o    (opc_dat2),
+    .bkd_opc_dat3_o    (opc_dat3),
+    .bkd_opc_dat4_o    (opc_dat4),
+    .bkd_opc_dat5_o    (opc_dat5),
+    .bkd_opc_dat6_o    (opc_dat6),
+    .bkd_opc_dat7_o    (opc_dat7),
+    .bkd_opc_dat8_o    (opc_dat8),
+    .bkd_opc_dat9_o    (opc_dat9),
+    .bkd_opc_datA_o    (opc_datA),
+    .bkd_opc_datB_o    (opc_datB),
+    .bkd_opc_datC_o    (opc_datC),
+    .bkd_opc_datD_o    (opc_datD),
+    .bkd_opc_datE_o    (opc_datE),
+    .bkd_opc_datF_o    (opc_datF),
+
+    .bkd_rsp_i          (opc_rsp_new),       // Send opcode response block to mmc_tester uart
+    .bkd_rsp_ack_o      (opc_rsp_ack),       // Done sending response
+    .bkd_rsp_dat0_i     (opc_rsp0),
+    .bkd_rsp_dat1_i     (opc_rsp1),
+    .bkd_rsp_dat2_i     (opc_rsp2),
+    .bkd_rsp_dat3_i     (opc_rsp3),
+    .bkd_rsp_dat4_i     (opc_rsp4),
+    .bkd_rsp_dat5_i     (opc_rsp5),
+    .bkd_rsp_dat6_i     (opc_rsp6),
+    .bkd_rsp_dat7_i     (opc_rsp7),
+    .bkd_rsp_dat8_i     (opc_rsp8),
+    .bkd_rsp_dat9_i     (opc_rsp9),
+    .bkd_rsp_datA_i     (opc_rspA),
+    .bkd_rsp_datB_i     (opc_rspB),
+    .bkd_rsp_datC_i     (opc_rspC),
+    .bkd_rsp_datD_i     (opc_rspD),
+    .bkd_rsp_datE_i     (opc_rspE),
+    .bkd_rsp_datF_i     (opc_rspF),
+
 //    .opc_fif_dat_o     (opc_fifo_dat_i),
 //    .opc_fif_wen_o     (opc_fifo_wen),
 //    .opc_fif_wmt_i     (opc_fifo_mt),
@@ -836,7 +876,7 @@ end
     .response_fifo_full_i       (opc_rspf_fl),      // response fifo full  flag
     .response_ready_o           (opc_rspf_rdy),     // response fifo is waiting
     .response_length_o          (opc_rsp_lng),      // update response length when response is ready
-    .response_fifo_count_i      (opc_rsp_cnt),      // response fifo count, opcode processor asserts 
+    .response_fifo_count_i      (opc_rsp_cnt),      // response fifo count
 // response_ready when fifo_length==response_length
 
 //    .frequency_o,  // to fifo, frequency output in MHz           //zzmf0003
@@ -968,7 +1008,14 @@ end
     end
   end
 
-  // Load the opcode processor fifo using back-door UART
+
+// ******************************************************************************
+// *                                                                            *
+// *  Load opcode fifo from the mmc_tester instance                             *
+// *  (Initially using mmc debug uart)                                          *
+// *  Load the opcode processor fifo using back-door UART                       *
+// *                                                                            *
+// ******************************************************************************
   reg  [4:0]    bkd_opc_state;
   reg  [5:0]    bkd_counter;
   `define BKD_COUNT 6'd63
@@ -978,7 +1025,8 @@ end
   `define BKD_WR2   5'd3
   `define BKD_WR3   5'd4
   `define BKD_WTMUX 5'd5
-  `define BKD_DONE  5'd6
+  `define BKD_WRREG 5'd6
+  `define BKD_DONE  5'd7
   always @(posedge sys_clk) begin
     if(!sys_rst_n) begin
       opc_load_ack <= 1'b0;
@@ -1039,58 +1087,199 @@ end
         opc_load_ack <= 1'b0;    
     end 
   end
-
   // Mux the 16 opc data wires from mmc_tester UART into one register
   always @(posedge sys_clk) begin
     if(bkd_counter < 4) begin
-      opc_inreg <= opc_data0;
+      opc_inreg <= opc_dat0;
     end
     else if(bkd_counter < 8) begin
-      opc_inreg <= opc_data1;
+      opc_inreg <= opc_dat1;
     end
     else if(bkd_counter < 12) begin
-      opc_inreg <= opc_data2;
+      opc_inreg <= opc_dat2;
     end
     else if(bkd_counter < 16) begin
-      opc_inreg <= opc_data3;
+      opc_inreg <= opc_dat3;
     end
     else if(bkd_counter < 20) begin
-      opc_inreg <= opc_data4;
+      opc_inreg <= opc_dat4;
     end
     else if(bkd_counter < 24) begin
-      opc_inreg <= opc_data5;
+      opc_inreg <= opc_dat5;
     end
     else if(bkd_counter < 28) begin
-      opc_inreg <= opc_data6;
+      opc_inreg <= opc_dat6;
     end
     else if(bkd_counter < 32) begin
-      opc_inreg <= opc_data7;
+      opc_inreg <= opc_dat7;
     end
     else if(bkd_counter < 36) begin
-      opc_inreg <= opc_data8;
+      opc_inreg <= opc_dat8;
     end
     else if(bkd_counter < 40) begin
-      opc_inreg <= opc_data9;
+      opc_inreg <= opc_dat9;
     end
     else if(bkd_counter < 44) begin
-      opc_inreg <= opc_dataA;
+      opc_inreg <= opc_datA;
     end
     else if(bkd_counter < 48) begin
-      opc_inreg <= opc_dataB;
+      opc_inreg <= opc_datB;
     end
     else if(bkd_counter < 52) begin
-      opc_inreg <= opc_dataC;
+      opc_inreg <= opc_datC;
     end
     else if(bkd_counter < 56) begin
-      opc_inreg <= opc_dataD;
+      opc_inreg <= opc_datD;
     end
     else if(bkd_counter < 60) begin
-      opc_inreg <= opc_dataE;
+      opc_inreg <= opc_datE;
     end
     else begin
-      opc_inreg <= opc_dataF;
+      opc_inreg <= opc_datF;
     end
   end
+
+
+// ******************************************************************************
+// *                                                                            *
+// *  Send opcode response fifo to the mmc_tester instance                      *
+// *  (Initially using mmc debug uart)                                          *
+// *  Send the opcode processor response fifo using back-door UART              *
+// *                                                                            *
+// ******************************************************************************
+reg  [4:0]    bkd_rsp_state;
+reg  [5:0]    bkd_rsp_counter;
+reg           bkd_rsp_run;
+always @(posedge sys_clk) begin
+  if(!sys_rst_n) begin
+    opc_rsp_new <= 1'b0;
+    bkd_rsp_run <= 1'b0;
+    bkd_rsp_state <= `BKD_IDLE;
+    bkd_rsp_counter <= 6'd0;
+  end
+  else if(opc_rspf_rdy == 1'b1 || bkd_rsp_run) begin
+      case(bkd_rsp_state)
+      `BKD_IDLE: begin
+        opc_rsp_new <= 1'b0;
+        bkd_rsp_counter <= 6'd0;
+        bkd_rsp_run <= 1'b1;
+        bkd_rsp_state <= `BKD_WR0;
+      end
+      `BKD_WR0: begin
+        opc_outreg[7:0] <= opc_rspf_dat_o;
+        opc_rspf_ren <= 1'b1;
+        bkd_rsp_counter <= bkd_rsp_counter + 1;
+        bkd_rsp_state <= `BKD_WR1;
+      end
+      `BKD_WR1: begin
+        opc_outreg[15:8] <= opc_rspf_dat_o;
+        bkd_rsp_counter <= bkd_rsp_counter + 1;
+        bkd_rsp_state <= `BKD_WR2;
+      end
+      `BKD_WR2: begin
+        opc_outreg[23:16] <= opc_rspf_dat_o;
+        bkd_rsp_counter <= bkd_rsp_counter + 1;
+        bkd_rsp_state <= `BKD_WR3;
+      end
+      `BKD_WR3: begin
+        opc_outreg[31:24] <= opc_rspf_dat_o;
+        bkd_rsp_counter <= bkd_rsp_counter + 1;
+        if(bkd_rsp_counter == `BKD_COUNT)
+          bkd_rsp_state <= `BKD_DONE;
+        else
+          bkd_rsp_state <= `BKD_WRREG;
+          opc_rspf_ren <= 1'b1;
+      end
+      `BKD_WRREG: begin // Save value
+        case(bkd_rsp_counter) 
+        4:  opc_rsp0 <= opc_outreg;           
+        8:  opc_rsp1 <= opc_outreg;           
+        12: opc_rsp2 <= opc_outreg;           
+        16: opc_rsp3 <= opc_outreg;           
+        20: opc_rsp4 <= opc_outreg;           
+        24: opc_rsp5 <= opc_outreg;           
+        28: opc_rsp6 <= opc_outreg;           
+        32: opc_rsp7 <= opc_outreg;           
+        36: opc_rsp8 <= opc_outreg;           
+        40: opc_rsp9 <= opc_outreg;           
+        44: opc_rspA <= opc_outreg;           
+        48: opc_rspB <= opc_outreg;           
+        52: opc_rspC <= opc_outreg;           
+        56: opc_rspD <= opc_outreg;           
+        60: opc_rspE <= opc_outreg;           
+        64: opc_rspF <= opc_outreg;           
+        endcase
+        bkd_rsp_state <= `BKD_WR0;
+        opc_rspf_ren <= 1'b1;
+      end
+      `BKD_DONE: begin
+        opc_rsp_new <= 1'b1;
+        opc_rspf_ren <= 1'b0;
+        bkd_rsp_run <= 1'b0;
+        bkd_rsp_state <= `BKD_IDLE;
+      end
+      endcase
+  end
+  else begin
+    // When rsp fifo length is not equal the response length
+    // the opc_rspf_rdy flag clears. When mmc_tester acks
+    // our response we must clear opc_rsp_new 
+    if(opc_rsp_ack == 1'b1)
+      opc_rsp_new <= 1'b0;    
+  end 
+end
+// Mux the rsp fifo data out to 16 rsp data wires to mmc_tester UART
+//always @(posedge sys_clk) begin
+//  if(bkd_rsp_counter < 4) begin
+//    opc_rsp0 <= opc_outreg;
+//  end
+//  else if(bkd_rsp_counter < 8) begin
+//    opc_rsp1 <= opc_outreg;
+//  end
+//  else if(bkd_rsp_counter < 12) begin
+//    opc_rsp2 <= opc_outreg;
+//  end
+//  else if(bkd_rsp_counter < 16) begin
+//    opc_rsp3 <= opc_outreg;
+//  end
+//  else if(bkd_rsp_counter < 20) begin
+//    opc_rsp4 <= opc_outreg;
+//  end
+//  else if(bkd_rsp_counter < 24) begin
+//    opc_rsp5 <= opc_outreg;
+//  end
+//  else if(bkd_rsp_counter < 28) begin
+//    opc_rsp6 <= opc_outreg;
+//  end
+//  else if(bkd_rsp_counter < 32) begin
+//    opc_rsp7 <= opc_outreg;
+//  end
+//  else if(bkd_rsp_counter < 36) begin
+//    opc_rsp8 <= opc_outreg;
+//  end
+//  else if(bkd_rsp_counter < 40) begin
+//    opc_rsp9 <= opc_outreg;
+//  end
+//  else if(bkd_rsp_counter < 44) begin
+//    opc_rspA <= opc_outreg;
+//  end
+//  else if(bkd_rsp_counter < 48) begin
+//    opc_rspB <= opc_outreg;
+//  end
+//  else if(bkd_rsp_counter < 52) begin
+//    opc_rspC <= opc_outreg;
+//  end
+//  else if(bkd_rsp_counter < 56) begin
+//    opc_rspD <= opc_outreg;
+//  end
+//  else if(bkd_rsp_counter < 60) begin
+//    opc_rspE <= opc_outreg;
+//  end
+//  else begin
+//    opc_rspF <= opc_outreg;
+//  end
+//end
+
 
   // Implement MMC card tri-state drivers at the top level
     // Drive the clock output when needed

@@ -105,22 +105,42 @@ package mmc_test_pack is
     -- Either way, opcode processor i/o goes thru these mmc_tester connections
     bkd_opc_load_new    : out std_logic;
     bkd_opc_load_ack    : in  std_logic;
-    bkd_opc_data0_o     : out unsigned(31 downto 0);
-    bkd_opc_data1_o     : out unsigned(31 downto 0);
-    bkd_opc_data2_o     : out unsigned(31 downto 0);
-    bkd_opc_data3_o     : out unsigned(31 downto 0);
-    bkd_opc_data4_o     : out unsigned(31 downto 0);
-    bkd_opc_data5_o     : out unsigned(31 downto 0);
-    bkd_opc_data6_o     : out unsigned(31 downto 0);
-    bkd_opc_data7_o     : out unsigned(31 downto 0);
-    bkd_opc_data8_o     : out unsigned(31 downto 0);
-    bkd_opc_data9_o     : out unsigned(31 downto 0);
-    bkd_opc_dataA_o     : out unsigned(31 downto 0);
-    bkd_opc_dataB_o     : out unsigned(31 downto 0);
-    bkd_opc_dataC_o     : out unsigned(31 downto 0);
-    bkd_opc_dataD_o     : out unsigned(31 downto 0);
-    bkd_opc_dataE_o     : out unsigned(31 downto 0);
-    bkd_opc_dataF_o     : out unsigned(31 downto 0);
+    bkd_opc_dat0_o     : out unsigned(31 downto 0);
+    bkd_opc_dat1_o     : out unsigned(31 downto 0);
+    bkd_opc_dat2_o     : out unsigned(31 downto 0);
+    bkd_opc_dat3_o     : out unsigned(31 downto 0);
+    bkd_opc_dat4_o     : out unsigned(31 downto 0);
+    bkd_opc_dat5_o     : out unsigned(31 downto 0);
+    bkd_opc_dat6_o     : out unsigned(31 downto 0);
+    bkd_opc_dat7_o     : out unsigned(31 downto 0);
+    bkd_opc_dat8_o     : out unsigned(31 downto 0);
+    bkd_opc_dat9_o     : out unsigned(31 downto 0);
+    bkd_opc_datA_o     : out unsigned(31 downto 0);
+    bkd_opc_datB_o     : out unsigned(31 downto 0);
+    bkd_opc_datC_o     : out unsigned(31 downto 0);
+    bkd_opc_datD_o     : out unsigned(31 downto 0);
+    bkd_opc_datE_o     : out unsigned(31 downto 0);
+    bkd_opc_datF_o     : out unsigned(31 downto 0);
+
+    bkd_rsp_i           : in  std_logic;
+    bkd_rsp_ack_o       : out std_logic;
+    bkd_rsp_dat0_i      : in unsigned(31 downto 0);
+    bkd_rsp_dat1_i      : in unsigned(31 downto 0);
+    bkd_rsp_dat2_i      : in unsigned(31 downto 0);
+    bkd_rsp_dat3_i      : in unsigned(31 downto 0);
+    bkd_rsp_dat4_i      : in unsigned(31 downto 0);
+    bkd_rsp_dat5_i      : in unsigned(31 downto 0);
+    bkd_rsp_dat6_i      : in unsigned(31 downto 0);
+    bkd_rsp_dat7_i      : in unsigned(31 downto 0);
+    bkd_rsp_dat8_i      : in unsigned(31 downto 0);
+    bkd_rsp_dat9_i      : in unsigned(31 downto 0);
+    bkd_rsp_datA_i      : in unsigned(31 downto 0);
+    bkd_rsp_datB_i      : in unsigned(31 downto 0);
+    bkd_rsp_datC_i      : in unsigned(31 downto 0);
+    bkd_rsp_datD_i      : in unsigned(31 downto 0);
+    bkd_rsp_datE_i      : in unsigned(31 downto 0);
+    bkd_rsp_datF_i      : in unsigned(31 downto 0);
+
 --    opc_fif_dat_o       : out unsigned( 7 downto 0);     -- write opcodes here
 --    opc_fif_wen_o       : out std_logic;                 -- opcode fifo write line
 --    opc_fif_wmt_i       : in std_logic;                  -- opcode fifo empty
@@ -777,22 +797,42 @@ use work.async_syscon_pack.all;
     -- For first article back door, write 16 32-bit words to s4.v for processing
     bkd_opc_load_new    : out std_logic;
     bkd_opc_load_ack    : in  std_logic;
-    bkd_opc_data0_o     : out unsigned(31 downto 0);
-    bkd_opc_data1_o     : out unsigned(31 downto 0);
-    bkd_opc_data2_o     : out unsigned(31 downto 0);
-    bkd_opc_data3_o     : out unsigned(31 downto 0);
-    bkd_opc_data4_o     : out unsigned(31 downto 0);
-    bkd_opc_data5_o     : out unsigned(31 downto 0);
-    bkd_opc_data6_o     : out unsigned(31 downto 0);
-    bkd_opc_data7_o     : out unsigned(31 downto 0);
-    bkd_opc_data8_o     : out unsigned(31 downto 0);
-    bkd_opc_data9_o     : out unsigned(31 downto 0);
-    bkd_opc_dataA_o     : out unsigned(31 downto 0);
-    bkd_opc_dataB_o     : out unsigned(31 downto 0);
-    bkd_opc_dataC_o     : out unsigned(31 downto 0);
-    bkd_opc_dataD_o     : out unsigned(31 downto 0);
-    bkd_opc_dataE_o     : out unsigned(31 downto 0);
-    bkd_opc_dataF_o     : out unsigned(31 downto 0);
+    bkd_opc_dat0_o      : out unsigned(31 downto 0);
+    bkd_opc_dat1_o      : out unsigned(31 downto 0);
+    bkd_opc_dat2_o      : out unsigned(31 downto 0);
+    bkd_opc_dat3_o      : out unsigned(31 downto 0);
+    bkd_opc_dat4_o      : out unsigned(31 downto 0);
+    bkd_opc_dat5_o      : out unsigned(31 downto 0);
+    bkd_opc_dat6_o      : out unsigned(31 downto 0);
+    bkd_opc_dat7_o      : out unsigned(31 downto 0);
+    bkd_opc_dat8_o      : out unsigned(31 downto 0);
+    bkd_opc_dat9_o      : out unsigned(31 downto 0);
+    bkd_opc_datA_o      : out unsigned(31 downto 0);
+    bkd_opc_datB_o      : out unsigned(31 downto 0);
+    bkd_opc_datC_o      : out unsigned(31 downto 0);
+    bkd_opc_datD_o      : out unsigned(31 downto 0);
+    bkd_opc_datE_o      : out unsigned(31 downto 0);
+    bkd_opc_datF_o      : out unsigned(31 downto 0);
+    
+    bkd_rsp_i           : in  std_logic;
+    bkd_rsp_ack_o       : out std_logic;
+    bkd_rsp_dat0_i      : in unsigned(31 downto 0);
+    bkd_rsp_dat1_i      : in unsigned(31 downto 0);
+    bkd_rsp_dat2_i      : in unsigned(31 downto 0);
+    bkd_rsp_dat3_i      : in unsigned(31 downto 0);
+    bkd_rsp_dat4_i      : in unsigned(31 downto 0);
+    bkd_rsp_dat5_i      : in unsigned(31 downto 0);
+    bkd_rsp_dat6_i      : in unsigned(31 downto 0);
+    bkd_rsp_dat7_i      : in unsigned(31 downto 0);
+    bkd_rsp_dat8_i      : in unsigned(31 downto 0);
+    bkd_rsp_dat9_i      : in unsigned(31 downto 0);
+    bkd_rsp_datA_i      : in unsigned(31 downto 0);
+    bkd_rsp_datB_i      : in unsigned(31 downto 0);
+    bkd_rsp_datC_i      : in unsigned(31 downto 0);
+    bkd_rsp_datD_i      : in unsigned(31 downto 0);
+    bkd_rsp_datE_i      : in unsigned(31 downto 0);
+    bkd_rsp_datF_i      : in unsigned(31 downto 0);
+    
 --    opc_fif_dat_o       : out unsigned( 7 downto 0);     -- write opcodes here
 --    opc_fif_wen_o       : out std_logic;                 -- opcode fifo write line
 --    opc_fif_wmt_i       : in std_logic;                  -- opcode fifo empty
@@ -1141,17 +1181,24 @@ begin
 
   with to_integer(syscon_adr(3 downto 0)) select
   o_reg_dat_rd <=
-    u_resize(opc_oc_cnt_i,32)                        when 16#0#,      -- status
-    --u_resize(opc_counter,32)                       when 16#1#,      -- opcode_counter
-    --u_resize(opc_state,32)                         when 16#2#,      -- opcode processor state
-    --u_resize(opc_system_state,32)                  when 16#3#,      -- system_state
-    --u_resize(opc_system_mode,32)                   when 16#4#,      -- mode
-    --u_resize(opc_frq_pwr_status,32)                when 16#5#,      -- freq processor status upper 16, power lower 16
-    --u_resize(opc_phs_pls_status,32)                when 16#6#,      -- phase processor status upper 16, pulse lower 16
-    --u_resize(opc_ptn_dbg_status,32)                when 16#7#,      -- temporarily 'response_ready' pattern processor status upper 16, unused lower 16
-    --u_resize(s_fif_dat_wr_level,32)                when 16#8#,      -- response fifo fill level
-  str2u("51514343",32)                           when others;
-
+    bkd_rsp_dat0_i                                 when 16#0#,      -- status
+    bkd_rsp_dat1_i                                 when 16#1#,      -- response data
+    bkd_rsp_dat2_i                                 when 16#2#,      -- response data
+    bkd_rsp_dat3_i                                 when 16#3#,      -- response data
+    bkd_rsp_dat4_i                                 when 16#4#,      -- response data
+    bkd_rsp_dat5_i                                 when 16#5#,      -- response data
+    bkd_rsp_dat6_i                                 when 16#6#,      -- response data
+    bkd_rsp_dat7_i                                 when 16#7#,      -- response data
+    bkd_rsp_dat8_i                                 when 16#8#,      -- response data
+    bkd_rsp_dat9_i                                 when 16#9#,      -- response data
+    bkd_rsp_datA_i                                 when 16#A#,      -- response data
+    bkd_rsp_datB_i                                 when 16#B#,      -- response data
+    bkd_rsp_datC_i                                 when 16#C#,      -- response data
+    bkd_rsp_datD_i                                 when 16#D#,      -- response data
+    bkd_rsp_datE_i                                 when 16#E#,      -- response data
+    u_resize(opc_oc_cnt_i,32)                      when 16#F#,      -- opcodes processed
+  str2u("51514343",32)                             when others;
+  
  -- Handle Local Register Writes
   process(sys_rst_n,sys_clk)
   begin
@@ -1231,37 +1278,37 @@ begin
         case to_integer(syscon_adr(3 downto 0)) is
           when 16#0# =>
             bkd_opc_load_new <= '0';
-            bkd_opc_data0_o <= syscon_dat_wr(31 downto 0);
+            bkd_opc_dat0_o <= syscon_dat_wr(31 downto 0);
           when 16#1# =>
-            bkd_opc_data1_o <= syscon_dat_wr(31 downto 0);
+            bkd_opc_dat1_o <= syscon_dat_wr(31 downto 0);
           when 16#2# =>
-            bkd_opc_data2_o <= syscon_dat_wr(31 downto 0);
+            bkd_opc_dat2_o <= syscon_dat_wr(31 downto 0);
           when 16#3# =>
-            bkd_opc_data3_o <= syscon_dat_wr(31 downto 0);
+            bkd_opc_dat3_o <= syscon_dat_wr(31 downto 0);
           when 16#4# =>
-            bkd_opc_data4_o <= syscon_dat_wr(31 downto 0);
+            bkd_opc_dat4_o <= syscon_dat_wr(31 downto 0);
           when 16#5# =>
-            bkd_opc_data5_o <= syscon_dat_wr(31 downto 0);
+            bkd_opc_dat5_o <= syscon_dat_wr(31 downto 0);
           when 16#6# =>
-            bkd_opc_data6_o <= syscon_dat_wr(31 downto 0);
+            bkd_opc_dat6_o <= syscon_dat_wr(31 downto 0);
           when 16#7# =>
-            bkd_opc_data7_o <= syscon_dat_wr(31 downto 0);
+            bkd_opc_dat7_o <= syscon_dat_wr(31 downto 0);
           when 16#8# =>
-            bkd_opc_data8_o <= syscon_dat_wr(31 downto 0);
+            bkd_opc_dat8_o <= syscon_dat_wr(31 downto 0);
           when 16#9# =>
-            bkd_opc_data9_o <= syscon_dat_wr(31 downto 0);
+            bkd_opc_dat9_o <= syscon_dat_wr(31 downto 0);
           when 16#A# =>
-            bkd_opc_dataA_o <= syscon_dat_wr(31 downto 0);
+            bkd_opc_datA_o <= syscon_dat_wr(31 downto 0);
           when 16#B# =>
-            bkd_opc_dataB_o <= syscon_dat_wr(31 downto 0);
+            bkd_opc_datB_o <= syscon_dat_wr(31 downto 0);
           when 16#C# =>
-            bkd_opc_dataC_o <= syscon_dat_wr(31 downto 0);
+            bkd_opc_datC_o <= syscon_dat_wr(31 downto 0);
           when 16#D# =>
-            bkd_opc_dataD_o <= syscon_dat_wr(31 downto 0);
+            bkd_opc_datD_o <= syscon_dat_wr(31 downto 0);
           when 16#E# =>
-            bkd_opc_dataE_o <= syscon_dat_wr(31 downto 0);
+            bkd_opc_datE_o <= syscon_dat_wr(31 downto 0);
           when 16#F# =>
-            bkd_opc_dataF_o <= syscon_dat_wr(31 downto 0);
+            bkd_opc_datF_o <= syscon_dat_wr(31 downto 0);
             bkd_opc_load_new <= '1';
           when others =>
             null;
