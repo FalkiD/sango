@@ -341,6 +341,8 @@ reg  [31:0]     opc_inreg;          // Mux'd above 16 wires
 
 // opcode processor wires:
 reg          opc_enable;                // control needed...      
+wire         opc_fifo_enable;           // enable opcode processor in & out fifo's
+wire         opc_fifo_rst;              // reset for opcode processor fifo's
 reg  [7:0]   opc_fifo_dat_i;            // mmc_tester opcode fifo writes can go here
 reg          opc_fifo_wen;              // opcode fifo write line
 wire         opc_fifo_mt;               // opcode fifo empty flag
@@ -353,12 +355,14 @@ wire [15:0]  opc_sys_st_w;            // s4 system state (e.g. running a pattern
 wire [31:0]  opc_mode_w;              // MODE opcode can set system-wide flags
 
 wire [7:0]   opc_rspf_w;              // to fifo, response bytes(status, measurements, echo, etc)
-wire         opc_rspf_we_w;           // response fifo write enable
-wire         opc_rspf_mt_w;           // response fifo empty flag
-wire         opc_rspf_fl_w;           // response fifo full  flag
-wire         opc_rspf_rdy_w;          // response fifo is waiting
-wire [`GLBL_RSP_FILL_LEVEL_BITS-1:0] opc_rsp_lng_w;    // update response length when response is ready
-wire [`GLBL_RSP_FILL_LEVEL_BITS-1:0] opc_rsp_cnt_w;    // response fifo count, opcode processor asserts 
+wire         opc_rspf_wen;            // response fifo write enable
+wire         opc_rspf_mt;             // response fifo empty flag
+wire         opc_rspf_fl;             // response fifo full  flag
+wire         opc_rspf_rdy;            // response fifo is waiting
+wire         opc_rspf_ren;            // response fifo read enable
+wire [7:0]   opc_rspf_dat_o;          // response fifo output data, used to generate response block
+wire [`GLBL_RSP_FILL_LEVEL_BITS-1:0] opc_rsp_lng;    // update response length when response is ready
+wire [`GLBL_RSP_FILL_LEVEL_BITS-1:0] opc_rsp_cnt;    // response fifo count, opcode processor asserts 
 
 // Frequency processor wires
 wire [31:0]  frequency_w;             // to fifo, frequency output in MHz    // zzmf0002
@@ -556,6 +560,12 @@ end
 
 assign sys_rst_n = MCU_TRIG ? 1'b0 : dbg_sys_rst_n;
 
+/////////////////////////////////////////////////////////
+// Important system globals & assignments              //
+/////////////////////////////////////////////////////////
+assign opc_fifo_enable = 1'b1;
+assign opc_fifo_rst = 1'b0;
+
 // Create a "time-alive" counter.
 //   2^40 @ 100MHz wraps at ~3.05 hours.
 //
@@ -614,8 +624,8 @@ always @(posedge sys_clk) begin
  // end
 end
 
-  // Instantiate VHDL fifo that the MMC slave core 
-  // (or debugging array) is using to store opcodes
+  // Instantiate VHDL fifo that mmc_tester instance 
+  // is using to store opcodes (opcode processor input fifo)
   swiss_army_fifo #(
     .USE_BRAM(1),
     .WIDTH(8),
@@ -627,17 +637,17 @@ end
   ) input_opcodes(
       .sys_rst_n(sys_rst_n),
       .sys_clk(sys_clk),
-      .sys_clk_en(1'b1),
+      .sys_clk_en(opc_fifo_enable),
         
-      .reset_i(1'b0),
+      .reset_i(opc_fifo_rst),
         
-      .fifo_wr_i(opc_fifo_wen),           // 12-Jul moved to mmc_tester  ZZM comes from HWDBG ext'd extd_fifo_addr_wr_stb
-      .fifo_din(opc_fifo_dat_i),          // 12-Jul moved to mmc_tester  ZZM comes from HWDBG ext'd hw_ctl_o[71:64]
+      .fifo_wr_i(opc_fifo_wen),
+      .fifo_din(opc_fifo_dat_i),
         
-      .fifo_rd_i(opc_fifo_ren),           // 12-Jul moved to opcode processor  ZZM comes from HWDBG ext'd hw_ctl_o[254] shaped to 1-tick.
-      .fifo_dout(opc_fifo_dat_o),         // 12-Jul moved to opcode processor  ZZM goes to HWDBG uart hw_stat_i[119:112]
+      .fifo_rd_i(opc_fifo_ren),
+      .fifo_dout(opc_fifo_dat_o),
         
-      .fifo_fill_level(opc_fifo_count),   // 12-Jul used in opcode processor  ZZM goes to HWDBG uart hw_stat_i[104:96]
+      .fifo_fill_level(opc_fifo_count),
       .fifo_full(opc_fifo_full),
       .fifo_empty(opc_fifo_mt),
       .fifo_pf_full(),
@@ -645,6 +655,41 @@ end
       .fifo_pf_empty()           
   );
 
+  // Instantiate VHDL fifo that opcode processor instance 
+  // is using to store responses (opcode processor output fifo)
+    //////////////////////////////////////////////
+  // The response to all opcodes will be 
+  // written to this fifo. This fifo will be
+  // used for status, echo, and measurement
+  // opcodes.
+  swiss_army_fifo #(
+    .USE_BRAM(1),
+    .WIDTH(8),
+    .DEPTH(512),
+    .FILL_LEVEL_BITS(10),
+    .PF_FULL_POINT(511),
+    .PF_FLAG_POINT(256),
+    .PF_EMPTY_POINT(1)
+  ) opcode_response(
+      .sys_rst_n(sys_rst_n),
+      .sys_clk(sys_clk),
+      .sys_clk_en(opc_fifo_enable),
+      
+      .reset_i(opc_fifo_rst),
+      
+      .fifo_wr_i(opc_rspf_wen),                 // response fifo write enable
+      .fifo_din(opc_rspf_w),                    // to fifo, response bytes(status, measurements, echo, etc)
+      
+      .fifo_rd_i(opc_rspf_ren),                 // response fifo read enable
+      .fifo_dout(opc_rspf_dat_o),               // response fifo output data, used to generate response block
+      
+      .fifo_fill_level(opc_rsp_cnt),            // response fifo count
+      .fifo_full(opc_rspf_fl),                  // response fifo full  flag
+      .fifo_empty(opc_rspf_mt),                 // response fifo empty flag
+      .fifo_pf_full(),
+      .fifo_pf_flag(),
+      .fifo_pf_empty()           
+  );
 
 // ******************************************************************************
 // *                                                                            *
@@ -777,7 +822,7 @@ end
 
     .enable                     (opc_enable),
 
-    .fifo_dat_i                 (opc_fifo_dat_),    // fifo read data bus
+    .fifo_dat_i                 (opc_fifo_dat_o),   // fifo read data bus
     .fifo_rd_en_o               (opc_fifo_ren),     // fifo read line
     .fifo_rd_empty_i            (opc_fifo_mt),      // fifo empty flag
     .fifo_rd_count_i            (opc_fifo_count),   // fifo fill level
@@ -786,12 +831,12 @@ end
     .mode_o                     (opc_mode_w),       // MODE opcode can set system-wide flags
 
     .response_o                 (opc_rspf_w),       // to fifo, response bytes(status, measurements, echo, etc)
-    .response_wr_en_o           (opc_rspf_we_w),    // response fifo write enable
-    .response_fifo_empty_i      (opc_rspf_mt_w),    // response fifo empty flag
-    .response_fifo_full_i       (opc_rspf_fl_w),    // response fifo full  flag
-    .response_ready_o           (opc_rspf_rdy_w),   // response fifo is waiting
-    .response_length_o          (opc_rsp_lng_w),    // update response length when response is ready
-    .response_fifo_count_i      (opc_rsp_cnt_w),    // response fifo count, opcode processor asserts 
+    .response_wr_en_o           (opc_rspf_wen),     // response fifo write enable
+    .response_fifo_empty_i      (opc_rspf_mt),      // response fifo empty flag
+    .response_fifo_full_i       (opc_rspf_fl),      // response fifo full  flag
+    .response_ready_o           (opc_rspf_rdy),     // response fifo is waiting
+    .response_length_o          (opc_rsp_lng),      // update response length when response is ready
+    .response_fifo_count_i      (opc_rsp_cnt),      // response fifo count, opcode processor asserts 
 // response_ready when fifo_length==response_length
 
 //    .frequency_o,  // to fifo, frequency output in MHz           //zzmf0003

@@ -64,26 +64,25 @@ module opcodes #(parameter RSP_FILL_LEVEL_BITS = 10,
                  parameter TWOFIFTY_MS = 50000000     // 25e6 ticks per 250ms
   )
   (
-    input                clk,
-    input                rst_n,
-    input                enable,
+    input  wire          clk,
+    input  wire          rst_n,
+    input  wire          enable,
 
-    input       [7:0]    fifo_dat_i,              // opcode fifo
+    input  wire [7:0]    fifo_dat_i,              // opcode fifo
     output reg           fifo_rd_en_o,            // fifo read line
-    input                fifo_rd_empty_i,         // fifo empty flag
-    input       [RSP_FILL_LEVEL_BITS-1:0]  fifo_rd_count_i,            // fifo fill level 
+    input  wire          fifo_rd_empty_i,         // fifo empty flag
+    input  wire [RSP_FILL_LEVEL_BITS-1:0]  fifo_rd_count_i,            // fifo fill level 
 
-    input       [15:0]   system_state_i,          // overall state of system, "running a pattern", for example
+    input  wire [15:0]   system_state_i,          // overall state of system, "running a pattern", for example
     output reg  [31:0]   mode_o,                  // MODE opcode can set system-wide flags
 
     output reg  [7:0]    response_o,              // to fifo, response bytes(status, measurements, echo, etc)
     output reg           response_wr_en_o,        // response fifo write enable
-    input                response_fifo_empty_i,   // response fifo empty flag
-    input                response_fifo_full_i,    // response fifo full flag
+    input  wire          response_fifo_empty_i,   // response fifo empty flag
+    input  wire          response_fifo_full_i,    // response fifo full flag
     output wire          response_ready_o,        // response is waiting
     output wire [RSP_FILL_LEVEL_BITS-1:0] response_length_o,     // update response length when response is ready
-    input  wire [RSP_FILL_LEVEL_BITS-1:0] response_fifo_count_i, // response fifo count, opcode processor asserts 
-                                                  // response_ready when fifo_length==response_length
+    input  wire [RSP_FILL_LEVEL_BITS-1:0] response_fifo_count_i, // response fifo count, response_ready when fifo_length==response_length
 
 //    output reg  [31:0] frequency_o,             // to fifo, frequency output in MHz
 //    output reg         frq_wr_en_o,             // frequency fifo write enable
