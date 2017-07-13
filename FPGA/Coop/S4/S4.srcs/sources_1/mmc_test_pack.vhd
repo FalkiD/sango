@@ -104,6 +104,7 @@ package mmc_test_pack is
     -- use the MMC UART to enter 64-byte opcode blocks & read 64-byte responses
     -- Either way, opcode processor i/o goes thru these mmc_tester connections
     bkd_opc_load_new    : out std_logic;
+    bkd_opc_load_ack    : in  std_logic;
     bkd_opc_data0_o     : out unsigned(31 downto 0);
     bkd_opc_data1_o     : out unsigned(31 downto 0);
     bkd_opc_data2_o     : out unsigned(31 downto 0);
@@ -775,6 +776,7 @@ use work.async_syscon_pack.all;
     -- Either way, opcode processor i/o goes thru these mmc_tester connections
     -- For first article back door, write 16 32-bit words to s4.v for processing
     bkd_opc_load_new    : out std_logic;
+    bkd_opc_load_ack    : in  std_logic;
     bkd_opc_data0_o     : out unsigned(31 downto 0);
     bkd_opc_data1_o     : out unsigned(31 downto 0);
     bkd_opc_data2_o     : out unsigned(31 downto 0);
@@ -1167,12 +1169,15 @@ begin
       host_en_reg <= '0';
       slave_en_reg <= '0';
       tlm_fifo_reg_access <= '0';
+      
       -- SPI debugging
       dbg_spi_bytes_io <= to_unsigned(0, dbg_spi_bytes_io'length);
       dbg_spi_start_o <= '0';
       dbg_spi_device_o <= to_unsigned(0, dbg_spi_device_o'length);
       dbg_enables_o <= to_unsigned(0, dbg_enables_o'length);
       dbg_spi_state <= 0;
+      
+      -- Backdoor UART opcode entry/response
       bkd_opc_load_new <= '0';
     elsif (sys_clk'event and sys_clk='1') then
       -- Default values
@@ -1261,6 +1266,8 @@ begin
           when others =>
             null;
           end case;
+      elsif (bkd_opc_load_ack='1') then
+        bkd_opc_load_new <= '0';
       end if;            
 
       -- spi debug, SPI debug register writes, 03000040 x y z ...

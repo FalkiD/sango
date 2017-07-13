@@ -315,10 +315,12 @@ reg  [255:0] tdbgr;
 wire         syscon_rxd;
 wire         syscon_txd;
 
-// 12-Jul LPC MMC interface is not working so we must use UART back door
+// 12-Jul LPC MMC interface is not working so we must use 
+// MMC UART back door from mmc_tester debugger
 // to receive opcodes & send responses
 // Use 16 32-bit words to transfer 64 byte opcode blocks
-wire            opc_load_new = 1'b0;   // Load new opcode block into opcode fifo
+wire            opc_load_new;       // Load new opcode block into opcode fifo, from mmc_tester
+reg             opc_load_ack;       // Done loading opcodes block
 wire [31:0]     opc_data0;
 wire [31:0]     opc_data1;
 wire [31:0]     opc_data2;
@@ -335,10 +337,10 @@ wire [31:0]     opc_dataC;
 wire [31:0]     opc_dataD;
 wire [31:0]     opc_dataE;
 wire [31:0]     opc_dataF;
-reg  [31:0]     opc_inreg;  // Mux'd above 16 wires
+reg  [31:0]     opc_inreg;          // Mux'd above 16 wires
 
 // opcode processor wires:
-reg          opc_enable;         // control needed...      
+reg          opc_enable;                // control needed...      
 reg  [7:0]   opc_fifo_dat_i;            // mmc_tester opcode fifo writes can go here
 reg          opc_fifo_wen;              // opcode fifo write line
 wire         opc_fifo_mt;               // opcode fifo empty flag
@@ -725,6 +727,7 @@ end
     // connect the mmc fifo's to the opcode processor here.
     // 12-Jul first article must use back-door UART entry since LPC MMC interface is not working
     .bkd_opc_load_new   (opc_load_new),
+    .bkd_opc_load_ack   (opc_load_ack),
     .bkd_opc_data0_o    (opc_data0),
     .bkd_opc_data1_o    (opc_data1),
     .bkd_opc_data2_o    (opc_data2),
@@ -753,7 +756,7 @@ end
 //    .opc_rspf_fl_o     (opc_rspf_fl_w),
 //    .opc_rspf_rdy_i    (opc_rspf_rdy_w),
 //    .opc_rsp_cnt_o     (opc_rsp_cnt_w),
-    .opc_oc_cnt_i      (opc_count)
+    .opc_oc_cnt_i      ({22'd0,opc_fifo_count[`GLBL_RSP_FILL_LEVEL_BITS-1:0]})
 //    // Debugging
 //    .opc_status_i      (status_w),
 //    .opc_state_i       (state_w),
@@ -923,62 +926,73 @@ end
   // Load the opcode processor fifo using back-door UART
   reg  [4:0]    bkd_opc_state;
   reg  [5:0]    bkd_counter;
-  `define BKD_COUNT 6'd64
+  `define BKD_COUNT 6'd63
   `define BKD_IDLE  5'd0
   `define BKD_WR0   5'd1
   `define BKD_WR1   5'd2
   `define BKD_WR2   5'd3
   `define BKD_WR3   5'd4
-  `define BKD_DONE  5'd5
+  `define BKD_WTMUX 5'd5
+  `define BKD_DONE  5'd6
   always @(posedge sys_clk) begin
     if(!sys_rst_n) begin
-      //opc_load_new <= 1'b0;
+      opc_load_ack <= 1'b0;
       bkd_opc_state <= `BKD_IDLE;
       bkd_counter <= 6'd0;
       opc_enable <= 1'b0;
     end
     else if(opc_load_new == 1'b1) begin
-      case(bkd_opc_state)
-      `BKD_IDLE: begin
-        bkd_counter <= 6'd0;
-        bkd_opc_state <= `BKD_WR0;
-      end
-      `BKD_WR0: begin
-        opc_fifo_dat_i <= opc_inreg[7:0];
-        opc_fifo_wen <= 1'b1;
-        bkd_counter <= bkd_counter + 1;
-        bkd_opc_state <= `BKD_WR1;
-      end
-      `BKD_WR1: begin
-        opc_fifo_dat_i <= opc_inreg[15:8];
-        bkd_counter <= bkd_counter + 1;
-        bkd_opc_state <= `BKD_WR2;
-      end
-      `BKD_WR2: begin
-        opc_fifo_dat_i <= opc_inreg[23:16];
-        bkd_counter <= bkd_counter + 1;
-        bkd_opc_state <= `BKD_WR3;
-      end
-      `BKD_WR3: begin
-        opc_fifo_dat_i <= opc_inreg[31:24];
-        bkd_counter <= bkd_counter + 1;
-        if(bkd_counter == `BKD_COUNT - 1)
-          bkd_opc_state <= `BKD_DONE;
-        else
+      if(opc_load_ack == 1'b0) begin    // we haven't loaded opc yet
+        case(bkd_opc_state)
+        `BKD_IDLE: begin
+          opc_load_ack <= 1'b0;
+          bkd_counter <= 6'd0;
           bkd_opc_state <= `BKD_WR0;
+        end
+        `BKD_WR0: begin
+          opc_fifo_dat_i <= opc_inreg[7:0];
+          opc_fifo_wen <= 1'b1;
+          bkd_counter <= bkd_counter + 1;
+          bkd_opc_state <= `BKD_WR1;
+        end
+        `BKD_WR1: begin
+          opc_fifo_dat_i <= opc_inreg[15:8];
+          bkd_counter <= bkd_counter + 1;
+          bkd_opc_state <= `BKD_WR2;
+        end
+        `BKD_WR2: begin
+          opc_fifo_dat_i <= opc_inreg[23:16];
+          bkd_counter <= bkd_counter + 1;
+          bkd_opc_state <= `BKD_WR3;
+        end
+        `BKD_WR3: begin
+          opc_fifo_dat_i <= opc_inreg[31:24];
+          bkd_counter <= bkd_counter + 1;
+          if(bkd_counter == `BKD_COUNT)
+            bkd_opc_state <= `BKD_DONE;
+          else
+            bkd_opc_state <= `BKD_WTMUX;
+        end
+        `BKD_WTMUX: begin // Wait 1 tick for mux
+          bkd_opc_state <= `BKD_WR0;
+          opc_fifo_wen <= 1'b0;
+        end
+        `BKD_DONE: begin
+          opc_load_ack <= 1'b1;
+          opc_fifo_wen <= 1'b0;
+          opc_enable <= 1'b1;
+          bkd_opc_state <= `BKD_IDLE;
+        end
+        endcase    
       end
-      `BKD_DONE: begin
-        opc_fifo_wen <= 1'b0;
-        opc_enable <= 1'b1;
-        bkd_opc_state <= `BKD_IDLE;
-      end
-
-//    .opc_fif_dat_o     (),
-//    .opc_fif_wen_o     (opc_fifo_wen),
-//    .opc_fif_wmt_i     (opc_fifo_mt),
-      
-      endcase    
     end
+    else begin
+      // If we have loaded opc & acknowledged mmc_tester
+      // once mmc_tester clears opc_load_new we must clear
+      // opc_load_ack (handshake)
+      if(opc_load_ack == 1'b1)
+        opc_load_ack <= 1'b0;    
+    end 
   end
 
   // Mux the 16 opc data wires from mmc_tester UART into one register
