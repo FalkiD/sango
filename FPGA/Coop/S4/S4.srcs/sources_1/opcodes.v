@@ -34,7 +34,7 @@
 `define STATE_FETCH                 7'h03
 `define STATE_LENGTH                7'h04
 `define STATE_DATA                  7'h05
-`define STATE_WAIT_DATA             7'h06
+`define STATE_WAIT_DATA             7'h06   // Waiting for more fifo data
 `define STATE_READ_SPACER           7'h07
 `define STATE_FIFO_WRITE            7'h08
 `define STATE_BEGIN_RESPONSE        7'h09
@@ -45,6 +45,11 @@
 `define STATE_WR_PTN1               7'h10
 `define STATE_WR_PTN2               7'h11
 `define STATE_DBG_DELAY             7'h12
+`define STATE_EMPTY_FIFO            7'h13
+
+// If the input fifo has incomplete data, wait this many ticks 
+// before clearing it (so we never get stuck in odd state)
+`define WAIT_FIFO_TMO              1000
 
 // Max fetch attempts with FIFO empty ON
 //`define MAX_FETCH_ATTEMPTS          8'd50
@@ -64,14 +69,15 @@ module opcodes #(parameter RSP_FILL_LEVEL_BITS = 10,
                  parameter TWOFIFTY_MS = 50000000     // 25e6 ticks per 250ms
   )
   (
-    input  wire          clk,
-    input  wire          rst_n,
+    input  wire          sys_clk,
+    input  wire          sys_rst_n,
     input  wire          enable,
 
     input  wire [7:0]    fifo_dat_i,              // opcode fifo
     output reg           fifo_rd_en_o,            // fifo read line
     input  wire          fifo_rd_empty_i,         // fifo empty flag
-    input  wire [RSP_FILL_LEVEL_BITS-1:0]  fifo_rd_count_i,            // fifo fill level 
+    input  wire [RSP_FILL_LEVEL_BITS-1:0]  fifo_rd_count_i, // fifo fill level
+    //output wire          fifo_rst,                // reset input fifo 
 
     input  wire [15:0]   system_state_i,          // overall state of system, "running a pattern", for example
     output reg  [31:0]   mode_o,                  // MODE opcode can set system-wide flags
@@ -141,7 +147,6 @@ module opcodes #(parameter RSP_FILL_LEVEL_BITS = 10,
     reg             dumpRAM;
 `endif
 
-    wire         rst = ~rst_n;
     reg          operating_mode = 0; // 0=normal, process & run opcodes. 1=save pattern mode, write opcodes to pattern RAM
     reg  [6:0]   state = 0;          // Use as flag in hardware to indicate first starting up
     reg  [6:0]   next_state = `STATE_IDLE;
@@ -156,6 +161,7 @@ module opcodes #(parameter RSP_FILL_LEVEL_BITS = 10,
     reg  [RSP_FILL_LEVEL_BITS-1:0]  rsp_length;         // length tmp var
     reg  [7:0]   rsp_data [15:0];    // 64k array of response bytes (measure, echo, status)
     reg  [RSP_FILL_LEVEL_BITS-1:0]  rsp_index;          // response array index
+    reg  [9:0]   opc_fifo_timeout;   // wait for input fifo to contain minimum data for this long before clearing it(so we never get stuck)
 
     reg  [15:0]  pat_addr;           // pattern address to write
     reg  [23:0]  pat_clk;            // pattern clock tick to write
@@ -194,8 +200,8 @@ module opcodes #(parameter RSP_FILL_LEVEL_BITS = 10,
 
 //    reg [15:0] max_count;
 
-    always @( posedge clk) begin
-        if( rst || state == 0) begin //|| (state != `STATE_IDLE && fifo_rd_empty_i == 1))
+    always @( posedge sys_clk) begin
+        if( !sys_rst_n || state == 0) begin //|| (state != `STATE_IDLE && fifo_rd_empty_i == 1))
             reset_opcode_processor();
             counter <= 0;
 //            max_count <= 0;
@@ -326,6 +332,22 @@ module opcodes #(parameter RSP_FILL_LEVEL_BITS = 10,
                     if(fifo_rd_count_i >= length) begin
                         fifo_rd_en_o <= 1;                  // start reading again
                         show_next_state(`STATE_READ_SPACER);
+                    end
+                    else begin
+                      if(opc_fifo_timeout == 6'd0) begin
+                        fifo_rd_en_o <= 1;
+                        show_next_state(`STATE_EMPTY_FIFO);
+                      end
+                      opc_fifo_timeout <= opc_fifo_timeout - 10'd1;    
+                    end
+                end
+                `STATE_EMPTY_FIFO: begin
+                    if(fifo_rd_count_i > 0) begin
+                      saved_opc_byte <= fifo_dat_i; // Just use register to dump fifo contents
+                    end
+                    else begin
+                      fifo_rd_en_o <= 0;            // back to idle
+                      show_next_state(`STATE_IDLE);
                     end
                 end
                 `STATE_READ_SPACER: begin
@@ -750,6 +772,8 @@ module opcodes #(parameter RSP_FILL_LEVEL_BITS = 10,
         rsp_index <= 16'h0000;
         rsp_length <= 0; // payload length, DEFAULT_RESPONSE_LENGTH gets added in
         mode_o <= 32'h0000_0000;
+        
+        opc_fifo_timeout = `WAIT_FIFO_TMO;
 
     end
     endtask
@@ -774,6 +798,7 @@ module opcodes #(parameter RSP_FILL_LEVEL_BITS = 10,
         response_length <= 16'h0000;
         rsp_index <= 16'h0000;
         rsp_length <= 0; // payload length, DEFAULT_RESPONSE_LENGTH gets added in
+        opc_fifo_timeout <= `WAIT_FIFO_TMO;
     end
     endtask
 

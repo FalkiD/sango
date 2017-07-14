@@ -31,6 +31,16 @@ u 2.0 ms r 3000034 4; -- read response
 u 2.0 ms r 3000038 4; -- read response
 u 2.0 ms r 300003C 4; -- read response
 
+--Power opcode followed by frequency
+--u 1.0 ms w 03000030 00010604 04043200 92080880;
+--u 1.0 ms w 03000033 00000000 00000000 00000000;
+--u 1.0 ms w 03000036 00000000 00000000 00000000;
+--u 1.0 ms w 03000039 00000000 00000000 00000000;
+--u 1.0 ms w 0300003C 00000000 00000000 00000000;
+--u 1.0 ms w 0300003F 00000000;  -- write 64 bytes to opcode processor
+
+
+
 -- 13-Jul load of opcode fifo works in sim & hardware:
 --u 1.0 ms w 3000030 03020100 07060504 0B0A0908; -- Write 12 of 64 bytes to opcode backdoor
 --u 1.0 ms w 3000033 0F0E0D0C 13121110 17161514; -- Write 24 of 64 bytes to opcode backdoor

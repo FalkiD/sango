@@ -157,10 +157,10 @@ package mmc_test_pack is
 --    opc_rspf_rdy_i : in  std_logic;                     -- response is ready
 --    -- opc_rsp_len_i  : in  std_logic(MMC_FILL_LEVEL_BITS-1 downto 0);   
 --    opc_rsp_cnt_i  : in  unsigned(RSP_FILL_LEVEL_BITS-1 downto 0); -- response length
-    opc_oc_cnt_i   : in  unsigned(31 downto 0)         -- count of opcodes processed
---    -- Debugging
---    opc_status_i   : in  unsigned( 7 downto 0);
---    opc_state_i    : in  unsigned( 6 downto 0);
+    -- Debugging
+    opc_oc_cnt_i   : in  unsigned(31 downto 0);           -- LS 16 bits=count of opcodes processed, upper 16 bits opc fifo level
+    opc_status1_i  : in  unsigned(31 downto 0);           -- LS 16 bits=opc status, MS 16-bits=opc_state
+    opc_status2_i  : in  unsigned(31 downto 0)            -- rsp_fifo_count__opc_fifo_count    
   );
   end component;
 
@@ -849,10 +849,10 @@ use work.async_syscon_pack.all;
 --    opc_rspf_rdy_i : in  std_logic;                     -- response is ready
 --    -- opc_rsp_len_i  : in  std_logic(MMC_FILL_LEVEL_BITS-1 downto 0);   
 --    opc_rsp_cnt_i  : in  unsigned(RSP_FILL_LEVEL_BITS-1 downto 0); -- response length
-    opc_oc_cnt_i   : in  unsigned(31 downto 0)         -- count of opcodes processed
---    -- Debugging
---    opc_status_i   : in  unsigned( 7 downto 0);
---    opc_state_i    : in  unsigned( 6 downto 0);
+    -- Debugging
+    opc_oc_cnt_i   : in  unsigned(31 downto 0);         -- LS 16 bits=count of opcodes processed, MS 16 bits=opc fifo level
+    opc_status1_i  : in  unsigned(31 downto 0);         -- LS 16 bits=opc status, MS 16-bits=opc_state
+    opc_status2_i  : in  unsigned(31 downto 0)          -- rsp_fifo_count__opc_fifo_count
   );
   end mmc_tester;
 
@@ -1194,8 +1194,8 @@ begin
     bkd_rsp_datA_i                                 when 16#A#,      -- response data
     bkd_rsp_datB_i                                 when 16#B#,      -- response data
     bkd_rsp_datC_i                                 when 16#C#,      -- response data
-    bkd_rsp_datD_i                                 when 16#D#,      -- response data
-    bkd_rsp_datE_i                                 when 16#E#,      -- response data
+    opc_status2_i                                  when 16#D#,      -- rsp_fifo_count__opc_fifo_count
+    opc_status1_i                                  when 16#E#,      -- opc_state__opc_status
     u_resize(opc_oc_cnt_i,32)                      when 16#F#,      -- opcodes processed
   str2u("51514343",32)                             when others;
   

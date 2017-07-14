@@ -419,8 +419,8 @@ wire         ptn_processor_en_w;      // Run pattern processor
 wire [15:0]  ptn_start_addr_w;        // address 
 
 wire [31:0]  opc_count;               // count opcodes for status info                     
-wire [7:0]   opc_status_w;            // NULL opcode terminates, done=0, or error code
-wire [6:0]   opc_state_w;             // For debugging
+wire [7:0]   opc_status;              // NULL opcode terminates, done=0, or error code
+wire [6:0]   opc_state;               // For debugging
     
 //    // Debugging
 wire [7:0]   last_opcode_w;
@@ -650,7 +650,7 @@ end
   // Instantiate VHDL fifo that mmc_tester instance 
   // is using to store opcodes (opcode processor input fifo)
   swiss_army_fifo #(
-    .USE_BRAM(1),
+    .USE_BRAM(1),           // BRAM=1 requires 1 extra clock before read data is ready
     .WIDTH(8),
     .DEPTH(512),
     .FILL_LEVEL_BITS(10),
@@ -686,7 +686,7 @@ end
   // used for status, echo, and measurement
   // opcodes.
   swiss_army_fifo #(
-    .USE_BRAM(1),
+    .USE_BRAM(1),               // BRAM=1 requires 1 extra clock before read data is ready
     .WIDTH(8),
     .DEPTH(512),
     .FILL_LEVEL_BITS(10),
@@ -835,6 +835,7 @@ end
 //    .opc_fif_dat_o     (opc_fifo_dat_i),
 //    .opc_fif_wen_o     (opc_fifo_wen),
 //    .opc_fif_wmt_i     (opc_fifo_mt),
+//    .opc_fif_wmt_i     (opc_fifo_mt),
 //    .opc_rd_cnt_i      (opc_fifo_count), 
 //    .opc_sys_st_o      (opc_sys_st_w),
 //    .opc_mode_i        (opc_mode_w),
@@ -844,10 +845,11 @@ end
 //    .opc_rspf_fl_o     (opc_rspf_fl_w),
 //    .opc_rspf_rdy_i    (opc_rspf_rdy_w),
 //    .opc_rsp_cnt_o     (opc_rsp_cnt_w),
-    .opc_oc_cnt_i      ({22'd0,opc_fifo_count[`GLBL_RSP_FILL_LEVEL_BITS-1:0]})
-//    // Debugging
-//    .opc_status_i      (status_w),
-//    .opc_state_i       (state_w),
+    // Debugging
+    .opc_oc_cnt_i      (opc_count),
+    .opc_status1_i     ({9'd0, opc_state, 8'd0, opc_status}),    // opc_state__opc_status
+    // rsp_fifo_count__opc_fifo_count
+    .opc_status2_i     ({6'd0, opc_rsp_cnt[`GLBL_RSP_FILL_LEVEL_BITS-1:0], 6'd0, opc_fifo_count[`GLBL_RSP_FILL_LEVEL_BITS-1:0]})
     );
 
 // ******************************************************************************
@@ -860,8 +862,8 @@ end
   opcodes #(
      .RSP_FILL_LEVEL_BITS(`GLBL_RSP_FILL_LEVEL_BITS)
   ) opcode_processor (
-    .rst_n                      (sys_rst_n),
-    .clk                        (sys_clk),
+    .sys_rst_n                  (sys_rst_n),
+    .sys_clk                    (sys_clk),
 
     .enable                     (opc_enable),
 
@@ -914,8 +916,8 @@ end
     .opcode_counter_o           (opc_count),     // count opcodes for status info   
                                                         
     // Debugging
-    .status_o                   (status_w),         // NULL opcode terminates, done=0, or error code
-    .state_o                    (state_w)           // For debugger display
+    .status_o                   (opc_status),         // NULL opcode terminates, done=0, or error code
+    .state_o                    (opc_state)           // For debugger display
     // .last_opcode_o              (),                 //
     // .last_length_o              ()                  //    
   );
