@@ -347,6 +347,7 @@ module opcodes #(parameter RSP_FILL_LEVEL_BITS = 10,
                     end
                     else begin
                       fifo_rd_en_o <= 0;            // back to idle
+                      status_o <= `SUCCESS;
                       show_next_state(`STATE_IDLE);
                     end
                 end
@@ -357,11 +358,12 @@ module opcodes #(parameter RSP_FILL_LEVEL_BITS = 10,
                     // Look for special opcodes, RESET & NULL Terminator
                     if(opcode == 0) begin
                         if(blk_rsp_done == 1'b0) begin
-                            blk_rsp_done <= 1'b1;   // Flag we've done it
-                            done_opcode_block();                    
+                          blk_rsp_done <= 1'b1;   // Flag we've done it
+                          done_opcode_block();                    
                         end
                         else begin
-                            show_next_state(`STATE_IDLE);
+                          status_o <= `SUCCESS;  
+                          show_next_state(`STATE_IDLE);
                         end
                     end
                     else if(opcode == `RESET) begin
