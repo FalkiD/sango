@@ -90,31 +90,22 @@ module opcodes #(parameter RSP_FILL_LEVEL_BITS = 10,
     output wire [RSP_FILL_LEVEL_BITS-1:0] response_length_o,     // update response length when response is ready
     input  wire [RSP_FILL_LEVEL_BITS-1:0] response_fifo_count_i, // response fifo count, response_ready when fifo_length==response_length
 
-//    output reg  [31:0] frequency_o,             // to fifo, frequency output in MHz
-//    output reg         frq_wr_en_o,             // frequency fifo write enable
-//    input              frq_fifo_empty_i,        // frequency fifo empty flag
-//    input              frq_fifo_full_i,         // frequency fifo full flag
+    output reg  [31:0] frequency_o,               // to fifo, frequency output in MHz
+    output reg         frq_wr_en_o,               // frequency fifo write enable
+    input              frq_fifo_empty_i,          // frequency fifo empty flag
+    input              frq_fifo_full_i,           // frequency fifo full flag
 
 //    output reg  [31:0] power_o,                 // to fifo, power output in dBm
 //    output reg         pwr_wr_en_o,             // power fifo write enable
 //    input              pwr_fifo_empty_i,        // power fifo empty flag
 //    input              pwr_fifo_full_i,         // power fifo full flag
 
-      // phase is X7 only, do later
-//    output reg  [15:0] phase_o,                 // to fifo, phase output in degrees
-//    output reg         phs_wr_en_o,             // phase fifo write enable
-//    input              phs_fifo_empty_i,        // phase fifo empty flag
-//    input              phs_fifo_full_i,         // phase fifo full flag
-
 //    output reg  [63:0] pulse_o,                 // to fifo, pulse opcode
 //    output reg         pulse_wr_en_o,           // pulse fifo write enable
 //    input              pulse_fifo_empty_i,      // pulse fifo empty flag
 //    input              pulse_fifo_full_i,       // pulse fifo full flag
 
-//    output reg  [15:0] bias_o,                  // to fifo, bias opcode
-//    output reg         bias_wr_en_o,            // bias fifo write enable
-//    input              bias_fifo_empty_i,       // bias fifo empty flag
-//    input              bias_fifo_full_i,        // bias fifo full flag
+    output reg         bias_enable_o,             // bias control
 
       // pattern opcodes are saved in pattern RAM.
 //    output reg         ptn_wr_en_o,             // opcode processor saves pattern opcodes to pattern RAM 
@@ -127,12 +118,11 @@ module opcodes #(parameter RSP_FILL_LEVEL_BITS = 10,
 
     output reg  [31:0] opcode_counter_o,        // count opcodes for status info                     
     output reg  [7:0]  status_o,                // NULL opcode terminates, done=0, or error code
-    output wire [6:0]  state_o                  // For debugger display
+    output wire [6:0]  state_o,                 // For debugger display
     
 //    // Debugging
-//    output reg  [7:0]  last_opcode_o,
+    output reg  [7:0]  last_opcode_o
 //    output reg  [15:0] last_length_o
-    
     );
 
 `ifdef XILINX_SIMULATOR
@@ -370,7 +360,8 @@ module opcodes #(parameter RSP_FILL_LEVEL_BITS = 10,
                         reset_opcode_processor();
                     end
                     else begin
-                        // Reset response already sent flag
+                        last_opcode_o <= opcode;
+                      // Reset response already sent flag
                         blk_rsp_done <= 1'b0;   // flag, response is required
                         // Gather opcode data payload, then run it
                         // Most opcodes will use the same code here, (integer args) just different number of bytes.
@@ -384,15 +375,14 @@ module opcodes #(parameter RSP_FILL_LEVEL_BITS = 10,
                 end
                 `STATE_FIFO_WRITE:
                 begin
-                    // Don't process anymore opcodes until arg data has been written to fifo
-    //                frq_wr_en_o <= 0;   // All off until next opcode ready
-    //                pwr_wr_en_o <= 0;
-    //                pulse_wr_en_o <= 0;
-    //                bias_wr_en_o <= 0;
-                   `ifdef XILINX_SIMULATOR
-                        fifo_empty_note();  // checks for fifo empty, logs it if so
-                   `endif
-                    next_opcode();
+                  frq_wr_en_o <= 0;   // All off until next opcode ready
+    //              pwr_wr_en_o <= 0;
+    //              pulse_wr_en_o <= 0;
+    //              bias_wr_en_o <= 0;
+                 `ifdef XILINX_SIMULATOR
+                    fifo_empty_note();  // checks for fifo empty, logs it if so
+                 `endif
+                  next_opcode();
                 end
                 default:
                 begin
@@ -503,9 +493,9 @@ module opcodes #(parameter RSP_FILL_LEVEL_BITS = 10,
 //                `endif
 //                end
 //                else begin
-//                    frequency_o <= uinttmp[31:0];
-//                    frq_wr_en_o <= 1;   // enable write frequency FIFO
-                    // Don't process anymore opcodes until fifo is written
+                    frequency_o <= uinttmp[31:0];
+                    frq_wr_en_o <= 1;   // enable write frequency FIFO
+                    // Don't process anymore opcodes until fifo is written (1-tick)
                     show_next_state(`STATE_FIFO_WRITE);
                 `ifdef XILINX_SIMULATOR
                     if(filefreqs == 0)
@@ -533,7 +523,7 @@ module opcodes #(parameter RSP_FILL_LEVEL_BITS = 10,
 //                else begin
 //                    power_o <= uinttmp[31:0];
 //                    pwr_wr_en_o <= 1;   // enable write power FIFO
-                    // Don't process anymore opcodes until fifo is written
+                    // Don't process anymore opcodes until fifo is written (1-tick)
                     show_next_state(`STATE_FIFO_WRITE);
 
                 `ifdef XILINX_SIMULATOR
@@ -574,7 +564,7 @@ module opcodes #(parameter RSP_FILL_LEVEL_BITS = 10,
 //                `endif
 //                end
 //            end
-//            `BIAS: begin
+            `BIAS: begin
 //                if(operating_mode == `WRITE_PATTERN) begin // Write pattern mode
 //                    ptn_addr_o <= pat_addr; 
 //                    // 12 bytes, 3 bytes patClk tick, 9 bytes for left-justified opcode data
@@ -590,17 +580,15 @@ module opcodes #(parameter RSP_FILL_LEVEL_BITS = 10,
 //                `endif
 //                end
 //                else begin
-//                    bias_o <= uinttmp[15:0];
-//                    bias_wr_en_o <= 1;   // enable write bias FIFO
-//                    // Don't process anymore opcodes until fifo is written
-//                    show_next_state(`STATE_FIFO_WRITE);                                    
-//                `ifdef XILINX_SIMULATOR
-//                    if(filebias == 0)
-//                        filebias = $fopen("./opcode_bias_to_fifo.txt", "a");
-//                    $fdisplay (filebias, "Wrote 0x%h to bias processor fifo", uinttmp[15:0]);
-//                `endif
+              bias_enable_o <= uinttmp[8];  // ls byte is channel, always 1 for S4. Lsb of next byte is On/Off
+              next_opcode();
+            `ifdef XILINX_SIMULATOR
+              if(filebias == 0)
+                filebias = $fopen("./opcode_bias_to_fifo.txt", "a");
+                $fdisplay (filebias, "BiasEnable:%d", uinttmp[8]);
+            `endif
 //                end
-//            end
+            end
             `MODE: begin
                 mode_o <= uinttmp[31:0];    // Flags are set, next opcode
                 next_opcode();
@@ -774,9 +762,8 @@ module opcodes #(parameter RSP_FILL_LEVEL_BITS = 10,
         rsp_index <= 16'h0000;
         rsp_length <= 0; // payload length, DEFAULT_RESPONSE_LENGTH gets added in
         mode_o <= 32'h0000_0000;
-        
-        opc_fifo_timeout = `WAIT_FIFO_TMO;
-
+        opc_fifo_timeout <= `WAIT_FIFO_TMO;
+        bias_enable_o <= 1'b0;
     end
     endtask
 

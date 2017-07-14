@@ -388,10 +388,13 @@ wire [`GLBL_RSP_FILL_LEVEL_BITS-1:0] opc_rsp_lng;    // update response length w
 wire [`GLBL_RSP_FILL_LEVEL_BITS-1:0] opc_rsp_cnt;    // response fifo count, opcode processor asserts 
 
 // Frequency processor wires
-wire [31:0]  frequency_w;             // to fifo, frequency output in MHz    // zzmf0002
-wire         frq_wr_en_w;             // frequency fifo write enable         // zzmf0002
-wire         frq_fifo_empty_w;        // frequency fifo empty flag           // zzmf0002
-wire         frq_fifo_full_w;         // frequency fifo full flag            // zzmf0002
+wire [31:0]  frq_fifo_dat_i;          // to fifo, frequency output in MHz
+wire         frq_fifo_wen;            // frequency fifo write enable
+wire [31:0]  frq_fifo_dat_o;          // to frequency processor
+wire         frq_fifo_ren;            // frequency fifo read enable
+wire         frq_fifo_mt;             // frequency fifo empty flag
+wire         frq_fifo_full;           // frequency fifo full flag
+wire [5:0]   frq_fifo_count;
 
 // Power processor wires
 wire [31:0]  power_w;                 // to fifo, power output in dBm
@@ -405,11 +408,8 @@ wire         pulse_wr_en_w;           // pulse fifo write enable
 wire         pulse_fifo_empty_w;      // pulse fifo empty flag
 wire         pulse_fifo_full_w;       // pulse fifo full flag
 
-// Bias processor wires
-wire [15:0]  bias_w;                  // to fifo, bias opcode
-wire         bias_wr_en_w;            // bias fifo write enable
-wire         bias_fifo_empty_w;       // bias fifo empty flag
-wire         bias_fifo_full_w;        // bias fifo full flag
+// Bias enable wire
+wire         bias_en;                  // bias control
 
 // pattern opcodes are saved in pattern RAM.
 wire         ptn_wr_en_w;             // opcode processor saves pattern opcodes to pattern RAM 
@@ -423,8 +423,8 @@ wire [7:0]   opc_status;              // NULL opcode terminates, done=0, or erro
 wire [6:0]   opc_state;               // For debugging
     
 //    // Debugging
-wire [7:0]   last_opcode_w;
-wire [15:0]  last_length_w;
+wire [7:0]   last_opcode;
+//wire [15:0]  last_length_w;
 
 // SPI debugging connections for w 03000030 command
 // Write up to 14 byte to SPI device
@@ -714,6 +714,51 @@ end
       .fifo_pf_empty()           
   );
 
+
+///////////////////////////////////////////////////////////////////////
+// Frequency FIFO
+// variables for frequency FIFO, written by opcode processor, 
+// read by frequency processor module
+///////////////////////////////////////////////////////////////////////
+//    wire        freq_fifo_rst_i = 0;
+//    reg         freq_fifo_clk_en = 0;
+//    wire        freq_fifo_wr_en;
+//    wire        freq_fifo_rd_en;
+//    wire [31:0] freq_fifo_data_in;
+//    wire [31:0] freq_fifo_data_out;
+//    wire  [9:0] freq_fifo_count;    // 512 max
+//    wire        freq_fifo_empty, freq_fifo_full;
+  // Instantiate fifo that the opcode processor is using to store frequencies
+  swiss_army_fifo #(
+    .USE_BRAM(1),
+    .WIDTH(32),
+    .DEPTH(64),
+    .FILL_LEVEL_BITS(7),
+    .PF_FULL_POINT(63),
+    .PF_FLAG_POINT(32),
+    .PF_EMPTY_POINT(1)
+  ) freq_fifo(
+    .sys_rst_n(sys_rst_n),
+    .sys_clk(sys_clk),
+    .sys_clk_en(opc_fifo_enable),
+        
+    .reset_i(opc_fifo_rst),
+        
+    .fifo_wr_i(frq_fifo_wen),
+    .fifo_din(frq_fifo_dat_i),
+        
+    .fifo_rd_i(freq_fifo_ren),
+    .fifo_dout(freq_fifo_dat_o),
+        
+    .fifo_fill_level(frq_fifo_count),
+    .fifo_full(freq_fifo_full),
+    .fifo_empty(freq_fifo_mt),
+    .fifo_pf_full(),
+    .fifo_pf_flag(),
+    .fifo_pf_empty()           
+  );
+              
+
 // ******************************************************************************
 // *                                                                            *
 // *  mmc_tester:  The MMC Slave + Related Debug/Test HW                        *
@@ -846,11 +891,15 @@ end
 //    .opc_rspf_rdy_i    (opc_rspf_rdy_w),
 //    .opc_rsp_cnt_o     (opc_rsp_cnt_w),
     // Debugging
-    .opc_oc_cnt_i      (opc_count),
-    .opc_status1_i     ({9'd0, opc_state, 8'd0, opc_status}),    // opc_state__opc_status
+    .opc_oc_cnt_i      ({8'd0, last_opcode[7:0], opc_count[15:0]}),   // last_opcode__opcodes_procesed
+    .opc_status1_i     ({9'd0, opc_state, 8'd0, opc_status}),         // opc_state__opc_status
     // rsp_fifo_count__opc_fifo_count
-    .opc_status2_i     ({6'd0, opc_rsp_cnt[`GLBL_RSP_FILL_LEVEL_BITS-1:0], 6'd0, opc_fifo_count[`GLBL_RSP_FILL_LEVEL_BITS-1:0]})
+    .opc_status2_i     ({10'd0, frq_fifo_count[5:0], 6'd0, opc_fifo_count[`GLBL_RSP_FILL_LEVEL_BITS-1:0]})
     );
+
+
+
+
 
 // ******************************************************************************
 // *                                                                            *
@@ -879,15 +928,15 @@ end
     .response_wr_en_o           (opc_rspf_wen),     // response fifo write enable
     .response_fifo_empty_i      (opc_rspf_mt),      // response fifo empty flag
     .response_fifo_full_i       (opc_rspf_fl),      // response fifo full  flag
+    // response_ready when fifo_length==response_length
     .response_ready_o           (opc_rspf_rdy),     // response fifo is waiting
     .response_length_o          (opc_rsp_lng),      // update response length when response is ready
     .response_fifo_count_i      (opc_rsp_cnt),      // response fifo count
-// response_ready when fifo_length==response_length
 
-//    .frequency_o,  // to fifo, frequency output in MHz           //zzmf0003
-//    .frq_wr_en_o,         // frequency fifo write enable         //zzmf0003
-//    .frq_fifo_empty_i,         // frequency fifo empty flag      //zzmf0003
-//    .frq_fifo_full_i,          // frequency fifo full flag       //zzmf0003
+    .frequency_o                (frq_fifo_dat_i),   // to fifo, frequency output in MHz
+    .frq_wr_en_o                (frq_fifo_wen),     // frequency fifo write enable
+    .frq_fifo_empty_i           (frq_fifo_mt),      // frequency fifo empty flag
+    .frq_fifo_full_i            (frq_fifo_full),    // frequency fifo full flag
                                                     
 //    .power_o,      // to fifo, power output in dBm
 //    .reg pwr_wr_en_o,         // power fifo write enable
@@ -899,10 +948,7 @@ end
 //    .pulse_fifo_empty_i,           // pulse fifo empty flag
 //    .pulse_fifo_full_i,            // pulse fifo full flag
                                                     
-//    .bias_o,           // to fifo, bias opcode
-//    .bias_wr_en_o,            // bias fifo write enable
-//    .bias_fifo_empty_i,            // bias fifo empty flag
-//    .bias_fifo_full_i,             // bias fifo full flag
+    .bias_enable_o              (bias_en),          // bias control
                                                     
     // pattern opcodes are saved in pattern RAM.
 //    .ptn_wr_en_o,             // opcode processor saves pattern opcodes to pattern RAM 
@@ -917,9 +963,9 @@ end
                                                         
     // Debugging
     .status_o                   (opc_status),         // NULL opcode terminates, done=0, or error code
-    .state_o                    (opc_state)           // For debugger display
-    // .last_opcode_o              (),                 //
-    // .last_length_o              ()                  //    
+    .state_o                    (opc_state),          // For debugger display
+    .last_opcode_o              (last_opcode)         //
+    // .last_length_o              ()                   //    
   );
   
 // ******************************************************************************
@@ -1296,8 +1342,8 @@ end
   assign RF_GATE2 = dbg_enables & BIT_RF_GATE2 ? 1'b1 : 1'b0;
   assign VGA_VSW = dbg_enables & BIT_VGA_VSW ? 1'b1 : 1'b0;
   assign VGA_VSWn = !VGA_VSW;       
-  assign DRV_BIAS_EN = dbg_enables & BIT_DRV_BIAS_EN ? 1'b1 : 1'b0;
-  assign PA_BIAS_EN = dbg_enables & BIT_PA_BIAS_EN ? 1'b1 : 1'b0;
+  assign DRV_BIAS_EN = bias_en;     //dbg_enables & BIT_DRV_BIAS_EN ? 1'b1 : 1'b0;
+  assign PA_BIAS_EN = bias_en;      //dbg_enables & BIT_PA_BIAS_EN ? 1'b1 : 1'b0;
   assign SYN_MUTE = dbg_enables & BIT_SYN_MUTE ? 1'b0 : 1'b1;
   assign DDS_IORST = dbg_enables & BIT_DDS_IORST ? 1'b1 : 1'b0;
   assign DDS_IOUP = dbg_enables & BIT_DDS_IOUP ? 1'b1 : 1'b0;
