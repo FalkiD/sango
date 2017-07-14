@@ -897,8 +897,40 @@ end
     .opc_status2_i     ({10'd0, frq_fifo_count[5:0], 6'd0, opc_fifo_count[`GLBL_RSP_FILL_LEVEL_BITS-1:0]})
     );
 
+  freq_s4 freq_processor
+  (
+    .sys_clk            (sys_clk),
+    .sys_rst_n          (sys_rst_n),
+    
+    .freq_en            (),
+    .spi_idle           (),
 
+    // Frequency(ies) are in Hz in input fifo
+    .frq_fifo_i         (frq_fifo_dat_o),       // frequency fifo
+    .frq_fifo_ren_o     (frq_fifo_ren),         // fifo read line
+    .frq_fifo_empty_i   (frq_fifo_empty),       // fifo empty flag
+    .frq_fifo_count_i   (frq_fifo_count),       // fifo count, for debug message only
 
+    .ftw_o              (),                     // tuning word output          
+
+    // SPI data is written to dual-clock fifo, then SPI write request is queued.
+    // spi_processor_idle is asserted when write is finished by top level.
+//    output reg [7:0]    spi_o,              // spi DDS fifo data
+//    output reg          spi_wr_en_o,        // spi DDS fifo write enable
+//    input               spi_fifo_empty_i,   // spi DDS fifo empty flag
+//    input               spi_fifo_full_i,    // spi DDS fifo full flag
+//    input               spi_wr_ack_i,       // spi DDS fifo write acknowledge
+
+    // The fifo to request an SPI write from the top level
+//    output reg [7:0]    spiwr_queue_data_o,       // queue request for DDS write
+//    output reg          spiwr_queue_wr_en_o,      // spi DDS fifo write enable
+//    input               spiwr_queue_fifo_empty_i, // spi DDS fifo empty flag
+//    input               spiwr_queue_fifo_full_i,  // spi DDS fifo full flag
+//    input               spiwr_queue_wr_ack_i,     // fifo write acknowledge
+
+    .status_o           (),                 // SUCCESS when done, or an error code
+    .busy_o             ()                  // State of frequency processor
+  );
 
 
 // ******************************************************************************
