@@ -69,31 +69,28 @@ module freq_s4 #(parameter FILL_BITS = 6,
   output reg              busy_o                  // State of this module
 );
 
-    // Main Globals
+  // Main Globals
   reg [6:0]       state = 0;
   reg [6:0]       next_state;         // saved while waiting for multiply/divide in FRQ_WAIT state
   reg [6:0]       next_spiwr_state;   // saved while waiting for SPI writes to finish before next request
 
-  reg [31:0]      frequency = 32'd0;
-  reg [31:0]      tmp32;      // for FR, MSYN, MBW queueing, other tmp use
-  reg [3:0]       byte_idx;   // countdown when writing bytes to fifo
-  reg [5:0]       shift;      // up to 63 bits
-  // Latency for math operations, Xilinx multiplier & divrem divider have no reliable "done" line???
-  `define MULTIPLIER_CLOCKS 6'd4
-  reg [5:0]       latency_counter;    // wait for multiplier & divider 
+  reg  [31:0]      frequency = 32'd0;
+  // Latency for multiply operation, Xilinx multiplier
+  `define MULTIPLIER_CLOCKS 6'd6
+  reg  [5:0]       latency_counter;    // wait for multiplier & divider 
 
-  reg [31:0] K = 32'h0C00DEF5;        // Tuning word scale
-  reg [63:0] FTW;                     // FTW calculated
-  reg        multiply;
+  reg  [31:0]      K = 32'h0C00DEF5;        // Tuning word scale
+  wire [63:0]      FTW;                     // FTW calculated
+  reg              multiply;
 
   // Xilinx multiplier to perform 32 bit multiplication, output is 64 bits
-//  mult48 ddsMultiply (
-//     .CLK(sys_clk),
-//     .A(frequency),
-//     .B(K),
-//     .CE(multiply),
-//     .P(FTW)
-//  );      
+  ftw_mult ftw_multiplier (
+     .CLK(sys_clk),
+     .A(frequency),
+     .B(K),
+     .CE(multiply),
+     .P(FTW)
+  );      
     
   /////////////////////////////////
   // Frequency state definitions //
@@ -119,8 +116,10 @@ module freq_s4 #(parameter FILL_BITS = 6,
     begin
       case(state)
       `FRQ_WAIT: begin
-        if(latency_counter == 0)
+        if(latency_counter == 0) begin
           state <= next_state;
+          multiply <= 1'b0;
+        end
         else
           latency_counter <= latency_counter - 1;
       end
@@ -157,7 +156,6 @@ module freq_s4 #(parameter FILL_BITS = 6,
       end
       endcase
     end
-    
   end
 endmodule
     

@@ -28,20 +28,20 @@
     <Option Name="IPStaticSourceDir" Val="$PPRDIR/S4.ip_user_files/ipstatic"/>
     <Option Name="EnableBDX" Val="FALSE"/>
     <Option Name="DSANumComputeUnits" Val="16"/>
-    <Option Name="WTXSimLaunchSim" Val="59"/>
+    <Option Name="WTXSimLaunchSim" Val="63"/>
     <Option Name="WTModelSimLaunchSim" Val="0"/>
     <Option Name="WTQuestaLaunchSim" Val="0"/>
     <Option Name="WTIesLaunchSim" Val="0"/>
     <Option Name="WTVcsLaunchSim" Val="0"/>
     <Option Name="WTRivieraLaunchSim" Val="0"/>
     <Option Name="WTActivehdlLaunchSim" Val="0"/>
-    <Option Name="WTXSimExportSim" Val="0"/>
-    <Option Name="WTModelSimExportSim" Val="0"/>
-    <Option Name="WTQuestaExportSim" Val="0"/>
-    <Option Name="WTIesExportSim" Val="0"/>
-    <Option Name="WTVcsExportSim" Val="0"/>
-    <Option Name="WTRivieraExportSim" Val="0"/>
-    <Option Name="WTActivehdlExportSim" Val="0"/>
+    <Option Name="WTXSimExportSim" Val="1"/>
+    <Option Name="WTModelSimExportSim" Val="1"/>
+    <Option Name="WTQuestaExportSim" Val="1"/>
+    <Option Name="WTIesExportSim" Val="1"/>
+    <Option Name="WTVcsExportSim" Val="1"/>
+    <Option Name="WTRivieraExportSim" Val="1"/>
+    <Option Name="WTActivehdlExportSim" Val="1"/>
     <Option Name="GenerateIPUpgradeLog" Val="TRUE"/>
     <Option Name="XSimRadix" Val="hex"/>
     <Option Name="XSimTimeUnit" Val="ns"/>
@@ -305,6 +305,34 @@
         <Option Name="xsim.simulate.runtime" Val="30000000ns"/>
       </Config>
     </FileSet>
+    <FileSet Name="ftw_mult" Type="BlockSrcs" RelSrcDir="$PSRCDIR/ftw_mult">
+      <File Path="$PSRCDIR/sources_1/ip/ftw_mult/ftw_mult.xci">
+        <FileInfo>
+          <Attr Name="UsedIn" Val="synthesis"/>
+          <Attr Name="UsedIn" Val="implementation"/>
+          <Attr Name="UsedIn" Val="simulation"/>
+        </FileInfo>
+        <CompFileExtendedInfo CompFileName="ftw_mult.xci" FileRelPathName="ftw_mult_sim_netlist.vhdl"/>
+        <CompFileExtendedInfo CompFileName="ftw_mult.xci" FileRelPathName="ftw_mult_sim_netlist.v"/>
+        <CompFileExtendedInfo CompFileName="ftw_mult.xci" FileRelPathName="ftw_mult_stub.vhdl"/>
+        <CompFileExtendedInfo CompFileName="ftw_mult.xci" FileRelPathName="ftw_mult_stub.v"/>
+        <CompFileExtendedInfo CompFileName="ftw_mult.xci" FileRelPathName="ftw_mult.xml"/>
+        <CompFileExtendedInfo CompFileName="ftw_mult.xci" FileRelPathName="ftw_mult.vho"/>
+        <CompFileExtendedInfo CompFileName="ftw_mult.xci" FileRelPathName="ftw_mult.veo"/>
+        <CompFileExtendedInfo CompFileName="ftw_mult.xci" FileRelPathName="sim/ftw_mult.vhd"/>
+        <CompFileExtendedInfo CompFileName="ftw_mult.xci" FileRelPathName="hdl/mult_gen_v12_0_vh_rfs.vhd"/>
+        <CompFileExtendedInfo CompFileName="ftw_mult.xci" FileRelPathName="ftw_mult_ooc.xdc"/>
+        <CompFileExtendedInfo CompFileName="ftw_mult.xci" FileRelPathName="hdl/xbip_utils_v3_0_vh_rfs.vhd"/>
+        <CompFileExtendedInfo CompFileName="ftw_mult.xci" FileRelPathName="synth/ftw_mult.vhd"/>
+        <CompFileExtendedInfo CompFileName="ftw_mult.xci" FileRelPathName="hdl/xbip_bram18k_v3_0_vh_rfs.vhd"/>
+        <CompFileExtendedInfo CompFileName="ftw_mult.xci" FileRelPathName="hdl/xbip_pipe_v3_0_vh_rfs.vhd"/>
+        <CompFileExtendedInfo CompFileName="ftw_mult.xci" FileRelPathName="doc/mult_gen_v12_0_changelog.txt"/>
+      </File>
+      <Config>
+        <Option Name="TopModule" Val="ftw_mult"/>
+        <Option Name="UseBlackboxStub" Val="1"/>
+      </Config>
+    </FileSet>
   </FileSets>
   <Simulators>
     <Simulator Name="XSim">
@@ -333,6 +361,16 @@
       <GeneratedRun Dir="$PRUNDIR" File="gen_run.xml"/>
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
     </Run>
+    <Run Id="ftw_mult_synth_1" Type="Ft3:Synth" SrcSet="ftw_mult" Part="xc7a35tftg256-2" ConstrsSet="ftw_mult" Description="Vivado Synthesis Defaults" Dir="$PRUNDIR/ftw_mult_synth_1" IncludeInArchive="true">
+      <Strategy Version="1" Minor="2">
+        <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2016">
+          <Desc>Vivado Synthesis Defaults</Desc>
+        </StratHandle>
+        <Step Id="synth_design"/>
+      </Strategy>
+      <GeneratedRun Dir="$PRUNDIR" File="gen_run.xml"/>
+      <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
+    </Run>
     <Run Id="impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-2" ConstrsSet="constrs_1" Description="Default settings for Implementation." State="current" Dir="$PRUNDIR/impl_1" SynthRun="synth_1" IncludeInArchive="true">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2016"/>
@@ -347,6 +385,23 @@
         <Step Id="write_bitstream"/>
       </Strategy>
       <GeneratedRun Dir="$PRUNDIR" File="gen_run.xml"/>
+      <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
+    </Run>
+    <Run Id="ftw_mult_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-2" ConstrsSet="ftw_mult" Description="Default settings for Implementation." SynthRun="ftw_mult_synth_1" IncludeInArchive="false">
+      <Strategy Version="1" Minor="2">
+        <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2016">
+          <Desc>Default settings for Implementation.</Desc>
+        </StratHandle>
+        <Step Id="init_design"/>
+        <Step Id="opt_design"/>
+        <Step Id="power_opt_design"/>
+        <Step Id="place_design"/>
+        <Step Id="post_place_power_opt_design"/>
+        <Step Id="phys_opt_design"/>
+        <Step Id="route_design"/>
+        <Step Id="post_route_phys_opt_design"/>
+        <Step Id="write_bitstream"/>
+      </Strategy>
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
     </Run>
   </Runs>

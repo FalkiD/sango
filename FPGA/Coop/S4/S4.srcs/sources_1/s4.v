@@ -388,13 +388,14 @@ wire [`GLBL_RSP_FILL_LEVEL_BITS-1:0] opc_rsp_lng;    // update response length w
 wire [`GLBL_RSP_FILL_LEVEL_BITS-1:0] opc_rsp_cnt;    // response fifo count, opcode processor asserts 
 
 // Frequency processor wires
-wire [31:0]  frq_fifo_dat_i;          // to fifo, frequency output in MHz
+wire [31:0]  frq_fifo_dat_i;          // to fifo from opc, frequency output in MHz
 wire         frq_fifo_wen;            // frequency fifo write enable
 wire [31:0]  frq_fifo_dat_o;          // to frequency processor
 wire         frq_fifo_ren;            // frequency fifo read enable
 wire         frq_fifo_mt;             // frequency fifo empty flag
 wire         frq_fifo_full;           // frequency fifo full flag
 wire [5:0]   frq_fifo_count;
+wire [31:0]  ft_bytes;                // frequency tuning word SPI bytes for DDS SPI
 
 // Power processor wires
 wire [31:0]  power_w;                 // to fifo, power output in dBm
@@ -733,7 +734,7 @@ end
     .USE_BRAM(1),
     .WIDTH(32),
     .DEPTH(64),
-    .FILL_LEVEL_BITS(7),
+    .FILL_LEVEL_BITS(6),
     .PF_FULL_POINT(63),
     .PF_FLAG_POINT(32),
     .PF_EMPTY_POINT(1)
@@ -747,12 +748,12 @@ end
     .fifo_wr_i(frq_fifo_wen),
     .fifo_din(frq_fifo_dat_i),
         
-    .fifo_rd_i(freq_fifo_ren),
-    .fifo_dout(freq_fifo_dat_o),
+    .fifo_rd_i(frq_fifo_ren),
+    .fifo_dout(frq_fifo_dat_o),
         
     .fifo_fill_level(frq_fifo_count),
-    .fifo_full(freq_fifo_full),
-    .fifo_empty(freq_fifo_mt),
+    .fifo_full(frq_fifo_full),
+    .fifo_empty(frq_fifo_mt),
     .fifo_pf_full(),
     .fifo_pf_flag(),
     .fifo_pf_empty()           
@@ -902,16 +903,16 @@ end
     .sys_clk            (sys_clk),
     .sys_rst_n          (sys_rst_n),
     
-    .freq_en            (),
-    .spi_idle           (),
+    .freq_en            (opc_enable),
+    .spi_idle           (1'b1),
 
     // Frequency(ies) are in Hz in input fifo
     .frq_fifo_i         (frq_fifo_dat_o),       // frequency fifo
     .frq_fifo_ren_o     (frq_fifo_ren),         // fifo read line
-    .frq_fifo_empty_i   (frq_fifo_empty),       // fifo empty flag
+    .frq_fifo_empty_i   (frq_fifo_mt),       // fifo empty flag
     .frq_fifo_count_i   (frq_fifo_count),       // fifo count, for debug message only
 
-    .ftw_o              (),                     // tuning word output          
+    .ftw_o              (ft_bytes),             // tuning word output, SPI bytes to DDS SPI          
 
     // SPI data is written to dual-clock fifo, then SPI write request is queued.
     // spi_processor_idle is asserted when write is finished by top level.
