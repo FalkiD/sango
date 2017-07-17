@@ -304,11 +304,6 @@ wire  [1:0]  mmc_dat_siz;
 wire         mmc_tlm;
 
 // MMC card I/O proxy signals
-wire         MMC_CLK_io;
-wire         MMC_CMD_io;
-wire  [7:0]  MMC_DAT_io;
-wire         MMC_CLK_i;
-wire         MMC_CMD_i;
 wire  [7:0]  MMC_DAT_i;
 
 // Backside HW signals  
@@ -803,10 +798,10 @@ end
 `endif
 
     // SD/MMC card signals
-    .mmc_clk_i         (MMC_CLK_i),
+    .mmc_clk_i         (MMC_CLK),
     .mmc_clk_o         (mmc_clk),
     .mmc_clk_oe_o      (mmc_clk_oe),
-    .mmc_cmd_i         (MMC_CMD_i),
+    .mmc_cmd_i         (MMC_CMD),
     .mmc_cmd_o         (mmc_cmd),
     .mmc_cmd_oe_o      (mmc_cmd_oe),
     .mmc_dat_i         (MMC_DAT_i),
@@ -1291,11 +1286,11 @@ end
 
   // Implement MMC card tri-state drivers at the top level
     // Drive the clock output when needed
-  assign MMC_CLK_io = mmc_clk_oe?mmc_clk:1'bZ;
+  assign MMC_CLK = mmc_clk_oe?mmc_clk:1'bZ;
     // Create mmc command signals
   assign mmc_cmd_zzz    = mmc_cmd?1'bZ:1'b0;
   assign mmc_cmd_choice = mmc_od_mode?mmc_cmd_zzz:mmc_cmd;
-  assign MMC_CMD_io = mmc_cmd_oe?mmc_cmd_choice:1'bZ;
+  assign MMC_CMD = mmc_cmd_oe?mmc_cmd_choice:1'bZ;
     // Create "open drain" data vector
   genvar j;
   for(j=0;j<8;j=j+1) begin
@@ -1310,25 +1305,20 @@ end
     else if (mmc_dat_siz==1) mmc_dat_choice3 <= {4'bZ,mmc_dat_choice2[3:0]};
     else                     mmc_dat_choice3 <= mmc_dat_choice2;
 
-  assign MMC_DAT_io = mmc_dat_choice3;
-  
-   // Map the MMC output proxies to actual FPGA I/O pins
-  assign MMC_CLK      = MMC_CLK_io;
-  assign MMC_CMD      = MMC_CMD_io;
-  assign MMC_DAT7     = MMC_DAT_io[7];
-  assign MMC_DAT6     = MMC_DAT_io[6];
-  assign MMC_DAT5     = MMC_DAT_io[5];
-  assign MMC_DAT4     = MMC_DAT_io[4];
-  assign MMC_DAT3     = MMC_DAT_io[3];
-  assign MMC_DAT2     = MMC_DAT_io[2];
-  assign MMC_DAT1     = MMC_DAT_io[1];
-  assign MMC_DAT0     = MMC_DAT_io[0];
+  // Map the MMC output proxies to actual FPGA I/O pins
+  assign MMC_DAT7     = mmc_dat_choice3[7];
+  assign MMC_DAT6     = mmc_dat_choice3[6];
+  assign MMC_DAT5     = mmc_dat_choice3[5];
+  assign MMC_DAT4     = mmc_dat_choice3[4];
+  assign MMC_DAT3     = mmc_dat_choice3[3];
+  assign MMC_DAT2     = mmc_dat_choice3[2];
+  assign MMC_DAT1     = mmc_dat_choice3[1];
+  assign MMC_DAT0     = mmc_dat_choice3[0];
   
    // Map the MMC input  proxies to actual FPGA I/O pins
-  assign MMC_CLK_i    = MMC_CLK;
-  assign MMC_CMD_i    = MMC_CMD;
   assign MMC_DAT_i    = {MMC_DAT7, MMC_DAT6, MMC_DAT5, MMC_DAT4, MMC_DAT3, MMC_DAT2, MMC_DAT1, MMC_DAT0};
 
+  // MMC_IRQn connected to MCU SD_CD, must be low. Can remove later when MMC driver sw fixed
   assign MMC_IRQn     = 1'b0;    // MCU SDIO_SD pin; low=MMC_Card_Present.
       
   // 31-Mar-2017 Add SPI instances to debug on S4

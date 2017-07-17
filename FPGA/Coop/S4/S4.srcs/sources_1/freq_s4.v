@@ -76,7 +76,7 @@ module freq_s4 #(parameter FILL_BITS = 6,
 
   reg  [31:0]      frequency = 32'd0;
   // Latency for multiply operation, Xilinx multiplier
-  `define MULTIPLIER_CLOCKS 6'd6
+  localparam MULTIPLIER_CLOCKS = 6'd6;
   reg  [5:0]       latency_counter;    // wait for multiplier & divider 
 
   reg  [31:0]      K = 32'h0C00DEF5;        // Tuning word scale
@@ -95,27 +95,27 @@ module freq_s4 #(parameter FILL_BITS = 6,
   /////////////////////////////////
   // Frequency state definitions //
   /////////////////////////////////
-  `define FRQ_IDLE        0
-  `define FRQ_SPCR        1
-  `define FRQ_READ        2
-  `define FRQ_TOMHZ       3
-  `define FRQ_DDS_MULT    4
-//  `define FRQ_DDS_RND     5
-  `define FRQ_WRITE       6
-  `define FRQ_WAIT        7
+  localparam FRQ_IDLE      = 0;
+  localparam FRQ_SPCR      = 1;
+  localparam FRQ_READ      = 2;
+  localparam FRQ_TOMHZ     = 3;
+  localparam FRQ_DDS_MULT  = 4;
+//  localparam FRQ_DDS_RND  =  5;
+  localparam FRQ_WRITE     = 6;
+  localparam FRQ_WAIT      = 7;
     
   always @(posedge sys_clk)
   begin
     if(!sys_rst_n)
     begin
-      state <= `FRQ_IDLE;            
+      state <= FRQ_IDLE;            
       frq_fifo_ren_o <= 0;
       ftw_o <= 32'd0;
     end
     else if(freq_en == 1'b1)
     begin
       case(state)
-      `FRQ_WAIT: begin
+      FRQ_WAIT: begin
         if(latency_counter == 0) begin
           state <= next_state;
           multiply <= 1'b0;
@@ -123,36 +123,36 @@ module freq_s4 #(parameter FILL_BITS = 6,
         else
           latency_counter <= latency_counter - 1;
       end
-      `FRQ_IDLE: begin
+      FRQ_IDLE: begin
         if(!frq_fifo_empty_i) begin
           frq_fifo_ren_o <= 1'b1;
-          state <= `FRQ_SPCR;
+          state <= FRQ_SPCR;
         end
       end
-      `FRQ_SPCR: begin
-        state <= `FRQ_READ;
+      FRQ_SPCR: begin
+        state <= FRQ_READ;
       end
-      `FRQ_READ: begin
+      FRQ_READ: begin
         frequency <= frq_fifo_i;
-        state <= `FRQ_DDS_MULT;
+        state <= FRQ_DDS_MULT;
       end
-      `FRQ_DDS_MULT: begin
+      FRQ_DDS_MULT: begin
         frq_fifo_ren_o <= 1'b0;
         multiply <= 1'b1;
-        latency_counter <= `MULTIPLIER_CLOCKS;
-        next_state <= `FRQ_WRITE;
-        state <= `FRQ_WAIT;
+        latency_counter <= MULTIPLIER_CLOCKS;
+        next_state <= FRQ_WRITE;
+        state <= FRQ_WAIT;
       end
-      `FRQ_WRITE: begin
+      FRQ_WRITE: begin
         if(FTW[31] == 1'b1)
           ftw_o <= FTW[63:32] + 32'd1;
         else
           ftw_o <= FTW[63:32];
-        state <= `FRQ_IDLE;
+        state <= FRQ_IDLE;
       end
       default: begin
         status_o <= `ERR_UNKNOWN_FRQ_STATE;
-        state <= `FRQ_IDLE;
+        state <= FRQ_IDLE;
       end
       endcase
     end

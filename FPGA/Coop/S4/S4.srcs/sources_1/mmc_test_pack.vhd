@@ -93,7 +93,7 @@ package mmc_test_pack is
     dbg_spi_dataC_o     : out unsigned(7 downto 0);
     dbg_spi_dataD_o     : out unsigned(7 downto 0);
     dbg_spi_bytes_io    : inout unsigned(3 downto 0); --bytes to send
-    dbg_spi_start_o     : inout std_logic;
+    dbg_spi_start_o     : out std_logic;
     dbg_spi_device_o    : out unsigned(2 downto 0); --1=VGA, 2=SYN, 3=DDS, 4=ZMON
     dbg_spi_busy_i      : in  std_logic;
     dbg_enables_o       : out unsigned(15 downto 0);  --toggle various enables/wires
@@ -784,7 +784,7 @@ use work.async_syscon_pack.all;
     dbg_spi_dataC_o     : out unsigned(7 downto 0);
     dbg_spi_dataD_o     : out unsigned(7 downto 0);
     dbg_spi_bytes_io    : inout unsigned(3 downto 0); --bytes to send
-    dbg_spi_start_o     : inout std_logic;
+    dbg_spi_start_o     : out std_logic;
     dbg_spi_device_o    : out unsigned(2 downto 0); --1=VGA, 2=SYN, 3=DDS, 4=ZMON
     dbg_spi_busy_i      : in  std_logic;            --top level is writing SPI bytes
     dbg_enables_o       : out unsigned(15 downto 0); --toggle various enables/wires
@@ -1039,6 +1039,7 @@ architecture beh of mmc_tester is
 
   signal dbg_spi_count      : unsigned(3 downto 0); --down counter
   signal dbg_spi_state      : integer;
+  signal dbg_spi_start_l    : std_logic; -- local copy of dbg_spi_start_o
 
 begin
 
@@ -1219,7 +1220,7 @@ begin
       
       -- SPI debugging
       dbg_spi_bytes_io <= to_unsigned(0, dbg_spi_bytes_io'length);
-      dbg_spi_start_o <= '0';
+      dbg_spi_start_l <= '0';
       dbg_spi_device_o <= to_unsigned(0, dbg_spi_device_o'length);
       dbg_enables_o <= to_unsigned(0, dbg_enables_o'length);
       dbg_spi_state <= 0;
@@ -1322,112 +1323,112 @@ begin
         case to_integer(syscon_adr(3 downto 0)) is
           when 16#0# =>
             dbg_spi_device_o <= syscon_dat_wr(2 downto 0);
-            dbg_spi_start_o <= '0';
+            dbg_spi_start_l <= '0';
           when 16#1# =>
             dbg_spi_bytes_io <= syscon_dat_wr(3 downto 0);
             dbg_spi_count <= to_unsigned(1, dbg_spi_count'length);
           when 16#2# =>
             dbg_spi_data0_o <= syscon_dat_wr(7 downto 0);
             if(dbg_spi_count = dbg_spi_bytes_io) then
-              dbg_spi_start_o <= '1';
+              dbg_spi_start_l <= '1';
             else
               dbg_spi_count <= dbg_spi_count + 1;
             end if;
           when 16#3# =>
             dbg_spi_data1_o <= syscon_dat_wr(7 downto 0);
             if(dbg_spi_count = dbg_spi_bytes_io) then
-              dbg_spi_start_o <= '1';
+              dbg_spi_start_l <= '1';
             else
               dbg_spi_count <= dbg_spi_count + 1;
             end if;
           when 16#4# =>
             dbg_spi_data2_o <= syscon_dat_wr(7 downto 0);
             if(dbg_spi_count = dbg_spi_bytes_io) then
-              dbg_spi_start_o <= '1';
+              dbg_spi_start_l <= '1';
             else
               dbg_spi_count <= dbg_spi_count + 1;
             end if;
           when 16#5# =>
             dbg_spi_data3_o <= syscon_dat_wr(7 downto 0);
             if(dbg_spi_count = dbg_spi_bytes_io) then
-              dbg_spi_start_o <= '1';
+              dbg_spi_start_l <= '1';
             else
               dbg_spi_count <= dbg_spi_count + 1;
             end if;
           when 16#6# =>
             dbg_spi_data4_o <= syscon_dat_wr(7 downto 0);
             if(dbg_spi_count = dbg_spi_bytes_io) then
-              dbg_spi_start_o <= '1';
+              dbg_spi_start_l <= '1';
             else
               dbg_spi_count <= dbg_spi_count + 1;
             end if;
           when 16#7# =>
             dbg_spi_data5_o <= syscon_dat_wr(7 downto 0);
             if(dbg_spi_count = dbg_spi_bytes_io) then
-              dbg_spi_start_o <= '1';
+              dbg_spi_start_l <= '1';
             else
               dbg_spi_count <= dbg_spi_count + 1;
             end if;
           when 16#8# =>
             dbg_spi_data6_o <= syscon_dat_wr(7 downto 0);
             if(dbg_spi_count = dbg_spi_bytes_io) then
-              dbg_spi_start_o <= '1';
+              dbg_spi_start_l <= '1';
             else
               dbg_spi_count <= dbg_spi_count + 1;
             end if;
           when 16#9# =>
             dbg_spi_data7_o <= syscon_dat_wr(7 downto 0);
             if(dbg_spi_count = dbg_spi_bytes_io) then
-              dbg_spi_start_o <= '1';
+              dbg_spi_start_l <= '1';
             else
               dbg_spi_count <= dbg_spi_count + 1;
             end if;
           when 16#A# =>
             dbg_spi_data8_o <= syscon_dat_wr(7 downto 0);
             if(dbg_spi_count = dbg_spi_bytes_io) then
-              dbg_spi_start_o <= '1';
+              dbg_spi_start_l <= '1';
             else
               dbg_spi_count <= dbg_spi_count + 1;
             end if;
           when 16#B# =>
             dbg_spi_data9_o <= syscon_dat_wr(7 downto 0);
             if(dbg_spi_count = dbg_spi_bytes_io) then
-              dbg_spi_start_o <= '1';
+              dbg_spi_start_l <= '1';
             else
               dbg_spi_count <= dbg_spi_count + 1;
             end if;
           when 16#C# =>
             dbg_spi_dataA_o <= syscon_dat_wr(7 downto 0);
             if(dbg_spi_count = dbg_spi_bytes_io) then
-              dbg_spi_start_o <= '1';
+              dbg_spi_start_l <= '1';
             else
               dbg_spi_count <= dbg_spi_count + 1;
             end if;
           when 16#D# =>
             dbg_spi_dataB_o <= syscon_dat_wr(7 downto 0);
             if(dbg_spi_count = dbg_spi_bytes_io) then
-              dbg_spi_start_o <= '1';
+              dbg_spi_start_l <= '1';
             else
               dbg_spi_count <= dbg_spi_count + 1;
             end if;
           when 16#E# =>
             dbg_spi_dataC_o <= syscon_dat_wr(7 downto 0);
             if(dbg_spi_count = dbg_spi_bytes_io) then
-              dbg_spi_start_o <= '1';
+              dbg_spi_start_l <= '1';
             else
               dbg_spi_count <= dbg_spi_count + 1;
             end if;
           when 16#F# =>
             dbg_spi_dataD_o <= syscon_dat_wr(7 downto 0);
-            dbg_spi_start_o <= '1';
+            dbg_spi_start_l <= '1';
           when others =>
             null;
           end case;
       end if;            
 
       --If Debug SPI just started, clear start pulse, device #
-      if(dbg_spi_start_o = '1' and dbg_spi_busy_i = '1') then
-        dbg_spi_start_o <= '0';     -- clear start
+      if(dbg_spi_start_l = '1' and dbg_spi_busy_i = '1') then
+        dbg_spi_start_l <= '0';     -- clear start
       end if;
 
     end if;
@@ -1438,6 +1439,9 @@ begin
                '0';
   o_reg_ack <= o_reg_sel;
   r_reg_ack <= r_reg_sel;
+
+  -- assign output based on local value
+  dbg_spi_start_o <= dbg_spi_start_l;
 
   -- Provide led_reg as output to external LEDs
   led_o <= led_reg;
@@ -1660,7 +1664,12 @@ begin
   end process;
   -- Create a signal that, when high, indicates that the SD/MMC command
   -- event filter criteria have been met.
-  t_rx_capture <= '1' when (t_rx_cmd_done='1' and t_rx_cmd_filter>"10000000") else
+--  t_rx_capture <= '1' when (t_rx_cmd_done='1' and t_rx_cmd_filter>"10000000") else
+--                  '1' when (t_rx_cmd_done='1' and t_rx_cmd_filter=t_rx_cmd_raw(47 downto 40)) else
+--                  '0';
+-- John C sent this capture filter bugfix 24-Jun-2017
+    t_rx_capture <= '1' when (t_rx_cmd_done='1' and t_rx_cmd_filter>"10000000") else
+                  '1' when (t_rx_cmd_done='1' and t_rx_cmd_filter(6)=t_rx_cmd_raw(46) and t_rx_cmd_filter(5 downto 0)="111111") else
                   '1' when (t_rx_cmd_done='1' and t_rx_cmd_filter=t_rx_cmd_raw(47 downto 40)) else
                   '0';
 

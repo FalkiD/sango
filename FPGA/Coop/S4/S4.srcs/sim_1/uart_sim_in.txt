@@ -31,11 +31,11 @@ u 1.0 ms w 0300003C 0 0 0 0;
 --u 1.0 ms w 03000039 00000000 00000000 00000000;
 --u 1.0 ms w 0300003C 00000000 00000000 00000000;
 --u 1.0 ms w 0300003F 00000000;  -- write 64 bytes to opcode processor
---d 50 us ;  -- wait a little
---u 2.0 ms r 3000030 4; -- read response
---u 2.0 ms r 3000034 4; -- read response
---u 2.0 ms r 3000038 4; -- read response
---u 2.0 ms r 300003C 4; -- read response
+d 50 us ;  -- wait a little
+u 2.0 ms r 3000030 4; -- read response
+u 2.0 ms r 3000034 4; -- read response
+u 2.0 ms r 3000038 4; -- read response
+u 2.0 ms r 300003C 4; -- read response
 
 --Power opcode followed by frequency
 --u 1.0 ms w 03000030 00010604 04043200 92080880;
