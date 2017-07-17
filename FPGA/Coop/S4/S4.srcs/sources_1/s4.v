@@ -173,6 +173,7 @@
 `define CLKFB_FACTOR_MCU 9.800         //  "       "        "      "                     JLC_TEMP_CLK
 `define GLBL_MMC_FILL_LEVEL_BITS 16
 `define GLBL_RSP_FILL_LEVEL_BITS 10
+`define PWR_FIFO_FILL_BITS       4
 
 // -----------------------------------------------------------------------------
 
@@ -391,18 +392,18 @@ wire         frq_fifo_mt;             // frequency fifo empty flag
 wire         frq_fifo_full;           // frequency fifo full flag
 wire [5:0]   frq_fifo_count;
 wire [31:0]  ft_bytes;                // frequency tuning word SPI bytes for DDS SPI
+wire [7:0]   frq_status;              // frequency processor status
 
 // Power processor wires
-wire [31:0]  power_w;                 // to fifo, power output in dBm
-wire         pwr_wr_en_w;             // power fifo write enable
-wire         pwr_fifo_empty_w;        // power fifo empty flag
-wire         pwr_fifo_full_w;         // power fifo full flag
-
-// Pulse processor wires
-wire [63:0]  pulse_w;                 // to fifo, pulse opcode
-wire         pulse_wr_en_w;           // pulse fifo write enable
-wire         pulse_fifo_empty_w;      // pulse fifo empty flag
-wire         pulse_fifo_full_w;       // pulse fifo full flag
+wire [38:0]  pwr_fifo_dat_i;          // to fifo from opc, power or cal value. 
+                                      // Upper 7 bits are opcode, cal or user power
+wire         pwr_fifo_wen;            // power fifo write enable
+wire [38:0]  pwr_fifo_dat_o;          // to power processor
+wire         pwr_fifo_ren;            // power fifo read enable
+wire         pwr_fifo_mt;             // power fifo empty flag
+wire         pwr_fifo_full;           // power fifo full flag
+wire [7:0]   pwr_status;              // power processor status
+wire [`PWR_FIFO_FILL_BITS-1:0]   pwr_fifo_count;
 
 // Bias enable wire
 wire         bias_en;                  // bias control
@@ -716,14 +717,6 @@ end
 // variables for frequency FIFO, written by opcode processor, 
 // read by frequency processor module
 ///////////////////////////////////////////////////////////////////////
-//    wire        freq_fifo_rst_i = 0;
-//    reg         freq_fifo_clk_en = 0;
-//    wire        freq_fifo_wr_en;
-//    wire        freq_fifo_rd_en;
-//    wire [31:0] freq_fifo_data_in;
-//    wire [31:0] freq_fifo_data_out;
-//    wire  [9:0] freq_fifo_count;    // 512 max
-//    wire        freq_fifo_empty, freq_fifo_full;
   // Instantiate fifo that the opcode processor is using to store frequencies
   swiss_army_fifo #(
     .USE_BRAM(1),
@@ -754,7 +747,44 @@ end
     .fifo_pf_empty()           
   );
               
-
+  ///////////////////////////////////////////////////////////////////////
+  // Power FIFO
+  // variables for power FIFO, written by opcode processor, 
+  // read by power processor module
+  // opcode is written in upper 7 bits so power processsor knows
+  // if it's user power opcode or cal opcode
+  ///////////////////////////////////////////////////////////////////////
+    // Instantiate fifo that the opcode processor is using to store power values
+    swiss_army_fifo #(
+      .USE_BRAM(1),
+      .WIDTH(39),
+      .DEPTH(16),
+      .FILL_LEVEL_BITS(`PWR_FIFO_FILL_BITS),
+      .PF_FULL_POINT(15),
+      .PF_FLAG_POINT(8),
+      .PF_EMPTY_POINT(1)
+    ) pwr_fifo(
+      .sys_rst_n(sys_rst_n),
+      .sys_clk(sys_clk),
+      .sys_clk_en(opc_fifo_enable),
+          
+      .reset_i(opc_fifo_rst),
+          
+      .fifo_wr_i(pwr_fifo_wen),
+      .fifo_din(pwr_fifo_dat_i),
+          
+      .fifo_rd_i(pwr_fifo_ren),
+      .fifo_dout(pwr_fifo_dat_o),
+          
+      .fifo_fill_level(pwr_fifo_count),
+      .fifo_full(pwr_fifo_full),
+      .fifo_empty(pwr_fifo_mt),
+      .fifo_pf_full(),
+      .fifo_pf_flag(),
+      .fifo_pf_empty()           
+    );
+                
+                
 // ******************************************************************************
 // *                                                                            *
 // *  mmc_tester:  The MMC Slave + Related Debug/Test HW                        *
@@ -893,6 +923,9 @@ end
     .opc_status2_i     ({10'd0, frq_fifo_count[5:0], 6'd0, opc_fifo_count[`GLBL_RSP_FILL_LEVEL_BITS-1:0]})
     );
 
+  // Frequency processor instance. 
+  // Input:requested frequency in MHz in fifo
+  // Output:Programs DDS chip on DDS SPI
   freq_s4 freq_processor
   (
     .sys_clk            (sys_clk),
@@ -904,30 +937,34 @@ end
     // Frequency(ies) are in Hz in input fifo
     .frq_fifo_i         (frq_fifo_dat_o),       // frequency fifo
     .frq_fifo_ren_o     (frq_fifo_ren),         // fifo read line
-    .frq_fifo_empty_i   (frq_fifo_mt),       // fifo empty flag
+    .frq_fifo_empty_i   (frq_fifo_mt),          // fifo empty flag
     .frq_fifo_count_i   (frq_fifo_count),       // fifo count, for debug message only
 
-    .ftw_o              (ft_bytes),             // tuning word output, SPI bytes to DDS SPI          
+    .ftw_o              (ft_bytes),             // Debug only, tuning word output, SPI bytes to DDS SPI          
 
-    // SPI data is written to dual-clock fifo, then SPI write request is queued.
-    // spi_processor_idle is asserted when write is finished by top level.
-//    output reg [7:0]    spi_o,              // spi DDS fifo data
-//    output reg          spi_wr_en_o,        // spi DDS fifo write enable
-//    input               spi_fifo_empty_i,   // spi DDS fifo empty flag
-//    input               spi_fifo_full_i,    // spi DDS fifo full flag
-//    input               spi_wr_ack_i,       // spi DDS fifo write acknowledge
-
-    // The fifo to request an SPI write from the top level
-//    output reg [7:0]    spiwr_queue_data_o,       // queue request for DDS write
-//    output reg          spiwr_queue_wr_en_o,      // spi DDS fifo write enable
-//    input               spiwr_queue_fifo_empty_i, // spi DDS fifo empty flag
-//    input               spiwr_queue_fifo_full_i,  // spi DDS fifo full flag
-//    input               spiwr_queue_wr_ack_i,     // fifo write acknowledge
-
-    .status_o           (),                 // SUCCESS when done, or an error code
-    .busy_o             ()                  // State of frequency processor
+    .status_o           (frq_status)            // 0=Busy, SUCCESS when done, or an error code
   );
 
+  // Power processor instance. 
+  // Input:requested power in dBm or a cal value in fifo
+  // Output:Programs DAC7563 chip on VGA SPI
+  power #(
+    .FILL_BITS(`PWR_FIFO_FILL_BITS)
+  )
+  pwr_processor 
+  (
+    .sys_clk            (sys_clk),
+    .sys_rst_n          (sys_rst_n),
+    
+    .power_en           (opc_enable),
+
+    .pwr_fifo_i         (pwr_fifo_dat_o),       // power processor fifo input
+    .pwr_fifo_ren_o     (pwr_fifo_ren),         // power processor fifo read line
+    .pwr_fifo_mt_i      (pwr_fifo_mt),          // power fifo empty flag
+    .pwr_fifo_count_i   (pwr_fifo_count),       // power fifo count
+
+    .status_o           (pwr_status)            // 0=busy, SUCCESS when done, or an error code
+  );
 
 // ******************************************************************************
 // *                                                                            *
@@ -966,10 +1003,10 @@ end
     .frq_fifo_empty_i           (frq_fifo_mt),      // frequency fifo empty flag
     .frq_fifo_full_i            (frq_fifo_full),    // frequency fifo full flag
                                                     
-//    .power_o,      // to fifo, power output in dBm
-//    .reg pwr_wr_en_o,         // power fifo write enable
-//    .pwr_fifo_empty_i,         // power fifo empty flag
-//    .pwr_fifo_full_i,          // power fifo full flag
+    .power_o                    (pwr_fifo_dat_i),   // to fifo, power & opcode in upper 7 bits
+    .pwr_wr_en_o                (pwr_fifo_wen),     // power fifo write enable
+//    .pwr_fifo_empty_i,          (pwr_fifo_mt),      // power fifo empty flag
+//    .pwr_fifo_full_i,           (pwr_fifo_full),    // power fifo full flag
                                                     
 //    .pulse_o,          // to fifo, pulse opcode
 //    .pulse_wr_en_o,           // pulse fifo write enable

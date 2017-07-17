@@ -3,7 +3,7 @@
 <!--                                                         -->
 <!-- Copyright 1986-2016 Xilinx, Inc. All Rights Reserved.   -->
 
-<Project Version="7" Minor="17" Path="C:/work/github/Rick11Jul/FPGA/Coop/S4/S4.xpr">
+<Project Version="7" Minor="17" Path="C:/work/github/master/FPGA/Coop/S4/S4.xpr">
   <DefaultLaunch Dir="$PRUNDIR"/>
   <Configuration>
     <Option Name="Id" Val="2d9935d52c7648098ca2e1b0834597eb"/>
@@ -28,7 +28,7 @@
     <Option Name="IPStaticSourceDir" Val="$PPRDIR/S4.ip_user_files/ipstatic"/>
     <Option Name="EnableBDX" Val="FALSE"/>
     <Option Name="DSANumComputeUnits" Val="16"/>
-    <Option Name="WTXSimLaunchSim" Val="67"/>
+    <Option Name="WTXSimLaunchSim" Val="85"/>
     <Option Name="WTModelSimLaunchSim" Val="0"/>
     <Option Name="WTQuestaLaunchSim" Val="0"/>
     <Option Name="WTIesLaunchSim" Val="0"/>
@@ -137,6 +137,13 @@
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
       </File>
+      <File Path="$PSRCDIR/sources_1/timescale.v">
+        <FileInfo>
+          <Attr Name="UsedIn" Val="synthesis"/>
+          <Attr Name="UsedIn" Val="implementation"/>
+          <Attr Name="UsedIn" Val="simulation"/>
+        </FileInfo>
+      </File>
       <File Path="$PSRCDIR/sources_1/status.h">
         <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
@@ -153,6 +160,13 @@
       <File Path="$PSRCDIR/sources_1/opcodes.h">
         <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
+          <Attr Name="UsedIn" Val="simulation"/>
+        </FileInfo>
+      </File>
+      <File Path="$PSRCDIR/sources_1/power.v">
+        <FileInfo>
+          <Attr Name="UsedIn" Val="synthesis"/>
+          <Attr Name="UsedIn" Val="implementation"/>
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
       </File>
@@ -177,13 +191,6 @@
         </FileInfo>
       </File>
       <File Path="$PSRCDIR/sources_1/spi_master.v">
-        <FileInfo>
-          <Attr Name="UsedIn" Val="synthesis"/>
-          <Attr Name="UsedIn" Val="implementation"/>
-          <Attr Name="UsedIn" Val="simulation"/>
-        </FileInfo>
-      </File>
-      <File Path="$PSRCDIR/sources_1/timescale.v">
         <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="implementation"/>
@@ -320,21 +327,6 @@
           <Attr Name="UsedIn" Val="implementation"/>
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
-        <CompFileExtendedInfo CompFileName="ftw_mult.xci" FileRelPathName="ftw_mult_sim_netlist.vhdl"/>
-        <CompFileExtendedInfo CompFileName="ftw_mult.xci" FileRelPathName="ftw_mult_sim_netlist.v"/>
-        <CompFileExtendedInfo CompFileName="ftw_mult.xci" FileRelPathName="ftw_mult_stub.vhdl"/>
-        <CompFileExtendedInfo CompFileName="ftw_mult.xci" FileRelPathName="ftw_mult_stub.v"/>
-        <CompFileExtendedInfo CompFileName="ftw_mult.xci" FileRelPathName="ftw_mult.xml"/>
-        <CompFileExtendedInfo CompFileName="ftw_mult.xci" FileRelPathName="ftw_mult.vho"/>
-        <CompFileExtendedInfo CompFileName="ftw_mult.xci" FileRelPathName="ftw_mult.veo"/>
-        <CompFileExtendedInfo CompFileName="ftw_mult.xci" FileRelPathName="sim/ftw_mult.vhd"/>
-        <CompFileExtendedInfo CompFileName="ftw_mult.xci" FileRelPathName="hdl/mult_gen_v12_0_vh_rfs.vhd"/>
-        <CompFileExtendedInfo CompFileName="ftw_mult.xci" FileRelPathName="ftw_mult_ooc.xdc"/>
-        <CompFileExtendedInfo CompFileName="ftw_mult.xci" FileRelPathName="hdl/xbip_utils_v3_0_vh_rfs.vhd"/>
-        <CompFileExtendedInfo CompFileName="ftw_mult.xci" FileRelPathName="synth/ftw_mult.vhd"/>
-        <CompFileExtendedInfo CompFileName="ftw_mult.xci" FileRelPathName="hdl/xbip_bram18k_v3_0_vh_rfs.vhd"/>
-        <CompFileExtendedInfo CompFileName="ftw_mult.xci" FileRelPathName="hdl/xbip_pipe_v3_0_vh_rfs.vhd"/>
-        <CompFileExtendedInfo CompFileName="ftw_mult.xci" FileRelPathName="doc/mult_gen_v12_0_changelog.txt"/>
       </File>
       <Config>
         <Option Name="TopModule" Val="ftw_mult"/>
@@ -371,9 +363,7 @@
     </Run>
     <Run Id="ftw_mult_synth_1" Type="Ft3:Synth" SrcSet="ftw_mult" Part="xc7a35tftg256-2" ConstrsSet="ftw_mult" Description="Vivado Synthesis Defaults" Dir="$PRUNDIR/ftw_mult_synth_1" IncludeInArchive="true">
       <Strategy Version="1" Minor="2">
-        <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2016">
-          <Desc>Vivado Synthesis Defaults</Desc>
-        </StratHandle>
+        <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2016"/>
         <Step Id="synth_design"/>
       </Strategy>
       <GeneratedRun Dir="$PRUNDIR" File="gen_run.xml"/>
@@ -397,9 +387,7 @@
     </Run>
     <Run Id="ftw_mult_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-2" ConstrsSet="ftw_mult" Description="Default settings for Implementation." SynthRun="ftw_mult_synth_1" IncludeInArchive="false">
       <Strategy Version="1" Minor="2">
-        <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2016">
-          <Desc>Default settings for Implementation.</Desc>
-        </StratHandle>
+        <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2016"/>
         <Step Id="init_design"/>
         <Step Id="opt_design"/>
         <Step Id="power_opt_design"/>

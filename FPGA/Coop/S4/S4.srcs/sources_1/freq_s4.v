@@ -48,25 +48,10 @@ module freq_s4 #(parameter FILL_BITS = 6,
   input                   frq_fifo_empty_i,  // fifo empty flag
   input [FILL_BITS-1:0]   frq_fifo_count_i,  // fifo count, for debug message only
 
+  // This writes to FIFO in the DDS SPI instance
   output reg [31:0]       ftw_o,             // tuning word output          
 
-    // SPI data is written to dual-clock fifo, then SPI write request is queued.
-    // spi_processor_idle is asserted when write is finished by top level.
-//    output reg [7:0]    spi_o,              // spi DDS fifo data
-//    output reg          spi_wr_en_o,        // spi DDS fifo write enable
-//    input               spi_fifo_empty_i,   // spi DDS fifo empty flag
-//    input               spi_fifo_full_i,    // spi DDS fifo full flag
-//    input               spi_wr_ack_i,       // spi DDS fifo write acknowledge
-
-    // The fifo to request an SPI write from the top level
-//    output reg [7:0]    spiwr_queue_data_o,       // queue request for DDS write
-//    output reg          spiwr_queue_wr_en_o,      // spi DDS fifo write enable
-//    input               spiwr_queue_fifo_empty_i, // spi DDS fifo empty flag
-//    input               spiwr_queue_fifo_full_i,  // spi DDS fifo full flag
-//    input               spiwr_queue_wr_ack_i,     // fifo write acknowledge
-
-  output reg [7:0]        status_o,               // SUCCESS when done, or an error code
-  output reg              busy_o                  // State of this module
+  output reg [7:0]        status_o           // 0=Busy, SUCCESS when done, or an error code
 );
 
   // Main Globals
@@ -111,6 +96,7 @@ module freq_s4 #(parameter FILL_BITS = 6,
       state <= FRQ_IDLE;            
       frq_fifo_ren_o <= 0;
       ftw_o <= 32'd0;
+      status_o <= `SUCCESS;
     end
     else if(freq_en == 1'b1)
     begin
@@ -127,6 +113,7 @@ module freq_s4 #(parameter FILL_BITS = 6,
         if(!frq_fifo_empty_i) begin
           frq_fifo_ren_o <= 1'b1;
           state <= FRQ_SPCR;
+          status_o <= `SUCCESS;
         end
       end
       FRQ_SPCR: begin
@@ -149,6 +136,7 @@ module freq_s4 #(parameter FILL_BITS = 6,
         else
           ftw_o <= FTW[63:32];
         state <= FRQ_IDLE;
+        status_o <= `SUCCESS;
       end
       default: begin
         status_o <= `ERR_UNKNOWN_FRQ_STATE;

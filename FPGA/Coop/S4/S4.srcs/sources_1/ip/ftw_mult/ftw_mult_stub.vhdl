@@ -1,10 +1,10 @@
 -- Copyright 1986-2016 Xilinx, Inc. All Rights Reserved.
 -- --------------------------------------------------------------------------------
 -- Tool Version: Vivado v.2016.4 (win64) Build 1756540 Mon Jan 23 19:11:23 MST 2017
--- Date        : Sat Jul 15 14:16:48 2017
+-- Date        : Mon Jul 17 18:30:41 2017
 -- Host        : ANA00075 running 64-bit major release  (build 9200)
 -- Command     : write_vhdl -force -mode synth_stub
---               c:/work/github/Rick11Jul/FPGA/Coop/S4/S4.srcs/sources_1/ip/ftw_mult/ftw_mult_stub.vhdl
+--               C:/work/github/master/FPGA/Coop/S4/S4.srcs/sources_1/ip/ftw_mult/ftw_mult_stub.vhdl
 -- Design      : ftw_mult
 -- Purpose     : Stub declaration of top-level module interface
 -- Device      : xc7a35tftg256-2
