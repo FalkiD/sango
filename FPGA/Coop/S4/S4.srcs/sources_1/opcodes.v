@@ -532,9 +532,17 @@ module opcodes #(parameter RSP_FILL_LEVEL_BITS = 10,
                 `endif
 //                end
             end
-    //                        `PHASE:
-    //                            begin
-    //                            end
+            `CALPWR: begin  // power processor handles both user power requests and power cal commands
+              power_o <= {opcode[6:0], uinttmp[31:0]};
+              pwr_wr_en_o <= 1;   // enable write power FIFO
+              // Don't process anymore opcodes until fifo is written
+              show_next_state(`STATE_FIFO_WRITE);
+            `ifdef XILINX_SIMULATOR
+              if(filepwr == 0)
+                filepwr = $fopen("./opcode_pwr_to_fifo.txt", "a");
+              $fdisplay (filepwr, "Wrote 0x%h (calpwr) to power processor fifo", uinttmp[31:0]);
+            `endif
+            end
 //            `PULSE: begin
 //                if(operating_mode == `WRITE_PATTERN) begin // Write pattern mode
 //                // save opcode in pattern RAM

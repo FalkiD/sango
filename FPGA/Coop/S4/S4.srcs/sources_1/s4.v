@@ -269,6 +269,10 @@ wire         clk050;
 //wire        initialized = 1'b0;
 //reg  [3:0]  init_clks = 4'd10; 
 
+// Use 0x4000 if dbg_enables to turn ON SPI debugger mode
+// Otherwise SPI outputs are driven by various processor modules
+wire         dbg_spi_mode = 1'b0;
+
 // <JLC_TEMP_RST>
 wire         dbg_sys_rst_i;
 reg  [9:0]   dbg_sys_rst_sr   = 0; //10'b0;
@@ -395,15 +399,20 @@ wire [31:0]  ft_bytes;                // frequency tuning word SPI bytes for DDS
 wire [7:0]   frq_status;              // frequency processor status
 
 // Power processor wires
-wire [38:0]  pwr_fifo_dat_i;          // to fifo from opc, power or cal value. 
+wire [38:0] pwr_fifo_dat_i;          // to fifo from opc, power or cal value. 
                                       // Upper 7 bits are opcode, cal or user power
-wire         pwr_fifo_wen;            // power fifo write enable
-wire [38:0]  pwr_fifo_dat_o;          // to power processor
-wire         pwr_fifo_ren;            // power fifo read enable
-wire         pwr_fifo_mt;             // power fifo empty flag
-wire         pwr_fifo_full;           // power fifo full flag
-wire [7:0]   pwr_status;              // power processor status
+wire        pwr_fifo_wen;            // power fifo write enable
+wire [38:0] pwr_fifo_dat_o;          // to power processor
+wire        pwr_fifo_ren;            // power fifo read enable
+wire        pwr_fifo_mt;             // power fifo empty flag
+wire        pwr_fifo_full;           // power fifo full flag
+wire [7:0]  pwr_status;              // power processor status
 wire [`PWR_FIFO_FILL_BITS-1:0]   pwr_fifo_count;
+// power processor outputs, mux'd to main outputs
+wire        pwr_mosi;
+wire        pwr_sclk;
+wire        pwr_ssn;       
+wire        pwr_vsw;       
 
 // Bias enable wire
 wire         bias_en;                  // bias control
@@ -431,8 +440,8 @@ reg  [3:0]   dbg_spi_count;      // down counter
 wire         dbg_spi_start;
 wire         dbg_spi_busy;
 reg          dbg_spi_done;
-wire [2:0]   dbg_spi_device;     // 1=VGA, 2=SYN, 3=DDS, 4=ZMON
-wire [15:0]  dbg_enables;       // toggle various enables/wires
+wire [2:0]   dbg_spi_device;       // 1=VGA, 2=SYN, 3=DDS, 4=ZMON
+wire [15:0]  dbg_enables; // = 1'b0;          // toggle various enables/wires
 
 // 11-Jul HWDBG UART work, opc connected to mmc_tester 12-Jul
 //   wire                   opc_fifo_wr_en;    // ZZM wr enable to opcode input fifo.
@@ -963,6 +972,11 @@ end
     .pwr_fifo_mt_i      (pwr_fifo_mt),          // power fifo empty flag
     .pwr_fifo_count_i   (pwr_fifo_count),       // power fifo count
 
+    .VGA_MOSI_o         (pwr_mosi),
+    .VGA_SCLK_o         (pwr_sclk),
+    .VGA_SSn_o          (pwr_ssn),       
+    .VGA_VSW_o          (pwr_vsw),       
+
     .status_o           (pwr_status)            // 0=busy, SUCCESS when done, or an error code
   );
 
@@ -1366,12 +1380,14 @@ end
   
   // top level SPI busy flag used by mmc_test_pack 
   // SPI debug command processsor
+  // ******************************************************
+  // ** 18-Jul-2017 note: 0x4000 is used to turn ON SPI  **
+  // ** debug mode. Otherwise SPI outputs are driven by  **
+  // ** various processor modules.                       **
+  // ******************************************************     
   assign dbg_spi_busy = (spi_state == `SPI_IDLE) ? 1'b0 : 1'b1;  
   // Connect SPI to wires based on which device is selected.
   localparam SPI_VGA = 4'd1, SPI_SYN = 4'd2, SPI_DDS = 4'd3, SPI_ZMON = 4'd4;
-  assign VGA_SSn = dbg_spi_device == SPI_VGA ? SPI_SSn : 1'b1;
-  assign VGA_SCLK = dbg_spi_device == SPI_VGA ? SPI_SCLK : 1'b0;
-  assign VGA_MOSI = dbg_spi_device == SPI_VGA ? SPI_MOSI : 1'b0;
 
   assign SYN_SSn = dbg_spi_device == SPI_SYN ? SPI_SSn : 1'b1;
   assign SYN_SCLK = dbg_spi_device == SPI_SYN ? SPI_SCLK : 1'b0;
@@ -1394,23 +1410,71 @@ end
   localparam BIT_DDS_SYNC         = 16'h0200;
   localparam BIT_DDS_PS0          = 16'h0400;
   localparam BIT_DDS_PS1          = 16'h0800;
-  localparam BIT_ZMON_EN          = 16'h1000;                            // <JLC_TEMP_ZMON_EN>
+  localparam BIT_ZMON_EN          = 16'h1000;                           // <JLC_TEMP_ZMON_EN>
   
-  localparam BIT_TEMP_SYS_RST     = 16'h8000;                            // <JLC_TEMP_RST>
+  localparam BIT_SPI_DBG_MODE     = 16'h4000;                           // Enable this SPI debugger
+  localparam BIT_TEMP_SYS_RST     = 16'h8000;                           // <JLC_TEMP_RST>
+
+  // Mux these debug controls
+  assign dbg_spi_mode = 1'b0; //(dbg_enables & BIT_SPI_DBG_MODE) == 16'h4000 ? 1'b1 : 1'b0;   // Mux SPI outputs   
+
+  wire dbg_rfgate;
+  assign dbg_rfgate = dbg_enables & BIT_RF_GATE ? 1'b1 : 1'b0;  
+  assign RF_GATE = dbg_spi_mode == 1'b1 ? dbg_rfgate : 1'b0;
   
-  assign RF_GATE = dbg_enables & BIT_RF_GATE ? 1'b1 : 1'b0;
-  assign RF_GATE2 = dbg_enables & BIT_RF_GATE2 ? 1'b1 : 1'b0;
-  assign VGA_VSW = dbg_enables & BIT_VGA_VSW ? 1'b1 : 1'b0;
-  assign VGA_VSWn = !VGA_VSW;       
-  assign DRV_BIAS_EN = bias_en;     //dbg_enables & BIT_DRV_BIAS_EN ? 1'b1 : 1'b0;
-  assign PA_BIAS_EN = bias_en;      //dbg_enables & BIT_PA_BIAS_EN ? 1'b1 : 1'b0;
-  assign SYN_MUTE = dbg_enables & BIT_SYN_MUTE ? 1'b0 : 1'b1;
-  assign DDS_IORST = dbg_enables & BIT_DDS_IORST ? 1'b1 : 1'b0;
-  assign DDS_IOUP = dbg_enables & BIT_DDS_IOUP ? 1'b1 : 1'b0;
-  assign DDS_SYNC = dbg_enables & BIT_DDS_SYNC ? 1'b1 : 1'b0;
-  assign DDS_PS0 = dbg_enables & BIT_DDS_PS0 ? 1'b1 : 1'b0;
-  assign DDS_PS1 = dbg_enables & BIT_DDS_PS1 ? 1'b1 : 1'b0;
-  assign ZMON_EN = dbg_enables & BIT_ZMON_EN ? 1'b1 : 1'b0;              // <JLC_TEMP_ZMON_EN>
+  wire dbg_rfgate2;
+  assign dbg_rfgate2 = dbg_enables & BIT_RF_GATE2 ? 1'b1 : 1'b0;  
+  assign RF_GATE2 = dbg_spi_mode == 1'b1 ? dbg_rfgate2 : 1'b0;
+
+  // VGA SPI mux
+  // How can this friggin mux not be working???
+  wire dbg_vgavsw;
+  assign dbg_vgavsw = dbg_enables & BIT_VGA_VSW ? 1'b1 : 1'b0;  
+  assign VGA_VSW = pwr_vsw; //dbg_spi_mode == 1'b1 ? dbg_vgavsw : pwr_vsw;
+  wire dbg_vgassn;
+  assign dbg_vgassn = dbg_spi_device == SPI_VGA ? SPI_SSn : 1'b1;  
+  assign VGA_SSn = dbg_spi_mode == 1'b1 ? dbg_vgassn : pwr_ssn;
+  wire dbg_vgasclk;
+  assign dbg_vgasclk = dbg_spi_device == SPI_VGA ? SPI_SCLK : 1'b0;  
+  assign VGA_SCLK = dbg_spi_mode == 1'b1 ? dbg_vgassn : pwr_sclk;
+  wire dbg_vgamosi;
+  assign dbg_vgamosi = dbg_spi_device == SPI_VGA ? SPI_MOSI : 1'b0;  
+  assign VGA_MOSI = dbg_spi_mode == 1'b1 ? dbg_vgamosi : pwr_mosi;
+  assign VGA_VSWn = !VGA_VSW;
+
+  wire dbg_bias;
+  assign dbg_bias = dbg_enables & BIT_PA_BIAS_EN ? 1'b1 : 1'b0;  
+  assign DRV_BIAS_EN = dbg_spi_mode == 1'b1 ? dbg_bias : bias_en;
+  assign PA_BIAS_EN = DRV_BIAS_EN;
+  
+  wire dbg_synmute;
+  assign dbg_synmute = dbg_enables & BIT_SYN_MUTE ? 1'b0 : 1'b1;
+  assign SYN_MUTE = dbg_spi_mode == 1'b1 ? dbg_synmute : 1'b0;
+  
+  wire dbg_ddsiorst;
+  assign dbg_ddsiorst = dbg_enables & BIT_DDS_IORST ? 1'b1 : 1'b0; 
+  assign DDS_IORST = dbg_spi_mode == 1'b1 ? dbg_ddsiorst : 1'b0;
+  
+  wire dbg_ddsioup;
+  assign dbg_ddsioup = dbg_enables & BIT_DDS_IOUP ? 1'b1 : 1'b0;
+  assign DDS_IOUP = dbg_spi_mode == 1'b1 ? dbg_ddsioup : 1'b0;
+  
+  wire dbg_ddssync;
+  assign dbg_ddssync = dbg_enables & BIT_DDS_SYNC ? 1'b1 : 1'b0;
+  assign DDS_SYNC = dbg_spi_mode == 1'b1 ? dbg_ddssync : 1'b0;
+  
+  wire dbg_ddsps0;
+  assign dbg_ddsps0 = dbg_enables & BIT_DDS_PS0 ? 1'b1 : 1'b0;
+  assign DDS_PS0 = dbg_spi_mode == 1'b1 ? dbg_ddsps0 : 1'b0;
+   
+  wire dbg_ddsps1;
+  assign dbg_ddsps1 = dbg_enables & BIT_DDS_PS1 ? 1'b1 : 1'b0;
+  assign DDS_PS1 = dbg_spi_mode == 1'b1 ? dbg_ddsps1 : 1'b0;
+   
+  wire dbg_zmonen;
+  assign dbg_zmonen = dbg_enables & BIT_ZMON_EN ? 1'b1 : 1'b0;
+  assign ZMON_EN = dbg_spi_mode == 1'b1 ? dbg_zmonen : 1'b0;
+  
   assign dbg_sys_rst_i = dbg_enables & BIT_TEMP_SYS_RST ? 1'b1 : 1'b0;   // <JLC_TEMP_RST>
 
   // FPGA_RXD/TXD to/from MMC UART RXD/TXD

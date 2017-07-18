@@ -17,6 +17,7 @@
 `define PAINTFCFG		    7'h0B
 `define ECHO			    7'h0C
 `define RESET               7'h0D
+`define CALPWR              7'h0E
 
 // Patterns, 0x20 based
 `define PTN_PATCLK			7'h20
