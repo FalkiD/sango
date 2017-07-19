@@ -88,7 +88,8 @@ module power #(parameter FILL_BITS = 4)
   //reg  [11:0]     dbmx10;             // user dBm request, dBm x 10, 400 to 650
   reg  [11:0]     dbm_idx;            // index into power table of user requested power, only using ~8 lsbs
   reg  [31:0]     ten;                // for dbm * 10
-
+  reg             internal;           // flag, internal set power cmd
+  
   // interpolation multiplier vars
   reg  [31:0]     dbmA;
   reg  [31:0]     interp1;
@@ -351,6 +352,7 @@ module power #(parameter FILL_BITS = 4)
   localparam PWR_SLOPE3         = 18;
   localparam PWR_INTCPT1        = 19;
   localparam PWR_INTCPT2        = 20;
+  localparam PWR_DAC2           = 21;
   
   ////////////////////////////////////////
   // End of power state definitions //
@@ -431,6 +433,7 @@ module power #(parameter FILL_BITS = 4)
       interp1 <= {16'd0, INTERP1};
       interp_mul <= 1'b0;
       ten <= {16'd0, TEN};
+      internal <= 1'b0;
     end
     else if(power_en == 1) begin
       case(state)
@@ -446,6 +449,7 @@ module power #(parameter FILL_BITS = 4)
             state <= PWR_READ;
             status_o <= 1'b0;
             multiply <= 1'b0;
+            internal <= 1'b0;
           end
           else
             status_o <= `SUCCESS;
@@ -477,11 +481,10 @@ module power #(parameter FILL_BITS = 4)
             state <= PWR_VGA2;  // write 1st byte of 3
           end
         end
-//        PWR_VGA1: begin
-//          power <= pwr_word[31:0];
-//          pwr_opcode <= pwr_word[38:32];
-//          state <= PWR_VGA2;
-//        end
+        PWR_VGA1: begin         // only used on internal writes to assert SSELn for 2nd write
+          VGA_SSn_o <= 1'b0;
+          state <= PWR_VGA2;
+        end
         PWR_VGA2: begin    // 32 bit word has 24 bits of DAC data in 3 LS bytes
           // write 1st byte
           spi_write <= power[23:16];
@@ -506,8 +509,16 @@ module power #(parameter FILL_BITS = 4)
         PWR_VGA5: begin
           VGA_SSn_o <= 1'b1;
           spi_run <= 1'b0;
-          state <= PWR_IDLE;
-          status_o <= `SUCCESS;
+          if(internal == 1'b1) begin
+            // host set power, we're writing 2 dacs
+            power[23:16] <= 8'h11;  // change to write dac B input & update both dacs
+            state <= PWR_VGA1;      // Write dac data again
+            internal <= 1'b0;
+          end
+          else begin
+            state <= PWR_IDLE;
+            status_o <= `SUCCESS;
+          end
         end
         WAIT_SPI: begin
           if(spi_done_byte == 1'b1) begin
@@ -597,19 +608,28 @@ module power #(parameter FILL_BITS = 4)
           else begin
             intercept <= {4'd0, dbmx10_2490[dbm_idx]} - prod1[15:0];
           end
-          state <= PWR_DBM1;
-        end
-        PWR_DBM1: begin
+          
+          // we have slope & intercept, calculate our dac value
+          // dac <= slope*frequency + intercept;          
+          // Load up for next multiply
+          dbmA <= {16'd0, slope};
+          interp1 <= frequency_i;
+          
           state <= PWR_DBM2;
         end
         PWR_DBM2: begin
-          state <= PWR_DBM3;
+          interp_mul <= 1'b1;
+          next_state <= PWR_DBM3;
+          state <= PWR_WAIT;
         end
         PWR_DBM3: begin
-          state <= PWR_DBM4;
-        end        
-        PWR_DBM4: begin
-          state <= PWR_IDLE;
+          // Ready to send data to both DAC's. Just use this FSM to do it, 
+          // except value is not in input fifo. Must use special internal
+          // mode. Set next_state to PWR_DAC2 as a flag
+          power <= {16'd0, prod1[15:0]}; 
+          state <= PWR_VGA2;        // write 1st byte of 3
+          internal <= 1'b1;         // Flag, user set power requires writes to both dacs
+          VGA_SSn_o <= 1'b0;
         end
         default: begin
           status_o = `ERR_UNKNOWN_PWR_STATE;
