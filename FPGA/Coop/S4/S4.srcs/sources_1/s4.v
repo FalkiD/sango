@@ -265,13 +265,17 @@ wire         clk100;
 wire         clk200;
 wire         clk050;
 
+// The current system state:
+wire [15:0]  frequency;
+reg  [11:0]  dbm_x10;
+
 //// Initialize ourselves at startup
 //wire        initialized = 1'b0;
 //reg  [3:0]  init_clks = 4'd10; 
 
 // Use 0x4000 if dbg_enables to turn ON SPI debugger mode
 // Otherwise SPI outputs are driven by various processor modules
-wire         dbg_spi_mode = 1'b0;
+wire         dbg_spi_mode;
 
 // <JLC_TEMP_RST>
 wire         dbg_sys_rst_i;
@@ -951,6 +955,8 @@ end
 
     .ftw_o              (ft_bytes),             // Debug only, tuning word output, SPI bytes to DDS SPI          
 
+    .frequency_o        (frequency),            // System frequency so all modules can access
+
     .status_o           (frq_status)            // 0=Busy, SUCCESS when done, or an error code
   );
 
@@ -975,8 +981,10 @@ end
     .VGA_MOSI_o         (pwr_mosi),
     .VGA_SCLK_o         (pwr_sclk),
     .VGA_SSn_o          (pwr_ssn),       
-    .VGA_VSW_o          (pwr_vsw),       
+    .VGA_VSW_o          (pwr_vsw),              // Gain mode control
 
+    .frequency_i        (frequency),            // current system frequency
+    
     .status_o           (pwr_status)            // 0=busy, SUCCESS when done, or an error code
   );
 

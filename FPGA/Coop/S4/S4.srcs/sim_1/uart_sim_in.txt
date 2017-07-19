@@ -23,9 +23,9 @@ u 0.5 ms w 300002C 07faa; -- Set enables, careful, 0x8000 is RESET
 -- {00 99 60}     // DAC A input, 0x996
 -- {11 80 00}     // DAC B input & update all, 0x800
 -- Write VGA DAC's
-u 1.0 ms w 03000030 00001C04 1C040038 00300003;
-u 1.0 ms w 03000033 99601C04 1C040000 00118000;
-u 1.0 ms w 03000036 0 0 0 0 0 0 0 0 0 0;
+--u 1.0 ms w 03000030 00001C04 1C040038 00300003;
+--u 1.0 ms w 03000033 99601C04 1C040000 00118000;
+--u 1.0 ms w 03000036 0 0 0 0 0 0 0 0 0 0;
 
 -- Bias On then Off, then freq 2450MHz
 --u 1.0 ms w 03000030 01010C02 00010C02 08800404;
@@ -47,13 +47,13 @@ u 1.0 ms w 03000036 0 0 0 0 0 0 0 0 0 0;
 --u 2.0 ms r 300003C 4; -- read response
 
 --Power opcode followed by frequency
---u 1.0 ms w 03000030 00010604 04043200 92080880;
---u 1.0 ms w 03000033 0 0 0 0 0 0 0 0 0 0 0 0 0; -- write 64 bytes to opcode processor
---d 50 us ;  -- wait a little
---u 2.0 ms r 3000030 4; -- read response
---u 2.0 ms r 3000034 4; -- read response
---u 2.0 ms r 3000038 4; -- read response
---u 2.0 ms r 300003C 4; -- read response
+u 1.0 ms w 03000030 00010604 04043200 92080880;
+u 1.0 ms w 03000033 0 0 0 0 0 0 0 0 0 0 0 0 0; -- write 64 bytes to opcode processor
+d 50 us ;  -- wait a little
+u 2.0 ms r 3000030 4; -- read response
+u 2.0 ms r 3000034 4; -- read response
+u 2.0 ms r 3000038 4; -- read response
+u 2.0 ms r 300003C 4; -- read response
 
 -- 13-Jul load of opcode fifo works in sim & hardware:
 --u 1.0 ms w 3000030 03020100 07060504 0B0A0908; -- Write 12 of 64 bytes to opcode backdoor

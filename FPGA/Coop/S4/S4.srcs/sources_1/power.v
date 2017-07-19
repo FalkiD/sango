@@ -8,7 +8,21 @@
 // Project Name: 
 // Target Devices: Artix-7, DAC7563
 // Tool Versions: 
-// Description: 
+// Description: S4 power is controlled by writing the 2 DAC's of U39,
+// DAC7563, at the same time. Values come from the table for the VGA
+// chip, U36, ADL5246. DAC values of 0 give full scale output.
+//
+// ADL5426 VSW and VSWn bypass switches define 
+// high gain or low gain mode:
+//      VSWn        VSW     Mode
+//      0           0       Undefined
+//      0           1       High Gain Mode
+//      1           0       Low Gain Mode
+//      1           1       Undefined
+//
+//  We'll use high-gain mode, datasheet figure 12 gives gain data
+//  at 2.6GHz while varying both VGAIN1 & VGAIN2
+//  Looks like 3.3v ~ -12dB, 0v ~ +2dB
 // 
 // Dependencies: 
 // 
@@ -39,87 +53,252 @@ module power #(parameter FILL_BITS = 4)
   input  wire [38:0]    pwr_fifo_i,               // fifo data in
   output reg            pwr_fifo_ren_o,           // fifo read line
   input  wire           pwr_fifo_mt_i,            // fifo empty flag
-  input  wire [FILL_BITS-1:0] pwr_fifo_count_i,         // fifo count
+  input  wire [FILL_BITS-1:0] pwr_fifo_count_i,   // fifo count
 
   // outputs, VGA SPI to DAC7563
   output wire           VGA_MOSI_o,
   output wire           VGA_SCLK_o,
   output reg            VGA_SSn_o,       
-  output wire           VGA_VSW_o,       
+  output wire           VGA_VSW_o,                // VSW controls gain mode, 1=high, 0=low
+
+  input  wire [15:0]    frequency_i,              // current frequency
   
-  output reg [7:0]      status_o                  // 0=busy, SUCCESS when done, or an error code
+  output reg  [7:0]     status_o       // 0=busy, SUCCESS when done, or an error code
 );
 
+  localparam DBM_OFFSET = 24'd102400;  // 40.0 dBm * 256 * 10
+  localparam DBM_MAX_OFFSET = 24'd250; // 251 entries per table at 0.1dBm intervals
+  localparam TEN = 16'd10;             // Multiply user power request by 10
+  localparam FRQ1 = 16'd2410;          // frequency breakpoint 1
+  localparam FRQ2 = 16'd2430;          // frequency breakpoint 1
+  localparam FRQ3 = 16'd2450;          // frequency breakpoint 1
+  localparam FRQ4 = 16'd2470;          // frequency breakpoint 1
+  localparam FRQ5 = 16'd2490;          // frequency breakpoint 1
+  localparam FRQ_DELTA = 16'd20;       // 20MHz between tables
+  localparam INTERP1 = 16'd13;         // 1/20MHz * 256 = 12.8
+
   // Main Globals
-  reg [6:0]       state = 0;
-  reg [6:0]       next_state;         // saved while waiting for multiply/divide in FRQ_WAIT state
+  reg  [6:0]      state = 0;
+  reg  [6:0]      next_state;          // saved while waiting for SPI writes
 
-  reg [31:0]      power = 0;      
-  reg [38:0]      pwr_word;           // whole 39 bit word
-  reg [6:0]       pwr_opcode;         // which power opcode, user request or cal?
+  reg  [31:0]     power = 0;          // 12 bits of dBm x10 (400 to 650) or Cal data
+  reg  [38:0]     pwr_word;           // whole 39 bit word (32 bits cal data, 7 bits opcode)
+  reg  [6:0]      pwr_opcode;         // which power opcode, user request or cal?
+  wire [63:0]     q7dot8x10;          // Q7.8 user dBm request, 40.0 to 65.0 times 256.0, times 10
+  //reg  [11:0]     dbmx10;             // user dBm request, dBm x 10, 400 to 650
+  reg  [11:0]     dbm_idx;            // index into power table of user requested power, only using ~8 lsbs
+  reg  [31:0]     ten;                // for dbm * 10
+
+  // interpolation multiplier vars
+  reg  [31:0]     dbmA;
+  reg  [31:0]     interp1;
+  wire [63:0]     prod1;
+  reg             interp_mul;   // enable interpolation multiplier
+  
+  // interpolation vars
+  reg  [15:0]     slope;
+  reg  [15:0]     intercept;
+
+  // enable dbm x10 multiplier
+  reg             multiply;
   // Latency for math operations, Xilinx multiplier & divrem divider have no reliable "done" line???
-  localparam MULTIPLIER_CLOCKS = 4;
-  localparam DIVIDER_CLOCKS = 42;
-  reg [5:0]       latency_counter;    // wait for multiplier & divider 
-  reg [3:0]       byte_idx;           // countdown when writing bytes to fifo
+  localparam MULTIPLIER_CLOCKS = 6;
+  //localparam DIVIDER_CLOCKS = 42;
+  reg [5:0]       latency_counter;    // wait for multiplier
 
-//    // Xilinx multiplier.
-//    // A input is 56 bits. B input is 24 bits
-//    // Output is 64 bits
-//    reg [55:0] multA;                   // A multiplier input
-//    reg [23:0] multB;                   // B multiplier input
-//    wire [63:0] multiplier_result;      // Result
-//    mult48 ddsMultiply (
-//       .CLK(clk),
-//       .A(multA),
-//       .B(multB),
-//       .CE(power_en),
-//       .P(multiplier_result)
-//     );      
-    
-//    // Instantiate simple division ip for division not
-//    // requiring remainder.
-//    // Use 32-bit divider to convert programmed frequency 
-//    // in Hertz to MHz, other calculations for limits, etc
-//    parameter WIDTH_FR = 32;
-//    reg  [31:0] divisor;             // always 1MHz here
-//    reg  [31:0] dividend;            // frequency in Hertz
-//    wire [31:0] quotient;            // MHz
-//    wire        divide_done;         // Division done
-//    reg         div_enable;          // Divider enable
-//    division #(WIDTH_FR) divnorem (
-//        .enable(div_enable),
-//        .A(dividend), 
-//        .B(divisor), 
-//        .result(quotient),
-//        .done(divide_done)
-//    );
+  // power table of dac values required for dBm output.
+  // 5 tables, 2410MHz, 2430MHz, 2450MHz, 2470MHz, 2490MHz
+  // Entries in 0.1 dBm steps beginning at 40.0dBm
+  // 251 total entries covering 400 to 650 (40.0 to 65.0 dBm)
+  reg [11:0]      dbmx10_2410 [250:0] = { 
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800 };
 
-//    /////////////////////////////////////////////////////////
-//    // user-programmed power, power table, corresponding 
-//    // magnitude table, etc.
-//    /////////////////////////////////////////////////////////
-//    reg [3:0]       channel;            // 1-16 minus 1
-//    reg [15:0]      dbmx10;             // ((desired dBm - (40*256)) * 10) / 256 (xx.x dBm * 10, an integer)   
-//    localparam      dbm_offset = 16'd400;   // Offset is 40dBm, after x10 is 400. Subtracted after >>8 
-//    localparam      pwr_table_size = 8'd21;
-//    // Note: array indexing reverse order from C
-//    reg [7:0]       power_table [20:0] = {8'h00, 8'h00, 8'h00, 8'h00, 8'h00, 
-//                                            8'h0f, 8'h1e, 8'h2d, 8'h3c, 
-//                                            8'h4b, 8'h5a, 8'h69, 8'h78,
-//                                            8'h87, 8'h96, 8'ha5, 8'hb4, 
-//                                            8'hc3, 8'hd2, 8'he1, 8'hf0  };
-//    reg [5:0]       table_index;
-//    reg [15:0]      mag_table [20:0] = { 16'h20, 16'h28, 16'h30, 16'h38,
-//                                        16'h40, 16'h50, 16'h60, 16'h70, 16'h80,
-//                                        16'ha0, 16'hc0, 16'he0, 16'h100,
-//                                        16'h140, 16'h180, 16'h1c0, 16'h200,
-//                                        16'h280, 16'h300, 16'h380, 16'h400 };
-//    reg [7:0]       numerator;
-//    reg [15:0]      denominator;
-//    reg [15:0]      mag_step;
-//    reg [15:0]      mag_data;       // interpolated mag_table value for hardware
-//    localparam PWR_BYTES = 2;
+  reg [11:0]      dbmx10_2430 [250:0] = { 
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800 };
+
+  reg [11:0]      dbmx10_2450 [250:0] = { 
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800 };
+
+  reg [11:0]      dbmx10_2470 [250:0] = { 
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800 };
+
+  reg [11:0]      dbmx10_2490 [250:0] = { 
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800, 12'h800,
+  12'h800, 12'h800, 12'h800 };
+
+  // Xilinx multiplier to perform 16 bit multiplication, output is 32 bits
+  ftw_mult dbm_multiplier (
+     .CLK(sys_clk),
+     .A(power),
+     .B(ten),
+     .CE(multiply),
+     .P(q7dot8x10)
+  );      
+
+  // Xilinx multiplier to perform 16 bit multiplication, output is 32 bits
+  // this one for interpolation between power tables
+  ftw_mult interp_mult (
+     .CLK(sys_clk),
+     .A(dbmA),
+     .B(interp1),
+     .CE(interp_mul),
+     .P(prod1)
+  );      
+
 
   ////////////////////////////////////////
   // VGA SPI instance, SPI to DAC7563   //
@@ -130,7 +309,11 @@ module power #(parameter FILL_BITS = 4)
   wire [7:0]  spi_read;
   wire        spi_busy;         // 'each byte' busy
   wire        spi_done_byte;    // 1=done with a byte, data is valid
-  spi #(.CLK_DIV(3)) vga_spi 
+  spi #(
+    .CLK_DIV(3),
+    .CPHA(1)
+  ) 
+  vga_spi 
   (
     .clk(sys_clk),
     .rst(!sys_rst_n),
@@ -150,34 +333,28 @@ module power #(parameter FILL_BITS = 4)
   localparam PWR_IDLE           = 0;
   localparam PWR_SPCR           = 1;
   localparam PWR_READ           = 2;
-  localparam PWR_INTERNAL_DBM   = 3;   // ((user dBm - (40*256)) * 10) / 256 (xx.x dBm * 10, an integer)
-  localparam PWR_VGA1           = 4;
-  localparam PWR_VGA2           = 5;
-  localparam PWR_VGA3           = 6;
-  localparam PWR_VGA4           = 7;
-  localparam PWR_VGA5           = 8;
-  localparam PWR_INIT_LOOP      = 9;
-  localparam PWR_LOOP_TOP       = 10;
-  localparam PWR_MULT           = 11;
-  localparam PWR_DIVIDE         = 12;
-  localparam PWR_WAIT           = 13;
-  localparam WAIT_SPI           = 14;
-        
-//    // done calculations, queuing data for SPI states
-//    `define PWR_QUEUE               60
-//    `define PWR_QUEUE_CMD           61
-
-//    // Waiting for multiply/divide state, 7 bits available 
-//    `define PWR_WAIT                127
-//    ////////////////////////////////////////
-//    // End of power state definitions //
-//    ////////////////////////////////////////
-
-//`ifdef XILINX_SIMULATOR
-//    integer         filepwr = 0;
-//`endif
-
-
+  localparam PWR_DATA           = 3;
+  localparam PWR_DBM            = 4;   // ((user dBm - Q7.8 requested dBm output)
+  localparam PWR_DBM1           = 5;
+  localparam PWR_DBM2           = 6;
+  localparam PWR_DBM3           = 7;
+  localparam PWR_DBM4           = 8;
+  localparam PWR_VGA1           = 9;
+  localparam PWR_VGA2           = 10;
+  localparam PWR_VGA3           = 11;
+  localparam PWR_VGA4           = 12;
+  localparam PWR_VGA5           = 13;
+  localparam PWR_WAIT           = 14;
+  localparam WAIT_SPI           = 15;
+  localparam PWR_SLOPE1         = 16;
+  localparam PWR_SLOPE2         = 17;
+  localparam PWR_SLOPE3         = 18;
+  localparam PWR_INTCPT1        = 19;
+  localparam PWR_INTCPT2        = 20;
+  
+  ////////////////////////////////////////
+  // End of power state definitions //
+  ////////////////////////////////////////
 
 // DAC7563 programming from M2
 //static uint8_t InitializeDac() {
@@ -237,10 +414,11 @@ module power #(parameter FILL_BITS = 4)
 //	return status;
 //}
 
-// DAC7563 uses SPI mode 1. As long as SSEL(SYNC) is low for 24 bits
-// to be clocked in, the DAC will be updated on teh 24th falling 
-// edge of SCLK
+  assign VGA_VSW_o = 1'b1;          // We'll use high-gain mode
 
+  // DAC7563 uses SPI mode 1. As long as SSEL(SYNC) is low for 24 bits
+  // to be clocked in, the DAC will be updated on the 24th falling 
+  // edge of SCLK
   always @( posedge sys_clk) begin
     if( !sys_rst_n ) begin
       state <= PWR_IDLE;
@@ -248,14 +426,11 @@ module power #(parameter FILL_BITS = 4)
       pwr_fifo_ren_o <= 1'b0;
       power <= 32'h00000000;
       latency_counter <= 6'b000000; 
-//      channel <= 4'b0000;
-//      dbmx10 <= 16'h0000;   
-//      table_index <= 6'b000000;
-//      numerator <= 8'h00;
-//      denominator <= 16'h0001;
-//      mag_step <= 16'h0000;
-//      mag_data <= 16'h0000;
       VGA_SSn_o <= 1'b1;
+      multiply <= 1'b0;      
+      interp1 <= {16'd0, INTERP1};
+      interp_mul <= 1'b0;
+      ten <= {16'd0, TEN};
     end
     else if(power_en == 1) begin
       case(state)
@@ -270,6 +445,7 @@ module power #(parameter FILL_BITS = 4)
             pwr_fifo_ren_o <= 1;
             state <= PWR_READ;
             status_o <= 1'b0;
+            multiply <= 1'b0;
           end
           else
             status_o <= `SUCCESS;
@@ -282,22 +458,30 @@ module power #(parameter FILL_BITS = 4)
           pwr_word <= pwr_fifo_i;
           pwr_fifo_ren_o <= 1'b0;
           if(pwr_fifo_i[38:32] == `POWER) begin
-            state <= PWR_INTERNAL_DBM;
+            state <= PWR_DATA;
           end
           else begin
             state <= PWR_VGA1;  // write 1st byte of 3
             VGA_SSn_o <= 1'b0;
           end
-//        `ifdef XILINX_SIMULATOR
-//          if(filepwr == 0)
-//            filepwr = $fopen("../../../project_1.srcs/sources_1/pwr_in.txt", "a");
-//        `endif
         end
-        PWR_VGA1: begin
-          power <= pwr_word[31:0];
+        PWR_DATA: begin
           pwr_opcode <= pwr_word[38:32];
-          state <= PWR_VGA2;
+          if(pwr_fifo_i[38:32] == `POWER) begin
+            power <= {16'd0, pwr_word[31:16]};
+            state <= PWR_DBM;
+          end
+          else begin
+            power <= pwr_word[31:0];
+            VGA_SSn_o <= 1'b0;
+            state <= PWR_VGA2;  // write 1st byte of 3
+          end
         end
+//        PWR_VGA1: begin
+//          power <= pwr_word[31:0];
+//          pwr_opcode <= pwr_word[38:32];
+//          state <= PWR_VGA2;
+//        end
         PWR_VGA2: begin    // 32 bit word has 24 bits of DAC data in 3 LS bytes
           // write 1st byte
           spi_write <= power[23:16];
@@ -331,112 +515,108 @@ module power #(parameter FILL_BITS = 4)
             spi_run <= 1'b0;
           end
         end
-        PWR_INTERNAL_DBM: begin
-          //dbmx10 <= (((pwr_tmp << 3) + (pwr_tmp << 1)) >> 8) - dbm_offset;    // Initial dbm * 10 / 256 - 400                
-          state <= PWR_INIT_LOOP;
+        PWR_DBM: begin
+          // Initial user request, dbm * 256.0 
+          multiply <= 1'b1;         // multiply dBm request by 10, 65dBm*256*10=166,400 = 0x28a00
+          latency_counter <= MULTIPLIER_CLOCKS;
+          next_state <= PWR_DBM1;                           
+          state <= PWR_WAIT;
         end
-//        PWR_INIT_LOOP: begin
-//          table_index <= 0;
-//          state <= `PWR_LOOP_TOP;
-//            `ifdef XILINX_SIMULATOR
-//                $fdisplay (filepwr, "Power(Q8.7):0x%h, dbmx10:%d", power, dbmx10);
-//            `endif
-//            end
-//            `PWR_LOOP_TOP: begin
-//                if(dbmx10 > power_table[table_index]) begin
-//                    numerator <= dbmx10 - power_table[table_index];
-//                    // Verilog "static array" indexing is in reverse order
-//                    denominator <= power_table[table_index - 1] - power_table[table_index];
-//                    mag_step <= mag_table[table_index - 1] - mag_table[table_index];
-//                    state <= `PWR_MULT;
-//                end
-//                else begin
-//                    if(table_index < pwr_table_size - 1) begin 
-//                        table_index <= table_index + 1;
-//                    end
-//                    else begin
-//                        status_o <= `ERR_POWER_INVALID;
-//                        state <= `PWR_IDLE;
-//                    end
-//                end
-//            end
-//            `PWR_MULT: begin
-//                multA <= mag_step;
-//                multB <= numerator;
-//                latency_counter <= `MULTIPLIER_CLOCKS;
-//                next_state <= `PWR_DIVIDE;
-//                state <= `PWR_WAIT;
-//            end
-//            `PWR_DIVIDE: begin
-//                dividend <= multiplier_result;
-//                divisor <= denominator;
-//                div_enable <= 1;
-//                state <= `PWR_DIV_WAIT;            // Wait for result
-//            end
-//            `PWR_DIV_WAIT: begin
-//                if(divide_done) begin
-//                    mag_data <= quotient[15:0] + mag_table[table_index];
-//                    div_enable <= 0;
-//                    state <= `PWR_IDLE;
-////                    byte_idx <= `PWR_BYTES;
-////                    state <= `PWR_QUEUE;
-//                end
-//            end
-//            `PWR_QUEUE: begin
-//                //
-//                // Queue calculated bytes for SPI write
-//                //
-//                // When queueing has finished, byte_idx will be 0,
-//                // waiting for top level to write DDS at this point,
-//                // When SPI write is finished, go back to idle
-//                if(byte_idx == 0) begin
-//                    // wait in this state (PWR_QUEUE, byte_idx=0) until SPI fifo is empty (write has finished)
-//                    if(spi_processor_idle) begin
-//                        // done with write SPI, continue calculations if necessary
-//                        state = `PWR_IDLE;  // Done
-//                        status_o = `SUCCESS;
-//                    end
-//                end
-//                else begin
-//                    byte_idx = byte_idx - 1;
-//                    if(byte_idx == 0) begin
-//                        // Data bytes are in SPI fifo at top level, queue request to write.
-//                        // But first, wait for fifo_empty to turn OFF
-//                        spi_wr_en_o <= 0;   // Turn OFF writes!
-//                        next_state <= `PWR_QUEUE_CMD;  // after fifo empty turns OFF
-//                        state <= `PWR_SPIWRDATA_FINISH;
-//                    end
-//                    else begin
-//                        shift = (`PWR_BYTES - byte_idx) << 3;
-//                        spi_wr_en_o <= 1;       // Enable writes, SPI processor is not busy
-//                        spi_o <= (mag_data >> shift);
-//                        next_state <= `PWR_QUEUE_CMD;
-//                        state <= `PWR_SPIWRDATA_WAIT;
-//                    `ifdef XILINX_SIMULATOR
-//                        dbgdata = (mag_data >> shift);
-//                        $fdisplay (filepwr, "%02h", dbgdata);
-//                    `endif
-//                    end
-//                end
-//            end
-//            `PWR_QUEUE_CMD: begin
-//                // SPI data written to fifo, fifo empty OFF, write SPI processor request
-//                spiwr_queue_data_o <= `SPI_PWR;     // queue request for Power write
-//                spiwr_queue_wr_en_o <= 1;           // spi queue fifo write enable
-//                next_state <= `PWR_QUEUE;           // after queueing cmd, wait in PWR_QUEUE state
-//                state <= `PWR_SPIWRQUE_WAIT;
-//            `ifdef XILINX_SIMULATOR
-//                $fdisplay (filepwr, "  ");   // spacer line
-//                //$fdisplay (filepwr, "Done with power %d\n", power);
-//                $fclose (filepwr);
-//                filepwr = 0;
-//            `endif
-//            end
+        PWR_DBM1: begin
+          // product is max  65dBm*256*10=166,400 => 0x28a00. Use 12 bits beginning at d8
+          if(q7dot8x10[19:8] - DBM_OFFSET[19:8] < 0)
+            dbm_idx <= 12'd0;
+          else if(q7dot8x10[19:8] - DBM_OFFSET[19:8] > DBM_MAX_OFFSET)
+            dbm_idx <= DBM_MAX_OFFSET;
+          else
+            dbm_idx <= q7dot8x10[19:8] - DBM_OFFSET[19:8]; // (/256.0) - 400, the array index for requested power
+          state <= PWR_SLOPE1;
+        end
+        PWR_SLOPE1: begin
+          // interpolate between power tables
+          if(frequency_i < FRQ2) begin
+          // slope = ((dbmx10_2410[dbm_idx] - dbmx10_2430[dbm_idx]))/(FRQ_DELTA);
+          //   OR (Y2-Y1) * ((1/FRQ_DELTA)*256) / 256
+            dbmA <= {24'd0, dbmx10_2410[dbm_idx] - dbmx10_2430[dbm_idx]};            
+          end
+          else if(frequency_i < FRQ3) begin
+            dbmA <= {24'd0, dbmx10_2430[dbm_idx] - dbmx10_2450[dbm_idx]};    
+          end
+          else if(frequency_i < FRQ4) begin
+            dbmA <= {24'd0, dbmx10_2450[dbm_idx] - dbmx10_2470[dbm_idx]};           
+          end
+          else begin
+            dbmA <= {24'd0, dbmx10_2470[dbm_idx] - dbmx10_2490[dbm_idx]};           
+          end
+          interp1 <= {16'd0, INTERP1};
+          state <= PWR_SLOPE2;
+        end
+        PWR_SLOPE2: begin
+          interp_mul <= 1'b1;
+          latency_counter <= MULTIPLIER_CLOCKS;
+          next_state <= PWR_SLOPE3;
+          state <= PWR_WAIT;
+        end
+        PWR_SLOPE3: begin
+          // prod1 is now slope*256 (Q7.8)
+          interp_mul <= 1'b0;
+          slope <= prod1[23:8]; // save product / 256
+          dbmA <= {16'd0, prod1[23:8]};  // slope into dbmA, product / 256
+          // F2 into multiplicand
+          if(frequency_i < FRQ2) begin
+            interp1 <= FRQ2;
+          end
+          else if(frequency_i < FRQ3) begin
+            interp1 <= FRQ3;            
+          end
+          else if(frequency_i < FRQ4) begin
+            interp1 <= FRQ4;           
+          end
+          else begin
+            interp1 <= FRQ5;           
+          end
+          state <= PWR_INTCPT1;        
+        end
+        PWR_INTCPT1: begin
+          interp_mul <= 1'b1;
+          next_state <= PWR_INTCPT2;
+          state <= PWR_WAIT;
+        end
+        PWR_INTCPT2: begin
+          // prod1 is slope*FRQ2
+          interp_mul <= 1'b0;
+          if(frequency_i < FRQ2) begin
+            intercept <= {4'd0, dbmx10_2430[dbm_idx]} - prod1[15:0];
+          end
+          else if(frequency_i < FRQ3) begin
+            intercept <= {4'd0, dbmx10_2450[dbm_idx]} - prod1[15:0];
+          end
+          else if(frequency_i < FRQ4) begin
+            intercept <= {4'd0, dbmx10_2470[dbm_idx]} - prod1[15:0];
+          end
+          else begin
+            intercept <= {4'd0, dbmx10_2490[dbm_idx]} - prod1[15:0];
+          end
+          state <= PWR_DBM1;
+        end
+        PWR_DBM1: begin
+          state <= PWR_DBM2;
+        end
+        PWR_DBM2: begin
+          state <= PWR_DBM3;
+        end
+        PWR_DBM3: begin
+          state <= PWR_DBM4;
+        end        
+        PWR_DBM4: begin
+          state <= PWR_IDLE;
+        end
         default: begin
           status_o = `ERR_UNKNOWN_PWR_STATE;
           state <= PWR_IDLE;
         end
         endcase
     end
-  end    
+  end
+
 endmodule

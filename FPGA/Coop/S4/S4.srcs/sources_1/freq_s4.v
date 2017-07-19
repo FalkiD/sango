@@ -36,22 +36,24 @@
 module freq_s4 #(parameter FILL_BITS = 6,
                  parameter FRQ_BITS = 32)
 (
-  input                   sys_clk,
-  input                   sys_rst_n,
+  input  wire             sys_clk,
+  input  wire             sys_rst_n,
     
-  input                   freq_en,
-  input                   spi_idle, // Only queue SPI data when it's idle
+  input  wire             freq_en,
+  input  wire             spi_idle, // Only write SPI data when DDS/SYN SPI idle (needed?)
 
   // Frequency(ies) are in Hz in input fifo
-  input [FRQ_BITS-1:0]    frq_fifo_i,        // frequency fifo
-  output reg              frq_fifo_ren_o,    // fifo read line
-  input                   frq_fifo_empty_i,  // fifo empty flag
-  input [FILL_BITS-1:0]   frq_fifo_count_i,  // fifo count, for debug message only
+  input  wire [FRQ_BITS-1:0] frq_fifo_i,        // frequency fifo
+  output reg              frq_fifo_ren_o,       // fifo read line
+  input  wire             frq_fifo_empty_i,     // fifo empty flag
+  input  wire [FILL_BITS-1:0] frq_fifo_count_i, // fifo count, for debug message only
 
   // This writes to FIFO in the DDS SPI instance
-  output reg [31:0]       ftw_o,             // tuning word output          
+  output reg  [31:0]      ftw_o,             // tuning word output          
 
-  output reg [7:0]        status_o           // 0=Busy, SUCCESS when done, or an error code
+  output wire [15:0]      frequency_o,       // System frequency so all top-level modules can access
+
+  output reg  [7:0]       status_o           // 0=Busy, SUCCESS when done, or an error code
 );
 
   // Main Globals
@@ -60,6 +62,8 @@ module freq_s4 #(parameter FILL_BITS = 6,
   reg [6:0]       next_spiwr_state;   // saved while waiting for SPI writes to finish before next request
 
   reg  [31:0]      frequency = 32'd0;
+  assign frequency_o = frequency[15:0];     // keep global frequency updated
+  
   // Latency for multiply operation, Xilinx multiplier
   localparam MULTIPLIER_CLOCKS = 6'd6;
   reg  [5:0]       latency_counter;    // wait for multiplier & divider 
