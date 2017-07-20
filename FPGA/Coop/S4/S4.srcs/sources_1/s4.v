@@ -266,7 +266,7 @@ wire         clk200;
 wire         clk050;
 
 // The current system state:
-wire [15:0]  frequency;
+wire [15:0]   frequency;
 reg  [11:0]  dbm_x10;
 
 //// Initialize ourselves at startup
@@ -1553,7 +1553,7 @@ end
 //   assign FPGA_MCU3 = opc_fifo_rd_en;      // ZZM
 //   assign FPGA_MCU4 = opcode_fifo_empty;   // ZZM    
   // 22-Jun have to scope MMC signals
-  assign FPGA_MCU4 = MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.
-  assign FPGA_MCU3 = MMC_CMD; //count3[15];    // 200MHz div'd by 2^16.
+  assign FPGA_MCU4 = VGA_SCLK; //MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.
+  assign FPGA_MCU3 = VGA_MOSI; //MMC_CMD; //count3[15];    // 200MHz div'd by 2^16.
 
   endmodule
