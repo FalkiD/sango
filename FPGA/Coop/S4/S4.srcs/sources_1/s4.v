@@ -811,7 +811,7 @@ end
     .HOST_RAM_ADR_BITS    (14), // Determines amount of BRAM in MMC host
     .MMC_FIFO_DEPTH       (65536), // (2048),
     .MMC_FILL_LEVEL_BITS  (`GLBL_MMC_FILL_LEVEL_BITS),    // (16),
-    .RSP_FILL_LEVEL_BITS   (`GLBL_RSP_FILL_LEVEL_BITS),    // (10),
+    .RSP_FILL_LEVEL_BITS  (`GLBL_RSP_FILL_LEVEL_BITS),    // (10),
     .MMC_RAM_ADR_BITS     (9)      // 512 bytes, 1st sector (17)
   ) mmc_tester_0 (
 

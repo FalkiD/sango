@@ -833,9 +833,9 @@ use work.async_syscon_pack.all;
     bkd_rsp_datE_i      : in unsigned(31 downto 0);
     bkd_rsp_datF_i      : in unsigned(31 downto 0);
     
---    opc_fif_dat_o       : out unsigned( 7 downto 0);     -- write opcodes here
---    opc_fif_wen_o       : out std_logic;                 -- opcode fifo write line
---    opc_fif_wmt_i       : in std_logic;                  -- opcode fifo empty
+    --opc_fif_dat_o       : out unsigned( 7 downto 0);     -- write opcodes here
+    --opc_fif_wen_o       : out std_logic;                 -- opcode fifo write line
+    --opc_fif_wmt_i       : in std_logic;                  -- opcode fifo empty
 --    opc_rd_cnt_i        : in unsigned(MMC_FILL_LEVEL_BITS-1 downto 0); -- opcode fifo fill level 
     -- probably want opc_fifo_full too
 
@@ -913,9 +913,19 @@ architecture beh of mmc_tester is
   signal s_ram_dat_rd     : unsigned(7 downto 0);
   signal s_ram_we         : std_logic;
   signal s_fif_sel        : std_logic;
-  signal s_fif_dat_rd     : unsigned(7 downto 0);
-  signal s_fif_rd         : std_logic;
-  signal s_fif_we         : std_logic;
+
+    -------------------------------------------------------
+    -- mmc data pipe to opcode processor interface fifo's
+  signal s_fif_dat_rd     : unsigned(7 downto 0);       -- opcode fifo data from mmc
+  signal s_fif_rd         : std_logic;                  -- opcode fifo read enable
+  signal s_fif_rd_empty   : std_logic;
+  signal s_fif_rd_full    : std_logic;
+  signal s_fif_dat_wr     : unsigned(7 downto 0);       -- response fifo to mmc
+  signal s_fif_wr         : std_logic;                  -- response fifo write enable
+  signal s_fif_wr_empty   : std_logic;
+  signal s_fif_wr_full    : std_logic;
+    ------------------------------------------------------
+
   signal t_reg_sel        : std_logic; -- Test registers
   signal o_reg_sel        : std_logic; -- Opcode processor registers
   signal o_reg_ack        : std_logic; -- Opcode processor register ack
@@ -1024,22 +1034,13 @@ architecture beh of mmc_tester is
   signal tlm_log_dat_we        : std_logic;
 
     -- local signals for the MMC data pipe
-  signal s_fif_dat_rd_level : unsigned(MMC_FILL_LEVEL_BITS-1 downto 0);
-  signal s_fif_dat_wr_level : unsigned(MMC_FILL_LEVEL_BITS-1 downto 0);
-
-    -- local signals for the opcode processor module
-    -- 17-Feb-2017
-  signal s_fif_rd_empty     : std_logic;
-  signal s_fif_rd_full      : std_logic;
-  signal s_fif_wr_empty     : std_logic;
-  signal s_fif_wr_full      : std_logic;
-  -- preface opcode processor vars w/opc_ to clarify what's what (opcodes refactored to top level, JLC)
---  signal opc_rsp_len        : unsigned(MMC_FILL_LEVEL_BITS-1 downto 0);
-  signal s_fif_wr           : unsigned(7 downto 0);
-
-  signal dbg_spi_count      : unsigned(3 downto 0); --down counter
-  signal dbg_spi_state      : integer;
-  signal dbg_spi_start_l    : std_logic; -- local copy of dbg_spi_start_o
+  signal s_fif_dat_rd_level    : unsigned(MMC_FILL_LEVEL_BITS-1 downto 0);
+  signal s_fif_dat_wr_level    : unsigned(MMC_FILL_LEVEL_BITS-1 downto 0);
+    
+  -- SPI debugging vars
+  signal dbg_spi_count         : unsigned(3 downto 0); --down counter
+  signal dbg_spi_state         : integer;
+  signal dbg_spi_start_l       : std_logic; -- local copy of dbg_spi_start_o
 
 begin
 
@@ -1963,8 +1964,8 @@ end process;
     wr_clk_i      => sys_clk,
     wr_clk_en_i   => '1',
     wr_reset_i    => s_fif_dat_wr_clear,  -- Synchronous
-    wr_en_i       => s_fif_we,
-    wr_dat_i      => s_fif_wr,  --syscon_dat_wr(7 downto 0),
+    wr_en_i       => s_fif_wr,
+    wr_dat_i      => s_fif_dat_wr,  --syscon_dat_wr(7 downto 0),
     wr_fifo_level => s_fif_dat_wr_level,
     wr_fifo_full  => s_fif_wr_full,
     wr_fifo_empty => s_fif_wr_empty,
@@ -1975,8 +1976,8 @@ end process;
     rd_en_i       => s_fif_rd,
     rd_dat_o      => s_fif_dat_rd,
     rd_fifo_level => s_fif_dat_rd_level,
-    rd_fifo_full  => s_fif_rd_full, --led_reg(1), --open,
-    rd_fifo_empty => s_fif_rd_empty, --led_reg(0), --open,
+    rd_fifo_full  => s_fif_rd_full,
+    rd_fifo_empty => s_fif_rd_empty,
 
     -- Data Pipe RAM
     ram_clk_i     => sys_clk,
@@ -2028,16 +2029,5 @@ end process;
   slave_clk_i <= mmc_clk_i;
 
   test_cmd_i  <= mmc_cmd_i;
-
--- a place to trap in simulation...
---process(s_fif_rd_empty)
---begin
---  if(falling_edge(s_fif_rd_empty)) then
---    led_reg(0) <= s_fif_rd_empty;
---  else
---    led_reg(0) <= s_fif_rd_empty;
---  end if;
---end process;
-
 
 end beh;
