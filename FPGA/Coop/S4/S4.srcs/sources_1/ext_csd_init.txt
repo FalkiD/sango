@@ -194,7 +194,7 @@
 00
 02 ; CSD structure
 00
-03 ; Card Type 52 MHz, no DDR
+01 ; Card Type 52 MHz, no DDR
 00
 00
 00
