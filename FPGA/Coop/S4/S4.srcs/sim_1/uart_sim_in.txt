@@ -26,6 +26,11 @@ u 0.5 ms w 300002C 07faa; -- Set enables, careful, 0x8000 is RESET
 --u 1.0 ms w 03000030 00001C04 1C040038 00300003;
 --u 1.0 ms w 03000033 99601C04 1C040000 00118000;
 --u 1.0 ms w 03000036 0 0 0 0 0 0 0 0 0 0;
+--
+-- Initialize & set both to FS:
+--u 1.0 ms w 03000030 00001c04 1c040038 00300003
+--u 1.0 ms w 03000033 fff01c04 1c040000 0011fff0
+
 
 -- Bias On then Off, then freq 2450MHz
 --u 1.0 ms w 03000030 01010C02 00010C02 08800404;
