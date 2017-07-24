@@ -40,6 +40,7 @@ package mmc_test_pack is
     HOST_RAM_ADR_BITS   : natural; -- Determines amount of BRAM in MMC host
     MMC_FIFO_DEPTH      : integer;
     MMC_FILL_LEVEL_BITS : integer; -- Should be at least int(floor(log2(FIFO_DEPTH))+1.0)
+    RSP_FILL_LEVEL_BITS : integer; 
     MMC_RAM_ADR_BITS    : integer
   );
   port (
@@ -141,26 +142,24 @@ package mmc_test_pack is
     bkd_rsp_datE_i      : in unsigned(31 downto 0);
     bkd_rsp_datF_i      : in unsigned(31 downto 0);
 
---    opc_fif_dat_o       : out unsigned( 7 downto 0);     -- write opcodes here
---    opc_fif_wen_o       : out std_logic;                 -- opcode fifo write line
---    opc_fif_wmt_i       : in std_logic;                  -- opcode fifo empty
---    opc_rd_cnt_i        : in unsigned(MMC_FILL_LEVEL_BITS-1 downto 0); -- opcode fifo fill level 
-    -- probably want opc_fifo_full too
+    ------ Connect MMC fifos to opcode processor ----------
+    -- Read from MMC fifo connections
+    opc_fif_dat_o       : out unsigned( 7 downto 0);    -- MMC opcode fifo
+    opc_fif_ren_i       : in  std_logic;                -- mmc fifo read enable
+    opc_fif_mt_o        : out std_logic;                -- mmc opcode fifo empty
+    opc_rd_cnt_o        : out unsigned(MMC_FILL_LEVEL_BITS-1 downto 0); -- mmc opcode fifo fill level 
+    opc_rd_reset_i      : in  std_logic;                -- Synchronous mmc opcode fifo reset
+    -- Write to MMC fifo connections
+    opc_rspf_dat_i      : in  unsigned( 7 downto 0);    -- MMC response fifo
+    opc_rspf_we_i       : in  std_logic;                -- response fifo write line             
+    opc_rspf_mt_o       : out std_logic;                -- response fifo empty
+    opc_rspf_fl_o       : out std_logic;                -- response fifo full
+    opc_rspf_reset_i    : in std_logic;                 -- Synchronous mmc response fifo reset
 
---    opc_sys_st_o   : out unsigned(15 downto 0);
---    opc_mode_i     : in  unsigned(31 downto 0);
-    
---    opc_rspf_i     : in  unsigned( 7 downto 0);         -- opcode processor response fifo
---    opc_rspf_re_o  : out std_logic;                     -- response fifo read line             
---    opc_rspf_mt_i  : in  std_logic;                     -- response fifo empty
---    opc_rspf_fl_i  : in  std_logic;                     -- response fifo full
---    opc_rspf_rdy_i : in  std_logic;                     -- response is ready
---    -- opc_rsp_len_i  : in  std_logic(MMC_FILL_LEVEL_BITS-1 downto 0);   
---    opc_rsp_cnt_i  : in  unsigned(RSP_FILL_LEVEL_BITS-1 downto 0); -- response length
-    -- Debugging
-    opc_oc_cnt_i   : in  unsigned(31 downto 0);           -- LS 16 bits=count of opcodes processed, upper 16 bits opc fifo level
-    opc_status1_i  : in  unsigned(31 downto 0);           -- LS 16 bits=opc status, MS 16-bits=opc_state
-    opc_status2_i  : in  unsigned(31 downto 0)            -- rsp_fifo_count__opc_fifo_count    
+    -- UART debugger can show these values
+    opc_oc_cnt_i        : in  unsigned(31 downto 0);    -- LS 16 bits=count of opcodes processed, upper 16 bits opc fifo level
+    opc_status1_i       : in  unsigned(31 downto 0);    -- LS 16 bits=opc status, MS 16-bits=opc_state
+    opc_status2_i       : in  unsigned(31 downto 0)     -- rsp_fifo_count__opc_fifo_count    
   );
   end component;
 
@@ -832,23 +831,21 @@ use work.async_syscon_pack.all;
     bkd_rsp_datD_i      : in unsigned(31 downto 0);
     bkd_rsp_datE_i      : in unsigned(31 downto 0);
     bkd_rsp_datF_i      : in unsigned(31 downto 0);
-    
-    --opc_fif_dat_o       : out unsigned( 7 downto 0);     -- write opcodes here
-    --opc_fif_wen_o       : out std_logic;                 -- opcode fifo write line
-    --opc_fif_wmt_i       : in std_logic;                  -- opcode fifo empty
---    opc_rd_cnt_i        : in unsigned(MMC_FILL_LEVEL_BITS-1 downto 0); -- opcode fifo fill level 
-    -- probably want opc_fifo_full too
 
---    opc_sys_st_o   : out unsigned(15 downto 0);
---    opc_mode_i     : in  unsigned(31 downto 0);
-    
---    opc_rspf_i     : in  unsigned( 7 downto 0);         -- opcode processor response fifo
---    opc_rspf_re_o  : out std_logic;                     -- response fifo read line             
---    opc_rspf_mt_i  : in  std_logic;                     -- response fifo empty
---    opc_rspf_fl_i  : in  std_logic;                     -- response fifo full
---    opc_rspf_rdy_i : in  std_logic;                     -- response is ready
---    -- opc_rsp_len_i  : in  std_logic(MMC_FILL_LEVEL_BITS-1 downto 0);   
---    opc_rsp_cnt_i  : in  unsigned(RSP_FILL_LEVEL_BITS-1 downto 0); -- response length
+    -- connect opcode processor to mmc fifo's    
+    -- MMC read fifo to opcode processor
+    opc_fif_dat_o       : out unsigned( 7 downto 0);     -- MMC opcode fifo
+    opc_fif_ren_i       : in std_logic;                  -- mmc fifo read enable
+    opc_fif_mt_o        : out std_logic;                 -- mmc opcode fifo empty
+    opc_rd_cnt_o        : out unsigned(MMC_FILL_LEVEL_BITS-1 downto 0); -- mmc opcode fifo fill level 
+    opc_rd_reset_i      : in std_logic;                  -- Synchronous mmc opcode fifo reset
+    -- MMC write fifo from opcode processor
+    opc_rspf_dat_i      : in  unsigned( 7 downto 0);     -- MMC response fifo
+    opc_rspf_we_i       : in std_logic;                  -- response fifo write line             
+    opc_rspf_mt_o       : out std_logic;                 -- response fifo empty
+    opc_rspf_fl_o       : out std_logic;                 -- response fifo full
+    opc_rspf_reset_i    : in std_logic;                  -- Synchronous mmc response fifo reset
+
     -- Debugging
     opc_oc_cnt_i   : in  unsigned(31 downto 0);         -- LS 16 bits=count of opcodes processed, MS 16 bits=opc fifo level
     opc_status1_i  : in  unsigned(31 downto 0);         -- LS 16 bits=opc status, MS 16-bits=opc_state
@@ -916,14 +913,14 @@ architecture beh of mmc_tester is
 
     -------------------------------------------------------
     -- mmc data pipe to opcode processor interface fifo's
-  signal s_fif_dat_rd     : unsigned(7 downto 0);       -- opcode fifo data from mmc
-  signal s_fif_rd         : std_logic;                  -- opcode fifo read enable
-  signal s_fif_rd_empty   : std_logic;
-  signal s_fif_rd_full    : std_logic;
-  signal s_fif_dat_wr     : unsigned(7 downto 0);       -- response fifo to mmc
+  --signal s_fif_dat_rd     : unsigned(7 downto 0);       -- opcode fifo data from mmc
+  --signal s_fif_rd         : std_logic;                  -- opcode fifo read enable
+  --signal s_fif_rd_empty   : std_logic;
+  --signal s_fif_rd_full    : std_logic;
+  --signal s_fif_dat_wr     : unsigned(7 downto 0);       -- response fifo to mmc
   signal s_fif_wr         : std_logic;                  -- response fifo write enable
-  signal s_fif_wr_empty   : std_logic;
-  signal s_fif_wr_full    : std_logic;
+  --signal s_fif_wr_empty   : std_logic;
+  --signal s_fif_wr_full    : std_logic;
     ------------------------------------------------------
 
   signal t_reg_sel        : std_logic; -- Test registers
@@ -939,8 +936,8 @@ architecture beh of mmc_tester is
   
     -- relating to system side BRAM and FIFO access
   signal h_ram_we           : std_logic;
-  signal s_fif_dat_wr_clear : std_logic;
-  signal s_fif_dat_rd_clear : std_logic;
+  --signal s_fif_dat_wr_clear : std_logic;
+  --signal s_fif_dat_rd_clear : std_logic;
 
     -- MMC host BRAM interface related
   signal host_bram_clk    : std_logic;
@@ -1034,8 +1031,8 @@ architecture beh of mmc_tester is
   signal tlm_log_dat_we        : std_logic;
 
     -- local signals for the MMC data pipe
-  signal s_fif_dat_rd_level    : unsigned(MMC_FILL_LEVEL_BITS-1 downto 0);
-  signal s_fif_dat_wr_level    : unsigned(MMC_FILL_LEVEL_BITS-1 downto 0);
+  --signal s_fif_dat_rd_level    : unsigned(MMC_FILL_LEVEL_BITS-1 downto 0);
+  signal s_fif_dat_wr_level    : unsigned(MMC_FILL_LEVEL_BITS-1 downto 0);  -- for debugging?
     
   -- SPI debugging vars
   signal dbg_spi_count         : unsigned(3 downto 0); --down counter
@@ -1178,7 +1175,7 @@ begin
     u_resize(reg_dbus_size,32)                     when 16#8#,
     u_resize(tlm_fifo_fill_level,32)               when 16#9#,
     u_resize(tlm_r10_dat,32)                       when 16#A#,
-    u_resize(s_fif_dat_rd,32)                      when 16#F#,
+    --u_resize(s_fif_dat_rd,32)                      when 16#F#,
     str2u("51514343",32)                           when others;
 
   with to_integer(syscon_adr(3 downto 0)) select
@@ -1212,8 +1209,8 @@ begin
       reg_stp_bdcount_clear <= '0';
       reg_dat_count_clear <= '0';
       reg_dbus_size_clear <= '0';
-      s_fif_dat_wr_clear <= '0';
-      s_fif_dat_rd_clear <= '0';
+      --s_fif_dat_wr_clear <= '0';
+      --s_fif_dat_rd_clear <= '0';
       t_reg_sel_r1 <= '0';
       host_en_reg <= '0';
       slave_en_reg <= '0';
@@ -1235,8 +1232,8 @@ begin
       reg_stp_bdcount_clear <= '0';
       reg_dat_count_clear <= '0';
       reg_dbus_size_clear <= '0';
-      s_fif_dat_wr_clear <= '0';
-      s_fif_dat_rd_clear <= '0';
+      --s_fif_dat_wr_clear <= '0';
+      --s_fif_dat_rd_clear <= '0';
       -- Register writes have the highest priority
       t_reg_sel_r1 <= t_reg_sel;
       if (t_reg_sel='1' and t_reg_sel_r1='0' and syscon_we='1') then
@@ -1265,9 +1262,9 @@ begin
           -- Register 9 writes implemented at the FIFO
           when 16#C# =>
              dbg_enables_o <= syscon_dat_wr(15 downto 0);
-          when 16#E# =>
-            s_fif_dat_wr_clear <= syscon_dat_wr(0);
-            s_fif_dat_rd_clear <= syscon_dat_wr(1);
+          --when 16#E# =>
+            --opc_rspf_reset_i <= syscon_dat_wr(0);     --s_fif_dat_wr_clear <= syscon_dat_wr(0);
+            --opc_rd_reset_i <= syscon_dat_wr(1);     --s_fif_dat_rd_clear <= syscon_dat_wr(1);
           when others =>
             null;
         end case;
@@ -1963,21 +1960,21 @@ end process;
     -- Data Pipe FIFOs
     wr_clk_i      => sys_clk,
     wr_clk_en_i   => '1',
-    wr_reset_i    => s_fif_dat_wr_clear,  -- Synchronous
-    wr_en_i       => s_fif_wr,
-    wr_dat_i      => s_fif_dat_wr,  --syscon_dat_wr(7 downto 0),
+    wr_reset_i    => opc_rspf_reset_i,          --s_fif_dat_wr_clear,  -- Synchronous
+    wr_en_i       => opc_rspf_we_i,             --s_fif_wr,
+    wr_dat_i      => opc_rspf_dat_i,            --s_fif_dat_wr,  --syscon_dat_wr(7 downto 0),
     wr_fifo_level => s_fif_dat_wr_level,
-    wr_fifo_full  => s_fif_wr_full,
-    wr_fifo_empty => s_fif_wr_empty,
+    wr_fifo_full  => opc_rspf_fl_o,             --s_fif_wr_full,
+    wr_fifo_empty => opc_rspf_mt_o,             --s_fif_wr_empty,
 
     rd_clk_i      => sys_clk,
     rd_clk_en_i   => '1',
-    rd_reset_i    => s_fif_dat_rd_clear,  -- Synchronous
-    rd_en_i       => s_fif_rd,
-    rd_dat_o      => s_fif_dat_rd,
-    rd_fifo_level => s_fif_dat_rd_level,
-    rd_fifo_full  => s_fif_rd_full,
-    rd_fifo_empty => s_fif_rd_empty,
+    rd_reset_i    => opc_rd_reset_i,        --s_fif_dat_rd_clear,  -- Synchronous
+    rd_en_i       => opc_fif_ren_i,         --s_fif_rd,
+    rd_dat_o      => opc_fif_dat_o,         --s_fif_dat_rd,
+    rd_fifo_level => opc_rd_cnt_o,          --s_fif_dat_rd_level,
+    rd_fifo_full  => open,                  --s_fif_rd_full,
+    rd_fifo_empty => opc_fif_mt_o,          --s_fif_rd_empty,
 
     -- Data Pipe RAM
     ram_clk_i     => sys_clk,

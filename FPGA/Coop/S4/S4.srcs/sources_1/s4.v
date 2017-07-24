@@ -389,7 +389,7 @@ wire         opc_rspf_rdy;            // response fifo is waiting
 reg          opc_rspf_ren;            // response fifo read enable
 wire [7:0]   opc_rspf_dat_o;          // response fifo output data, used to generate response block
 wire [`GLBL_RSP_FILL_LEVEL_BITS-1:0] opc_rsp_lng;    // update response length when response is ready
-wire [`GLBL_RSP_FILL_LEVEL_BITS-1:0] opc_rsp_cnt;    // response fifo count, opcode processor asserts 
+wire [`GLBL_RSP_FILL_LEVEL_BITS-1:0] opc_rspf_cnt;   // response fifo count, opcode processor asserts 
 
 // Frequency processor wires
 wire [31:0]  frq_fifo_dat_i;          // to fifo from opc, frequency output in MHz
@@ -436,7 +436,7 @@ wire [6:0]   opc_state;               // For debugging
 wire [7:0]   last_opcode;
 //wire [15:0]  last_length_w;
 
-// SPI debugging connections for w 03000030 command
+// SPI debugging connections for w 03000040 command
 // Write up to 14 byte to SPI device
 wire [7:0]   arr_spi_bytes [13:0];
 wire [3:0]   dbg_spi_bytes;      // bytes to send
@@ -446,6 +446,46 @@ wire         dbg_spi_busy;
 reg          dbg_spi_done;
 wire [2:0]   dbg_spi_device;       // 1=VGA, 2=SYN, 3=DDS, 4=ZMON
 wire [15:0]  dbg_enables; // = 1'b0;          // toggle various enables/wires
+
+
+//////////////////////////////////////////////////////////
+// Backdoor fifo variables
+//////////////////////////////////////////////////////////
+reg   [7:0]     bkd_fif_dat_i;
+reg             bkd_fif_wen; 
+
+wire  [7:0]     bkd_rspf_dat_i; 
+reg             bkd_rspf_ren; 
+
+//////////////////////////////////////////////////////////
+// Mux variables for opcode processor I/O 2-way mux
+// between MMC fifo's & backdoor UART fifo's
+// MMC is select=0, default
+//////////////////////////////////////////////////////////
+wire  [7:0]     mmc_fif_dat;    // MMC read fifo into mux, out of mux into opcode processor 
+wire            mmc_fif_ren;    // MMC read enable, out of opcode processor, thru mux, into mmc_tester
+wire            mmc_fif_mt;     // MMC read fifo empty
+wire  [`GLBL_RSP_FILL_LEVEL_BITS-1:0]  mmc_fif_cnt;    // MMC read fifo count
+
+wire  [7:0]     mmc_rspf_dat;   // MMC write fifo, out of opcode processor, thru mux, into mmc_tester 
+wire            mmc_rspf_wen;   // MMC write enable 
+wire            mmc_rspf_mt;    // MMC write fifo empty 
+wire            mmc_rspf_fl;    // MMC write fifo full
+wire  [`GLBL_RSP_FILL_LEVEL_BITS-1:0]  mmc_rspf_cnt;   // MMC write fifo count
+wire  [`GLBL_RSP_FILL_LEVEL_BITS-1:0]  mmc_rsp_rdy;    // Response ready
+
+// mux 1, is backdoor UART fifo's
+wire  [7:0]     bkd_fif_dat_o;
+wire            bkd_fif_ren; 
+wire            bkd_fif_mt; 
+wire  [`GLBL_RSP_FILL_LEVEL_BITS-1:0]  bkd_fif_cnt; 
+
+wire  [7:0]     bkd_rspf_dat_o; 
+wire            bkd_rspf_wen; 
+wire            bkd_rspf_mt; 
+wire            bkd_rspf_fl; 
+wire  [`GLBL_RSP_FILL_LEVEL_BITS-1:0]  bkd_rspf_cnt; 
+wire  [`GLBL_RSP_FILL_LEVEL_BITS-1:0]  bkd_rsp_rdy; 
 
 // 11-Jul HWDBG UART work, opc connected to mmc_tester 12-Jul
 //   wire                   opc_fifo_wr_en;    // ZZM wr enable to opcode input fifo.
@@ -673,16 +713,17 @@ end
       .sys_clk_en(opc_fifo_enable),
         
       .reset_i(opc_fifo_rst),
-        
-      .fifo_wr_i(opc_fifo_wen),
-      .fifo_din(opc_fifo_dat_i),
-        
-      .fifo_rd_i(opc_fifo_ren),
-      .fifo_dout(opc_fifo_dat_o),
-        
-      .fifo_fill_level(opc_fifo_count),
-      .fifo_full(opc_fifo_full),
-      .fifo_empty(opc_fifo_mt),
+
+      // backdoor UART writes entries        
+      .fifo_wr_i(bkd_fif_wen),
+      .fifo_din(bkd_fif_dat_i),
+
+      // opcode fifo mux reads entries
+      .fifo_rd_i(bkd_fif_ren),
+      .fifo_dout(bkd_fif_dat_o),
+      .fifo_fill_level(bkd_fif_cnt),
+      .fifo_full(),
+      .fifo_empty(bkd_fif_mt),
       .fifo_pf_full(),
       .fifo_pf_flag(),
       .fifo_pf_empty()           
@@ -710,15 +751,15 @@ end
       
       .reset_i(opc_fifo_rst),
       
-      .fifo_wr_i(opc_rspf_wen),                 // response fifo write enable
-      .fifo_din(opc_rspf_w),                    // to fifo, response bytes(status, measurements, echo, etc)
+      .fifo_wr_i(bkd_rspf_wen),                 // response fifo write enable
+      .fifo_din(bkd_rspf_dat_i),                // to fifo, response bytes(status, measurements, echo, etc)
       
-      .fifo_rd_i(opc_rspf_ren),                 // response fifo read enable
-      .fifo_dout(opc_rspf_dat_o),               // response fifo output data, used to generate response block
+      .fifo_rd_i(bkd_rspf_ren),                 // response fifo read enable
+      .fifo_dout(bkd_rspf_dat_o),               // response fifo output data, used to generate response block
       
-      .fifo_fill_level(opc_rsp_cnt),            // response fifo count
-      .fifo_full(opc_rspf_fl),                  // response fifo full  flag
-      .fifo_empty(opc_rspf_mt),                 // response fifo empty flag
+      .fifo_fill_level(bkd_rspf_cnt),           // response fifo count
+      .fifo_full(bkd_rspf_fl),                  // response fifo full  flag
+      .fifo_empty(bkd_rspf_mt),                 // response fifo empty flag
       .fifo_pf_full(),
       .fifo_pf_flag(),
       .fifo_pf_empty()           
@@ -916,19 +957,20 @@ end
     .bkd_rsp_datE_i     (opc_rspE),
     .bkd_rsp_datF_i     (opc_rspF),
 
-//    .opc_fif_dat_o     (opc_fifo_dat_i),
-//    .opc_fif_wen_o     (opc_fifo_wen),
-//    .opc_fif_wmt_i     (opc_fifo_mt),
-//    .opc_fif_wmt_i     (opc_fifo_mt),
-//    .opc_rd_cnt_i      (opc_fifo_count), 
-//    .opc_sys_st_o      (opc_sys_st_w),
-//    .opc_mode_i        (opc_mode_w),
-//    .opc_rspf_i        (opc_rspf_w),
-//    .opc_rspf_we_i     (opc_rspf_we_w),
-//    .opc_rspf_mt_o     (opc_rspf_mt_w),
-//    .opc_rspf_fl_o     (opc_rspf_fl_w),
-//    .opc_rspf_rdy_i    (opc_rspf_rdy_w),
-//    .opc_rsp_cnt_o     (opc_rsp_cnt_w),
+    // MMC is working, connect these to mux with backdoor UART
+    // Read from MMC fifo connections
+    .opc_fif_dat_o      (mmc_fif_dat),          // MMC opcode fifo from mmc_tester into mux
+    .opc_fif_ren_i      (mmc_fif_ren),          // mmc fifo read enable
+    .opc_fif_mt_o       (mmc_fif_mt),           // mmc opcode fifo empty
+    .opc_rd_cnt_o       (mmc_fif_cnt),          // mmc opcode fifo fill level 
+    .opc_rd_reset_i     (opc_fifo_rst),         // Synchronous mmc opcode fifo reset
+    //    -- Write to MMC fifo connections
+    .opc_rspf_dat_i     (mmc_rspf_dat),         // MMC response fifo
+    .opc_rspf_we_i      (mmc_rspf_wen),         // response fifo write line             
+    .opc_rspf_mt_o      (mmc_rspf_mt),          // response fifo empty
+    .opc_rspf_fl_o      (mmc_rspf_fl),          // response fifo full
+    .opc_rspf_reset_i   (opc_fifo_rst),         // Synchronous mmc response fifo reset
+
     // Debugging
     .opc_oc_cnt_i      ({8'd0, last_opcode[7:0], opc_count[15:0]}),   // last_opcode__opcodes_procesed
     .opc_status1_i     ({9'd0, opc_state, 8'd0, opc_status}),         // opc_state__opc_status
@@ -1018,7 +1060,7 @@ end
     // response_ready when fifo_length==response_length
     .response_ready_o           (opc_rspf_rdy),     // response fifo is waiting
     .response_length_o          (opc_rsp_lng),      // update response length when response is ready
-    .response_fifo_count_i      (opc_rsp_cnt),      // response fifo count
+    .response_fifo_count_i      (opc_rspf_cnt),     // response fifo count
 
     .frequency_o                (frq_fifo_dat_i),   // to fifo, frequency output in MHz
     .frq_wr_en_o                (frq_fifo_wen),     // frequency fifo write enable
@@ -1054,6 +1096,56 @@ end
     .last_opcode_o              (last_opcode)         //
     // .last_length_o              ()                   //    
   );
+
+  opc_mux opcode_io
+  (
+    .sys_clk                    (sys_clk),
+    .sys_rst_n                  (sys_rst_n),
+    .enable_i                   (opc_enable),
+      
+    .select_i                   (1'b1),             // 1'b0=>MMC, 1'b1=>Backdoor UART
+      
+      // opcode processor connections. opc_fifo_full local var not used
+    .opc_fif_dat_o              (opc_fifo_dat_o),   // output of mux, input to opcode processor
+    .opc_fif_ren_i              (opc_fifo_ren),     // fifo read line, from opcode processor to MMC fifo
+    .opc_fif_mt_o               (opc_fifo_mt),      // MMC opcode fifo empty flag to opcode processor
+    .opc_fif_cnt_o              (opc_fifo_count),   // MMC fifo fill level to opcode processor
+
+    .opc_rspf_dat_i             (opc_rspf_w),       // from opcode processor to MMC response fifo
+    .opc_rspf_wen_i             (opc_rspf_wen),     // MMC response fifo write enable
+    .opc_rspf_mt_o              (opc_rspf_mt),      // MMC response fifo empty
+    .opc_rspf_fl_o              (opc_rspf_fl),      // MMC response fifo full
+    .opc_rspf_cnt_o             (opc_rspf_cnt),     // MMC response fifo count
+    .opc_rsp_rdy_i              (opc_rspf_rdy),     // response fifo is waiting
+
+      // mux'd connections
+      // mux 0, default, is MMC fifo's
+    .mmc_fif_dat_i              (mmc_fif_dat),      // mux 0 is MMC
+    .mmc_fif_ren_o              (mmc_fif_ren),      // 
+    .mmc_fif_mt_i               (mmc_fif_mt),       // 
+    .mmc_fif_cnt_i              (mmc_fif_cnt),      // 
+   
+    .mmc_rspf_dat_o             (mmc_rspf_dat),     // 
+    .mmc_rspf_wen_o             (mmc_rspf_wen),     // 
+    .mmc_rspf_mt_i              (mmc_rspf_mt),      // 
+    .mmc_rspf_fl_i              (mmc_rspf_fl),      // 
+    .mmc_rspf_cnt_i             (mmc_rspf_cnt),     // 
+    .mmc_rsp_rdy_o              (mmc_rsp_rdy),          // 
+  
+      // mux 1, is backdoor UART fifo's
+    .bkd_fif_dat_i              (bkd_fif_dat_o),        // mux 1 is backdor UART
+    .bkd_fif_ren_o              (bkd_fif_ren),          // 
+    .bkd_fif_mt_i               (bkd_fif_mt),           // 
+    .bkd_fif_cnt_i              (bkd_fif_cnt),          // 
+   
+    .bkd_rspf_dat_o             (bkd_rspf_dat_i),       // 
+    .bkd_rspf_wen_o             (bkd_rspf_wen),         // 
+    .bkd_rspf_mt_i              (bkd_rspf_mt),          // 
+    .bkd_rspf_fl_i              (bkd_rspf_fl),          // 
+    .bkd_rspf_cnt_i             (bkd_rspf_cnt),         // 
+    .bkd_rsp_rdy_o              (bkd_rsp_rdy)          // 
+  );
+
   
 // ******************************************************************************
 // *                                                                            *
@@ -1184,23 +1276,23 @@ end
           bkd_opc_state <= `BKD_WR0;
         end
         `BKD_WR0: begin
-          opc_fifo_dat_i <= opc_inreg[7:0];
-          opc_fifo_wen <= 1'b1;     // writes on 1st clock even though count takes another clock to update
+          bkd_fif_dat_i <= opc_inreg[7:0];
+          bkd_fif_wen <= 1'b1;     // writes on 1st clock even though count takes another clock to update
           bkd_counter <= bkd_counter + 1;
           bkd_opc_state <= `BKD_WR1;
         end
         `BKD_WR1: begin
-          opc_fifo_dat_i <= opc_inreg[15:8];
+          bkd_fif_dat_i <= opc_inreg[15:8];
           bkd_counter <= bkd_counter + 1;
           bkd_opc_state <= `BKD_WR2;
         end
         `BKD_WR2: begin
-          opc_fifo_dat_i <= opc_inreg[23:16];
+          bkd_fif_dat_i <= opc_inreg[23:16];
           bkd_counter <= bkd_counter + 1;
           bkd_opc_state <= `BKD_WR3;
         end
         `BKD_WR3: begin
-          opc_fifo_dat_i <= opc_inreg[31:24];
+          bkd_fif_dat_i <= opc_inreg[31:24];
           bkd_counter <= bkd_counter + 1;
           if(bkd_counter == `BKD_COUNT)
             bkd_opc_state <= `BKD_DONE;
@@ -1226,11 +1318,11 @@ end
           60: opc_inreg <= opc_datF;
           endcase
           bkd_opc_state <= `BKD_WR0;
-          opc_fifo_wen <= 1'b0;
+          bkd_fif_wen <= 1'b0;
         end
         `BKD_DONE: begin
           opc_load_ack <= 1'b1;
-          opc_fifo_wen <= 1'b0;
+          bkd_fif_wen <= 1'b0;
           opc_enable <= 1'b1;
           bkd_opc_state <= `BKD_IDLE;
         end
@@ -1273,8 +1365,8 @@ always @(posedge sys_clk) begin
         bkd_rsp_state <= `BKD_WR0;
       end
       `BKD_WR0: begin
-        opc_outreg[7:0] <= opc_rspf_dat_o;
-        opc_rspf_ren <= 1'b1;
+        opc_outreg[7:0] <= bkd_rspf_dat_o;
+        bkd_rspf_ren <= 1'b1;
         bkd_rsp_counter <= bkd_rsp_counter + 1;
         bkd_rsp_state <= `BKD_SPCR; // Takes extra clk to start reading
       end
@@ -1285,23 +1377,23 @@ always @(posedge sys_clk) begin
         bkd_rsp_state <= `BKD_WR1;
       end
       `BKD_WR1: begin
-        opc_outreg[15:8] <= opc_rspf_dat_o;
+        opc_outreg[15:8] <= bkd_rspf_dat_o;
         bkd_rsp_counter <= bkd_rsp_counter + 1;
         bkd_rsp_state <= `BKD_WR2;
       end
       `BKD_WR2: begin
-        opc_outreg[23:16] <= opc_rspf_dat_o;
+        opc_outreg[23:16] <= bkd_rspf_dat_o;
         bkd_rsp_counter <= bkd_rsp_counter + 1;
         bkd_rsp_state <= `BKD_WR3;
       end
       `BKD_WR3: begin
-        opc_outreg[31:24] <= opc_rspf_dat_o;
+        opc_outreg[31:24] <= bkd_rspf_dat_o;
         bkd_rsp_counter <= bkd_rsp_counter + 1;
         if(bkd_rsp_counter == `BKD_COUNT)
           bkd_rsp_state <= `BKD_DONE;
         else
           bkd_rsp_state <= `BKD_WRREG;
-          opc_rspf_ren <= 1'b1;
+          bkd_rspf_ren <= 1'b0;
       end
       `BKD_WRREG: begin // Save value
         case(bkd_rsp_counter) 
@@ -1323,11 +1415,11 @@ always @(posedge sys_clk) begin
         64: opc_rspF <= opc_outreg;           
         endcase
         bkd_rsp_state <= `BKD_WR0;
-        opc_rspf_ren <= 1'b1;
+        bkd_rspf_ren <= 1'b1;
       end
       `BKD_DONE: begin
         opc_rsp_new <= 1'b1;
-        opc_rspf_ren <= 1'b0;
+        bkd_rspf_ren <= 1'b0;
         bkd_rsp_run <= 1'b0;
         bkd_rsp_state <= `BKD_IDLE;
       end
