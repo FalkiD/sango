@@ -388,7 +388,7 @@ wire         opc_rspf_fl;             // response fifo full  flag
 wire         opc_rspf_rdy;            // response fifo is waiting
 reg          opc_rspf_ren;            // response fifo read enable
 wire [7:0]   opc_rspf_dat_o;          // response fifo output data, used to generate response block
-wire [`GLBL_RSP_FILL_LEVEL_BITS-1:0] opc_rsp_lng;    // update response length when response is ready
+wire [`GLBL_RSP_FILL_LEVEL_BITS-1:0] opc_rsp_len;    // update response length when response is ready
 wire [`GLBL_RSP_FILL_LEVEL_BITS-1:0] opc_rspf_cnt;   // response fifo count, opcode processor asserts 
 
 // Frequency processor wires
@@ -472,7 +472,8 @@ wire            mmc_rspf_wen;   // MMC write enable
 wire            mmc_rspf_mt;    // MMC write fifo empty 
 wire            mmc_rspf_fl;    // MMC write fifo full
 wire  [`GLBL_RSP_FILL_LEVEL_BITS-1:0]  mmc_rspf_cnt;   // MMC write fifo count
-wire  [`GLBL_RSP_FILL_LEVEL_BITS-1:0]  mmc_rsp_rdy;    // Response ready
+wire            mmc_rsp_rdy;    // Response ready
+wire  [`GLBL_RSP_FILL_LEVEL_BITS-1:0]  mmc_rsp_len;    // Response length written by opcode processor
 
 // mux 1, is backdoor UART fifo's
 wire  [7:0]     bkd_fif_dat_o;
@@ -485,7 +486,8 @@ wire            bkd_rspf_wen;
 wire            bkd_rspf_mt; 
 wire            bkd_rspf_fl; 
 wire  [`GLBL_RSP_FILL_LEVEL_BITS-1:0]  bkd_rspf_cnt; 
-wire  [`GLBL_RSP_FILL_LEVEL_BITS-1:0]  bkd_rsp_rdy; 
+wire  bkd_rsp_rdy; 
+wire  [`GLBL_RSP_FILL_LEVEL_BITS-1:0]  bkd_rsp_len; 
 
 // 11-Jul HWDBG UART work, opc connected to mmc_tester 12-Jul
 //   wire                   opc_fifo_wr_en;    // ZZM wr enable to opcode input fifo.
@@ -1059,7 +1061,7 @@ end
     .response_fifo_full_i       (opc_rspf_fl),      // response fifo full  flag
     // response_ready when fifo_length==response_length
     .response_ready_o           (opc_rspf_rdy),     // response fifo is waiting
-    .response_length_o          (opc_rsp_lng),      // update response length when response is ready
+    .response_length_o          (opc_rsp_len),      // update response length when response is ready
     .response_fifo_count_i      (opc_rspf_cnt),     // response fifo count
 
     .frequency_o                (frq_fifo_dat_i),   // to fifo, frequency output in MHz
@@ -1101,7 +1103,7 @@ end
   (
     .sys_clk                    (sys_clk),
     .sys_rst_n                  (sys_rst_n),
-    .enable_i                   (opc_enable),
+    .enable_i                   (opc_fifo_enable),
       
     .select_i                   (1'b1),             // 1'b0=>MMC, 1'b1=>Backdoor UART
       
@@ -1117,6 +1119,7 @@ end
     .opc_rspf_fl_o              (opc_rspf_fl),      // MMC response fifo full
     .opc_rspf_cnt_o             (opc_rspf_cnt),     // MMC response fifo count
     .opc_rsp_rdy_i              (opc_rspf_rdy),     // response fifo is waiting
+    .opc_rsp_len_i              (opc_rsp_len),      // response length written by opcode processor
 
       // mux'd connections
       // mux 0, default, is MMC fifo's
@@ -1130,20 +1133,22 @@ end
     .mmc_rspf_mt_i              (mmc_rspf_mt),      // 
     .mmc_rspf_fl_i              (mmc_rspf_fl),      // 
     .mmc_rspf_cnt_i             (mmc_rspf_cnt),     // 
-    .mmc_rsp_rdy_o              (mmc_rsp_rdy),          // 
+    .mmc_rsp_rdy_o              (mmc_rsp_rdy),      // 
+    .mmc_rsp_len_o              (mmc_rsp_len),      // response length written by opcode processor
   
       // mux 1, is backdoor UART fifo's
-    .bkd_fif_dat_i              (bkd_fif_dat_o),        // mux 1 is backdor UART
-    .bkd_fif_ren_o              (bkd_fif_ren),          // 
-    .bkd_fif_mt_i               (bkd_fif_mt),           // 
-    .bkd_fif_cnt_i              (bkd_fif_cnt),          // 
+    .bkd_fif_dat_i              (bkd_fif_dat_o),   // mux 1 is backdor UART
+    .bkd_fif_ren_o              (bkd_fif_ren),     // 
+    .bkd_fif_mt_i               (bkd_fif_mt),      // 
+    .bkd_fif_cnt_i              (bkd_fif_cnt),     // 
    
-    .bkd_rspf_dat_o             (bkd_rspf_dat_i),       // 
-    .bkd_rspf_wen_o             (bkd_rspf_wen),         // 
-    .bkd_rspf_mt_i              (bkd_rspf_mt),          // 
-    .bkd_rspf_fl_i              (bkd_rspf_fl),          // 
-    .bkd_rspf_cnt_i             (bkd_rspf_cnt),         // 
-    .bkd_rsp_rdy_o              (bkd_rsp_rdy)          // 
+    .bkd_rspf_dat_o             (bkd_rspf_dat_i),  // 
+    .bkd_rspf_wen_o             (bkd_rspf_wen),    // 
+    .bkd_rspf_mt_i              (bkd_rspf_mt),     // 
+    .bkd_rspf_fl_i              (bkd_rspf_fl),     // 
+    .bkd_rspf_cnt_i             (bkd_rspf_cnt),    // 
+    .bkd_rsp_rdy_o              (bkd_rsp_rdy),     // 
+    .bkd_rsp_len_o              (bkd_rsp_len)      // response length written by opcode processor
   );
 
   

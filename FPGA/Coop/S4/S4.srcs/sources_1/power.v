@@ -461,13 +461,7 @@ module power #(parameter FILL_BITS = 4)
           // read power from fifo
           pwr_word <= pwr_fifo_i;
           pwr_fifo_ren_o <= 1'b0;
-          if(pwr_fifo_i[38:32] == `POWER) begin
-            state <= PWR_DATA;
-          end
-          else begin
-            state <= PWR_VGA1;  // write 1st byte of 3
-            VGA_SSn_o <= 1'b0;
-          end
+          state <= PWR_DATA;
         end
         PWR_DATA: begin
           pwr_opcode <= pwr_word[38:32];
@@ -477,11 +471,10 @@ module power #(parameter FILL_BITS = 4)
           end
           else begin
             power <= pwr_word[31:0];
-            VGA_SSn_o <= 1'b0;
-            state <= PWR_VGA2;  // write 1st byte of 3
+            state <= PWR_VGA1;   // write 1st byte of 3  
           end
         end
-        PWR_VGA1: begin         // only used on internal writes to assert SSELn for 2nd write
+        PWR_VGA1: begin          // On internal writes, assert SSELn for 2nd write (both VGA dacs)
           VGA_SSn_o <= 1'b0;
           state <= PWR_VGA2;
         end

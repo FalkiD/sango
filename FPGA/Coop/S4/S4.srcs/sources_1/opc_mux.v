@@ -43,7 +43,7 @@ module opc_mux #(parameter WIDTH = 10)
     output reg                  opc_rspf_fl_o,          // MMC response fifo full
     output reg  [WIDTH-1:0]     opc_rspf_cnt_o,         // MMC response fifo count
     
-    input  wire [WIDTH-1:0]     opc_rsp_rdy_i,          // response fifo is waiting
+    input  wire                 opc_rsp_rdy_i,          // response fifo is waiting
     input  wire [WIDTH-1:0]     opc_rsp_len_i,          // update response length when response is ready
     
     // mux'd connections
@@ -59,8 +59,8 @@ module opc_mux #(parameter WIDTH = 10)
     input  wire                 mmc_rspf_fl_i,          // 
     input  wire [WIDTH-1:0]     mmc_rspf_cnt_i,         // 
     
-    output reg [WIDTH-1:0]      mmc_rsp_rdy_o,          // 
-    output reg [WIDTH-1:0]      mmc_rsp_len_o,          // update response length when response is ready
+    output reg                  mmc_rsp_rdy_o,          // 
+    output reg  [WIDTH-1:0]     mmc_rsp_len_o,          // update response length when response is ready
 
     // mux 1, is backdoor UART fifo's
     input  wire [7:0]           bkd_fif_dat_i,          // mux 0 is MMC
@@ -74,8 +74,8 @@ module opc_mux #(parameter WIDTH = 10)
     input  wire                 bkd_rspf_fl_i,          // 
     input  wire [WIDTH-1:0]     bkd_rspf_cnt_i,         // 
 
-    output reg [WIDTH-1:0]      bkd_rsp_rdy_o,          // 
-    output reg [WIDTH-1:0]      bkd_rsp_len_o           // update response length when response is ready
+    output reg                  bkd_rsp_rdy_o,          // 
+    output reg  [WIDTH-1:0]     bkd_rsp_len_o           // update response length when response is ready
 );
 
   always @(*) begin

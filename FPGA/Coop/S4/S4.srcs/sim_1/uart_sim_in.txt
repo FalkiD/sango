@@ -15,7 +15,7 @@ d 10 us ;            -- Initial delay
 u 0.5 ms ;            -- <CR> (Allows autobaud to obtain lock on baud rate.)
 u 0.5 ms w 3000009 010624DE; -- Set DDS for sd_clk_o of 400kHz
 
-u 0.5 ms w 300002C 07faa; -- Set enables, careful, 0x8000 is RESET
+--u 0.5 ms w 300002C 07faa; -- Set enables, careful, 0x8000 is RESET
 --u 0.5 ms w 3000040 01 01 01; -- Write 1 byte to SPI device 1
 
 -- {0x38, 0, 0 }; // Disable internal refs, Gain=1
@@ -23,9 +23,9 @@ u 0.5 ms w 300002C 07faa; -- Set enables, careful, 0x8000 is RESET
 -- {00 99 60}     // DAC A input, 0x996
 -- {11 80 00}     // DAC B input & update all, 0x800
 -- Write VGA DAC's
---u 1.0 ms w 03000030 00001C04 1C040038 00300003;
---u 1.0 ms w 03000033 99601C04 1C040000 00118000;
---u 1.0 ms w 03000036 0 0 0 0 0 0 0 0 0 0;
+u 1.0 ms w 03000030 00001C04 1C040038 00300003;
+u 1.0 ms w 03000033 AAA01C04 1C040000 00115550;
+u 1.0 ms w 03000036 0 0 0 0 0 0 0 0 0 0;
 --
 -- Initialize & set both to FS:
 --u 1.0 ms w 03000030 00001c04 1c040038 00300003
@@ -52,13 +52,13 @@ u 0.5 ms w 300002C 07faa; -- Set enables, careful, 0x8000 is RESET
 --u 2.0 ms r 300003C 4; -- read response
 
 --Power opcode followed by frequency
-u 1.0 ms w 03000030 00010604 04043200 92080880;
-u 1.0 ms w 03000033 0 0 0 0 0 0 0 0 0 0 0 0 0; -- write 64 bytes to opcode processor
-d 50 us ;  -- wait a little
-u 2.0 ms r 3000030 4; -- read response
-u 2.0 ms r 3000034 4; -- read response
-u 2.0 ms r 3000038 4; -- read response
-u 2.0 ms r 300003C 4; -- read response
+--u 1.0 ms w 03000030 00010604 04043200 92080880;
+--u 1.0 ms w 03000033 0 0 0 0 0 0 0 0 0 0 0 0 0; -- write 64 bytes to opcode processor
+--d 50 us ;  -- wait a little
+--u 2.0 ms r 3000030 4; -- read response
+--u 2.0 ms r 3000034 4; -- read response
+--u 2.0 ms r 3000038 4; -- read response
+--u 2.0 ms r 300003C 4; -- read response
 
 -- 13-Jul load of opcode fifo works in sim & hardware:
 --u 1.0 ms w 3000030 03020100 07060504 0B0A0908; -- Write 12 of 64 bytes to opcode backdoor
@@ -69,7 +69,7 @@ u 2.0 ms r 300003C 4; -- read response
 --u 1.0 ms w 300003F 3F3E3D3C; -- Write 64 of 64 bytes to opcode backdoor, last byte enables opcode procesor
 
 -- 23-Jun Send S4 MCU startup CMD0, CMD1 sequence
--- Note:S4 MCU does this at 20MHz
+-- Note:1st commands MUST use 400kHz
 --u 0.5 ms w 300000E 200; -- Set host DMA address at 0x200
 --u 0.5 ms w 3000000 200 0; -- Set blk_size=512, blk_count=0
 --u 0.5 ms w 3000002 0 00000000; -- Write CMD0 (RESET, no response)
