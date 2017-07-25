@@ -77,7 +77,7 @@ module opcodes #(parameter RSP_FILL_LEVEL_BITS = 10,
     output reg           fifo_rd_en_o,            // fifo read line
     input  wire          fifo_rd_empty_i,         // fifo empty flag
     input  wire [RSP_FILL_LEVEL_BITS-1:0]  fifo_rd_count_i, // fifo fill level
-    //output wire          fifo_rst,                // reset input fifo 
+    output reg           fifo_rst_o,              // reset input fifo as soon as we get a null opcode 
 
     input  wire [15:0]   system_state_i,          // overall state of system, "running a pattern", for example
     output reg  [31:0]   mode_o,                  // MODE opcode can set system-wide flags
@@ -253,6 +253,7 @@ module opcodes #(parameter RSP_FILL_LEVEL_BITS = 10,
                     show_next_state(`STATE_WRITE_RESPONSE);
                 end
                 `STATE_WRITE_RESPONSE: begin
+                    fifo_rst_o <= 1'b0;             // clear input fifo reset line after a few clocks
                     if(rsp_length > 0) begin
                         response_o <= rsp_data[rsp_index];
                         rsp_length <= rsp_length - 1;
@@ -348,7 +349,8 @@ module opcodes #(parameter RSP_FILL_LEVEL_BITS = 10,
                     // Look for special opcodes, RESET & NULL Terminator
                     if(opcode == 0) begin
                         if(blk_rsp_done == 1'b0) begin
-                          blk_rsp_done <= 1'b1;   // Flag we've done it
+                          blk_rsp_done <= 1'b1;      // Flag we've done it
+                          fifo_rst_o <= 1'b1;       // reset input fifo, done with block
                           done_opcode_block();                    
                         end
                         else begin
@@ -745,7 +747,7 @@ module opcodes #(parameter RSP_FILL_LEVEL_BITS = 10,
         len_upr <= 0;
         length <= 9'b000000000;
         fifo_rd_en_o <= 1'b0; // Added by John Clayton
-//        frq_wr_en_o <= 1'b0;
+        frq_wr_en_o <= 1'b0;
         pwr_wr_en_o <= 1'b0;
 //        pulse_wr_en_o <= 1'b0;
 //        bias_wr_en_o <= 1'b0;
@@ -771,6 +773,7 @@ module opcodes #(parameter RSP_FILL_LEVEL_BITS = 10,
         mode_o <= 32'h0000_0000;
         opc_fifo_timeout <= `WAIT_FIFO_TMO;
         bias_enable_o <= 1'b0;
+        fifo_rst_o <= 1'b0;
     end
     endtask
 

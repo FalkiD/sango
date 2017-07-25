@@ -36,6 +36,7 @@ module opc_mux #(parameter WIDTH = 10)
     input  wire                 opc_fif_ren_i,          // fifo read line, from opcode processor to MMC fifo
     output reg                  opc_fif_mt_o,           // MMC opcode fifo empty flag to opcode processor
     output reg  [WIDTH-1:0]     opc_fif_cnt_o,          // MMC fifo fill level to opcode processor
+    input  wire                 opc_inpf_rst_i,         // opcode processor resets input fifo at first null opcode
  
     input  wire [7:0]           opc_rspf_dat_i,         // from opcode processor to MMC response fifo
     input  wire                 opc_rspf_wen_i,         // MMC response fifo write enable
@@ -52,6 +53,7 @@ module opc_mux #(parameter WIDTH = 10)
     output reg                  mmc_fif_ren_o,          // 
     input  wire                 mmc_fif_mt_i,           // 
     input  wire [WIDTH-1:0]     mmc_fif_cnt_i,          // 
+    output reg                  mmc_inpf_rst_o,         // opcode processor resets input fifo at first null opcode
  
     output reg  [7:0]           mmc_rspf_dat_o,         // 
     output reg                  mmc_rspf_wen_o,         // 
@@ -67,6 +69,7 @@ module opc_mux #(parameter WIDTH = 10)
     output reg                  bkd_fif_ren_o,          // 
     input  wire                 bkd_fif_mt_i,           // 
     input  wire [WIDTH-1:0]     bkd_fif_cnt_i,          // 
+    output reg                  bkd_inpf_rst_o,         // opcode processor resets input fifo at first null opcode
  
     output reg  [7:0]           bkd_rspf_dat_o,         // 
     output reg                  bkd_rspf_wen_o,         // 
@@ -85,6 +88,7 @@ module opc_mux #(parameter WIDTH = 10)
         mmc_fif_ren_o = opc_fif_ren_i;          // fifo read line, from opcode processor to MMC fifo
         opc_fif_mt_o = mmc_fif_mt_i;            // MMC opcode fifo empty flag to opcode processor
         opc_fif_cnt_o = mmc_fif_cnt_i;          // MMC fifo fill level to opcode processor
+        mmc_inpf_rst_o = opc_inpf_rst_i;        // opcode processor resets input fifo at first null opcode
        
         mmc_rspf_dat_o = opc_rspf_dat_i;        // from opcode processor to MMC response fifo
         mmc_rspf_wen_o = opc_rspf_wen_i;        // MMC response fifo write enable
@@ -98,13 +102,14 @@ module opc_mux #(parameter WIDTH = 10)
       else begin
         opc_fif_dat_o = bkd_fif_dat_i;
         bkd_fif_ren_o = opc_fif_ren_i;          // fifo read line, from opcode processor to MMC fifo
-        opc_fif_mt_o = bkd_fif_mt_i;            // MMC opcode fifo empty flag to opcode processor
-        opc_fif_cnt_o = bkd_fif_cnt_i;          // MMC fifo fill level to opcode processor
+        opc_fif_mt_o = bkd_fif_mt_i;            // backdoor opcode fifo empty flag to opcode processor
+        opc_fif_cnt_o = bkd_fif_cnt_i;          // backdoor fifo fill level to opcode processor
+        bkd_inpf_rst_o = opc_inpf_rst_i;        // opcode processor resets input fifo at first null opcode
      
-        bkd_rspf_dat_o = opc_rspf_dat_i;        // from opcode processor to MMC response fifo
-        bkd_rspf_wen_o = opc_rspf_wen_i;        // MMC response fifo write enable
-        opc_rspf_mt_o = bkd_rspf_mt_i;          // MMC response fifo empty
-        opc_rspf_fl_o = bkd_rspf_fl_i;          // MMC response fifo full
+        bkd_rspf_dat_o = opc_rspf_dat_i;        // from opcode processor to backdoor response fifo
+        bkd_rspf_wen_o = opc_rspf_wen_i;        // backdoor response fifo write enable
+        opc_rspf_mt_o = bkd_rspf_mt_i;          // backdoor response fifo empty
+        opc_rspf_fl_o = bkd_rspf_fl_i;          // backdoor response fifo full
         opc_rspf_cnt_o = bkd_rspf_cnt_i;
 
         bkd_rsp_rdy_o = opc_rsp_rdy_i;          

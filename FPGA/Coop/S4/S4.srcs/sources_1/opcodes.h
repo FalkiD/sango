@@ -52,6 +52,10 @@
 
 // Opcodes/Responses are written in 1-sector minimum chunks
 `define SECTOR_SIZE         512
-`define MIN_OPCODE_SIZE     2       // Min bytes in read FIFO to process opcodes
+
+// 25-Jul important bug: if feeder writes into input fifo but doesn't exceed
+// this threshhold then one extra byte will get read the next time we're
+// above this threshhold. Need to detect and clear this condition
+`define MIN_OPCODE_SIZE     16       // Min bytes in read FIFO to process opcodes
 
 `endif

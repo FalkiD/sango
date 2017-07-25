@@ -377,6 +377,7 @@ wire [`GLBL_RSP_FILL_LEVEL_BITS-1:0] opc_fifo_count;   // opcode fifo fill level
 wire [7:0]   opc_fifo_dat_o;            // opcode processor reads from here
 wire         opc_fifo_ren;              // opcode fifo read line 
 wire         opc_fifo_full;             // used?
+wire         opc_inpf_rst;              // opcode processor resets input fifo on first null opcode
 
 wire [15:0]  opc_sys_st_w;            // s4 system state (e.g. running a pattern)
 wire [31:0]  opc_mode_w;              // MODE opcode can set system-wide flags
@@ -466,6 +467,7 @@ wire  [7:0]     mmc_fif_dat;    // MMC read fifo into mux, out of mux into opcod
 wire            mmc_fif_ren;    // MMC read enable, out of opcode processor, thru mux, into mmc_tester
 wire            mmc_fif_mt;     // MMC read fifo empty
 wire  [`GLBL_RSP_FILL_LEVEL_BITS-1:0]  mmc_fif_cnt;    // MMC read fifo count
+wire            mmc_inpf_rst;   // opcode processor resets input fifo on first null opcode
 
 wire  [7:0]     mmc_rspf_dat;   // MMC write fifo, out of opcode processor, thru mux, into mmc_tester 
 wire            mmc_rspf_wen;   // MMC write enable 
@@ -480,6 +482,7 @@ wire  [7:0]     bkd_fif_dat_o;
 wire            bkd_fif_ren; 
 wire            bkd_fif_mt; 
 wire  [`GLBL_RSP_FILL_LEVEL_BITS-1:0]  bkd_fif_cnt; 
+wire            bkd_inpf_rst;   // opcode processor resets input fifo on first null opcode
 
 wire  [7:0]     bkd_rspf_dat_o; 
 wire            bkd_rspf_wen; 
@@ -714,7 +717,7 @@ end
       .sys_clk(sys_clk),
       .sys_clk_en(opc_fifo_enable),
         
-      .reset_i(opc_fifo_rst),
+      .reset_i(opc_inpf_rst),
 
       // backdoor UART writes entries        
       .fifo_wr_i(bkd_fif_wen),
@@ -965,7 +968,7 @@ end
     .opc_fif_ren_i      (mmc_fif_ren),          // mmc fifo read enable
     .opc_fif_mt_o       (mmc_fif_mt),           // mmc opcode fifo empty
     .opc_rd_cnt_o       (mmc_fif_cnt),          // mmc opcode fifo fill level 
-    .opc_rd_reset_i     (opc_fifo_rst),         // Synchronous mmc opcode fifo reset
+    .opc_rd_reset_i     (mmc_inpf_rst),         // Synchronous mmc opcode fifo reset
     //    -- Write to MMC fifo connections
     .opc_rspf_dat_i     (mmc_rspf_dat),         // MMC response fifo
     .opc_rspf_we_i      (mmc_rspf_wen),         // response fifo write line             
@@ -1051,6 +1054,7 @@ end
     .fifo_rd_en_o               (opc_fifo_ren),     // fifo read line
     .fifo_rd_empty_i            (opc_fifo_mt),      // fifo empty flag
     .fifo_rd_count_i            (opc_fifo_count),   // fifo fill level
+    .fifo_rst_o                 (opc_inpf_rst),     // opcode processor resets input fifo at first null opcode 
 
     .system_state_i             (opc_sys_st_w),     // s4 system state (e.g. running a pattern)
     .mode_o                     (opc_mode_w),       // MODE opcode can set system-wide flags
@@ -1112,6 +1116,7 @@ end
     .opc_fif_ren_i              (opc_fifo_ren),     // fifo read line, from opcode processor to MMC fifo
     .opc_fif_mt_o               (opc_fifo_mt),      // MMC opcode fifo empty flag to opcode processor
     .opc_fif_cnt_o              (opc_fifo_count),   // MMC fifo fill level to opcode processor
+    .opc_inpf_rst_i             (opc_inpf_rst),     // opcode processor resets input fifo at first null opcode, opc to MMC/BKD fifo
 
     .opc_rspf_dat_i             (opc_rspf_w),       // from opcode processor to MMC response fifo
     .opc_rspf_wen_i             (opc_rspf_wen),     // MMC response fifo write enable
@@ -1127,6 +1132,7 @@ end
     .mmc_fif_ren_o              (mmc_fif_ren),      // 
     .mmc_fif_mt_i               (mmc_fif_mt),       // 
     .mmc_fif_cnt_i              (mmc_fif_cnt),      // 
+    .mmc_inpf_rst_o             (mmc_inpf_rst),     //
    
     .mmc_rspf_dat_o             (mmc_rspf_dat),     // 
     .mmc_rspf_wen_o             (mmc_rspf_wen),     // 
@@ -1140,7 +1146,8 @@ end
     .bkd_fif_dat_i              (bkd_fif_dat_o),   // mux 1 is backdor UART
     .bkd_fif_ren_o              (bkd_fif_ren),     // 
     .bkd_fif_mt_i               (bkd_fif_mt),      // 
-    .bkd_fif_cnt_i              (bkd_fif_cnt),     // 
+    .bkd_fif_cnt_i              (bkd_fif_cnt),     //
+    .bkd_inpf_rst_o             (bkd_inpf_rst),    // Reset opcode processor input fifo, to backdoor fifo 
    
     .bkd_rspf_dat_o             (bkd_rspf_dat_i),  // 
     .bkd_rspf_wen_o             (bkd_rspf_wen),    // 

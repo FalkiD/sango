@@ -22,15 +22,15 @@ u 0.5 ms w 3000009 010624DE; -- Set DDS for sd_clk_o of 400kHz
 -- {30 00 03}     // LDAC pin inactive DAC A & B
 -- {00 99 60}     // DAC A input, 0x996
 -- {11 80 00}     // DAC B input & update all, 0x800
--- Write VGA DAC's
-u 1.0 ms w 03000030 00001C04 1C040038 00300003;
-u 1.0 ms w 03000033 AAA01C04 1C040000 00115550;
-u 1.0 ms w 03000036 0 0 0 0 0 0 0 0 0 0;
---
--- Initialize & set both to FS:
---u 1.0 ms w 03000030 00001c04 1c040038 00300003
---u 1.0 ms w 03000033 fff01c04 1c040000 0011fff0
 
+-- Initialize & set both to FS:
+u 1.0 ms w 03000030 00001c04 1c040038 00300003;
+u 1.0 ms w 03000033 fff01c04 1c040000 0011fff0;
+u 1.0 ms w 03000036 0 0 0 0 0 0 0 0 0 0;
+d 5 us ;
+-- Write VGA DAC's to HS
+u 1.0 ms w 03000030 80001C04 1C040000 00118000;
+u 1.0 ms w 03000033 0 0 0 0 0 0 0 0 0 0 0 0 0;
 
 -- Bias On then Off, then freq 2450MHz
 --u 1.0 ms w 03000030 01010C02 00010C02 08800404;
