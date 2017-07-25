@@ -23,6 +23,7 @@
 // 
 //////////////////////////////////////////////////////////////////////////////////
 
+`include "timescale.v"
 `include "status.h"
 `include "opcodes.h"
 
@@ -64,7 +65,8 @@
     for next byte. MMC clock and this module's SYS_CLK are different. 
     Normal to wait for next byte.
 */
-module opcodes #(parameter RSP_FILL_LEVEL_BITS = 10,
+module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
+                 parameter RSP_FILL_LEVEL_BITS = 10,
                  parameter HUNDRED_MS = 10000000,    // 10e6 ticks per 100ms
                  parameter TWOFIFTY_MS = 50000000     // 25e6 ticks per 250ms
   )
@@ -76,7 +78,7 @@ module opcodes #(parameter RSP_FILL_LEVEL_BITS = 10,
     input  wire [7:0]    fifo_dat_i,              // opcode fifo
     output reg           fifo_rd_en_o,            // fifo read line
     input  wire          fifo_rd_empty_i,         // fifo empty flag
-    input  wire [RSP_FILL_LEVEL_BITS-1:0]  fifo_rd_count_i, // fifo fill level
+    input  wire [MMC_FILL_LEVEL_BITS-1:0]  fifo_rd_count_i, // fifo fill level
     output reg           fifo_rst_o,              // reset input fifo as soon as we get a null opcode 
 
     input  wire [15:0]   system_state_i,          // overall state of system, "running a pattern", for example
@@ -187,8 +189,6 @@ module opcodes #(parameter RSP_FILL_LEVEL_BITS = 10,
 //   0..., MEAS_ZMCTL, MEAS_ZMSIZE
 //   0,0,0,0,0,0,0,0,0,0,0,0, PTN_DATA, PTN_PATCTL, PTN_PATADR, PTN_PATCLK
 //   0, 0, 0, ECHO, PAINTFCFG, SYNCCONF, TRIGCONF, LENGTH, MODE, BIAS, PULSE, PHASE, POWER, FREQ, STATUS, TERMINATOR
-
-//    reg [15:0] max_count;
 
     always @( posedge sys_clk) begin
         if( !sys_rst_n || state == 0) begin //|| (state != `STATE_IDLE && fifo_rd_empty_i == 1))
@@ -744,6 +744,7 @@ module opcodes #(parameter RSP_FILL_LEVEL_BITS = 10,
     task reset_opcode_processor;
     begin
         opcode <= 0;
+        last_opcode_o <= 7'b0000000;   
         len_upr <= 0;
         length <= 9'b000000000;
         fifo_rd_en_o <= 1'b0; // Added by John Clayton

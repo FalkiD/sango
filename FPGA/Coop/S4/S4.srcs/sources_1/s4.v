@@ -367,13 +367,13 @@ reg  [31:0]     opc_rspF;
 reg  [31:0]     opc_outreg;         // Mux'd above 16 response wires
 
 // opcode processor wires:
-reg          opc_enable;                // control needed...      
+wire         opc_enable;                // control needed...      
 wire         opc_fifo_enable;           // enable opcode processor in & out fifo's
 wire         opc_fifo_rst;              // reset for opcode processor fifo's
 reg  [7:0]   opc_fifo_dat_i;            // mmc_tester opcode fifo writes can go here
 reg          opc_fifo_wen;              // opcode fifo write line
 wire         opc_fifo_mt;               // opcode fifo empty flag
-wire [`GLBL_RSP_FILL_LEVEL_BITS-1:0] opc_fifo_count;   // opcode fifo fill level
+wire [`GLBL_MMC_FILL_LEVEL_BITS-1:0] opc_fifo_count;   // opcode fifo fill level
 wire [7:0]   opc_fifo_dat_o;            // opcode processor reads from here
 wire         opc_fifo_ren;              // opcode fifo read line 
 wire         opc_fifo_full;             // used?
@@ -466,7 +466,7 @@ reg             bkd_rspf_ren;
 wire  [7:0]     mmc_fif_dat;    // MMC read fifo into mux, out of mux into opcode processor 
 wire            mmc_fif_ren;    // MMC read enable, out of opcode processor, thru mux, into mmc_tester
 wire            mmc_fif_mt;     // MMC read fifo empty
-wire  [`GLBL_RSP_FILL_LEVEL_BITS-1:0]  mmc_fif_cnt;    // MMC read fifo count
+wire  [`GLBL_MMC_FILL_LEVEL_BITS-1:0]  mmc_fif_cnt;    // MMC read fifo count
 wire            mmc_inpf_rst;   // opcode processor resets input fifo on first null opcode
 
 wire  [7:0]     mmc_rspf_dat;   // MMC write fifo, out of opcode processor, thru mux, into mmc_tester 
@@ -481,7 +481,7 @@ wire  [`GLBL_RSP_FILL_LEVEL_BITS-1:0]  mmc_rsp_len;    // Response length writte
 wire  [7:0]     bkd_fif_dat_o;
 wire            bkd_fif_ren; 
 wire            bkd_fif_mt; 
-wire  [`GLBL_RSP_FILL_LEVEL_BITS-1:0]  bkd_fif_cnt; 
+wire  [`GLBL_MMC_FILL_LEVEL_BITS-1:0]  bkd_fif_cnt; 
 wire            bkd_inpf_rst;   // opcode processor resets input fifo on first null opcode
 
 wire  [7:0]     bkd_rspf_dat_o; 
@@ -643,6 +643,7 @@ assign sys_rst_n = MCU_TRIG ? 1'b0 : dbg_sys_rst_n;
 /////////////////////////////////////////////////////////
 assign opc_fifo_enable = 1'b1;
 assign opc_fifo_rst = 1'b0;
+assign opc_enable = 1'b1;
 
 // Create a "time-alive" counter.
 //   2^40 @ 100MHz wraps at ~3.05 hours.
@@ -708,9 +709,9 @@ end
     .USE_BRAM(1),           // BRAM=1 requires 1 extra clock before read data is ready
     .WIDTH(8),
     .DEPTH(512),
-    .FILL_LEVEL_BITS(10),
-    .PF_FULL_POINT(511),
-    .PF_FLAG_POINT(256),
+    .FILL_LEVEL_BITS(`GLBL_MMC_FILL_LEVEL_BITS),
+    .PF_FULL_POINT(`GLBL_MMC_FILL_LEVEL_BITS-1),
+    .PF_FLAG_POINT(`GLBL_MMC_FILL_LEVEL_BITS>>1),
     .PF_EMPTY_POINT(1)
   ) input_opcodes(
       .sys_rst_n(sys_rst_n),
@@ -1043,6 +1044,7 @@ end
 // ******************************************************************************
 
   opcodes #(
+     .MMC_FILL_LEVEL_BITS(`GLBL_MMC_FILL_LEVEL_BITS),
      .RSP_FILL_LEVEL_BITS(`GLBL_RSP_FILL_LEVEL_BITS)
   ) opcode_processor (
     .sys_rst_n                  (sys_rst_n),
@@ -1103,13 +1105,18 @@ end
     // .last_length_o              ()                   //    
   );
 
-  opc_mux opcode_io
+  // Opcode mux between backdoor UART and default MMC bus
+  opc_mux #(
+    .MMC_FILL_LEVEL_BITS(`GLBL_MMC_FILL_LEVEL_BITS),
+    .RSP_FILL_LEVEL_BITS(`GLBL_RSP_FILL_LEVEL_BITS)
+  )
+  opcode_io 
   (
     .sys_clk                    (sys_clk),
     .sys_rst_n                  (sys_rst_n),
     .enable_i                   (opc_fifo_enable),
       
-    .select_i                   (1'b1),             // 1'b0=>MMC, 1'b1=>Backdoor UART
+    .select_i                   (1'b0),             // 1'b0=>MMC, 1'b1=>Backdoor UART
       
       // opcode processor connections. opc_fifo_full local var not used
     .opc_fif_dat_o              (opc_fifo_dat_o),   // output of mux, input to opcode processor
@@ -1276,7 +1283,7 @@ end
       opc_load_ack <= 1'b0;
       bkd_opc_state <= `BKD_IDLE;
       bkd_counter <= 6'd0;
-      opc_enable <= 1'b0;
+      //opc_enable <= 1'b0;
     end
     else if(opc_load_new == 1'b1) begin
       if(opc_load_ack == 1'b0) begin    // we haven't loaded opc yet
@@ -1335,7 +1342,7 @@ end
         `BKD_DONE: begin
           opc_load_ack <= 1'b1;
           bkd_fif_wen <= 1'b0;
-          opc_enable <= 1'b1;
+          //opc_enable <= 1'b1;
           bkd_opc_state <= `BKD_IDLE;
         end
         endcase    
