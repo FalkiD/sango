@@ -64,6 +64,7 @@ module rcvr #(parameter BAUD_DIV = 867) // ((BAUD_DIV = 100MHz) / (BAUD = 115200
          bit_count <= 4'd9;
          rx_actv <= 1'b0;
          drdy <= 0;
+         baud <= 1'b0;
       end
       else begin
          baud <= (clk_div == 11'b0);

@@ -20,6 +20,7 @@
 // 0.00.1  2016-08-04 (JLC) Modified for current project.
 // 0.00.2  2017-04-11 (JLC) Modified for s4 backside.
 // 0.00.3  2017-06-13 (JLC) Expanded ctl/stat widths to 8 addressable 32-bit words
+// 1.00.7  2017-07-10 (JLC) Updated HWDBG extended fifo writes.
 //
 //----------------------------------------------------------------------------------
 

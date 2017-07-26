@@ -63,7 +63,7 @@ port (
                                          --     FPGA_MCLK is temporarily 102MHz LVCMOS33 FPGA Clk Input.  <JLC_TEMP_NO_L12>
   FPGA_MCLK     : in  std_logic;            --  R13   I                       
                                          --     FPGA_M*   is HW DBG I/F
-  FPGA_MCU1     : in  std_logic;            --  P10   I 
+  FPGA_MCU1     : out std_logic;            --  P10   I 
   FPGA_MCU2     : out std_logic;            --  P11   O
   FPGA_MCU3     : out std_logic;            --  R12   O    
   FPGA_MCU4     : out std_logic;            --  R13   O        

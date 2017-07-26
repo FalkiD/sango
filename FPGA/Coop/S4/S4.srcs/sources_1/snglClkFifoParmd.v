@@ -21,6 +21,8 @@
 //
 //------------------------------------------------------------------------------
 
+`include "timescale.v"        // Every source file needs this include
+
 `define LOG2(x) \
    (x <= 2) ? 1 : \
    (x <= 4) ? 2 : \

@@ -86,16 +86,17 @@
 //            swiss_army_ram             sd_card_pack.vhd             (s4 ........pipe_ram)
 //            swiss_army_fifo            mmc_test_pack.vhd            (s4 ......syn_spi_fifo)
 //              swiss_army_ram           sd_card_pack.vhd             (s4 ..........fifo_ram)
-//            spi                        mmc_test_pack.vhd            (s4 ......syn_spi)
+//        spi                            spi_master.v                 (s4 ...syn_spi)
 //                                                                                  ^
-//               NOTE: "Syn_spi"          is instantiated in mmc_test_pack.vhd -----+
-//                      and is defined in spi_master.v.
+//        opcodes                        opcodes.v                    (s4 ...opcode_processor)
+//
+//        hwdbg_uart                     uart.v                       (s4 ...hwdbg_uart)
+//            xmt1                       xmtr.v                       (s4 ......xmt1)
+//            rcv1                       rcvr.v                       (s4 ......rcv1)
 //          
-//        opcodes                        opcodes.v                    (s4 ......opcode_processor)
-//
-//        spix
-//
-//        hwdbg_uart                     uart.v                       (s4 ......hwuart)
+//        dds_spi                        dds.v                        (s4 ...hwdbg_dds_spi)  
+//            snglClkFifoParmd           snglClkFifoParmd.v           (s4 ......ddsInFifo)
+//          
 //          
 //          
 //    END:    Hierarchy table    (JLC 03/17/2017 - 05/23/2017).
@@ -114,6 +115,9 @@
 // Revision 1.00.3  06/12/2017 JLC Updated mmc_tester w/ RMR's dbg_spi_* and DBG_enables interface.
 // Revision 1.00.4  06/13/2017 JLC Updated HW debug UART (256 bit ctl r/w bus).
 // Revision 1.00.5  06/28/2017 JLC Reinplemented `define JLC_TEMP_NO_MMCM.
+// Revision 1.00.6  07/10/2017 JLC #1: uart.v got HWDBG ext'd fifo write updates.
+// Revision 1.00.7  07/10/2017 JLC #2:
+// See version.v    07/26/2017 RMR Merged Coop & Rick
 //
 // Additional Comments: General structure/sequence:
 //   Fifo's at top level for: opcodes and opcode processor output
@@ -206,7 +210,7 @@ module s4
                                          //     FPGA_MCLK is temporarily 102MHz LVCMOS33 FPGA Clk Input.  <JLC_TEMP_NO_L12>
   input              FPGA_MCLK,          //  R13   I                       
                                          //     FPGA_M*   is HW DBG I/F
-  input              FPGA_MCU1,          //  P10   I 
+  output             FPGA_MCU1,          //  P10   I 
   output             FPGA_MCU2,          //  P11   O
   output             FPGA_MCU3,          //  R12   O    
   output             FPGA_MCU4,          //  R13   O        
@@ -316,11 +320,16 @@ wire         mmc_tlm;
 wire  [7:0]  MMC_DAT_i;
 
 // Backside HW signals  
-wire [255:0] tdbgw;
-reg  [255:0] tdbgr;
+wire [255:0] hwdbg_ctl;
+reg  [255:0] hwdbg_stat;
 
 wire         syscon_rxd;
 wire         syscon_txd;
+
+wire         extd_fifo_wr_stb_w;
+wire [3:0]   extd_fifo_wr_addr_w;
+wire         extd_fifo_wr_dds_w       = extd_fifo_wr_stb_w & (extd_fifo_wr_addr_w == 4'h0);
+wire         hwdbg_sys_rst_i          = extd_fifo_wr_stb_w & (extd_fifo_wr_addr_w == 4'h6);
 
 // 12-Jul LPC MMC interface is not working so we must use 
 // MMC UART back door from mmc_tester debugger
@@ -448,6 +457,18 @@ reg          dbg_spi_done;
 wire [2:0]   dbg_spi_device;       // 1=VGA, 2=SYN, 3=DDS, 4=ZMON
 wire [15:0]  dbg_enables; // = 1'b0;          // toggle various enables/wires
 
+wire         rmr_DDS_IORST;
+wire         rmr_DDS_IOUP;
+wire         rmr_DDS_SYNC;
+wire         rmr_DDS_PS0;
+wire         rmr_DDS_PS1;
+
+wire         jlc_DDS_IORST;
+wire         jlc_DDS_IOUP;
+wire         jlc_DDS_SYNC;
+wire         jlc_DDS_PS0;
+wire         jlc_DDS_PS1;
+
 
 //////////////////////////////////////////////////////////
 // Backdoor fifo variables
@@ -489,21 +510,8 @@ wire            bkd_rspf_wen;
 wire            bkd_rspf_mt; 
 wire            bkd_rspf_fl; 
 wire  [`GLBL_RSP_FILL_LEVEL_BITS-1:0]  bkd_rspf_cnt; 
-wire  bkd_rsp_rdy; 
+wire            bkd_rsp_rdy; 
 wire  [`GLBL_RSP_FILL_LEVEL_BITS-1:0]  bkd_rsp_len; 
-
-// 11-Jul HWDBG UART work, opc connected to mmc_tester 12-Jul
-//   wire                   opc_fifo_wr_en;    // ZZM wr enable to opcode input fifo.
-//   wire                   opc_fifo_rd_en;    // ZZM
-//   //wire [7:0]             opc_fifo_dat_i;    // ZZM
-//   wire [7:0]             opc_fifo_dat_o;    // ZZM
-//   reg                    opc_fifo_wr_enr;   // ZZM
-//   reg                    opc_fifo_wr_enrr;  // ZZM
-//   reg                    opc_fifo_rd_enr;   // ZZM
-//   reg                    opc_fifo_rd_enrr;  // ZZM
-//   //wire [9:0]             opcode_fifo_count; // ZZM
-//   wire                   opcode_fifo_empty; // ZZM
-//   wire                   extd_fifo_wr_stb_w;// ZZM
 
 //------------------------------------------------------------------------
 // Start of logic
@@ -632,8 +640,10 @@ MMCME2_BASE_inst (
 // Create a "hwdbg dbg_sys_rst_n" synchronous self-timed pulse. <JLC_TEMP_RST>
 always @(posedge sys_clk)
 begin
-  dbg_sys_rst_sr <= {dbg_sys_rst_sr[8:0], dbg_sys_rst_i};
-  dbg_sys_rst_n <= !(&{!dbg_sys_rst_sr[9], | dbg_sys_rst_sr[8:0]});  // output 9 ticks of dbg_sys_rst_n == 1'b0.
+  dbg_sys_rst_sr <= {dbg_sys_rst_sr[8:0], (dbg_sys_rst_i | hwdbg_sys_rst_i)};
+  dbg_sys_rst_n <= !(!dbg_sys_rst_sr[9] & |dbg_sys_rst_sr[8:0]);  // output 9 ticks of dbg_sys_rst_n == 1'b0.
+//  dbg_sys_rst_sr <= {dbg_sys_rst_sr[8:0], dbg_sys_rst_i};
+//  dbg_sys_rst_n <= !(&{!dbg_sys_rst_sr[9], | dbg_sys_rst_sr[8:0]});  // output 9 ticks of dbg_sys_rst_n == 1'b0.
 end
 
 assign sys_rst_n = MCU_TRIG ? 1'b0 : dbg_sys_rst_n;
@@ -695,13 +705,12 @@ always @(posedge clk050)
     count4 <= count4+1;
   end
 
-// Initialize things at startup
-always @(posedge sys_clk) begin
+// Initialize things at startup??
+//always @(posedge sys_clk) begin
 //  if (!initialized) begin
-
-
- // end
-end
+//
+//  end
+//end
 
   // Instantiate VHDL fifo that mmc_tester instance 
   // is using to store opcodes (opcode processor input fifo)
@@ -871,7 +880,7 @@ end
     .resp_o            (syscon_txd),
 
     // Board related
-    .switch_i           (),
+    .switch_i          (4'b0),
     .led_o             (),
 
     // Interface for SD/MMC traffic logging
@@ -1165,8 +1174,49 @@ end
     .bkd_rsp_len_o              (bkd_rsp_len)      // response length written by opcode processor
   );
 
-  
 // ******************************************************************************
+// * JLC Debug SPI (for AD9954)                                                 *
+// *                                                                            *
+// *  07/17/2017  JLC                                                           *
+// *    - instantiating AD9954 dds spi module.                                  *
+// *                                                                            *
+// ******************************************************************************
+  
+    dds_spi #(
+      .VRSN                       (`VERSION),
+      .CLK_FREQ                   (`GLBL_CLK_FREQ_MCU),    // <JLC_TEMP_CLK
+      .SPI_CLK_FREQ               (25000000)
+    ) hwdbg_dds_spi
+    (                                                      // 
+      // infrastructure, etc.
+      .clk_i                      (sys_clk),               // 
+      .rst_i                      (!sys_rst_n),            // 
+  
+      .doInit_i                   (1'b0),                  // do an init sequence. 
+      .hwdbg_dat_i                (hwdbg_ctl[35:0]),       // hwdbg data input.
+      .hwdbg_we_i                 (extd_fifo_wr_dds_w),    // hwdbg we.
+      .freqproc_dat_i             ({32{1'b0}}),            // opcproc data input.
+      .freqproc_we_i              (1'b0),                  // opcproc we.
+      .dds_fifo_full_o            (),                      // opcproc full.
+      .dds_fifo_empty_o           (),                      // opcproc empty.
+      .dds_spi_sclk_o             (jlc_DDS_SCLK),          // 
+      .dds_spi_mosi_o             (jlc_DDS_MOSI),          //
+      .dds_spi_miso_i             (jlc_DDS_MISO),          // 
+      .dds_spi_ss_n_o             (jlc_DDS_SSn),           // 
+      .dds_spi_iorst_o            (jlc_DDS_IORST),         // 
+      .dds_spi_ioup_o             (jlc_DDS_IOUP),          // 
+      .dds_spi_sync_o             (jlc_DDS_SYNC),          // 
+      .dds_spi_ps0_o              (jlc_DDS_PS0),           // 
+      .dds_spi_ps1_o              (jlc_DDS_PS1),           // 
+  
+      .dbg0_o                     (FPGA_MCU1),             //
+      .dbg1_o                     (FPGA_MCU2),             //
+      .dbg2_o                     (FPGA_MCU3),             //
+      .dbg3_o                     (FPGA_MCU4)              //
+     );
+
+// ******************************************************************************
+// * RMR Debug SPI                                                              *
 // *                                                                            *
 // *  spi:  Initial SPI instance for debugging s4 HW                            *
 // *        31-Mar-2017 Add SPI instances to debug on s4                        *
@@ -1512,9 +1562,9 @@ end
   assign SYN_SCLK = dbg_spi_device == SPI_SYN ? SPI_SCLK : 1'b0;
   assign SYN_MOSI = dbg_spi_device == SPI_SYN ? SPI_MOSI : 1'b0;
 
-  assign DDS_SSn = dbg_spi_device == SPI_DDS ? SPI_SSn : 1'b1;
-  assign DDS_SCLK = dbg_spi_device == SPI_DDS ? SPI_SCLK : 1'b0;
-  assign DDS_MOSI = dbg_spi_device == SPI_DDS ? SPI_MOSI : 1'b0;
+  assign rmr_DDS_SSn = dbg_spi_device == SPI_DDS ? SPI_SSn : 1'b1;
+  assign rmr_DDS_SCLK = dbg_spi_device == SPI_DDS ? SPI_SCLK : 1'b0;
+  assign rmr_DDS_MOSI = dbg_spi_device == SPI_DDS ? SPI_MOSI : 1'b0;
   
   // S4 Enables/lines
   localparam BIT_RF_GATE          = 16'h0001;
@@ -1572,23 +1622,23 @@ end
   
   wire dbg_ddsiorst;
   assign dbg_ddsiorst = dbg_enables & BIT_DDS_IORST ? 1'b1 : 1'b0; 
-  assign DDS_IORST = dbg_spi_mode == 1'b1 ? dbg_ddsiorst : 1'b0;
+  assign rmr_DDS_IORST = dbg_spi_mode == 1'b1 ? dbg_ddsiorst : 1'b0;
   
   wire dbg_ddsioup;
   assign dbg_ddsioup = dbg_enables & BIT_DDS_IOUP ? 1'b1 : 1'b0;
-  assign DDS_IOUP = dbg_spi_mode == 1'b1 ? dbg_ddsioup : 1'b0;
+  assign rmr_DDS_IOUP = dbg_spi_mode == 1'b1 ? dbg_ddsioup : 1'b0;
   
   wire dbg_ddssync;
   assign dbg_ddssync = dbg_enables & BIT_DDS_SYNC ? 1'b1 : 1'b0;
-  assign DDS_SYNC = dbg_spi_mode == 1'b1 ? dbg_ddssync : 1'b0;
+  assign rmr_DDS_SYNC = dbg_spi_mode == 1'b1 ? dbg_ddssync : 1'b0;
   
   wire dbg_ddsps0;
   assign dbg_ddsps0 = dbg_enables & BIT_DDS_PS0 ? 1'b1 : 1'b0;
-  assign DDS_PS0 = dbg_spi_mode == 1'b1 ? dbg_ddsps0 : 1'b0;
+  assign rmr_DDS_PS0 = dbg_spi_mode == 1'b1 ? dbg_ddsps0 : 1'b0;
    
   wire dbg_ddsps1;
   assign dbg_ddsps1 = dbg_enables & BIT_DDS_PS1 ? 1'b1 : 1'b0;
-  assign DDS_PS1 = dbg_spi_mode == 1'b1 ? dbg_ddsps1 : 1'b0;
+  assign rmr_DDS_PS1 = dbg_spi_mode == 1'b1 ? dbg_ddsps1 : 1'b0;
    
   wire dbg_zmonen;
   assign dbg_zmonen = dbg_enables & BIT_ZMON_EN ? 1'b1 : 1'b0;
@@ -1609,62 +1659,57 @@ end
 // ******************************************************************************
 
   uart #(
-    .VRSN                       (`VERSION),
-    .CLK_FREQ                   (`GLBL_CLK_FREQ_MCU),    // <JLC_TEMP_CLK
-    .BAUD                       (115200)
-  ) hwdbg_uart
-  (                                                      // diag/debug control signal outputs
-    // infrastructure, etc.
-    .clk_i                      (sys_clk),               // 
-    .rst_i                      (!sys_rst_n),            // 
-    .rx_enbl                    (count2tc),
-    .RxD_i                      (FPGA_RXD2),             // "RxD" from USB serial bridge to FPGA
-    .TxD_o                      (FPGA_TXD2),             // "TxD" from FPGA to USB serial bridge
-    .extd_fifo_wr_stb_o         (extd_fifo_wr_stb_w),
-    .extd_fifo_wr_addr_o        (),
-    .dbg0_o                     (),                      //  1-bit output: debug outpin #0.
-    .dbg1_o                     (),                      //  1-bit output: debug outpin #1.
-    .dbg2_o                     (),                      //  1-bit output: debug outpin #2.
-    
-    // diag/debug control signal outputs
-    .hw_ctl_o                   (tdbgw),                 // 16-bit output: control functions.
+  .VRSN                       (`VERSION),
+  .CLK_FREQ                   (`GLBL_CLK_FREQ_MCU),    // <JLC_TEMP_CLK
+  .BAUD                       (115200)
+) hwdbg_uart
+(                                                      // diag/debug control signal outputs
+  // infrastructure, etc.
+  .clk_i                      (sys_clk),               // 
+  .rst_i                      (!sys_rst_n),            // 
+  .rx_enbl                    (count2tc),
+  .RxD_i                      (FPGA_RXD2),             // "RxD" from USB serial bridge to FPGA
+  .TxD_o                      (FPGA_TXD2),             // "TxD" from FPGA to USB serial bridge
+  .extd_fifo_wr_stb_o         (extd_fifo_wr_stb_w),
+  .extd_fifo_wr_addr_o        (extd_fifo_wr_addr_w),
+  .dbg0_o                     (),                      //  1-bit output: debug outpin #0.
+  .dbg1_o                     (),                      //  1-bit output: debug outpin #1.
+  .dbg2_o                     (),                      //  1-bit output: debug outpin #2.
+  
+  // diag/debug control signal outputs
+  .hw_ctl_o                   (hwdbg_ctl),             //  256-bit control outputs
 
-    // diag/debug status  signal inputs
-    .hw_stat_i                  (tdbgr),
-    .gp_opc_cnt_i               (opc_count),          // count of opcodes processed from top level
-    .ptn_opc_cnt_i              (32'hdeadbeef),          // 32-bit input:  count of pattern opcodes processed from top level
-    .sys_stat_vec_i             (opc_sys_st_w)           // 16-bit input:  status to show, system_state for now
-   );
+  // diag/debug status  signal inputs
+  .hw_stat_i                  (hwdbg_stat),
+  .gp_opc_cnt_i               (opc_oc_cnt_w),          // count of opcodes processed from top level
+  .ptn_opc_cnt_i              (32'hdeadbeef),          // 32-bit input:  count of pattern opcodes processed from top level
+  .sys_stat_vec_i             (opc_sys_st_w)           // 16-bit input:  status to show, system_state for now
+ );
 
-   // Snapshot:  capture data for R & S commands.   ZZM changes are incl'd in always block below.
-   always @(posedge sys_clk) begin
-      if (!sys_rst_n) begin
-         tdbgr                     <= 256'b0;
-//         opc_fifo_wr_enr           <= 1'b0;
-//         opc_fifo_wr_enrr          <= 1'b0;
-//         opc_fifo_rd_enr           <= 1'b0;
-//         opc_fifo_rd_enrr          <= 1'b0;
-      end
-      else begin
-         tdbgr                     <= tdbgw; //{tdbgw[255:120], opc_fifo_dat_o, opcode_fifo_empty, 5'b0, opcode_fifo_count, tdbgw[95:0]};
-//         opc_fifo_wr_enr           <= extd_fifo_wr_stb_w;  // ZZM stb_w is a 1-tick signal.
-//         opc_fifo_wr_enrr          <= opc_fifo_wr_enr;
-//         opc_fifo_rd_enr           <= tdbgw[254];
-//         opc_fifo_rd_enrr          <= opc_fifo_rd_enr;
-      end
-   end  // end of always @ (posedge clk).
+ // Snapshot:  capture data for R & S commands.   
+ always @(posedge sys_clk) begin
+    if (!sys_rst_n) begin
+       hwdbg_stat                      <= 256'b0;
+    end
+    else begin
+       hwdbg_stat                      <= hwdbg_ctl;
+    end
+ end  // end of always @ (posedge clk).
+ 
+ 
+ assign ACTIVE_LEDn = hwdbg_stat[255]?count2[24]:count2[25];
+ 
+ assign  DDS_MOSI    = hwdbg_stat[254] ? jlc_DDS_MOSI  : rmr_DDS_MOSI;   //  F2    O    AD9954 DDS SPI+ I/F
+ assign  DDS_SSn     = hwdbg_stat[254] ? jlc_DDS_SSn   : rmr_DDS_SSn;    //  G2    O
+ assign  DDS_SCLK    = hwdbg_stat[254] ? jlc_DDS_SCLK  : rmr_DDS_SCLK;   //  G1    O       
+ assign  DDS_IORST   = hwdbg_stat[254] ? jlc_DDS_IORST : rmr_DDS_IORST;  //  H2    O       
+ assign  DDS_IOUP    = hwdbg_stat[254] ? jlc_DDS_IOUP  : rmr_DDS_IOUP;   //  H1    O       
+ assign  DDS_SYNC    = hwdbg_stat[254] ? jlc_DDS_SYNC  : rmr_DDS_SYNC;   //  K1    O
+ assign  DDS_PS0     = hwdbg_stat[254] ? jlc_DDS_PS0   : rmr_DDS_PS0;    //  J1    O
+ assign  DDS_PS1     = hwdbg_stat[254] ? jlc_DDS_PS0   : rmr_DDS_PS0;    //  L2    O
    
-//   assign opc_fifo_dat_i = tdbgw[71:64];                            // ZZM
-//   assign opc_fifo_wr_en = opc_fifo_wr_enrr;                        // ZZM
-//   assign opc_fifo_rd_en = opc_fifo_rd_enr & ~opc_fifo_rd_enrr;     // ZZM
-        
-   assign ACTIVE_LEDn = tdbgr[255]?count2[24]:count2[25];
-   
-//   assign FPGA_MCU2 = opc_fifo_wr_enrr;    // ZZM
-//   assign FPGA_MCU3 = opc_fifo_rd_en;      // ZZM
-//   assign FPGA_MCU4 = opcode_fifo_empty;   // ZZM    
   // 22-Jun have to scope MMC signals
-  assign FPGA_MCU4 = VGA_SCLK; //MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.
-  assign FPGA_MCU3 = VGA_MOSI; //MMC_CMD; //count3[15];    // 200MHz div'd by 2^16.
+//  assign FPGA_MCU4 = VGA_SCLK; //MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.
+//  assign FPGA_MCU3 = VGA_MOSI; //MMC_CMD; //count3[15];    // 200MHz div'd by 2^16.
 
   endmodule

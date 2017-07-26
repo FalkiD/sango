@@ -29,7 +29,11 @@
 // Revision 1.00.5  06/28/2017 JLC Reinplemented `define JLC_TEMP_NO_MMCM.
 // Revision 1.00.6  07/10/2017 JLC Working w/ RMR @ Ampleon #1.  Updated HWDBG extended fifo writes.
 // Revision 1.00.7  07/10/2017 JLC Working w/ RMR @ Ampleon #2:  RSP_FILL_LEVEL_BITS fix
+// Revision 1.00.8  07/10/2017 JLC Working w/ RMR @ Ampleon #3:  DDS SPI 
+//                  07/17/2017 JLC Working w/ RMR @ Ampleon #3:  DDS SPI 
+// Revision 1.00.9  07/19/2017 JLC Working w/ RMR @ Ampleon #4:  DDS SPI 
+// Revision 1.00.A  07/26/2017 RMR Merged Coop & Rick
 //
 //------------------------------------------------------------------------------
 
-`define VERSION 16'h1_00_7     // V.vv.r FPGA development revision
+`define VERSION 16'h1_00_A     // V.vv.r FPGA development revision
