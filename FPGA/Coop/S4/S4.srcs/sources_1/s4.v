@@ -880,7 +880,7 @@ always @(posedge clk050)
     .resp_o            (syscon_txd),
 
     // Board related
-    .switch_i          (4'b0),
+    .switch_i          (8'b0),
     .led_o             (),
 
     // Interface for SD/MMC traffic logging

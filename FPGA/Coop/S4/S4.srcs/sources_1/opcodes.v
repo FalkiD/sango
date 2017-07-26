@@ -147,13 +147,14 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     reg  [6:0]   opcode = 0;         // Opcode being processed
     reg  [9:0]   length = 0;         // bytes of opcode data to read
     reg  [63:0]  uinttmp;            // up to 64-bit tmp for opcode data
+    reg  [MMC_FILL_LEVEL_BITS-1:0]  read_cnt;   // Bytes read from input fifo. Go until matches SECTOR_SIZE
     reg          len_upr = 0;        // Persist upper bit of length
     reg          response_ready;     // flag when response ready
     reg  [RSP_FILL_LEVEL_BITS-1:0]  response_length;    // length of response data
     reg  [RSP_FILL_LEVEL_BITS-1:0]  rsp_length;         // length tmp var
     reg  [7:0]   rsp_data [15:0];    // 64k array of response bytes (measure, echo, status)
     reg  [RSP_FILL_LEVEL_BITS-1:0]  rsp_index;          // response array index
-    reg  [9:0]   opc_fifo_timeout;   // wait for input fifo to contain minimum data for this long before clearing it(so we never get stuck)
+    //reg  [9:0]   opc_fifo_timeout;   // wait for input fifo to contain minimum data for this long before clearing it(so we never get stuck)
 
     reg  [15:0]  pat_addr;           // pattern address to write
     reg  [23:0]  pat_clk;            // pattern clock tick to write
@@ -194,15 +195,17 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         if( !sys_rst_n || state == 0) begin //|| (state != `STATE_IDLE && fifo_rd_empty_i == 1))
             reset_opcode_processor();
             counter <= 0;
-//            max_count <= 0;
     `ifdef XILINX_SIMULATOR
             dumpRAM <= 1'b0;
     `endif
         end
         else if(enable == 1) begin
-            if((state == `STATE_IDLE && fifo_rd_count_i >= `MIN_OPCODE_SIZE) ||
+            if((state == `STATE_IDLE && (fifo_rd_count_i >= `SECTOR_SIZE || read_cnt > 0)) || //`MIN_OPCODE_SIZE) ||
                 state != `STATE_IDLE) begin
                 // not IDLE or at least one opcode has been written to FIFO
+
+                if(state == `STATE_IDLE && fifo_rd_count_i == `SECTOR_SIZE) //    read_cnt == 0)
+                  read_cnt <= `SECTOR_SIZE;  // Reset our byte counter
 
                 case(state)
                 `STATE_IDLE: begin
@@ -245,7 +248,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     show_next_state(`STATE_WRITE_LENGTH1);
                 end
                 `STATE_WRITE_LENGTH1: begin  // LS byte of data length
-                    response_o <= rsp_length & 8'hff;
+                    response_o <= rsp_length[7:0];
                     show_next_state(`STATE_WRITE_LENGTH2);
                 end
                 `STATE_WRITE_LENGTH2: begin  // MS byte of status always 0 for now
@@ -253,7 +256,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     show_next_state(`STATE_WRITE_RESPONSE);
                 end
                 `STATE_WRITE_RESPONSE: begin
-                    fifo_rst_o <= 1'b0;             // clear input fifo reset line after a few clocks
+                    //fifo_rst_o <= 1'b0;             // clear input fifo reset line after a few clocks
                     if(rsp_length > 0) begin
                         response_o <= rsp_data[rsp_index];
                         rsp_length <= rsp_length - 1;
@@ -287,29 +290,30 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     
                 // Just began from `STATE_IDLE
                 `STATE_FETCH_FIRST: begin
-                    length <= fifo_dat_i;
-                    show_next_state(`STATE_FETCH);
+                    show_next_state(`STATE_FETCH);  // extra tick to get reads going
                 end
                 `STATE_FETCH: begin
                     shift <= 8'h00;
                     uinttmp <= 64'h0000_0000_0000_0000;
-                    length <= fifo_dat_i;
-                    saved_len_byte <= fifo_dat_i;     // Save opcode length byte in case of write to pattern RAM
+                    length <= {1'b0, fifo_dat_i};
+                    saved_len_byte <= {1'b0, fifo_dat_i};     // Save opcode length byte in case of write to pattern RAM
+                    read_cnt <= read_cnt - 1;
                     show_next_state(`STATE_LENGTH);   // Part 1 of length, get length msb & get opcode next
                 end
                 `STATE_LENGTH: begin
-                    saved_opc_byte <= fifo_dat_i;     // Save opcode byte in case of write to pattern RAM
-                    length <= length | ((fifo_dat_i & 1) << 8);
-                    rsp_index <= 16'h0000;  // index for multi-byte data blocks
-                    opcode <= (fifo_dat_i & 8'hFE) >> 1;     // got opcode, start reading data
+                    saved_opc_byte <= fifo_dat_i[6:0];      // Save opcode byte in case of write to pattern RAM
+                    length <= {fifo_dat_i[0], length[7:0]};
+                    rsp_index <= 16'h0000;                  // index for multi-byte data blocks
+                    opcode <= fifo_dat_i[7:1];              // got opcode, start reading data
+                    read_cnt <= read_cnt - 1;
                     // length tests
-                    if((length | ((fifo_dat_i & 1) << 8)) > fifo_rd_count_i) begin
-                        fifo_rd_en_o <= 0;                   // let it fill
+                    if({fifo_dat_i[0], length[7:0]} > fifo_rd_count_i) begin
+                        fifo_rd_en_o <= 0;                  // let it fill
                         show_next_state(`STATE_WAIT_DATA);
                     end
                     else begin
-                        if((length | ((fifo_dat_i & 1) << 8)) == 0) begin
-                            fifo_rd_en_o <= 0;                   // don't read next byte, opcode has no data
+                        if({fifo_dat_i[0], length[7:0]} == 0) begin
+                            fifo_rd_en_o <= 0;              // don't read next byte, opcode has no data
                         end
                         show_next_state(`STATE_DATA);
                     end
@@ -324,24 +328,24 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                         fifo_rd_en_o <= 1;                  // start reading again
                         show_next_state(`STATE_READ_SPACER);
                     end
-                    else begin
-                      if(opc_fifo_timeout == 6'd0) begin
-                        fifo_rd_en_o <= 1;
-                        show_next_state(`STATE_EMPTY_FIFO);
-                      end
-                      opc_fifo_timeout <= opc_fifo_timeout - 10'd1;    
-                    end
+//                    else begin
+//                      if(opc_fifo_timeout == 6'd0) begin
+//                        fifo_rd_en_o <= 1;
+//                        show_next_state(`STATE_EMPTY_FIFO);
+//                      end
+//                      opc_fifo_timeout <= opc_fifo_timeout - 10'd1;    
+//                    end
                 end
-                `STATE_EMPTY_FIFO: begin
-                    if(fifo_rd_count_i > 0) begin
-                      saved_opc_byte <= fifo_dat_i; // Just use register to dump fifo contents
-                    end
-                    else begin
-                      fifo_rd_en_o <= 0;            // back to idle
-                      status_o <= `SUCCESS;
-                      show_next_state(`STATE_IDLE);
-                    end
-                end
+//                `STATE_EMPTY_FIFO: begin
+//                    if(fifo_rd_count_i > 0) begin
+//                      saved_opc_byte <= fifo_dat_i; // Just use register to dump fifo contents
+//                    end
+//                    else begin
+//                      fifo_rd_en_o <= 0;            // back to idle
+//                      status_o <= `SUCCESS;
+//                      show_next_state(`STATE_IDLE);
+//                    end
+//                end
                 `STATE_READ_SPACER: begin
                     show_next_state(`STATE_DATA);
                 end
@@ -350,7 +354,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     if(opcode == 0) begin
                         if(blk_rsp_done == 1'b0) begin
                           blk_rsp_done <= 1'b1;      // Flag we've done it
-                          fifo_rst_o <= 1'b1;       // reset input fifo, done with block
+                          //fifo_rst_o <= 1'b1;       // reset input fifo, done with block
                           done_opcode_block();                    
                         end
                         else begin
@@ -682,6 +686,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 fifo_rd_en_o <= 0;      // pause opcode fifo reads
             length <= length - 1;
             shift <= shift + 8'd8;
+            read_cnt <= read_cnt - 1;
         end
     end
     endtask
@@ -716,6 +721,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 end
                 else if(!fifo_rd_empty_i) begin
                     rsp_data[rsp_index] <= ~fifo_dat_i; // complement the data for echo test 
+                    read_cnt <= read_cnt - 1;
 //                    if(length == 2) begin               // 1-based counter. Turn OFF FIFO early
 //                        length <= length - 1;
 //                        fifo_rd_en_o <= 0;                   // turn off reading
@@ -747,7 +753,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         last_opcode_o <= 7'b0000000;   
         len_upr <= 0;
         length <= 9'b000000000;
-        fifo_rd_en_o <= 1'b0; // Added by John Clayton
+        fifo_rd_en_o <= 1'b0;  // Added by John Clayton
+        read_cnt <= 0;         // Bytes read from input fifo. Go until matches SECTOR_SIZE
         frq_wr_en_o <= 1'b0;
         pwr_wr_en_o <= 1'b0;
 //        pulse_wr_en_o <= 1'b0;
@@ -772,7 +779,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         rsp_index <= 16'h0000;
         rsp_length <= 0; // payload length, DEFAULT_RESPONSE_LENGTH gets added in
         mode_o <= 32'h0000_0000;
-        opc_fifo_timeout <= `WAIT_FIFO_TMO;
+        //opc_fifo_timeout <= `WAIT_FIFO_TMO;
         bias_enable_o <= 1'b0;
         fifo_rst_o <= 1'b0;
     end
@@ -797,7 +804,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         response_length <= 16'h0000;
         rsp_index <= 16'h0000;
         rsp_length <= 0; // payload length, DEFAULT_RESPONSE_LENGTH gets added in
-        opc_fifo_timeout <= `WAIT_FIFO_TMO;
+        //opc_fifo_timeout <= `WAIT_FIFO_TMO;
     end
     endtask
 
