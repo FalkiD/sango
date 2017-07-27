@@ -155,6 +155,7 @@ package mmc_test_pack is
     opc_rspf_mt_o       : out std_logic;                -- response fifo empty
     opc_rspf_fl_o       : out std_logic;                -- response fifo full
     opc_rspf_reset_i    : in std_logic;                 -- Synchronous mmc response fifo reset
+    opc_rspf_cnt_o      : out unsigned(MMC_FILL_LEVEL_BITS-1 downto 0); -- mmc response fifo fill level 
 
     -- UART debugger can show these values
     opc_oc_cnt_i        : in  unsigned(31 downto 0);    -- LS 16 bits=count of opcodes processed, upper 16 bits opc fifo level
@@ -845,6 +846,7 @@ use work.async_syscon_pack.all;
     opc_rspf_mt_o       : out std_logic;                 -- response fifo empty
     opc_rspf_fl_o       : out std_logic;                 -- response fifo full
     opc_rspf_reset_i    : in std_logic;                  -- Synchronous mmc response fifo reset
+    opc_rspf_cnt_o      : out unsigned(MMC_FILL_LEVEL_BITS-1 downto 0); -- mmc response fifo fill level 
 
     -- Debugging
     opc_oc_cnt_i   : in  unsigned(31 downto 0);         -- LS 16 bits=count of opcodes processed, MS 16 bits=opc fifo level
@@ -1032,7 +1034,7 @@ architecture beh of mmc_tester is
 
     -- local signals for the MMC data pipe
   --signal s_fif_dat_rd_level    : unsigned(MMC_FILL_LEVEL_BITS-1 downto 0);
-  signal s_fif_dat_wr_level    : unsigned(MMC_FILL_LEVEL_BITS-1 downto 0);  -- for debugging?
+  --signal s_fif_dat_wr_level    : unsigned(MMC_FILL_LEVEL_BITS-1 downto 0);  -- for debugging?
     
   -- SPI debugging vars
   signal dbg_spi_count         : unsigned(3 downto 0); --down counter
@@ -1929,7 +1931,7 @@ end process;
   generic map(
     EXT_CSD_INIT_FILE => "ext_csd_init.txt", -- Initial contents of EXT_CSD
     FIFO_DEPTH        => MMC_FIFO_DEPTH,
-    FILL_LEVEL_BITS   => s_fif_dat_wr_level'length, -- Should be at least int(floor(log2(FIFO_DEPTH))+1.0)
+    FILL_LEVEL_BITS   => MMC_FILL_LEVEL_BITS, --s_fif_dat_wr_level'length, -- Should be at least int(floor(log2(FIFO_DEPTH))+1.0)
     RAM_ADR_WIDTH     => MMC_RAM_ADR_BITS
   )
   port map(
@@ -1963,7 +1965,7 @@ end process;
     wr_reset_i    => opc_rspf_reset_i,          --s_fif_dat_wr_clear,  -- Synchronous
     wr_en_i       => opc_rspf_we_i,             --s_fif_wr,
     wr_dat_i      => opc_rspf_dat_i,            --s_fif_dat_wr,  --syscon_dat_wr(7 downto 0),
-    wr_fifo_level => s_fif_dat_wr_level,
+    wr_fifo_level => opc_rspf_cnt_o,            --s_fif_dat_wr_level,
     wr_fifo_full  => opc_rspf_fl_o,             --s_fif_wr_full,
     wr_fifo_empty => opc_rspf_mt_o,             --s_fif_wr_empty,
 

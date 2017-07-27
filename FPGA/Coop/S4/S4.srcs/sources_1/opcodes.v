@@ -47,6 +47,10 @@
 `define STATE_WR_PTN2               7'h11
 `define STATE_DBG_DELAY             7'h12
 `define STATE_EMPTY_FIFO            7'h13
+`define STATE_DBG1                  7'h14
+`define STATE_DBG2                  7'h15
+`define STATE_DBG3                  7'h16
+`define STATE_DBG4                  7'h17
 
 // If the input fifo has incomplete data, wait this many ticks 
 // before clearing it (so we never get stuck in odd state)
@@ -89,8 +93,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     input  wire          response_fifo_empty_i,   // response fifo empty flag
     input  wire          response_fifo_full_i,    // response fifo full flag
     output wire          response_ready_o,        // response is waiting
-    output wire [RSP_FILL_LEVEL_BITS-1:0] response_length_o,     // update response length when response is ready
-    input  wire [RSP_FILL_LEVEL_BITS-1:0] response_fifo_count_i, // response fifo count, response_ready when fifo_length==response_length
+    output wire [MMC_FILL_LEVEL_BITS-1:0] response_length_o,     // update response length when response is ready
+    input  wire [MMC_FILL_LEVEL_BITS-1:0] response_fifo_count_i, // response fifo count, response_ready when fifo_length==response_length
 
     output reg  [31:0] frequency_o,               // to fifo, frequency output in MHz
     output reg         frq_wr_en_o,               // frequency fifo write enable
@@ -150,10 +154,10 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     reg  [MMC_FILL_LEVEL_BITS-1:0]  read_cnt;   // Bytes read from input fifo. Go until matches SECTOR_SIZE
     reg          len_upr = 0;        // Persist upper bit of length
     reg          response_ready;     // flag when response ready
-    reg  [RSP_FILL_LEVEL_BITS-1:0]  response_length;    // length of response data
-    reg  [RSP_FILL_LEVEL_BITS-1:0]  rsp_length;         // length tmp var
+    reg  [MMC_FILL_LEVEL_BITS-1:0]  response_length;    // length of response data
+    reg  [MMC_FILL_LEVEL_BITS-1:0]  rsp_length;         // length tmp var
     reg  [7:0]   rsp_data [15:0];    // 64k array of response bytes (measure, echo, status)
-    reg  [RSP_FILL_LEVEL_BITS-1:0]  rsp_index;          // response array index
+    reg  [MMC_FILL_LEVEL_BITS-1:0]  rsp_index;          // response array index
     //reg  [9:0]   opc_fifo_timeout;   // wait for input fifo to contain minimum data for this long before clearing it(so we never get stuck)
 
     reg  [15:0]  pat_addr;           // pattern address to write
@@ -213,10 +217,41 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     if(response_fifo_empty_i && !fifo_rd_empty_i) begin 
                         // Start processing opcodes, don't return to 
                         // `STATE_IDLE until a null opcode is seen.
-                        begin_opcodes();
-                        show_next_state(`STATE_FETCH_FIRST);
+                        
+                        // read opcodes, write 1st 512 bytes to response fifo
+                        fifo_rd_en_o <= 1'b1;
+                        state <= `STATE_DBG1;
+                        
+                        //begin_opcodes();
+                        //show_next_state(`STATE_FETCH_FIRST);
                     end
                 end
+                
+                `STATE_DBG1: begin
+                    state <= `STATE_DBG2;   // need spacer tick
+                end
+
+                `STATE_DBG2: begin
+                    response_length <= read_cnt;
+                    response_wr_en_o <= 1'b1;
+                    response_o <= fifo_dat_i;
+                    read_cnt <= read_cnt - 1;
+                    state <= `STATE_DBG3;
+                end
+                `STATE_DBG3: begin
+                    response_o <= fifo_dat_i;
+                    read_cnt <= read_cnt - 1;
+                    if(read_cnt == 1) begin
+                        response_wr_en_o <= 1'b0;
+                        state <= `STATE_DBG4;
+                    end
+                end
+                `STATE_DBG4: begin
+                    response_ready <= 1'b1;
+                    status_o <= `SUCCESS;       // Reset status_o if it's not set to an error
+                    state <= `STATE_IDLE;
+                end
+
     
                 `STATE_DBG_DELAY: begin
                     // MSB of mode_o flag word slows way down for visual observation on Arty bd

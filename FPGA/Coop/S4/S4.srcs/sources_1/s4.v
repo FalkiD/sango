@@ -398,8 +398,8 @@ wire         opc_rspf_fl;             // response fifo full  flag
 wire         opc_rspf_rdy;            // response fifo is waiting
 reg          opc_rspf_ren;            // response fifo read enable
 wire [7:0]   opc_rspf_dat_o;          // response fifo output data, used to generate response block
-wire [`GLBL_RSP_FILL_LEVEL_BITS-1:0] opc_rsp_len;    // update response length when response is ready
-wire [`GLBL_RSP_FILL_LEVEL_BITS-1:0] opc_rspf_cnt;   // response fifo count, opcode processor asserts 
+wire [`GLBL_MMC_FILL_LEVEL_BITS-1:0] opc_rsp_len;    // update response length when response is ready
+wire [`GLBL_MMC_FILL_LEVEL_BITS-1:0] opc_rspf_cnt;   // response fifo count, opcode processor asserts 
 
 // Frequency processor wires
 wire [31:0]  frq_fifo_dat_i;          // to fifo from opc, frequency output in MHz
@@ -494,9 +494,9 @@ wire  [7:0]     mmc_rspf_dat;   // MMC write fifo, out of opcode processor, thru
 wire            mmc_rspf_wen;   // MMC write enable 
 wire            mmc_rspf_mt;    // MMC write fifo empty 
 wire            mmc_rspf_fl;    // MMC write fifo full
-wire  [`GLBL_RSP_FILL_LEVEL_BITS-1:0]  mmc_rspf_cnt;   // MMC write fifo count
+wire  [`GLBL_MMC_FILL_LEVEL_BITS-1:0]  mmc_rspf_cnt;   // MMC write fifo count
 wire            mmc_rsp_rdy;    // Response ready
-wire  [`GLBL_RSP_FILL_LEVEL_BITS-1:0]  mmc_rsp_len;    // Response length written by opcode processor
+wire  [`GLBL_MMC_FILL_LEVEL_BITS-1:0]  mmc_rsp_len;    // Response length written by opcode processor
 
 // mux 1, is backdoor UART fifo's
 wire  [7:0]     bkd_fif_dat_o;
@@ -509,9 +509,9 @@ wire  [7:0]     bkd_rspf_dat_o;
 wire            bkd_rspf_wen; 
 wire            bkd_rspf_mt; 
 wire            bkd_rspf_fl; 
-wire  [`GLBL_RSP_FILL_LEVEL_BITS-1:0]  bkd_rspf_cnt; 
+wire  [`GLBL_MMC_FILL_LEVEL_BITS-1:0]  bkd_rspf_cnt; 
 wire            bkd_rsp_rdy; 
-wire  [`GLBL_RSP_FILL_LEVEL_BITS-1:0]  bkd_rsp_len; 
+wire  [`GLBL_MMC_FILL_LEVEL_BITS-1:0]  bkd_rsp_len; 
 
 //------------------------------------------------------------------------
 // Start of logic
@@ -985,12 +985,13 @@ always @(posedge clk050)
     .opc_rspf_mt_o      (mmc_rspf_mt),          // response fifo empty
     .opc_rspf_fl_o      (mmc_rspf_fl),          // response fifo full
     .opc_rspf_reset_i   (opc_fifo_rst),         // Synchronous mmc response fifo reset
+    .opc_rspf_cnt_o     (mmc_rspf_cnt),         // MMC response fifo fill level
 
     // Debugging
     .opc_oc_cnt_i      ({dbg_opcodes[15:0], opc_count[15:0]}),   // first_opcode__last_opcode__opcodes_procesed
     .opc_status1_i     ({9'd0, opc_state, 8'd0, opc_status}),         // opc_state__opc_status
-    // rsp_fifo_count__opc_fifo_count
-    .opc_status2_i     ({10'd0, frq_fifo_count[5:0], 6'd0, opc_fifo_count[`GLBL_RSP_FILL_LEVEL_BITS-1:0]})
+    //.opc_status2_i     ({10'd0, frq_fifo_count[5:0], 6'd0, opc_fifo_count[`GLBL_RSP_FILL_LEVEL_BITS-1:0]})
+    .opc_status2_i     ({response_fifo_count, opc_fifo_count})      // rsp_fifo_count__opc_fifo_count
     );
 
   // Frequency processor instance. 
