@@ -204,11 +204,11 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     `endif
         end
         else if(enable == 1) begin
-            if((state == `STATE_IDLE && (fifo_rd_count_i >= `SECTOR_SIZE || read_cnt > 0)) || //`MIN_OPCODE_SIZE) ||
+            if((state == `STATE_IDLE && (fifo_rd_count_i >= 1024 || read_cnt > 0)) || // `SECTOR_SIZE  `MIN_OPCODE_SIZE) ||
                 state != `STATE_IDLE) begin
                 // not IDLE or at least one opcode has been written to FIFO
 
-                if(state == `STATE_IDLE && fifo_rd_count_i >= `SECTOR_SIZE) //    read_cnt == 0)
+                if(state == `STATE_IDLE && fifo_rd_count_i >= 1024) //`SECTOR_SIZE) //    read_cnt == 0)
                   read_cnt <= fifo_rd_count_i;  // Reset our byte counter
 
                 case(state)
@@ -218,39 +218,43 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                         // Start processing opcodes, don't return to 
                         // `STATE_IDLE until a null opcode is seen.
                         
-                        // read opcodes, write 1st 512 bytes to response fifo
-                        fifo_rd_en_o <= 1'b1;
-                        state <= `STATE_DBG1;
+//                        // read opcodes, write 1st 512 bytes to response fifo
+//                        fifo_rd_en_o <= 1'b1;
+//                        state <= `STATE_DBG1;
+//                        opcode_counter_o <= opcode_counter_o + 32'd1;
                         
-                        //begin_opcodes();
-                        //show_next_state(`STATE_FETCH_FIRST);
+                        begin_opcodes();
+                        show_next_state(`STATE_FETCH_FIRST);
                     end
                 end
                 
-                `STATE_DBG1: begin
-                    state <= `STATE_DBG2;   // need spacer tick
-                end
+//                `STATE_DBG1: begin
+//                    state <= `STATE_DBG2;   // need spacer tick
+//                end
 
-                `STATE_DBG2: begin
-                    response_length <= read_cnt;
-                    response_wr_en_o <= 1'b1;
-                    response_o <= fifo_dat_i;
-                    read_cnt <= read_cnt - 1;
-                    state <= `STATE_DBG3;
-                end
-                `STATE_DBG3: begin
-                    response_o <= fifo_dat_i;
-                    read_cnt <= read_cnt - 1;
-                    if(read_cnt == 1) begin
-                        response_wr_en_o <= 1'b0;
-                        state <= `STATE_DBG4;
-                    end
-                end
-                `STATE_DBG4: begin
-                    response_ready <= 1'b1;
-                    status_o <= `SUCCESS;       // Reset status_o if it's not set to an error
-                    state <= `STATE_IDLE;
-                end
+//                `STATE_DBG2: begin
+//                    response_length <= read_cnt;
+//                    response_wr_en_o <= 1'b1;
+//                    response_o <= fifo_dat_i;
+//                    read_cnt <= read_cnt - 1;
+//                    opcode_counter_o <= opcode_counter_o + 32'd1;
+//                    state <= `STATE_DBG3;
+//                end
+//                `STATE_DBG3: begin
+//                    response_o <= fifo_dat_i;
+//                    read_cnt <= read_cnt - 1;
+//                    opcode_counter_o <= opcode_counter_o + 32'd1;
+//                    if(read_cnt == 1) begin
+//                        response_wr_en_o <= 1'b0;
+//                        state <= `STATE_DBG4;
+//                    end
+//                end
+//                `STATE_DBG4: begin
+//                    response_ready <= 1'b1;
+//                    status_o <= `SUCCESS;       // Reset status_o if it's not set to an error
+//                    state <= `STATE_IDLE;
+//                    opcode_counter_o <= opcode_counter_o + 32'd1;
+//                end
 
     
                 `STATE_DBG_DELAY: begin

@@ -988,10 +988,10 @@ always @(posedge clk050)
     .opc_rspf_cnt_o     (mmc_rspf_cnt),         // MMC response fifo fill level
 
     // Debugging
-    .opc_oc_cnt_i      ({dbg_opcodes[15:0], opc_count[15:0]}),   // first_opcode__last_opcode__opcodes_procesed
-    .opc_status1_i     ({9'd0, opc_state, 8'd0, opc_status}),         // opc_state__opc_status
+    .opc_oc_cnt_i      ({dbg_opcodes[15:0], opc_count[15:0]}),  // first_opcode__last_opcode__opcodes_procesed
+    .opc_status1_i     ({9'd0, opc_state, 8'd0, opc_status}),   // opc_state__opc_status
     //.opc_status2_i     ({10'd0, frq_fifo_count[5:0], 6'd0, opc_fifo_count[`GLBL_RSP_FILL_LEVEL_BITS-1:0]})
-    .opc_status2_i     ({response_fifo_count, opc_fifo_count})      // rsp_fifo_count__opc_fifo_count
+    .opc_status2_i     ({opc_rspf_cnt, opc_fifo_count})         // rsp_fifo_count__opc_fifo_count
     );
 
   // Frequency processor instance. 

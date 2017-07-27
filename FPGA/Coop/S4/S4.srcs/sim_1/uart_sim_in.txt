@@ -92,7 +92,7 @@ d 6.0 ms
 -- Actually that data isn't correct??? Use this load:
 --u 3.0 ms w 4000000 04 1c 00 00 38 00 04 1C 03 00 30 00; --CALPWR opcode, VGA dacs setup 
 --u 3.0 ms w 400000C 04 1c F0 FF 00 00 04 1C F0 FF 11 00; --CALPWR opcode, VGA dacs full scale 
--u 6.0 ms r 4000000 10; 
+--u 6.0 ms r 4000000 10; 
 --u 2.0 ms r 3000030 10; -- opcode processor status before block written
 u 0.5 ms w 300000E 0; -- Set host DMA address at 0x00
 u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
@@ -100,12 +100,18 @@ u 4.0 ms w 3000002 19 00000200; -- Write CMD25 to MMC address 0200, FIFO begin(W
 u 0.5 ms w 3000002 C 00000000; -- Write CMD12 (STOP_TRANSMISSION, arg=stuff bits)
 u 2.0 ms r 3000004 4; --Read CMD response
 u 3.0 ms r 3000030 10; -- Read opcode processor status
+-- try it again
+u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+u 4.0 ms w 3000002 19 00000200; -- Write CMD25 to MMC address 0200, FIFO begin(WRITE_MULTIPLE_BLOCK)
+u 0.5 ms w 3000002 C 00000000; -- Write CMD12 (STOP_TRANSMISSION, arg=stuff bits)
+--u 2.0 ms r 3000004 4; --Read CMD response
+u 3.0 ms r 3000030 10; -- Read opcode processor status
 -- read opcode processor response
 u 0.5 ms w 300000E 0; -- Set host DMA address at 0x00
 u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
 u 6.0 ms w 3000002 12 00000200; -- Write CMD18 (READ_MULTIPLE_BLOCK)
 u 0.5 ms w 3000002 C 00000000; -- Write CMD12 (STOP_TRANSMISSION, arg=stuff bits)
-u 2.0 ms r 4000000 2; --Read response data from host adapter RAM  
+u 5.0 ms r 4000000 8; --Read response data from host adapter RAM  
 
 --u 6.0 ms r 4000220 20; --Read data from host adapter  
 --u 1.0 ms r 4000240 20; --Read data from host adapter  
