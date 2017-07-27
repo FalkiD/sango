@@ -443,7 +443,7 @@ wire [7:0]   opc_status;              // NULL opcode terminates, done=0, or erro
 wire [6:0]   opc_state;               // For debugging
     
 //    // Debugging
-wire [7:0]   last_opcode;
+wire [15:0]  dbg_opcodes;
 //wire [15:0]  last_length_w;
 
 // SPI debugging connections for w 03000040 command
@@ -987,7 +987,7 @@ always @(posedge clk050)
     .opc_rspf_reset_i   (opc_fifo_rst),         // Synchronous mmc response fifo reset
 
     // Debugging
-    .opc_oc_cnt_i      ({8'd0, last_opcode[7:0], opc_count[15:0]}),   // last_opcode__opcodes_procesed
+    .opc_oc_cnt_i      ({dbg_opcodes[15:0], opc_count[15:0]}),   // first_opcode__last_opcode__opcodes_procesed
     .opc_status1_i     ({9'd0, opc_state, 8'd0, opc_status}),         // opc_state__opc_status
     // rsp_fifo_count__opc_fifo_count
     .opc_status2_i     ({10'd0, frq_fifo_count[5:0], 6'd0, opc_fifo_count[`GLBL_RSP_FILL_LEVEL_BITS-1:0]})
@@ -1110,7 +1110,7 @@ always @(posedge clk050)
     // Debugging
     .status_o                   (opc_status),         // NULL opcode terminates, done=0, or error code
     .state_o                    (opc_state),          // For debugger display
-    .last_opcode_o              (last_opcode)         //
+    .dbg_opcodes_o              (dbg_opcodes)         // first ocode__last_opcode
     // .last_length_o              ()                   //    
   );
 
@@ -1211,8 +1211,8 @@ always @(posedge clk050)
   
       .dbg0_o                     (FPGA_MCU1),             //
       .dbg1_o                     (FPGA_MCU2),             //
-      .dbg2_o                     (FPGA_MCU3),             //
-      .dbg3_o                     (FPGA_MCU4)              //
+      .dbg2_o                     (),             //
+      .dbg3_o                     ()              //
      );
 
 // ******************************************************************************
@@ -1709,7 +1709,7 @@ end
  assign  DDS_PS1     = hwdbg_stat[254] ? jlc_DDS_PS0   : rmr_DDS_PS0;    //  L2    O
    
   // 22-Jun have to scope MMC signals
-//  assign FPGA_MCU4 = VGA_SCLK; //MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.
-//  assign FPGA_MCU3 = VGA_MOSI; //MMC_CMD; //count3[15];    // 200MHz div'd by 2^16.
+  assign FPGA_MCU4 = VGA_SCLK; //MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.
+  assign FPGA_MCU3 = VGA_MOSI; //MMC_CMD; //count3[15];    // 200MHz div'd by 2^16.
 
   endmodule

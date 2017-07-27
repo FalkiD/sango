@@ -90,9 +90,9 @@ d 6.0 ms
 -- 26-Jul:Added DAC opcodes to host_ram_init.txt at
 -- (Host DMA) address 0, don't need to load here anymore
 -- Actually that data isn't correct??? Use this load:
-u 3.0 ms w 4000000 04 1c 00 00 38 00 04 1C 03 00 30 00; --CALPWR opcode, VGA dacs setup 
-u 3.0 ms w 400000C 04 1c F0 FF 00 00 04 1C F0 FF 11 00; --CALPWR opcode, VGA dacs full scale 
-u 6.0 ms r 4000000 10; 
+--u 3.0 ms w 4000000 04 1c 00 00 38 00 04 1C 03 00 30 00; --CALPWR opcode, VGA dacs setup 
+--u 3.0 ms w 400000C 04 1c F0 FF 00 00 04 1C F0 FF 11 00; --CALPWR opcode, VGA dacs full scale 
+-u 6.0 ms r 4000000 10; 
 --u 2.0 ms r 3000030 10; -- opcode processor status before block written
 u 0.5 ms w 300000E 0; -- Set host DMA address at 0x00
 u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)

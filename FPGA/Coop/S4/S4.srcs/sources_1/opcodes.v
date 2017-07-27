@@ -123,7 +123,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     output wire [6:0]  state_o,                 // For debugger display
     
 //    // Debugging
-    output reg  [7:0]  last_opcode_o
+    output reg  [15:0]  dbg_opcodes_o           // 1st opcode in 8 MSB's, last opcode in 8 LSB's
 //    output reg  [15:0] last_length_o
     );
 
@@ -204,8 +204,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 state != `STATE_IDLE) begin
                 // not IDLE or at least one opcode has been written to FIFO
 
-                if(state == `STATE_IDLE && fifo_rd_count_i == `SECTOR_SIZE) //    read_cnt == 0)
-                  read_cnt <= `SECTOR_SIZE;  // Reset our byte counter
+                if(state == `STATE_IDLE && fifo_rd_count_i >= `SECTOR_SIZE) //    read_cnt == 0)
+                  read_cnt <= fifo_rd_count_i;  // Reset our byte counter
 
                 case(state)
                 `STATE_IDLE: begin
@@ -350,6 +350,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     show_next_state(`STATE_DATA);
                 end
                 `STATE_DATA: begin
+                    if(dbg_opcodes_o[14:8] == 7'b0000000)
+                        dbg_opcodes_o[14:8] <= opcode;
                     // Look for special opcodes, RESET & NULL Terminator
                     if(opcode == 0) begin
                         if(blk_rsp_done == 1'b0) begin
@@ -366,7 +368,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                         reset_opcode_processor();
                     end
                     else begin
-                        last_opcode_o <= opcode;
+                        dbg_opcodes_o[7:0] <= {1'b0, opcode};
                       // Reset response already sent flag
                         blk_rsp_done <= 1'b0;   // flag, response is required
                         // Gather opcode data payload, then run it
@@ -750,7 +752,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     task reset_opcode_processor;
     begin
         opcode <= 0;
-        last_opcode_o <= 7'b0000000;   
+        dbg_opcodes_o <= 16'h0000;   
         len_upr <= 0;
         length <= 9'b000000000;
         fifo_rd_en_o <= 1'b0;  // Added by John Clayton
