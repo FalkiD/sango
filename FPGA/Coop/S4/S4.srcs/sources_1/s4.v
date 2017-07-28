@@ -1682,7 +1682,7 @@ end
 
   // diag/debug status  signal inputs
   .hw_stat_i                  (hwdbg_stat),
-  .gp_opc_cnt_i               (opc_oc_cnt_w),          // count of opcodes processed from top level
+  .gp_opc_cnt_i               (opc_count),             // count of opcodes processed from top level
   .ptn_opc_cnt_i              (32'hdeadbeef),          // 32-bit input:  count of pattern opcodes processed from top level
   .sys_stat_vec_i             (opc_sys_st_w)           // 16-bit input:  status to show, system_state for now
  );
