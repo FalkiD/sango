@@ -295,7 +295,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     show_next_state(`STATE_WRITE_RESPONSE);
                 end
                 `STATE_WRITE_RESPONSE: begin
-                    fifo_rst_o <= 1'b0;             // clear input fifo reset line after a few clocks
+                    //fifo_rst_o <= 1'b0;             // clear input fifo reset line after a few clocks
                     if(rsp_length > 0) begin
                         response_o <= rsp_data[rsp_index];
                         rsp_length <= rsp_length - 1;
@@ -395,7 +395,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     if(opcode == 0) begin
                         if(blk_rsp_done == 1'b0) begin
                           blk_rsp_done <= 1'b1;      // Flag we've done it
-                          fifo_rst_o <= 1'b1;        // reset input fifo, done with block or blocks
+                          //fifo_rst_o <= 1'b1;        // reset input fifo, done with block or blocks
                           done_opcode_block();       // Begin response
                         end
                         else begin
