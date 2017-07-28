@@ -1916,7 +1916,8 @@ begin
         -- but it is convenient to simply wait for the response to finish.
         if (sd_cmd_index=6) then
           if (r1_done='1') then
-            prg_dly_count <= to_unsigned(4000,prg_dly_count'length); -- Programming delay (card is busy!)
+            --prg_dly_count <= to_unsigned(4000,prg_dly_count'length); -- Programming delay (card is busy!)
+            prg_dly_count <= to_unsigned(40,prg_dly_count'length); -- Programming delay (card is busy!)
             card_state <= CARD_PRG;
             -- "Operation Complete" returns from CARD_PRG back to CARD_TRAN.
             -- prg_dly_count determines the length of the programming time.

@@ -27,9 +27,7 @@
  * overriding the frequency on the S4.
  */
 
-//`include "timescale.v"
-`include "version.v"
-
+`include "timescale.v"
 `include "status.h"
 `include "opcodes.h"
 

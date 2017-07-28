@@ -204,11 +204,11 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     `endif
         end
         else if(enable == 1) begin
-            if((state == `STATE_IDLE && (fifo_rd_count_i >= 1024 || read_cnt > 0)) || // `SECTOR_SIZE  `MIN_OPCODE_SIZE) ||
+            if((state == `STATE_IDLE && (fifo_rd_count_i >= `SECTOR_SIZE || read_cnt > 0)) || //  `MIN_OPCODE_SIZE) ||
                 state != `STATE_IDLE) begin
                 // not IDLE or at least one opcode has been written to FIFO
 
-                if(state == `STATE_IDLE && fifo_rd_count_i >= 1024) //`SECTOR_SIZE) //    read_cnt == 0)
+                if(state == `STATE_IDLE && fifo_rd_count_i >= `SECTOR_SIZE) //    read_cnt == 0)
                   read_cnt <= fifo_rd_count_i;  // Reset our byte counter
 
                 case(state)
@@ -295,7 +295,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     show_next_state(`STATE_WRITE_RESPONSE);
                 end
                 `STATE_WRITE_RESPONSE: begin
-                    //fifo_rst_o <= 1'b0;             // clear input fifo reset line after a few clocks
+                    fifo_rst_o <= 1'b0;             // clear input fifo reset line after a few clocks
                     if(rsp_length > 0) begin
                         response_o <= rsp_data[rsp_index];
                         rsp_length <= rsp_length - 1;
@@ -395,8 +395,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     if(opcode == 0) begin
                         if(blk_rsp_done == 1'b0) begin
                           blk_rsp_done <= 1'b1;      // Flag we've done it
-                          //fifo_rst_o <= 1'b1;       // reset input fifo, done with block
-                          done_opcode_block();                    
+                          fifo_rst_o <= 1'b1;        // reset input fifo, done with block or blocks
+                          done_opcode_block();       // Begin response
                         end
                         else begin
                           status_o <= `SUCCESS;  

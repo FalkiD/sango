@@ -18,6 +18,8 @@
 // 
 //////////////////////////////////////////////////////////////////////////////////
 
+`include "timescale.v"        // Every source file needs this include
+
 // 05-Jul-2016 refactor for CPHA=0, sample data on rising edge of SCK
 //
 // Code from https://embeddedmicro.com/tutorials/mojo/serial-peripheral-interface-spi

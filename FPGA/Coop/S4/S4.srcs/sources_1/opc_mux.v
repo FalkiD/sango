@@ -20,7 +20,6 @@
 // 
 //////////////////////////////////////////////////////////////////////////////////
 
-`include "version.v"
 `include "timescale.v"
 
 module opc_mux #(parameter MMC_FILL_LEVEL_BITS = 16,

@@ -19,8 +19,7 @@
 // 
 //////////////////////////////////////////////////////////////////////////////////
 
-//`include "timescale.v"
-`include "version.v"
+`include "timescale.v"
 `include "status.h"
 
 module run_spi  #(parameter WIDTH = 32,         // Width of input word(s)
