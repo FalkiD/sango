@@ -50,10 +50,11 @@
 `define ERR_COMMONFERR_BADDIV   8'h1a
 `define ERR_COMMONFOUT_BADDIV   8'h1b
 `define ERR_POWER_INVALID       8'h1c
-`define ERR_UNKNOWN_PULSE_STATE 8'h1d
-`define ERR_PATTERN_OVERRUN     8'h1e
-`define ERR_PATTERN_RUNNING     8'h1f
-`define ERR_RSP_FIFO_FULL       8'h20
+`define ERR_PULSE_OVERRUN       8'h1d   // measurement requested when ZMON ADC already busy
+`define ERR_UNKNOWN_PULSE_STATE 8'h1e
+`define ERR_PATTERN_OVERRUN     8'h1f
+`define ERR_PATTERN_RUNNING     8'h20
+`define ERR_RSP_FIFO_FULL       8'h21
 
 `define ERR_PTN_FIFO_FULL       8'h30   // Pattern processor error, opcode fifo is full
 

@@ -412,7 +412,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 begin
                   frq_wr_en_o <= 0;   // All off until next opcode ready
                   pwr_wr_en_o <= 0;
-    //              pulse_wr_en_o <= 0;
+                  pulse_wr_en_o <= 0;
                  `ifdef XILINX_SIMULATOR
                     fifo_empty_note();  // checks for fifo empty, logs it if so
                  `endif

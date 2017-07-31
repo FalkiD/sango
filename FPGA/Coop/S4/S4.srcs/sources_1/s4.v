@@ -448,7 +448,6 @@ wire [31:0] meas_fifo_dat_o;          // from meas fifo to opc response fifo
 wire        meas_fifo_ren;            // meas fifo read enable
 wire        meas_fifo_mt;             // meas fifo empty flag
 wire        meas_fifo_full;           // meas fifo full flag
-wire [7:0]  meas_status;              // meas processor status(within pulse processor)
 wire [`GLBL_MMC_FILL_LEVEL_BITS-1:0]   meas_fifo_count;
 
 // Bias enable wire
