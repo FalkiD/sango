@@ -158,9 +158,10 @@ package mmc_test_pack is
     opc_rspf_cnt_o      : out unsigned(MMC_FILL_LEVEL_BITS-1 downto 0); -- mmc response fifo fill level 
 
     -- UART debugger can show these values
-    opc_oc_cnt_i        : in  unsigned(31 downto 0);    -- LS 16 bits=count of opcodes processed, upper 16 bits opc fifo level
+    opc_oc_cnt_i        : in  unsigned(31 downto 0);    -- count of opcodes processed
     opc_status1_i       : in  unsigned(31 downto 0);    -- LS 16 bits=opc status, MS 16-bits=opc_state
-    opc_status2_i       : in  unsigned(31 downto 0)     -- rsp_fifo_count__opc_fifo_count    
+    opc_status2_i       : in  unsigned(31 downto 0);    -- rsp_fifo_count__opc_fifo_count    
+    opc_status3_i       : in  unsigned(31 downto 0)     -- LS 16 bits=MS 8 bits=RSP fifo level, LS 8 bits=OPC fifo level
   );
   end component;
 
@@ -851,7 +852,8 @@ use work.async_syscon_pack.all;
     -- Debugging
     opc_oc_cnt_i   : in  unsigned(31 downto 0);         -- LS 16 bits=count of opcodes processed, MS 16 bits=opc fifo level
     opc_status1_i  : in  unsigned(31 downto 0);         -- LS 16 bits=opc status, MS 16-bits=opc_state
-    opc_status2_i  : in  unsigned(31 downto 0)          -- rsp_fifo_count__opc_fifo_count
+    opc_status2_i  : in  unsigned(31 downto 0);         -- rsp_fifo_count__opc_fifo_count
+    opc_status3_i  : in  unsigned(31 downto 0)          -- LS 16 bits=MS 8 bits=RSP fifo level, LS 8 bits=OPC fifo level
   );
   end mmc_tester;
 
@@ -1194,7 +1196,7 @@ begin
     bkd_rsp_dat9_i                                 when 16#9#,      -- response data
     bkd_rsp_datA_i                                 when 16#A#,      -- response data
     bkd_rsp_datB_i                                 when 16#B#,      -- response data
-    bkd_rsp_datC_i                                 when 16#C#,      -- response data
+    opc_status3_i                                  when 16#C#,      -- 1st_opcode__last_opcode in lower 16 bits
     opc_status2_i                                  when 16#D#,      -- rsp_fifo_count__opc_fifo_count
     opc_status1_i                                  when 16#E#,      -- opc_state__opc_status
     u_resize(opc_oc_cnt_i,32)                      when 16#F#,      -- opcodes processed

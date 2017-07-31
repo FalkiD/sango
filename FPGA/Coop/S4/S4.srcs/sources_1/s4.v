@@ -414,7 +414,7 @@ wire [7:0]   frq_status;              // frequency processor status
 
 // Power processor wires
 wire [38:0] pwr_fifo_dat_i;          // to fifo from opc, power or cal value. 
-                                      // Upper 7 bits are opcode, cal or user power
+                                     // Upper 7 bits are opcode, cal or user power
 wire        pwr_fifo_wen;            // power fifo write enable
 wire [38:0] pwr_fifo_dat_o;          // to power processor
 wire        pwr_fifo_ren;            // power fifo read enable
@@ -427,6 +427,29 @@ wire        pwr_mosi;
 wire        pwr_sclk;
 wire        pwr_ssn;       
 wire        pwr_vsw;       
+
+// Pulse processor & fifo wires
+wire [63:0] pls_fifo_dat_i;          // to pulse fifo from opc
+wire        pls_fifo_wen;            // pulse fifo write enable
+wire [63:0] pls_fifo_dat_o;          // from pulse fifo to pulse processor
+wire        pls_fifo_ren;            // pulse fifo read enable
+wire        pls_fifo_mt;             // pulse fifo empty flag
+wire        pls_fifo_full;           // pulse fifo full flag
+wire [7:0]  pls_status;              // pulse processor status
+wire [`PWR_FIFO_FILL_BITS-1:0]   pls_fifo_count;
+wire        pls_zmonen;              // from pulse processor to ZMON_EN
+wire        pls_rfgate;              // from pulse processor to RF_GATE
+wire        pls_rfgate2;             // from pulse processor to RF_GATE2
+
+// Measurement fifo wires
+wire [31:0] meas_fifo_dat_i;          // to results fifo from measurement processing in pulse processor
+wire        meas_fifo_wen;            // meas fifo write enable
+wire [31:0] meas_fifo_dat_o;          // from meas fifo to opc response fifo
+wire        meas_fifo_ren;            // meas fifo read enable
+wire        meas_fifo_mt;             // meas fifo empty flag
+wire        meas_fifo_full;           // meas fifo full flag
+wire [7:0]  meas_status;              // meas processor status(within pulse processor)
+wire [`GLBL_MMC_FILL_LEVEL_BITS-1:0]   meas_fifo_count;
 
 // Bias enable wire
 wire         bias_en;                  // bias control
@@ -754,10 +777,10 @@ always @(posedge clk050)
   swiss_army_fifo #(
     .USE_BRAM(1),               // BRAM=1 requires 1 extra clock before read data is ready
     .WIDTH(8),
-    .DEPTH(512),
-    .FILL_LEVEL_BITS(10),
-    .PF_FULL_POINT(511),
-    .PF_FLAG_POINT(256),
+    .DEPTH(65536),
+    .FILL_LEVEL_BITS(`GLBL_MMC_FILL_LEVEL_BITS),
+    .PF_FULL_POINT(`GLBL_MMC_FILL_LEVEL_BITS-1),
+    .PF_FLAG_POINT(`GLBL_MMC_FILL_LEVEL_BITS>>1),
     .PF_EMPTY_POINT(1)
   ) opcode_response(
       .sys_rst_n(sys_rst_n),
@@ -852,7 +875,75 @@ always @(posedge clk050)
       .fifo_pf_flag(),
       .fifo_pf_empty()           
     );
-                
+
+    /////////////////////////////////////////////////////////////////////////////////////
+    // Pulse input FIFO                       
+    // Instantiate fifo that the opcode processor is using to store pulse opcodes
+    // Written by opcode processor, read by pulse processor module (or pattern processor?)
+    /////////////////////////////////////////////////////////////////////////////////////
+    swiss_army_fifo #(
+      .USE_BRAM(1),
+      .WIDTH(64),
+      .DEPTH(16),
+      .FILL_LEVEL_BITS(`PWR_FIFO_FILL_BITS),
+      .PF_FULL_POINT(`PWR_FIFO_FILL_BITS-1),
+      .PF_FLAG_POINT(`PWR_FIFO_FILL_BITS>>1),
+      .PF_EMPTY_POINT(1)
+    ) pulse_fifo(
+        .sys_rst_n(sys_rst_n),
+        .sys_clk(sys_clk),
+        .sys_clk_en(opc_fifo_enable),
+        
+        .reset_i(opc_fifo_rst),
+        
+        .fifo_wr_i(pls_fifo_wen),
+        .fifo_din(pls_fifo_dat_i),
+        
+        .fifo_rd_i(pls_fifo_ren),
+        .fifo_dout(pls_fifo_dat_o),
+        
+        .fifo_fill_level(pls_fifo_count),
+        .fifo_full(pls_fifo_full),
+        .fifo_empty(pls_fifo_mt),
+        .fifo_pf_full(),
+        .fifo_pf_flag(),
+        .fifo_pf_empty()           
+    );
+
+    /////////////////////////////////////////////////////////////////////////////////////
+    // Pulse measurement FIFO                       
+    // Instantiate fifo that the pulse processor is using to store measurements
+    /////////////////////////////////////////////////////////////////////////////////////
+    swiss_army_fifo #(
+      .USE_BRAM(1),
+      .WIDTH(32),
+      .DEPTH(65536),
+      .FILL_LEVEL_BITS(`GLBL_MMC_FILL_LEVEL_BITS),
+      .PF_FULL_POINT(`GLBL_MMC_FILL_LEVEL_BITS-1),
+      .PF_FLAG_POINT(`GLBL_MMC_FILL_LEVEL_BITS>>1),
+      .PF_EMPTY_POINT(1)
+    ) results_fifo(
+        .sys_rst_n(sys_rst_n),
+        .sys_clk(sys_clk),
+        .sys_clk_en(opc_fifo_enable),
+        
+        .reset_i(opc_fifo_rst),
+        
+        .fifo_wr_i(meas_fifo_wen),
+        .fifo_din(meas_fifo_dat_i),
+        
+        .fifo_rd_i(meas_fifo_ren),
+        .fifo_dout(meas_fifo_dat_o),
+        
+        .fifo_fill_level(meas_fifo_count),
+        .fifo_full(meas_fifo_full),
+        .fifo_empty(meas_fifo_mt),
+        .fifo_pf_full(),
+        .fifo_pf_flag(),
+        .fifo_pf_empty()           
+    );
+
+
                 
 // ******************************************************************************
 // *                                                                            *
@@ -987,11 +1078,12 @@ always @(posedge clk050)
     .opc_rspf_reset_i   (opc_fifo_rst),         // Synchronous mmc response fifo reset
     .opc_rspf_cnt_o     (mmc_rspf_cnt),         // MMC response fifo fill level
 
-    // Debugging
-    .opc_oc_cnt_i      ({dbg_opcodes[15:0], opc_count[15:0]}),  // first_opcode__last_opcode__opcodes_procesed
+    // Debugging, these go from 0300003F down
+    .opc_oc_cnt_i      (opc_count),                             // first_opcode__last_opcode__opcodes_procesed
     .opc_status1_i     ({9'd0, opc_state, 8'd0, opc_status}),   // opc_state__opc_status
     //.opc_status2_i     ({10'd0, frq_fifo_count[5:0], 6'd0, opc_fifo_count[`GLBL_RSP_FILL_LEVEL_BITS-1:0]})
-    .opc_status2_i     ({opc_rspf_cnt, opc_fifo_count})         // rsp_fifo_count__opc_fifo_count
+    .opc_status2_i     ({opc_rspf_cnt, opc_fifo_count}),        // rsp_fifo_count__opc_fifo_count
+    .opc_status3_i     ({16'h0000, dbg_opcodes[15:0]})          // first_opcode__last_opcode in lower 16 bits
     );
 
   // Frequency processor instance. 
@@ -1046,6 +1138,42 @@ always @(posedge clk050)
     .status_o           (pwr_status)            // 0=busy, SUCCESS when done, or an error code
   );
 
+  // Pulse processor instance. 
+  // Input:pulse data in fifo
+  // Output:Programs RFGATE and does ZMON measurements
+  pulse #(
+    .FILL_BITS(`PWR_FIFO_FILL_BITS)
+  )
+  pls_processor 
+  (
+    .sys_clk            (sys_clk),
+    .sys_rst_n          (sys_rst_n),
+    
+    .pulse_en           (opc_enable),
+
+    .pls_fifo_dat_i     (pls_fifo_dat_o),       // pulse processor fifo input
+    .pls_fifo_ren_o     (pls_fifo_ren),         // pulse processor fifo read line
+    .pls_fifo_mt_i      (pls_fifo_mt),          // pulse fifo empty flag
+    .pls_fifo_count_i   (pls_fifo_count),       // pulse fifo count
+
+    .rf_enable_i        (1'b1),                 // RF enabled by MCU, Interlock, etc.
+    .rf_gate_o          (pls_rfgate),           // RF_GATE line
+    .rf_gate2_o         (pls_rfgate2),          // RF_GATE2 line
+
+    .zmon_en_o          (pls_zmonen),           // Enable ZMON
+    .conv_o             (CONV),                 // CONV pulse
+    .adc_sclk_o         (ADC_SCLK),             // ZMON SCK
+    .adcf_sdo_i         (ADCF_SDO),             // FWD SDO
+    .adcr_sdo_i         (ADCR_SDO),             // REFL SDO
+    .adctrig_i          (ADCTRIG),              // Host read request
+
+    // output ZMON ADC data fifo
+    .adc_fifo_dat_o     (meas_fifo_dat_i),      // 32 bits of FWD REFL ADC data written to output fifo
+    .adc_fifo_wen_o     (meas_fifo_wen),        // ADC results fifo write enable
+
+    .status_o           (pls_status)            // 0=busy, SUCCESS when done, or an error code
+  );
+
 // ******************************************************************************
 // *                                                                            *
 // *  03/28/2017  JLC                                                           *
@@ -1090,8 +1218,8 @@ always @(posedge clk050)
 //    .pwr_fifo_empty_i,          (pwr_fifo_mt),      // power fifo empty flag
 //    .pwr_fifo_full_i,           (pwr_fifo_full),    // power fifo full flag
                                                     
-//    .pulse_o,          // to fifo, pulse opcode
-//    .pulse_wr_en_o,           // pulse fifo write enable
+    .pulse_o                    (pls_fifo_dat_i),   // to fifo, pulse opcode
+    .pulse_wr_en_o              (pls_fifo_wen),     // pulse fifo write enable
 //    .pulse_fifo_empty_i,           // pulse fifo empty flag
 //    .pulse_fifo_full_i,            // pulse fifo full flag
                                                     
@@ -1590,11 +1718,11 @@ end
 
   wire dbg_rfgate;
   assign dbg_rfgate = dbg_enables & BIT_RF_GATE ? 1'b1 : 1'b0;  
-  assign RF_GATE = dbg_spi_mode == 1'b1 ? dbg_rfgate : 1'b0;
+  assign RF_GATE = dbg_spi_mode == 1'b1 ? dbg_rfgate : pls_rfgate;
   
   wire dbg_rfgate2;
   assign dbg_rfgate2 = dbg_enables & BIT_RF_GATE2 ? 1'b1 : 1'b0;  
-  assign RF_GATE2 = dbg_spi_mode == 1'b1 ? dbg_rfgate2 : 1'b0;
+  assign RF_GATE2 = dbg_spi_mode == 1'b1 ? dbg_rfgate2 : pls_rfgate2;
 
   // VGA SPI mux
   // How can this friggin mux not be working???
@@ -1643,7 +1771,7 @@ end
    
   wire dbg_zmonen;
   assign dbg_zmonen = dbg_enables & BIT_ZMON_EN ? 1'b1 : 1'b0;
-  assign ZMON_EN = dbg_spi_mode == 1'b1 ? dbg_zmonen : 1'b0;
+  assign ZMON_EN = dbg_spi_mode == 1'b1 ? dbg_zmonen : pls_zmonen;
   
   assign dbg_sys_rst_i = dbg_enables & BIT_TEMP_SYS_RST ? 1'b1 : 1'b0;   // <JLC_TEMP_RST>
 

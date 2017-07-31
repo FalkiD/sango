@@ -21,6 +21,8 @@
 //
 //------------------------------------------------------------------------------
 
+`include "timescale.v"        // Every source file needs this include
+
 module rcvr #(parameter BAUD_DIV = 867) // ((BAUD_DIV = 100MHz) / (BAUD = 115200)) - 1
    (// connections to uart.v
     input               rxd,             // RX serial input

@@ -35,7 +35,7 @@
 `define STATE_FETCH                 7'h03
 `define STATE_LENGTH                7'h04
 `define STATE_DATA                  7'h05
-`define STATE_SAVE_DATA             7'h06
+//`define STATE_SAVE_DATA             7'h06
 `define STATE_WAIT_DATA             7'h07   // Waiting for more fifo data
 `define STATE_READ_SPACER           7'h08
 `define STATE_FIFO_WRITE            7'h09
@@ -46,8 +46,8 @@
 `define STATE_WRITE_RESPONSE        7'h10
 `define STATE_WR_PTN1               7'h11
 `define STATE_WR_PTN2               7'h12
-`define STATE_DBG_DELAY             7'h13
-`define STATE_EMPTY_FIFO            7'h14
+//`define STATE_DBG_DELAY             7'h13
+//`define STATE_EMPTY_FIFO            7'h14
 `define STATE_DBG1                  7'h15
 `define STATE_DBG2                  7'h16
 `define STATE_DBG3                  7'h17
@@ -107,8 +107,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 //    input              pwr_fifo_empty_i,          // power fifo empty flag
 //    input              pwr_fifo_full_i,           // power fifo full flag
 
-//    output reg  [63:0] pulse_o,                 // to fifo, pulse opcode
-//    output reg         pulse_wr_en_o,           // pulse fifo write enable
+    output reg  [63:0] pulse_o,                   // to fifo, pulse opcode
+    output reg         pulse_wr_en_o,             // pulse fifo write enable
 //    input              pulse_fifo_empty_i,      // pulse fifo empty flag
 //    input              pulse_fifo_full_i,       // pulse fifo full flag
 
@@ -227,7 +227,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 //                        opcode_counter_o <= opcode_counter_o + 32'd1;
                         
                         begin_opcodes();
-                        show_next_state(`STATE_FETCH_FIRST);
+                        state <= `STATE_FETCH_FIRST;
                     end
                 end
                 
@@ -260,15 +260,15 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 //                end
 
     
-                `STATE_DBG_DELAY: begin
-                    // MSB of mode_o flag word slows way down for visual observation on Arty bd
-                    //opcode_counter_o <= {25'b0_0000_0000, next_state};
-                    if(counter == 0) begin
-                        state <= next_state;
-                    end
-                    else
-                        counter <= counter - 1;
-                end
+//                `STATE_DBG_DELAY: begin
+//                    // MSB of mode_o flag word slows way down for visual observation on Arty bd
+//                    //opcode_counter_o <= {25'b0_0000_0000, next_state};
+//                    if(counter == 0) begin
+//                        state <= next_state;
+//                    end
+//                    else
+//                        counter <= counter - 1;
+//                end
                 
                 // Opcode block done, write response fifo: status, pad byte, 
                 // 2 length bytes, then data if any, then assert response_ready
@@ -283,19 +283,19 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     else
                         response_o <= status_o;
                     response_wr_en_o <= 1;
-                    show_next_state(`STATE_RSP_OPCODE);
+                    state <= `STATE_RSP_OPCODE;
                 end
                 `STATE_RSP_OPCODE: begin  // opcode responding to
                     response_o <= {1'b0, opcode};
-                    show_next_state(`STATE_WRITE_LENGTH1);
+                    state <= `STATE_WRITE_LENGTH1;
                 end
                 `STATE_WRITE_LENGTH1: begin  // LS byte of data length
                     response_o <= rsp_length[7:0];
-                    show_next_state(`STATE_WRITE_LENGTH2);
+                    state <= `STATE_WRITE_LENGTH2;
                 end
                 `STATE_WRITE_LENGTH2: begin  // MS byte of status always 0 for now
                     response_o <= 8'h6c; //(rsp_length>>8) & 8'hff;
-                    show_next_state(`STATE_WRITE_RESPONSE);
+                    state <= `STATE_WRITE_RESPONSE;
                 end
                 `STATE_WRITE_RESPONSE: begin
                     // this messes up teh MMC core??? fifo_rst_o <= 1'b0;             // clear input fifo reset line after a few clocks
@@ -307,7 +307,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     else begin
                         response_wr_en_o <= 1'b0;
                         response_ready <= 1'b1;
-                        show_next_state(`STATE_IDLE);
+                        state <= `STATE_IDLE;
                         if(status_o == 0)
                             status_o <= `SUCCESS;       // Reset status_o if it's not set to an error
                     end
@@ -317,7 +317,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     //            `STATE_WR_PTN1: begin
     //                ptn_wr_en_o <= 1'b1; 
     //                ptn_latch_count <= 0;
-    //            ....        show_next_state(`STATE_IDLE);
+    //            ....        state <= `STATE_IDLE;
     //                state <= `STATE_WR_PTN2;    
     //            end
     //            `STATE_WR_PTN2: begin
@@ -332,7 +332,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     
                 // Just began from `STATE_IDLE
                 `STATE_FETCH_FIRST: begin
-                    show_next_state(`STATE_FETCH);  // extra tick to get reads going
+                    state <= `STATE_FETCH;  // extra tick to get reads going
                 end
                 `STATE_FETCH: begin
                     shift <= 8'h00;
@@ -342,7 +342,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     //read_cnt <= read_cnt - 1;
                     if({1'b0, fifo_dat_i} > (fifo_rd_count_i-1))
                         fifo_rd_en_o <= 0;                    // must turn OFF REN 1 clock early
-                    show_next_state(`STATE_LENGTH);   // Part 1 of length, get length msb & get opcode next
+                    state <= `STATE_LENGTH;   // Part 1 of length, get length msb & get opcode next
                 end
                 `STATE_LENGTH: begin
                     saved_opc_byte <= fifo_dat_i[6:0];      // Save opcode byte in case of write to pattern RAM
@@ -353,13 +353,13 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     // length tests
                     if({fifo_dat_i[0], length[7:0]} > (fifo_rd_count_i-1)) begin
                         fifo_rd_en_o <= 0;                  // let it fill
-                        show_next_state(`STATE_WAIT_DATA);
+                        state <= `STATE_WAIT_DATA;
                     end
                     else begin
                         if({fifo_dat_i[0], length[7:0]} == 0) begin
                             fifo_rd_en_o <= 0;              // don't read next byte, opcode has no data
                         end
-                        show_next_state(`STATE_DATA);
+                        state <= `STATE_DATA;
                     end
                 `ifdef XILINX_SIMULATOR
                     if(fileopcode == 0)
@@ -367,37 +367,14 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     $fdisplay (fileopcode, "%02h, length:%d", (fifo_dat_i & 8'hFE) >> 1, length);
                 `endif
                 end
-//                `STATE_SAVE_DATA: begin
-//                    // unable to turn fifo off in time, save the byte
-//                    saved_byte <= fifo_dat_i;
-//                    uinttmp[7:0] <= fifo_dat_i;
-//                    state <= `STATE_WAIT_DATA;
-//                end
                 `STATE_WAIT_DATA: begin // Wait for asynch FIFO to receive all our data
                     if(fifo_rd_count_i >= length) begin
                         fifo_rd_en_o <= 1;                  // start reading again
                         state <= `STATE_READ_SPACER;
                     end
-//                    else begin
-//                      if(opc_fifo_timeout == 6'd0) begin
-//                        fifo_rd_en_o <= 1;
-//                        show_next_state(`STATE_EMPTY_FIFO);
-//                      end
-//                      opc_fifo_timeout <= opc_fifo_timeout - 10'd1;    
-//                    end
                 end
-//                `STATE_EMPTY_FIFO: begin
-//                    if(fifo_rd_count_i > 0) begin
-//                      saved_opc_byte <= fifo_dat_i; // Just use register to dump fifo contents
-//                    end
-//                    else begin
-//                      fifo_rd_en_o <= 0;            // back to idle
-//                      status_o <= `SUCCESS;
-//                      show_next_state(`STATE_IDLE);
-//                    end
-//                end
                 `STATE_READ_SPACER: begin
-                    show_next_state(`STATE_DATA);
+                    state <= `STATE_DATA;
                 end
                 `STATE_DATA: begin
                     if(dbg_opcodes_o[14:8] == 7'b0000000)
@@ -411,7 +388,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                         end
                         else begin
                           status_o <= `SUCCESS;  
-                          show_next_state(`STATE_IDLE);
+                          state <= `STATE_IDLE;
                         end
                     end
                     else if(opcode == `RESET) begin
@@ -445,7 +422,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 begin
                     status_o = `ERR_INVALID_STATE;
                     rsp_length <= 0;    // DEFAULT_RESPONSE_LENGTH gets added
-                    show_next_state(`STATE_BEGIN_RESPONSE);
+                    state <= `STATE_BEGIN_RESPONSE;
                 end
                 endcase;    // main state machine case
             end // if((state=IDLE & 1 sector of data) OT state <> IDLE
@@ -492,7 +469,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         `endif
         // Normal, successful end of opcode block
         // already done fifo_rd_en_o <= 0;   // Disable read fifo
-        show_next_state(`STATE_BEGIN_RESPONSE);
+        state <= `STATE_BEGIN_RESPONSE;
     end
     endtask
 
@@ -553,7 +530,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     frequency_o <= uinttmp[31:0];
                     frq_wr_en_o <= 1;   // enable write frequency FIFO
                     // Don't process anymore opcodes until fifo is written (1-tick)
-                    show_next_state(`STATE_FIFO_WRITE);
+                    state <= `STATE_FIFO_WRITE;
                 `ifdef XILINX_SIMULATOR
                     if(filefreqs == 0)
                         filefreqs = $fopen("./opcode_freqs_to_fifo.txt", "a");
@@ -573,7 +550,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 //                    state <= `STATE_WR_PTN1;
 //                `ifdef XILINX_SIMULATOR
 //                    if(filepattern == 0)
-//                        filepattern = $fopen("./pattern_ram.txt", "a");
+//                        filepattern 0= $fopen("./pattern_ram.txt", "a");
 //                    $fdisplay (filepattern, "POWER 0x%h to pattern RAM", uinttmp[31:0]);
 //                `endif
 //                end
@@ -581,7 +558,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     power_o <= {opcode[6:0], uinttmp[31:0]};
                     pwr_wr_en_o <= 1;   // enable write power FIFO
                     // Don't process anymore opcodes until fifo is written
-                    show_next_state(`STATE_FIFO_WRITE);
+                    state <= `STATE_FIFO_WRITE;
 
                 `ifdef XILINX_SIMULATOR
                     if(filepwr == 0)
@@ -594,14 +571,14 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
               power_o <= {opcode[6:0], uinttmp[31:0]};
               pwr_wr_en_o <= 1;   // enable write power FIFO
               // Don't process anymore opcodes until fifo is written
-              show_next_state(`STATE_FIFO_WRITE);
+              state <= `STATE_FIFO_WRITE;
             `ifdef XILINX_SIMULATOR
               if(filepwr == 0)
                 filepwr = $fopen("./opcode_pwr_to_fifo.txt", "a");
               $fdisplay (filepwr, "Wrote 0x%h (calpwr) to power processor fifo", uinttmp[31:0]);
             `endif
             end
-//            `PULSE: begin
+            `PULSE: begin
 //                if(operating_mode == `WRITE_PATTERN) begin // Write pattern mode
 //                // save opcode in pattern RAM
 //                    ptn_addr_o <= pat_addr; 
@@ -610,7 +587,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 //                                    (saved_len_byte << 64) | 
 //                                    (saved_opc_byte << 56) |
 //                                    uinttmp[55:0];
-//                    show_next_state(`STATE_WR_PTN1);
+//                    state <= `STATE_WR_PTN1;
 //                   `ifdef XILINX_SIMULATOR
 //                        if(filepattern == 0)
 //                            filepattern = $fopen("./pattern_ram.txt", "a");
@@ -618,17 +595,17 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 //                   `endif
 //                end
 //                else begin
-//                    pulse_o <= uinttmp[63:0];
-//                    pulse_wr_en_o <= 1;   // enable write ulse FIFO
-//                    // Don't process anymore opcodes until fifo is written
-//                    show_next_state(`STATE_FIFO_WRITE);                                    
-//                `ifdef XILINX_SIMULATOR
-//                    if(filepulse == 0)
-//                        filepulse = $fopen("./opcode_pulse_to_fifo.txt", "a");
-//                    $fdisplay (filepulse, "Wrote 0x%h to pulse processor fifo", uinttmp[63:0]);
-//                `endif
+                    pulse_o <= uinttmp[63:0];
+                    pulse_wr_en_o <= 1;   // enable write ulse FIFO
+                    // Don't process anymore opcodes until fifo is written
+                    state <= `STATE_FIFO_WRITE;                                    
+                `ifdef XILINX_SIMULATOR
+                    if(filepulse == 0)
+                        filepulse = $fopen("./opcode_pulse_to_fifo.txt", "a");
+                    $fdisplay (filepulse, "Wrote 0x%h to pulse processor fifo", uinttmp[63:0]);
+                `endif
 //                end
-//            end
+            end
             `BIAS: begin
 //                if(operating_mode == `WRITE_PATTERN) begin // Write pattern mode
 //                    ptn_addr_o <= pat_addr; 
@@ -637,7 +614,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 //                                    (saved_len_byte << 64) | 
 //                                    (saved_opc_byte << 56) |
 //                                    (uinttmp[15:0] << 40);
-//                    show_next_state(`STATE_WR_PTN1);
+//                    state <= `STATE_WR_PTN1;
 //                `ifdef XILINX_SIMULATOR
 //                    if(filepattern == 0)
 //                        filepattern = $fopen("./pattern_ram.txt", "a");
@@ -702,7 +679,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 //                        // 11 bytes, 3 bytes patClk tick, 8 bytes for left-jsutified opcode
 //                        ptn_data_o <= (pat_clk << 72) | (`PTN_PATCTL << 56) | (uinttmp[31:0] << 40);   
 //                        ptn_wr_en_o <= 1'b1; 
-//                        show_next_state(`STATE_WR_PTN1);
+//                        state <= `STATE_WR_PTN1;
 //                        operating_mode <= 1'b0;     // Done writing pattern
 //                   `ifdef XILINX_SIMULATOR
 //                        if(filepattern == 0)
@@ -728,7 +705,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             default: begin
                 status_o <= `ERR_INVALID_OPCODE;
                 rsp_length <= 0;
-                show_next_state(`STATE_BEGIN_RESPONSE);
+                state <= `STATE_BEGIN_RESPONSE;
             end
             endcase
         end // if(length == 0) block
@@ -755,7 +732,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             $fdisplay (fileopcerr, "*ERROR*:Cannot write pattern data while pattern is running");
         `endif
             status_o <= `ERR_PATTERN_RUNNING;
-            show_next_state(`STATE_BEGIN_RESPONSE);
+            state <= `STATE_BEGIN_RESPONSE;
         end
         else begin
             case(opcode)
@@ -769,7 +746,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     fileopcerr = 0;
                 `endif
                     status_o <= `ERR_RSP_FIFO_FULL;
-                    show_next_state(`STATE_BEGIN_RESPONSE);
+                    state <= `STATE_BEGIN_RESPONSE;
                 end
                 else if(!fifo_rd_empty_i) begin
                     rsp_data[rsp_index] <= ~fifo_dat_i; // complement the data for echo test 
@@ -786,7 +763,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                         // this might belong in a task such as next_opcode...
                         if(mode_o[31] == 1'b0)
                             opcode_counter_o <= opcode_counter_o + 32'd1;
-                        show_next_state(`STATE_BEGIN_RESPONSE);
+                        state <= `STATE_BEGIN_RESPONSE;
                     end
                     else begin
                         length <= length - 1;
@@ -860,25 +837,25 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     end
     endtask
 
-    // If msb of mode word is set slow way down for observation on arty board
-    task show_next_state;
-        input [6:0] newstate;
-    begin
-        if(mode_o & 32'h8000_0000) begin
-            next_state <= newstate;
-            state <= `STATE_DBG_DELAY;
-            counter <= TWOFIFTY_MS;
-        end
-        else begin
-            state <= newstate;
-        end
-    end
-    endtask
+//    // If msb of mode word is set slow way down for observation on arty board
+//    task show_next_state;
+//        input [6:0] newstate;
+//    begin
+//        if(mode_o & 32'h8000_0000) begin
+//            next_state <= newstate;
+//            state <= `STATE_DBG_DELAY;
+//            counter <= TWOFIFTY_MS;
+//        end
+//        else begin
+//            state <= newstate;
+//        end
+//    end
+//    endtask
 
     // finished an opcode, back to idle state
     task next_opcode;
     begin
-        show_next_state(`STATE_IDLE);
+        state <= `STATE_IDLE;
         // When not in slow debug mode, increment opcode counter
         if(mode_o[31] == 1'b0)
             opcode_counter_o <= opcode_counter_o + 32'd1;
