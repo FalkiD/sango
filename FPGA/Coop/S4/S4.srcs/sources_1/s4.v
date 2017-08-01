@@ -270,8 +270,10 @@ wire         clk200;
 wire         clk050;
 
 // The current system state:
-wire [15:0]   frequency;
+wire [15:0]  frequency;
 reg  [11:0]  dbm_x10;
+reg  [15:0]  sys_state = 0;                 // s4 system state (e.g. running a pattern)
+wire [31:0]  sys_mode;                  // MODE opcode can set system-wide flags
 
 //// Initialize ourselves at startup
 //wire        initialized = 1'b0;
@@ -387,9 +389,6 @@ wire [7:0]   opc_fifo_dat_o;            // opcode processor reads from here
 wire         opc_fifo_ren;              // opcode fifo read line 
 wire         opc_fifo_full;             // used?
 wire         opc_inpf_rst;              // opcode processor resets input fifo on first null opcode
-
-wire [15:0]  opc_sys_st_w;            // s4 system state (e.g. running a pattern)
-wire [31:0]  opc_mode_w;              // MODE opcode can set system-wide flags
 
 wire [7:0]   opc_rspf_w;              // to fifo, response bytes(status, measurements, echo, etc)
 wire         opc_rspf_wen;            // response fifo write enable
@@ -1195,8 +1194,8 @@ always @(posedge clk050)
     .fifo_rd_count_i            (opc_fifo_count),   // fifo fill level
     .fifo_rst_o                 (opc_inpf_rst),     // opcode processor resets input fifo at first null opcode 
 
-    .system_state_i             (opc_sys_st_w),     // s4 system state (e.g. running a pattern)
-    .mode_o                     (opc_mode_w),       // MODE opcode can set system-wide flags
+    .system_state_i             (sys_state),        // s4 system state (e.g. running a pattern)
+    .mode_o                     (sys_mode),         // MODE opcode can set system-wide flags
 
     .response_o                 (opc_rspf_w),       // to fifo, response bytes(status, measurements, echo, etc)
     .response_wr_en_o           (opc_rspf_wen),     // response fifo write enable
@@ -1219,8 +1218,10 @@ always @(posedge clk050)
                                                     
     .pulse_o                    (pls_fifo_dat_i),   // to fifo, pulse opcode
     .pulse_wr_en_o              (pls_fifo_wen),     // pulse fifo write enable
-//    .pulse_fifo_empty_i,           // pulse fifo empty flag
-//    .pulse_fifo_full_i,            // pulse fifo full flag
+
+    .meas_fifo_dat_i            (meas_fifo_dat_o),  // measurement fifo from pulse opcode
+    .meas_fifo_ren_o            (meas_fifo_ren),    // measurement fifo read enable
+    .meas_fifo_cnt_i            (meas_fifo_count),  // measurements in fifo after pulse/pattern
                                                     
     .bias_enable_o              (bias_en),          // bias control
                                                     
@@ -1342,6 +1343,54 @@ always @(posedge clk050)
       .dbg2_o                     (),             //
       .dbg3_o                     ()              //
      );
+
+
+/////////////////////////////////////////////////
+//  Maintain overall system state information 
+/////////////////////////////////////////////////
+  always @(*) begin
+    // Opcode processor status is opc_status
+    // Frequency status is frq_status
+    // Power processor status is pwr_status
+    // Pulse processor status is pls_status
+    // Pattern processor status is ptn_status
+    if(opc_rspf_rdy)
+      sys_state = sys_state | `STATE_RSP_READY;
+    else
+      sys_state = sys_state & ~(`STATE_RSP_READY);
+            
+    if(opc_status == 0)
+      sys_state = sys_state | `STATE_OPC_BUSY;
+    else
+      sys_state = sys_state & ~(`STATE_OPC_BUSY);
+            
+    if(frq_status == 0)
+      sys_state = sys_state | `STATE_FRQ_BUSY;
+    else
+      sys_state = sys_state & ~(`STATE_FRQ_BUSY);
+        
+    if(pwr_status == 0)
+      sys_state = sys_state | `STATE_PWR_BUSY;
+    else
+      sys_state = sys_state & ~(`STATE_PWR_BUSY);
+            
+    if(pls_status == 0)
+      sys_state = sys_state | `STATE_PLS_BUSY;
+    else
+      sys_state = sys_state & ~(`STATE_PLS_BUSY);
+
+//    if(ptn_status == 0)
+//      sys_state = sys_state | `STATE_PTN_BUSY;
+//    else
+//      sys_state = sys_state & ~(`STATE_PTN_BUSY);
+
+//    if(spi_busy)
+//      sys_state = sys_state | `STATE_SPI_BUSY;
+//    else
+//      sys_state = sys_state & ~(`STATE_SPI_BUSY);
+
+  end
+
 
 // ******************************************************************************
 // * RMR Debug SPI                                                              *
@@ -1811,7 +1860,7 @@ end
   .hw_stat_i                  (hwdbg_stat),
   .gp_opc_cnt_i               (opc_count),             // count of opcodes processed from top level
   .ptn_opc_cnt_i              (32'hdeadbeef),          // 32-bit input:  count of pattern opcodes processed from top level
-  .sys_stat_vec_i             (opc_sys_st_w)           // 16-bit input:  status to show, system_state for now
+  .sys_stat_vec_i             (sys_state)              // 16-bit input:  status to show, system_state for now
  );
 
  // Snapshot:  capture data for R & S commands.   

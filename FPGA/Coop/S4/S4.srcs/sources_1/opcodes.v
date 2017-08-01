@@ -46,12 +46,12 @@
 `define STATE_WRITE_RESPONSE        7'h10
 `define STATE_WR_PTN1               7'h11
 `define STATE_WR_PTN2               7'h12
-//`define STATE_DBG_DELAY             7'h13
-//`define STATE_EMPTY_FIFO            7'h14
-`define STATE_DBG1                  7'h15
-`define STATE_DBG2                  7'h16
-`define STATE_DBG3                  7'h17
-`define STATE_DBG4                  7'h18
+`define STATE_WMD                   7'h13
+`define STATE_RD_MEAS1              7'h14
+`define STATE_RD_MEAS2              7'h15
+`define STATE_RD_MEAS3              7'h16
+`define STATE_RD_MEAS4              7'h17
+`define STATE_DBG3                  7'h18
 
 // If the input fifo has incomplete data, wait this many ticks 
 // before clearing it (so we never get stuck in odd state)
@@ -109,8 +109,10 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 
     output reg  [63:0] pulse_o,                   // to fifo, pulse opcode
     output reg         pulse_wr_en_o,             // pulse fifo write enable
-//    input              pulse_fifo_empty_i,      // pulse fifo empty flag
-//    input              pulse_fifo_full_i,       // pulse fifo full flag
+
+    input  wire [31:0] meas_fifo_dat_i,           // measurement fifo from pulse opcode
+    output reg         meas_fifo_ren_o,           // measurement fifo read enable
+    input  wire [MMC_FILL_LEVEL_BITS-1:0] meas_fifo_cnt_i, // measurements in fifo after pulse/pattern
 
     output reg         bias_enable_o,             // bias control
 
@@ -158,9 +160,11 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     reg          response_ready;     // flag when response ready
     reg  [MMC_FILL_LEVEL_BITS-1:0]  response_length;    // length of response data
     reg  [MMC_FILL_LEVEL_BITS-1:0]  rsp_length;         // length tmp var
-    reg  [7:0]   rsp_data [15:0];    // 64k array of response bytes (measure, echo, status)
+    reg  [7:0]   rsp_data [15:0];    // 64k array of response bytes (echo, status)
     reg  [MMC_FILL_LEVEL_BITS-1:0]  rsp_index;          // response array index
-    //reg  [9:0]   opc_fifo_timeout;   // wait for input fifo to contain minimum data for this long before clearing it(so we never get stuck)
+    localparam GENERAL_ARR  = 2'b00;
+    localparam MEAS_FIFO    = 2'b01;
+    reg  [2:0]                      rsp_source;         // 0=general array, 1=measurement fifo
 
     reg  [15:0]  pat_addr;           // pattern address to write
     reg  [23:0]  pat_clk;            // pattern clock tick to write
@@ -172,9 +176,11 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     reg  [15:0]  sync_conf;          // sync configuration, from sync_conf opcode
     
     // handle opcode integer argument data in a common way
-    reg  [31:0]  shift = 0;              // tmp used building opcode data
+    reg  [31:0]  shift = 0;              // tmp used building opcode data and returning measurements
 
     reg  [31:0]  counter;
+    
+    wire         pulse_busy;
 
     assign response_ready_o = (response_ready && response_length == response_fifo_count_i);
     assign response_length_o = response_length;
@@ -273,7 +279,15 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 // Opcode block done, write response fifo: status, pad byte, 
                 // 2 length bytes, then data if any, then assert response_ready
                 `STATE_BEGIN_RESPONSE: begin
-                    response_length <= rsp_length + `DEFAULT_RESPONSE_LENGTH;  // add room for status byte & 0-padding byte
+                    if(rsp_length == 0) begin
+                        rsp_length <= (meas_fifo_cnt_i << 2);   // 4 bytes per word
+                        response_length <= (meas_fifo_cnt_i << 2) + `DEFAULT_RESPONSE_LENGTH;  // add room for status byte
+                        rsp_source <= MEAS_FIFO;
+                    end
+                    else begin
+                        response_length <= rsp_length + `DEFAULT_RESPONSE_LENGTH;  // add room for status byte
+                        rsp_source <= GENERAL_ARR;
+                    end
                     rsp_index <= 16'h0000;
                     // Status code is first 2 bytes, begin
                     if(status_o == 0) begin         // if status indicates busy(0), set 'SUCCESS
@@ -293,18 +307,61 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     response_o <= rsp_length[7:0];
                     state <= `STATE_WRITE_LENGTH2;
                 end
-                `STATE_WRITE_LENGTH2: begin  // MS byte of status always 0 for now
-                    response_o <= 8'h6c; //(rsp_length>>8) & 8'hff;
+                `STATE_WRITE_LENGTH2: begin      // MS byte of status always 0 for now
+                    response_o <= 8'h6c;         // (rsp_length>>8) & 8'hff;
                     state <= `STATE_WRITE_RESPONSE;
                 end
                 `STATE_WRITE_RESPONSE: begin
-                    // this messes up teh MMC core??? fifo_rst_o <= 1'b0;             // clear input fifo reset line after a few clocks
+                    // this messes up the MMC core??? fifo_rst_o <= 1'b0;             // clear input fifo reset line after a few clocks
                     if(rsp_length > 0) begin
-                        response_o <= rsp_data[rsp_index];
-                        rsp_length <= rsp_length - 1;
-                        rsp_index <= rsp_index + 1;
+                        if(rsp_source == MEAS_FIFO && rsp_length == (meas_fifo_cnt_i<<2)) begin
+                            response_wr_en_o <= 1'b0;       // Off while we read fifo
+                            meas_fifo_ren_o <= 1'b1;        // start reading measurement fifo                        
+                            state <= `STATE_RD_MEAS1;
+                        end
+                        else begin
+                            response_o <= rsp_data[rsp_index];
+                            rsp_length <= rsp_length - 1;
+                            rsp_index <= rsp_index + 1;
+                        end
                     end
                     else begin
+                        response_wr_en_o <= 1'b0;
+                        response_ready <= 1'b1;
+                        state <= `STATE_IDLE;
+                        if(status_o == 0)
+                            status_o <= `SUCCESS;       // Reset status_o if it's not set to an error
+                    end
+                end
+//                `STATE_RD_MEAS1: begin
+//                    state <= `STATE_RD_MEAS2;   // read fifo spacer
+//                end
+                `STATE_RD_MEAS1: begin
+                    uinttmp[31:0] <= meas_fifo_dat_i;
+                    meas_fifo_ren_o <= 1'b0;
+                    uinttmp <= {32'd0, 32'h7e53_a6b7};
+                    state <= `STATE_RD_MEAS2;
+                end
+                `STATE_RD_MEAS2: begin
+                    rsp_length <= rsp_length - 1;
+                    rsp_index <= rsp_index + 1;
+
+                    // write response byte
+                    response_wr_en_o <= 1'b1;
+                    response_o <= uinttmp[7:0];
+
+                    // prep next byte
+                    if(((rsp_index+1) & 2'b11) == 2'b0 &&
+                            rsp_length > 1) begin
+                        meas_fifo_ren_o <= 1'b1;                // read next result
+//                        uinttmp[31:0] <= meas_fifo_dat_i;   // next 32 bit word
+                        state <= `STATE_RD_MEAS1;
+                    end
+                    else
+                        uinttmp <= {8'h00, uinttmp[31:8]};
+
+                    // Done?
+                    if(rsp_length == 0) begin
                         response_wr_en_o <= 1'b0;
                         response_ready <= 1'b1;
                         state <= `STATE_IDLE;
@@ -380,16 +437,19 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     if(dbg_opcodes_o[14:8] == 7'b0000000)
                         dbg_opcodes_o[14:8] <= opcode;
                     // Look for special opcodes, RESET & NULL Terminator
+                    // On NULL, check for response data available. If measurement data is in the fifo
+                    // send it. Make sure the pulse & pattern processors are idle(done) first.
                     if(opcode == 0) begin
-                        if(blk_rsp_done == 1'b0) begin
-                          blk_rsp_done <= 1'b1;      // Flag we've done it
-                          // this f's up the MMC core, asserts MMC d0 for a while, count increases to 0x200???  fifo_rst_o <= 1'b1;        // reset input fifo, done with block or blocks
-                          done_opcode_block();       // Begin response
-                        end
-                        else begin
-                          status_o <= `SUCCESS;  
-                          state <= `STATE_IDLE;
-                        end
+                        state <= `STATE_WMD;    // Check for measurement done before doing response
+//                        if(blk_rsp_done == 1'b0) begin
+//                          blk_rsp_done <= 1'b1;      // Flag we've done it
+//                          // this f's up the MMC core, asserts MMC d0 for a while, count increases to 0x200???  fifo_rst_o <= 1'b1;        // reset input fifo, done with block or blocks
+//                          done_opcode_block();       // Begin response
+//                        end
+//                        else begin
+//                          status_o <= `SUCCESS;  
+//                          state <= `STATE_IDLE;
+//                        end
                     end
                     else if(opcode == `RESET) begin
                         reset_opcode_processor();
@@ -407,6 +467,22 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                             opcodes_byte_arg();                 // ECHO, other special opcodes
                         end
                     end
+                end
+                `STATE_WMD: begin
+                  // Got null opcode, done.
+                  // Wait Measurement Delay, wait until pulse processor
+                  // completes so all measurements are done
+                  if((system_state_i & `STATE_PLS_BUSY) != `STATE_PLS_BUSY) begin
+                    if(blk_rsp_done == 1'b0) begin
+                      blk_rsp_done <= 1'b1;      // Flag we've done it
+                      // this f's up the MMC core, asserts MMC d0 for a while, count increases to 0x200???  fifo_rst_o <= 1'b1;        // reset input fifo, done with block or blocks
+                      done_opcode_block();       // Begin response
+                    end
+                    else begin
+                      status_o <= `SUCCESS;  
+                      state <= `STATE_IDLE;
+                    end
+                  end  
                 end
                 `STATE_FIFO_WRITE:
                 begin
@@ -597,7 +673,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 //                else begin
                     pulse_o <= uinttmp[63:0];
                     pulse_wr_en_o <= 1;   // enable write ulse FIFO
-                    // Don't process anymore opcodes until fifo is written
                     state <= `STATE_FIFO_WRITE;                                    
                 `ifdef XILINX_SIMULATOR
                     if(filepulse == 0)
@@ -807,6 +882,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         response_length <= 16'h0000;
         rsp_index <= 16'h0000;
         rsp_length <= 0; // payload length, DEFAULT_RESPONSE_LENGTH gets added in
+        rsp_source <= GENERAL_ARR;
+        meas_fifo_ren_o <= 1'b0;                        
         mode_o <= 32'h0000_0000;
         //opc_fifo_timeout <= `WAIT_FIFO_TMO;
         bias_enable_o <= 1'b0;
@@ -833,7 +910,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         response_length <= 16'h0000;
         rsp_index <= 16'h0000;
         rsp_length <= 0; // payload length, DEFAULT_RESPONSE_LENGTH gets added in
-        //opc_fifo_timeout <= `WAIT_FIFO_TMO;
+        rsp_source <= GENERAL_ARR;
+        meas_fifo_ren_o <= 1'b0;                        
     end
     endtask
 
@@ -856,9 +934,9 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     task next_opcode;
     begin
         state <= `STATE_IDLE;
-        // When not in slow debug mode, increment opcode counter
-        if(mode_o[31] == 1'b0)
-            opcode_counter_o <= opcode_counter_o + 32'd1;
+//        // When not in slow debug mode, increment opcode counter
+//        if(mode_o[31] == 1'b0)
+        opcode_counter_o <= opcode_counter_o + 32'd1;
     end
     endtask
 
