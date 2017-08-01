@@ -1337,8 +1337,8 @@ always @(posedge clk050)
       .dds_spi_ps0_o              (jlc_DDS_PS0),           // 
       .dds_spi_ps1_o              (jlc_DDS_PS1),           // 
   
-      .dbg0_o                     (FPGA_MCU1),             //
-      .dbg1_o                     (FPGA_MCU2),             //
+      .dbg0_o                     (),             //
+      .dbg1_o                     (),             //
       .dbg2_o                     (),             //
       .dbg3_o                     ()              //
      );
@@ -1837,7 +1837,9 @@ end
  assign  DDS_PS1     = hwdbg_stat[254] ? jlc_DDS_PS0   : rmr_DDS_PS0;    //  L2    O
    
   // 22-Jun have to scope MMC signals
-  assign FPGA_MCU4 = VGA_SCLK; //MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.
-  assign FPGA_MCU3 = VGA_MOSI; //MMC_CMD; //count3[15];    // 200MHz div'd by 2^16.
+  assign FPGA_MCU4 = CONV; //MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.
+  assign FPGA_MCU3 = ADC_SCLK; //MMC_CMD; //count3[15];    // 200MHz div'd by 2^16.
+  assign FPGA_MCU2 = ZMON_EN;
+  assign FPGA_MCU1 = MMC_CMD;
 
   endmodule

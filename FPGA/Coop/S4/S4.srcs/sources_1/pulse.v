@@ -85,7 +85,7 @@ module pulse #(parameter FILL_BITS = 4)
 
     // ZMON ADC variables, processing
     wire read_zmon;
-    assign read_zmon = adctrig_i | conv; 
+    assign read_zmon = conv; //adctrig_i | conv; 
 
    // LTC1407A ADC state machine
     localparam AIdle = 3'd0, ASckOn = 3'd1, ASckOnWait = 3'd2, ASckOff = 3'd3, ADone = 3'd4, ADone2 = 3'd5, SckOnStretch = 3'd2;
@@ -181,7 +181,8 @@ module pulse #(parameter FILL_BITS = 4)
         else if(pulse_en == 1'b1) begin
             case(state)
             PULSE_IDLE: begin
-                if(!pls_fifo_mt_i) begin
+                if(!pls_fifo_mt_i && astate == AIdle) begin
+                    // pulse requested & measurement Idle
                     pls_fifo_ren_o <= 1'b1;   // read next value
                     state <= PULSE_SPACER;
                     status_o <= 1'b0;
@@ -191,6 +192,7 @@ module pulse #(parameter FILL_BITS = 4)
                     rf_gate <= 1'b0;
                     rf_gate2 <= 1'b0;
                     conv <= 1'b0;
+                    zmon_en <= 1'b0;
                 end
             end
             PULSE_SPACER: begin
@@ -199,7 +201,7 @@ module pulse #(parameter FILL_BITS = 4)
             PULSE_READ: begin
                 // read pulse data from fifo
                 // turn RF_GATE ON (start pulse)
-                pulse <= pls_fifo_dat_i[31:8] - 24'h00_0000_0001;         // pulse width count is 0-based
+                pulse <= pls_fifo_dat_i[31:8];      // 100ns ticks of width
                 ticks <= 24'h00_0000;
                 sys_ticks <= 32'h0000_0000;
                 measure <= pls_fifo_dat_i[32];
@@ -207,49 +209,25 @@ module pulse #(parameter FILL_BITS = 4)
                 pls_fifo_ren_o <= 0;
                 rf_gate <= pulse_en & rf_enable_i;   // on
                 rf_gate2 <= pulse_en & rf_enable_i;
+                zmon_en <= 1'b1;
                 if(pls_fifo_dat_i[32] == 1'b1 &&
                     pls_fifo_dat_i[63:39] - 24'h00_0000_0001 == 0)
                     conv <= 1'b1;   // measure at tick 0
                 else conv <= 1'b0;  // measure OFF at tick 0
                 state <= PULSE_RUN;
-            `ifdef XILINX_SIMULATOR
-                if(filepulse == 0)
-                    filepulse = $fopen("../../../project_1.srcs/sources_1/pulse_in.txt", "a");
-                $fdisplay (filepulse, "Pulse:0x%h ON", pls_fifo_dat_i);
-            `endif
             end
             PULSE_RUN: begin
                 if(ticks == pulse) begin
                     state <= PULSE_DONE;
                     rf_gate <= 1'b0;
                     rf_gate2 <= 1'b0;
-                `ifdef XILINX_SIMULATOR
-                    $fdisplay (filepulse, "Pulse Done");
-                `endif
+                    conv <= 1'b0;
                 end
-                else if(measure) begin
-                    if(ticks == measure_at) begin
-                        // Start a measurement                
-                        if(astate != AIdle) begin
-                          `ifdef XILINX_SIMULATOR
-                            if(filepulse == 0)
-                                filepulse = $fopen("../../../project_1.srcs/sources_1/pulse_in.txt", "a");
-                            $fdisplay (filepulse, "Pulse->Meas *OVERRUN* at 0x%h", measure_at);
-                          `endif
-                            state <= PULSE_IDLE;
-                            status_o = `ERR_PULSE_OVERRUN;
-                        end
-                        else begin
-                          `ifdef XILINX_SIMULATOR
-                            if(filepulse == 0)
-                                filepulse = $fopen("../../../project_1.srcs/sources_1/pulse_in.txt", "a");
-                            $fdisplay (filepulse, "Pulse->Meas at 0x%h", measure_at);
-                          `endif
-                            conv <= 1'b1;       // Start ZMON conversion using conv line
-                        end
-                    end
-                    else if(ticks == measure_at+2)
-                        conv <= 1'b0;         // CONV OFF
+                if(measure) begin
+                    if(ticks == measure_at)
+                        conv <= 1'b1;           // Start ZMON conversion using conv line                    
+                    else if(ticks == measure_at+1)
+                        conv <= 1'b0;           // CONV OFF
                 end
                 //             
                 if(sys_ticks+1 == PULSE_TICKS) begin
@@ -260,19 +238,14 @@ module pulse #(parameter FILL_BITS = 4)
                     sys_ticks <= sys_ticks + 1;
             end
             PULSE_DONE: begin
-                // return measurements, etc
-                state <= PULSE_IDLE;
-                status_o = `SUCCESS;
+                // make sure measurement done too before returning to idle
+                if(astate == AIdle) begin
+                    state <= PULSE_IDLE;
+                    status_o = `SUCCESS;
+                end                
             end
             default:
                 begin
-                `ifdef XILINX_SIMULATOR
-                    $fdisplay (filepulse, "Pulse:Unknwon State Error");
-                    if(pls_fifo_mt_i) begin
-                        $fclose(filepulse);
-                        filepulse = 0;
-                    end
-                `endif
                     status_o = `ERR_UNKNOWN_PULSE_STATE;
                     state = PULSE_IDLE;
                 end
