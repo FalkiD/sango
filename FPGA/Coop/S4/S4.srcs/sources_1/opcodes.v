@@ -88,6 +88,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 
     input  wire [15:0]   system_state_i,          // overall state of system, "running a pattern", for example
     output reg  [31:0]   mode_o,                  // MODE opcode can set system-wide flags
+    input  wire          pulse_busy_i,            // Pulse processor is busy (must wait for measurements)
 
     output reg  [7:0]    response_o,              // to fifo, response bytes(status, measurements, echo, etc)
     output reg           response_wr_en_o,        // response fifo write enable
@@ -155,7 +156,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     reg  [9:0]   length = 0;         // bytes of opcode data to read
     reg  [63:0]  uinttmp;            // up to 64-bit tmp for opcode data
     reg  [7:0]   saved_byte;         // kludge
-    //reg  [MMC_FILL_LEVEL_BITS-1:0]  read_cnt;   // Bytes read from input fifo. Go until matches SECTOR_SIZE
     reg          len_upr = 0;        // Persist upper bit of length
     reg          response_ready;     // flag when response ready
     reg  [MMC_FILL_LEVEL_BITS-1:0]  response_length;    // length of response data
@@ -212,14 +212,9 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     `endif
         end
         else if(enable == 1) begin
-            //if((state == `STATE_IDLE && (fifo_rd_count_i >= `SECTOR_SIZE || read_cnt > 0)) || //  `MIN_OPCODE_SIZE) ||
             if((state == `STATE_IDLE && fifo_rd_count_i >= `MIN_OPCODE_SIZE) ||
                 state != `STATE_IDLE) begin
                 // not IDLE or at least one opcode has been written to FIFO
-
-//                if(state == `STATE_IDLE && fifo_rd_count_i >= `SECTOR_SIZE) //    read_cnt == 0)
-//                  read_cnt <= fifo_rd_count_i;  // Reset our byte counter
-
                 case(state)
                 `STATE_IDLE: begin
                     // Don't continue until the response has been read(response fifo empty)
@@ -354,7 +349,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     if(((rsp_index+1) & 2'b11) == 2'b0 &&
                             rsp_length > 1) begin
                         meas_fifo_ren_o <= 1'b1;                // read next result
-//                        uinttmp[31:0] <= meas_fifo_dat_i;   // next 32 bit word
                         state <= `STATE_RD_MEAS1;
                     end
                     else
@@ -391,13 +385,17 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 `STATE_FETCH_FIRST: begin
                     state <= `STATE_FETCH;  // extra tick to get reads going
                 end
+                // **** 02-Aug If 256 byte opcode is illegal then we can know
+                // ****        a 0-length opcode from its first byte & turn OFF
+                // ****        reads NOW. If we don't we read one extra byte &
+                // ****        leave an extra byte in the input FIFO
                 `STATE_FETCH: begin
                     shift <= 8'h00;
                     uinttmp <= 64'h0000_0000_0000_0000;
                     length <= {1'b0, fifo_dat_i};
                     saved_len_byte <= {1'b0, fifo_dat_i};     // Save opcode length byte in case of write to pattern RAM
-                    //read_cnt <= read_cnt - 1;
-                    if({1'b0, fifo_dat_i} > (fifo_rd_count_i-1))
+                    // **** 02-Aug if 0 length then turn OFF read NOW
+                    if({1'b0, fifo_dat_i} > (fifo_rd_count_i-1) || fifo_dat_i == 8'h00)
                         fifo_rd_en_o <= 0;                    // must turn OFF REN 1 clock early
                     state <= `STATE_LENGTH;   // Part 1 of length, get length msb & get opcode next
                 end
@@ -406,7 +404,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     length <= {fifo_dat_i[0], length[7:0]};
                     rsp_index <= 16'h0000;                  // index for multi-byte data blocks
                     opcode <= fifo_dat_i[7:1];              // got opcode, start reading data
-                    //read_cnt <= read_cnt - 1;
                     // length tests
                     if({fifo_dat_i[0], length[7:0]} > (fifo_rd_count_i-1)) begin
                         fifo_rd_en_o <= 0;                  // let it fill
@@ -472,7 +469,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                   // Got null opcode, done.
                   // Wait Measurement Delay, wait until pulse processor
                   // completes so all measurements are done
-                  if((system_state_i & `STATE_PLS_BUSY) != `STATE_PLS_BUSY) begin
+                  if(pulse_busy_i == 1'b0) begin
                     if(blk_rsp_done == 1'b0) begin
                       blk_rsp_done <= 1'b1;      // Flag we've done it
                       // this f's up the MMC core, asserts MMC d0 for a while, count increases to 0x200???  fifo_rst_o <= 1'b1;        // reset input fifo, done with block or blocks
@@ -785,12 +782,12 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             endcase
         end // if(length == 0) block
         else begin  // integer argument, 2 to 8 bytes in length
+            // ng cuz variable width??? uinttmp <= {fifo_dat_i, uinttmp[63:8]};
             uinttmp <= uinttmp | (fifo_dat_i << shift);
             if(length == 2)             // Turn OFF with 2 clocks left. 1=last read, 0=begin write fifo
                 fifo_rd_en_o <= 0;      // pause opcode fifo reads
             length <= length - 1;
             shift <= shift + 8'd8;
-            //read_cnt <= read_cnt - 1;
         end
     end
     endtask
@@ -800,16 +797,16 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         // argument data is a block of bytes, save it
         // Normally pattern data, can be debug or echo opcodes
         // Pattern data is not valid when a pattern is running (opcodes w/integer args are valid)
-        if(system_state_i & `STATE_PTN_BUSY) begin
-        `ifdef XILINX_SIMULATOR
-            if(fileopcerr == 0)
-                fileopcerr = $fopen("./opcode_status.txt", "a");
-            $fdisplay (fileopcerr, "*ERROR*:Cannot write pattern data while pattern is running");
-        `endif
-            status_o <= `ERR_PATTERN_RUNNING;
-            state <= `STATE_BEGIN_RESPONSE;
-        end
-        else begin
+//        if(system_state_i & `STATE_PTN_BUSY) begin
+//        `ifdef XILINX_SIMULATOR
+//            if(fileopcerr == 0)
+//                fileopcerr = $fopen("./opcode_status.txt", "a");
+//            $fdisplay (fileopcerr, "*ERROR*:Cannot write pattern data while pattern is running");
+//        `endif
+//            status_o <= `ERR_PATTERN_RUNNING;
+//            state <= `STATE_BEGIN_RESPONSE;
+//        end
+//        else begin
             case(opcode)
             `ECHO: begin
                 if(response_fifo_full_i) begin
@@ -825,7 +822,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 end
                 else if(!fifo_rd_empty_i) begin
                     rsp_data[rsp_index] <= ~fifo_dat_i; // complement the data for echo test 
-                    //read_cnt <= read_cnt - 1;
 //                    if(length == 2) begin               // 1-based counter. Turn OFF FIFO early
 //                        length <= length - 1;
 //                        fifo_rd_en_o <= 0;                   // turn off reading
@@ -847,7 +843,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 end
             end
             endcase
-        end    
+//        end    
     end
     endtask
 
@@ -858,7 +854,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         len_upr <= 0;
         length <= 9'b000000000;
         fifo_rd_en_o <= 1'b0;  // Added by John Clayton
-        //read_cnt <= 0;         // Bytes read from input fifo. Go until matches SECTOR_SIZE
         frq_wr_en_o <= 1'b0;
         pwr_wr_en_o <= 1'b0;
 //        pulse_wr_en_o <= 1'b0;

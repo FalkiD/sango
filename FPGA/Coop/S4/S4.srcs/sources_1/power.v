@@ -469,7 +469,7 @@ module power #(parameter FILL_BITS = 4)
             state <= PWR_DBM;
           end
           else begin
-            power <= pwr_word[31:0];
+            power <= {7'd0, pwr_word[31:0]};
             state <= PWR_VGA1;   // write 1st byte of 3  
           end
         end

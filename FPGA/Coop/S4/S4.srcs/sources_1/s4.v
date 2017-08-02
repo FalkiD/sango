@@ -272,7 +272,8 @@ wire         clk050;
 // The current system state:
 wire [15:0]  frequency;
 reg  [11:0]  dbm_x10;
-reg  [15:0]  sys_state = 0;                 // s4 system state (e.g. running a pattern)
+reg  [15:0]  sys_state = 0;             // s4 system state (e.g. running a pattern)
+wire         pulse_busy;
 wire [31:0]  sys_mode;                  // MODE opcode can set system-wide flags
 
 //// Initialize ourselves at startup
@@ -1196,6 +1197,7 @@ always @(posedge clk050)
 
     .system_state_i             (sys_state),        // s4 system state (e.g. running a pattern)
     .mode_o                     (sys_mode),         // MODE opcode can set system-wide flags
+    .pulse_busy_i               (pulse_busy),       // Pulse processor is busy
 
     .response_o                 (opc_rspf_w),       // to fifo, response bytes(status, measurements, echo, etc)
     .response_wr_en_o           (opc_rspf_wen),     // response fifo write enable
@@ -1358,26 +1360,27 @@ always @(posedge clk050)
       sys_state = sys_state | `STATE_RSP_READY;
     else
       sys_state = sys_state & ~(`STATE_RSP_READY);
+
+// This creates timing loop error            
+//    if(opc_status == 0)
+//      sys_state = sys_state | `STATE_OPC_BUSY;
+//    else
+//      sys_state = sys_state & ~(`STATE_OPC_BUSY);
             
-    if(opc_status == 0)
-      sys_state = sys_state | `STATE_OPC_BUSY;
-    else
-      sys_state = sys_state & ~(`STATE_OPC_BUSY);
-            
-    if(frq_status == 0)
-      sys_state = sys_state | `STATE_FRQ_BUSY;
-    else
-      sys_state = sys_state & ~(`STATE_FRQ_BUSY);
+//    if(frq_status == 0)
+//      sys_state = sys_state | `STATE_FRQ_BUSY;
+//    else
+//      sys_state = sys_state & ~(`STATE_FRQ_BUSY);
         
-    if(pwr_status == 0)
-      sys_state = sys_state | `STATE_PWR_BUSY;
-    else
-      sys_state = sys_state & ~(`STATE_PWR_BUSY);
+//    if(pwr_status == 0)
+//      sys_state = sys_state | `STATE_PWR_BUSY;
+//    else
+//      sys_state = sys_state & ~(`STATE_PWR_BUSY);
             
-    if(pls_status == 0)
-      sys_state = sys_state | `STATE_PLS_BUSY;
-    else
-      sys_state = sys_state & ~(`STATE_PLS_BUSY);
+//    if(pls_status == 0)
+//      sys_state <= sys_state | `STATE_PLS_BUSY;
+//    else
+//      sys_state <= sys_state & ~(`STATE_PLS_BUSY);
 
 //    if(ptn_status == 0)
 //      sys_state = sys_state | `STATE_PTN_BUSY;
@@ -1593,20 +1596,20 @@ always @(posedge clk050)
 // *                                                                            *
 // ******************************************************************************
 reg  [4:0]    bkd_rsp_state;
-reg  [5:0]    bkd_rsp_counter;
+reg  [6:0]    bkd_rsp_counter;
 reg           bkd_rsp_run;
 always @(posedge sys_clk) begin
   if(!sys_rst_n) begin
     opc_rsp_new <= 1'b0;
     bkd_rsp_run <= 1'b0;
     bkd_rsp_state <= `BKD_IDLE;
-    bkd_rsp_counter <= 6'd0;
+    bkd_rsp_counter <= 7'd0;
   end
   else if(opc_rspf_rdy == 1'b1 || bkd_rsp_run) begin
       case(bkd_rsp_state)
       `BKD_IDLE: begin
         opc_rsp_new <= 1'b0;
-        bkd_rsp_counter <= 6'd0;
+        bkd_rsp_counter <= 7'd0;
         bkd_rsp_run <= 1'b1;
         bkd_rsp_state <= `BKD_WR0;
       end
@@ -1680,6 +1683,8 @@ always @(posedge sys_clk) begin
   end 
 end
 
+  // Flag when pulse processor is busy. Opcode processor has to wait for done to return measurements
+  assign pulse_busy = (pls_status == 8'd1) ? 1'b0 : 1'b1;
 
   // Implement MMC card tri-state drivers at the top level
     // Drive the clock output when needed
