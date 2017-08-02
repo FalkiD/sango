@@ -359,61 +359,23 @@ module power #(parameter FILL_BITS = 4)
 
 // DAC7563 programming from M2
 //static uint8_t InitializeDac() {
-
 //	//	hidio 66 1 3 38 00 00
 //	uint8_t dac_data[] = { 0x38, 0, 0 }; // Disable internal refs, Gain=1
-//	uint8_t status = spiwrrd(SPI_DEV_ID_DAC, sizeof(dac_data), dac_data);
 
 //	//	hidio 66 1 3 30 00 03
 //	dac_data[0] = 0x30;	// LDAC pin inactive DAC A & B
 //	dac_data[1] = 0;
 //	dac_data[2] = 3;
-//	status |= spiwrrd(SPI_DEV_ID_DAC, sizeof(dac_data), dac_data);
 
 //	//	hidio 66 1 3 00 99 60
 //	dac_data[0] = 0;		// DAC A input
 //	dac_data[1] = 0x99;		// 0x996
 //	dac_data[2] = 0x60;
-//	status |= spiwrrd(SPI_DEV_ID_DAC, sizeof(dac_data), dac_data);
 
 //	//	hidio 66 1 3 11 80 00
 //	dac_data[0] = 0x11;		// Write DAC B input & update all DAC's
 //	dac_data[1] = 0x80;		// 0x800
 //	dac_data[2] = 0;
-//	status |= spiwrrd(SPI_DEV_ID_DAC, sizeof(dac_data), dac_data);
-
-//	return status;
-//}
-
-
-//// *** Set Power from M2:
-//// Convert dB into dac value & send it
-//// dB is relative to dac 0x80(128)
-//static uint8_t SetSynthesizer(uint16_t db, uint16_t *pvmag) {
-//	float value = (float)db/2000.0;
-//	value = pow(10.0, value);
-//	value = value * 128.0 + 0.5;
-//	uint16_t vmag = (uint16_t)value + 0x800; //((pow(10.0, (db/20.0)) * (double)0x800) + 0.5);
-//	*pvmag = vmag;
-//	int16_t phase = 0x800; //GetPhase();
-//#ifdef DEBUG
-//	iprintf("dB:%04d, IDac:0x%03x, QDac:0x%03x\n", db, vmag, phase);
-//#endif
-
-//	// I(magnitude) is DAC A, Q(phase) is DAC B
-//	uint8_t dac_data[3];
-//	dac_data[0] = 0;		// DAC A input
-//	dac_data[1] = (vmag>>4) & 0xff;
-//	dac_data[2] = (vmag&0xf)<<4;
-//	uint8_t status = spiwrrd(SPI_DEV_ID_DAC, sizeof(dac_data), dac_data);
-
-//	dac_data[0] = 0x11;		// Write DAC B input & update all DAC's
-//	dac_data[1] = (phase>>4) & 0xff;
-//	dac_data[2] = (phase&0xf)<<4;
-//	status |= spiwrrd(SPI_DEV_ID_DAC, sizeof(dac_data), dac_data);
-
-//	return status;
-//}
 
   assign VGA_VSW_o = 1'b1;          // We'll use high-gain mode
 

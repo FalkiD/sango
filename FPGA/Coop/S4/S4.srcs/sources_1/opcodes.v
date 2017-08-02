@@ -221,55 +221,10 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     if(response_fifo_empty_i && !fifo_rd_empty_i) begin 
                         // Start processing opcodes, don't return to 
                         // `STATE_IDLE until a null opcode is seen.
-                        
-//                        // read opcodes, write 1st 512 bytes to response fifo
-//                        fifo_rd_en_o <= 1'b1;
-//                        state <= `STATE_DBG1;
-//                        opcode_counter_o <= opcode_counter_o + 32'd1;
-                        
                         begin_opcodes();
                         state <= `STATE_FETCH_FIRST;
                     end
                 end
-                
-//                `STATE_DBG1: begin
-//                    state <= `STATE_DBG2;   // need spacer tick
-//                end
-
-//                `STATE_DBG2: begin
-//                    response_length <= read_cnt;
-//                    response_wr_en_o <= 1'b1;
-//                    response_o <= fifo_dat_i;
-//                    read_cnt <= read_cnt - 1;
-//                    opcode_counter_o <= opcode_counter_o + 32'd1;
-//                    state <= `STATE_DBG3;
-//                end
-//                `STATE_DBG3: begin
-//                    response_o <= fifo_dat_i;
-//                    read_cnt <= read_cnt - 1;
-//                    opcode_counter_o <= opcode_counter_o + 32'd1;
-//                    if(read_cnt == 1) begin
-//                        response_wr_en_o <= 1'b0;
-//                        state <= `STATE_DBG4;
-//                    end
-//                end
-//                `STATE_DBG4: begin
-//                    response_ready <= 1'b1;
-//                    status_o <= `SUCCESS;       // Reset status_o if it's not set to an error
-//                    state <= `STATE_IDLE;
-//                    opcode_counter_o <= opcode_counter_o + 32'd1;
-//                end
-
-    
-//                `STATE_DBG_DELAY: begin
-//                    // MSB of mode_o flag word slows way down for visual observation on Arty bd
-//                    //opcode_counter_o <= {25'b0_0000_0000, next_state};
-//                    if(counter == 0) begin
-//                        state <= next_state;
-//                    end
-//                    else
-//                        counter <= counter - 1;
-//                end
                 
                 // Opcode block done, write response fifo: status, pad byte, 
                 // 2 length bytes, then data if any, then assert response_ready
@@ -335,7 +290,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     uinttmp[31:0] <= meas_fifo_dat_i;
                     response_wr_en_o <= 1'b0;               // don't write extra response byte after meas word
                     meas_fifo_ren_o <= 1'b0;
-                    uinttmp <= {32'd0, 32'h7e53_a6b7};
+                    //uinttmp <= {32'd0, 32'h7e53_a6b7};
                     state <= `STATE_RD_MEAS2;
                 end
                 `STATE_RD_MEAS2: begin
@@ -439,15 +394,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     // send it. Make sure the pulse & pattern processors are idle(done) first.
                     if(opcode == 0) begin
                         state <= `STATE_WMD;    // Check for measurement done before doing response
-//                        if(blk_rsp_done == 1'b0) begin
-//                          blk_rsp_done <= 1'b1;      // Flag we've done it
-//                          // this f's up the MMC core, asserts MMC d0 for a while, count increases to 0x200???  fifo_rst_o <= 1'b1;        // reset input fifo, done with block or blocks
-//                          done_opcode_block();       // Begin response
-//                        end
-//                        else begin
-//                          status_o <= `SUCCESS;  
-//                          state <= `STATE_IDLE;
-//                        end
                     end
                     else if(opcode == `RESET) begin
                         reset_opcode_processor();
@@ -499,7 +445,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     state <= `STATE_BEGIN_RESPONSE;
                 end
                 endcase;    // main state machine case
-            end // if((state=IDLE & 1 sector of data) OT state <> IDLE
+            end // if((state=IDLE & at least 1 opcode)
         end // if(enable == 1) block
     end // always block    
 
@@ -911,27 +857,10 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     end
     endtask
 
-//    // If msb of mode word is set slow way down for observation on arty board
-//    task show_next_state;
-//        input [6:0] newstate;
-//    begin
-//        if(mode_o & 32'h8000_0000) begin
-//            next_state <= newstate;
-//            state <= `STATE_DBG_DELAY;
-//            counter <= TWOFIFTY_MS;
-//        end
-//        else begin
-//            state <= newstate;
-//        end
-//    end
-//    endtask
-
     // finished an opcode, back to idle state
     task next_opcode;
     begin
         state <= `STATE_IDLE;
-//        // When not in slow debug mode, increment opcode counter
-//        if(mode_o[31] == 1'b0)
         opcode_counter_o <= opcode_counter_o + 32'd1;
     end
     endtask
