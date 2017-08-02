@@ -333,6 +333,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 //                end
                 `STATE_RD_MEAS1: begin
                     uinttmp[31:0] <= meas_fifo_dat_i;
+                    response_wr_en_o <= 1'b0;               // don't write extra response byte after meas word
                     meas_fifo_ren_o <= 1'b0;
                     uinttmp <= {32'd0, 32'h7e53_a6b7};
                     state <= `STATE_RD_MEAS2;
