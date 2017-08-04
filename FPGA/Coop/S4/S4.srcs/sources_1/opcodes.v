@@ -154,7 +154,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     reg          blk_rsp_done;       // flag, 1 sent response for block, 0=response not sent yet
     reg  [6:0]   opcode = 0;         // Opcode being processed
     reg  [9:0]   length = 0;         // bytes of opcode data to read
-    reg  [63:0]  uinttmp;            // up to 64-bit tmp for opcode data
+    (* ram_style = "distributed" *) reg  [63:0]  uinttmp; // Xilinx XST-specific meta comment specifying mem type
+    //reg  [63:0]  uinttmp;            // up to 64-bit tmp for opcode data
     reg  [7:0]   saved_byte;         // kludge
     reg          len_upr = 0;        // Persist upper bit of length
     reg          response_ready;     // flag when response ready
@@ -267,6 +268,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                         if(rsp_source == MEAS_FIFO && rsp_length == (meas_fifo_cnt_i<<2)) begin
                             response_wr_en_o <= 1'b0;       // Off while we read fifo
                             meas_fifo_ren_o <= 1'b1;        // start reading measurement fifo                        
+                            uinttmp[31:0] <= 32'd0;
                             state <= `STATE_RD_MEAS1;
                         end
                         else begin
@@ -287,10 +289,10 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 //                    state <= `STATE_RD_MEAS2;   // read fifo spacer
 //                end
                 `STATE_RD_MEAS1: begin
-                    uinttmp[31:0] <= meas_fifo_dat_i;
+                    uinttmp <= 64'd0; //{32'd0, meas_fifo_dat_i};
+                    //uinttmp <= {32'd0, 32'h7e53_a6b7};
                     response_wr_en_o <= 1'b0;               // don't write extra response byte after meas word
                     meas_fifo_ren_o <= 1'b0;
-                    //uinttmp <= {32'd0, 32'h7e53_a6b7};
                     state <= `STATE_RD_MEAS2;
                 end
                 `STATE_RD_MEAS2: begin
@@ -394,6 +396,15 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     // send it. Make sure the pulse & pattern processors are idle(done) first.
                     if(opcode == 0) begin
                         state <= `STATE_WMD;    // Check for measurement done before doing response
+//                        if(blk_rsp_done == 1'b0) begin
+//                          blk_rsp_done <= 1'b1;      // Flag we've done it
+//                          // this f's up the MMC core, asserts MMC d0 for a while, count increases to 0x200???  fifo_rst_o <= 1'b1;        // reset input fifo, done with block or blocks
+//                          done_opcode_block();       // Begin response
+//                        end
+//                        else begin
+//                          status_o <= `SUCCESS;  
+//                          state <= `STATE_IDLE;
+//                        end
                     end
                     else if(opcode == `RESET) begin
                         reset_opcode_processor();
@@ -803,7 +814,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         fifo_rd_en_o <= 1'b0;  // Added by John Clayton
         frq_wr_en_o <= 1'b0;
         pwr_wr_en_o <= 1'b0;
-//        pulse_wr_en_o <= 1'b0;
+        pulse_wr_en_o <= 1'b0;
 //        bias_wr_en_o <= 1'b0;
         opcode_counter_o <= 32'h0000_0000;
         uinttmp <= 64'h0000_0000_0000_0000;
@@ -846,7 +857,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         
         frq_wr_en_o <= 1'b0;
         pwr_wr_en_o <= 1'b0;
-    //                pulse_wr_en_o <= 1'b0;
+        pulse_wr_en_o <= 1'b0;
         response_wr_en_o <= 1'b0;
         response_ready <= 1'b0;
         response_length <= 16'h0000;

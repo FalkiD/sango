@@ -29,27 +29,30 @@
 // From Xilinx sample
 // Write-First Mode (template 2)
 //
-module ptn_ram #(parameter DEPTH=65536)
+module ptn_ram #(parameter DEPTH=65536,
+		 parameter DEPTH_BITS=16,
+		 parameter WIDTH=16)
 (
-        input clk, 
-        input we, 
-        input en, 
-        input [15:0] addr, 
-        input [95:0] data_i, 
-        output [95:0] data_o
-        );
+  input  clk, 
+  input  we, 
+  input  en, 
+  input  [DEPTH_BITS-1:0] addr, 
+  input  [WIDTH-1:0] data_i, 
+  output [WIDTH-1:0] data_o
+);
 
-    reg [95:0] RAM [DEPTH-1:0];
-    reg [15:0] read_addr;
+  // Xilinx XST-specific meta comment follows:
+  (* ram_style = "distributed" *) reg  [WIDTH-1:0]  RAM[DEPTH-1:0];
+  reg [DEPTH_BITS-1:0] read_addr;
 
-    always @(posedge clk) begin
-        if (en) begin
-            if (we)
-                RAM[addr] <= data_i;
-            read_addr <= addr;
-        end
-    end
+  always @(posedge clk) begin
+    if (en) begin
+      if (we)
+        RAM[addr] <= data_i;
+        read_addr <= addr;
+      end
+  end
 
-    assign data_o = RAM[read_addr];
+  assign data_o = RAM[read_addr];
 
 endmodule

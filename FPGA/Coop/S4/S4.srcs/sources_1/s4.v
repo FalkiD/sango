@@ -451,16 +451,14 @@ wire        meas_fifo_full;           // meas fifo full flag
 wire [`GLBL_MMC_FILL_LEVEL_BITS-1:0]   meas_fifo_count;
 
 // Bias enable wire
-wire         bias_en;                  // bias control
+wire         bias_en;                 // bias control
 
 // pattern opcodes are saved in pattern RAM.
-wire         ptn_enable;
-wire         ptn_wen;                  // opcode processor saves pattern opcodes to pattern RAM 
-wire [15:0]  ptn_addr;                 // address 
-wire [95:0]  ptn_dat_i;                // 12 bytes, 3 bytes patClk tick, 9 bytes for opcode, length, and data   
-wire [95:0]  ptn_dat_o;                // 12 bytes, 3 bytes patClk tick, 9 bytes for opcode, length, and data   
-wire         ptn_processor_en;         // Run pattern processor 
-wire [15:0]  ptn_start_addr;         // address 
+wire         ptn_wen;                 // opcode processor saves pattern opcodes to pattern RAM 
+wire [15:0]  ptn_addr;                // address 
+wire [95:0]  ptn_dat;                 // 12 bytes, 3 bytes patClk tick, 9 bytes for opcode, length, and data   
+wire         ptn_proc_en;             // Run pattern processor 
+wire [15:0]  ptn_start_addr;          // address 
 
 wire [31:0]  opc_count;               // count opcodes for status info                     
 wire [7:0]   opc_status;              // NULL opcode terminates, done=0, or error code
@@ -1175,32 +1173,16 @@ always @(posedge clk050)
     .status_o           (pls_status)            // 0=busy, SUCCESS when done, or an error code
   );
 
-  //////////////////////////////////////////////////////////////////////
-  // Pattern RAM, 64k per channel initially. (Need to parameterize the size)
-  // pattern opcodes write the patterns here.
-  // pattern_sequencer runs pattern from pattern RAM
-  // 
-  // Description: Each entry is 12 bytes.
-  // 3 MS bytes are patClk pattern clock tick. 100ns clock, pattern starts at 0
-  // 9 LS bytes are saved opcode, length, and data. Leaves room for PULSE opcode. 
-  // PULSE opcode is saved without its first byte (Channel) There will be a 
-  // separate instance of pattern RAM for each channel.
-  // Opcodes will be left-justified in the 9 byte field.
-  //////////////////////////////////////////////////////////////////////
-  // To run pattern, drop each opcode into opcode processor at correct time. 
-  // pattern_ram_addr is set by opcode processor when a pattern is not running.
-  // when a pattern is running it's set by the pattern processor.
-  ptn_ram #(.DEPTH(65536))
-  patterns 
-  (
-      .clk(sys_clk), 
-      .we(ptn_wen), 
-      .en(ptn_enable), 
-      .addr(ptn_addr), 
-      .data_i(ptn_dat_i), 
-      .data_o(ptn_dat_o)
-  );
-  
+//// Pattern RAM
+//// Xilinx XST-specific meta comment follows:
+//(* ram_style = "distributed" *) reg  [WIDTH-1:0]  fifoRAM[DEPTH-1:0];
+
+//  ptn_ram #(
+//  .FILL_BITS(`PWR_FIFO_FILL_BITS)
+//  )
+//  patterns(
+//  );
+
 
 // ******************************************************************************
 // *                                                                            *
@@ -1379,49 +1361,49 @@ always @(posedge clk050)
 /////////////////////////////////////////////////
 //  Maintain overall system state information 
 /////////////////////////////////////////////////
-//  always @(*) begin
-//    // Opcode processor status is opc_status
-//    // Frequency status is frq_status
-//    // Power processor status is pwr_status
-//    // Pulse processor status is pls_status
-//    // Pattern processor status is ptn_status
-//    if(opc_rspf_rdy)
-//      sys_state = sys_state | `STATE_RSP_READY;
+  always @(*) begin
+    // Opcode processor status is opc_status
+    // Frequency status is frq_status
+    // Power processor status is pwr_status
+    // Pulse processor status is pls_status
+    // Pattern processor status is ptn_status
+    if(opc_rspf_rdy)
+      sys_state = sys_state | `STATE_RSP_READY;
+    else
+      sys_state = sys_state & ~(`STATE_RSP_READY);
+
+// This creates timing loop error            
+//    if(opc_status == 0)
+//      sys_state = sys_state | `STATE_OPC_BUSY;
 //    else
-//      sys_state = sys_state & ~(`STATE_RSP_READY);
-
-//// This creates timing loop error            
-////    if(opc_status == 0)
-////      sys_state = sys_state | `STATE_OPC_BUSY;
-////    else
-////      sys_state = sys_state & ~(`STATE_OPC_BUSY);
+//      sys_state = sys_state & ~(`STATE_OPC_BUSY);
             
-////    if(frq_status == 0)
-////      sys_state = sys_state | `STATE_FRQ_BUSY;
-////    else
-////      sys_state = sys_state & ~(`STATE_FRQ_BUSY);
+//    if(frq_status == 0)
+//      sys_state = sys_state | `STATE_FRQ_BUSY;
+//    else
+//      sys_state = sys_state & ~(`STATE_FRQ_BUSY);
         
-////    if(pwr_status == 0)
-////      sys_state = sys_state | `STATE_PWR_BUSY;
-////    else
-////      sys_state = sys_state & ~(`STATE_PWR_BUSY);
+//    if(pwr_status == 0)
+//      sys_state = sys_state | `STATE_PWR_BUSY;
+//    else
+//      sys_state = sys_state & ~(`STATE_PWR_BUSY);
             
-////    if(pls_status == 0)
-////      sys_state <= sys_state | `STATE_PLS_BUSY;
-////    else
-////      sys_state <= sys_state & ~(`STATE_PLS_BUSY);
+//    if(pls_status == 0)
+//      sys_state <= sys_state | `STATE_PLS_BUSY;
+//    else
+//      sys_state <= sys_state & ~(`STATE_PLS_BUSY);
 
-////    if(ptn_status == 0)
-////      sys_state = sys_state | `STATE_PTN_BUSY;
-////    else
-////      sys_state = sys_state & ~(`STATE_PTN_BUSY);
+//    if(ptn_status == 0)
+//      sys_state = sys_state | `STATE_PTN_BUSY;
+//    else
+//      sys_state = sys_state & ~(`STATE_PTN_BUSY);
 
-////    if(spi_busy)
-////      sys_state = sys_state | `STATE_SPI_BUSY;
-////    else
-////      sys_state = sys_state & ~(`STATE_SPI_BUSY);
+//    if(spi_busy)
+//      sys_state = sys_state | `STATE_SPI_BUSY;
+//    else
+//      sys_state = sys_state & ~(`STATE_SPI_BUSY);
 
-//  end
+  end
 
 
 // ******************************************************************************
