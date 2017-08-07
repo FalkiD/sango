@@ -33,7 +33,9 @@
 //                  07/17/2017 JLC Working w/ RMR @ Ampleon #3:  DDS SPI 
 // Revision 1.00.9  07/19/2017 JLC Working w/ RMR @ Ampleon #4:  DDS SPI 
 // Revision 1.00.A  07/26/2017 RMR Merged Coop & Rick
+// Revision 1.00.B  08/01/2017 JLC DDS SPI Init & Re-Freq AD9954
+// Revision 1.00.C  08/04/2017 JLC DDS SPI Init & Re-Freq AD9954 & dds.v (esp. sclk-data) cleanup.
 //
 //------------------------------------------------------------------------------
 
-`define VERSION 16'h1_00_A     // V.vv.r FPGA development revision
+`define VERSION 16'h1_00_C     // V.vv.r FPGA development revision

@@ -326,6 +326,9 @@ module power #(parameter FILL_BITS = 4)
     .busy(spi_busy),
     .new_data(spi_done_byte)     // 1=signal, data_out is valid
   );
+
+  // Startup power level
+  localparam INIT_DBMx10    = 400;  // *10 dBm
  
   /////////////////////////////////
   // Set Power state definitions //
@@ -435,6 +438,14 @@ module power #(parameter FILL_BITS = 4)
       internal <= 1'b0;
     end
     else if(power_en == 1) begin
+      if(power == 32'd0) begin
+        // FPGA was just powered ON, initialize  TBD
+        
+        
+      
+        power <= INIT_DBMx10;
+      end
+
       case(state)
         PWR_WAIT: begin
           if(latency_counter == 0)

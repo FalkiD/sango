@@ -21,9 +21,9 @@ u 0.5 ms w 300000E 0; -- Set host DMA address at 0x00
 u 0.5 ms w 3000000 200 0; -- Set blk_size=512, blk_count=0
 u 0.5 ms w 3000002 0 00000000; -- Write CMD0 (RESET, no response)
 u 0.5 ms w 3000002 1 00000000; -- Write CMD1 (SEND_OP_COND)
-u 2.0 ms r 3000004 4; --Read CMD response
+--u 2.0 ms r 3000004 4; --Read CMD response
 u 0.5 ms w 3000002 1 00FF8000; -- Write CMD1 (SEND_OP_COND) (ocr_pwrup_done)
-u 2.0 ms r 3000004 4; --Read CMD response
+--u 2.0 ms r 3000004 4; --Read CMD response
 u 0.5 ms w 3000002 2 00000000; -- Write CMD2 (ALL_SEND_CID, long response)
 u 0.5 ms w 3000002 3 00050000; -- Write CMD3 (SET_RELATIVE_ADDRESS)
 u 0.5 ms w 3000002 7 00050000; -- Write CMD7 (SELECT) GOES TO CARD_TRAN
@@ -32,6 +32,8 @@ u 0.5 ms w 3000008 7D000002; -- Set controller timeout=32000, bus size 8 bits
 u 1.5 ms w 3000002 6 03B70200; -- Write CMD6 (SWITCH) set bus width 8 bits
 -- 26-Jul:Added DAC opcodes to host_ram_init.txt at
 -- (Host DMA) address 0, don't need to load here anymore
+u 1.0 ms w 300002c 02000; -- DDS init wire
+u 1.0 ms w 300002c 0;
 u 0.5 ms w 300000E 0; -- Set host DMA address at 0x00
 u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
 u 1.0 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)

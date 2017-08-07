@@ -298,6 +298,9 @@ reg  [15:0]  count4;
 
 wire         sys_clk;
 wire         sys_rst_n;
+
+wire         spiDevsDoInit;
+
 wire         mmcm_rst_i;
 wire         mmcm_pwrdn_i;
 wire         mmcm_locked_o;
@@ -411,6 +414,12 @@ wire         frq_fifo_full;           // frequency fifo full flag
 wire [5:0]   frq_fifo_count;
 wire [31:0]  ft_bytes;                // frequency tuning word SPI bytes for DDS SPI
 wire [7:0]   frq_status;              // frequency processor status
+// DDS processor wires
+wire [31:0]  ftw_fifo_dat_i; // = 32'h0000_0000;          // frequency tuning word fifo input(SPI data) from frequency processor.
+wire         ftw_fifo_wen; // = 1'b0;            // frequency tuning word fifo we.
+wire         ftw_fifo_full;           // ftw fifo full.
+wire         ftw_fifo_mt;             // ftw fifo empty.
+wire         dds_init;                // pulse to do DDS init sequence
 
 // Power processor wires
 wire [38:0] pwr_fifo_dat_i;          // to fifo from opc, power or cal value. 
@@ -479,18 +488,16 @@ reg          dbg_spi_done;
 wire [2:0]   dbg_spi_device;       // 1=VGA, 2=SYN, 3=DDS, 4=ZMON
 wire [15:0]  dbg_enables; // = 1'b0;          // toggle various enables/wires
 
+// DDS/SYN lines
+wire         rmr_DDS_SCLK;
+wire         rmr_DDS_MOSI;
+wire         rmr_DDS_MISO = 1'b0;
+wire         rmr_DDS_SSn;
 wire         rmr_DDS_IORST;
 wire         rmr_DDS_IOUP;
 wire         rmr_DDS_SYNC;
 wire         rmr_DDS_PS0;
 wire         rmr_DDS_PS1;
-
-wire         jlc_DDS_IORST;
-wire         jlc_DDS_IOUP;
-wire         jlc_DDS_SYNC;
-wire         jlc_DDS_PS0;
-wire         jlc_DDS_PS1;
-
 
 //////////////////////////////////////////////////////////
 // Backdoor fifo variables
@@ -1328,33 +1335,33 @@ always @(posedge clk050)
       .VRSN                       (`VERSION),
       .CLK_FREQ                   (`GLBL_CLK_FREQ_MCU),    // <JLC_TEMP_CLK
       .SPI_CLK_FREQ               (25000000)
-    ) hwdbg_dds_spi
+    ) dds_spi
     (                                                      // 
       // infrastructure, etc.
       .clk_i                      (sys_clk),               // 
       .rst_i                      (!sys_rst_n),            // 
   
-      .doInit_i                   (1'b0),                  // do an init sequence. 
+      .doInit_i                   (dds_init),              // do an init sequence. 
       .hwdbg_dat_i                (hwdbg_ctl[35:0]),       // hwdbg data input.
       .hwdbg_we_i                 (extd_fifo_wr_dds_w),    // hwdbg we.
       .freqproc_dat_i             ({32{1'b0}}),            // opcproc data input.
       .freqproc_we_i              (1'b0),                  // opcproc we.
       .dds_fifo_full_o            (),                      // opcproc full.
       .dds_fifo_empty_o           (),                      // opcproc empty.
-      .dds_spi_sclk_o             (jlc_DDS_SCLK),          // 
-      .dds_spi_mosi_o             (jlc_DDS_MOSI),          //
-      .dds_spi_miso_i             (jlc_DDS_MISO),          // 
-      .dds_spi_ss_n_o             (jlc_DDS_SSn),           // 
-      .dds_spi_iorst_o            (jlc_DDS_IORST),         // 
-      .dds_spi_ioup_o             (jlc_DDS_IOUP),          // 
-      .dds_spi_sync_o             (jlc_DDS_SYNC),          // 
-      .dds_spi_ps0_o              (jlc_DDS_PS0),           // 
-      .dds_spi_ps1_o              (jlc_DDS_PS1),           // 
+      .dds_spi_sclk_o             (rmr_DDS_SCLK),          // 
+      .dds_spi_mosi_o             (rmr_DDS_MOSI),          //
+      .dds_spi_miso_i             (rmr_DDS_MISO),          // 
+      .dds_spi_ss_n_o             (rmr_DDS_SSn),           // 
+      .dds_spi_iorst_o            (rmr_DDS_IORST),         // 
+      .dds_spi_ioup_o             (rmr_DDS_IOUP),          // 
+      .dds_spi_sync_o             (rmr_DDS_SYNC),          // 
+      .dds_spi_ps0_o              (rmr_DDS_PS0),           // 
+      .dds_spi_ps1_o              (rmr_DDS_PS1),           // 
   
       .dbg0_o                     (),             //
       .dbg1_o                     (),             //
-      .dbg2_o                     (),             //
-      .dbg3_o                     ()              //
+      .dbg2_o                     (FPGA_MCU1),             // DDS_IORST
+      .dbg3_o                     (FPGA_MCU2)              // DDS_IOUP
      );
 
 
@@ -1425,7 +1432,7 @@ always @(posedge clk050)
   wire [7:0]  spi_read;
   wire        spi_busy;         // 'each byte' busy
   wire        spi_done_byte;    // 1=done with a byte, data is valid
-  spi #(.CLK_DIV(3)) syn_spi 
+  spi #(.CLK_DIV(3)) debug_spi 
   (
       .clk(sys_clk),
       .rst(!sys_rst_n),
@@ -1751,14 +1758,14 @@ end
   // Connect SPI to wires based on which device is selected.
   localparam SPI_VGA = 4'd1, SPI_SYN = 4'd2, SPI_DDS = 4'd3, SPI_ZMON = 4'd4;
 
-  assign SYN_SSn = dbg_spi_device == SPI_SYN ? SPI_SSn : 1'b1;
-  assign SYN_SCLK = dbg_spi_device == SPI_SYN ? SPI_SCLK : 1'b0;
-  assign SYN_MOSI = dbg_spi_device == SPI_SYN ? SPI_MOSI : 1'b0;
+  assign SYN_SSn  = (dbg_spi_device == SPI_SYN) ? SPI_SSn  : 1'b1;
+  assign SYN_SCLK = (dbg_spi_device == SPI_SYN) ? SPI_SCLK : 1'b0;
+  assign SYN_MOSI = (dbg_spi_device == SPI_SYN) ? SPI_MOSI : 1'b0;
 
-  assign rmr_DDS_SSn = dbg_spi_device == SPI_DDS ? SPI_SSn : 1'b1;
-  assign rmr_DDS_SCLK = dbg_spi_device == SPI_DDS ? SPI_SCLK : 1'b0;
-  assign rmr_DDS_MOSI = dbg_spi_device == SPI_DDS ? SPI_MOSI : 1'b0;
-  
+  assign DDS_SSn  = (dbg_spi_device == SPI_DDS) ? SPI_SSn  : rmr_DDS_SSn;
+  assign DDS_SCLK = (dbg_spi_device == SPI_DDS) ? SPI_SCLK : rmr_DDS_SCLK;
+  assign DDS_MOSI = (dbg_spi_device == SPI_DDS) ? SPI_MOSI : rmr_DDS_MOSI;
+
   // S4 Enables/lines
   localparam BIT_RF_GATE          = 16'h0001;
   localparam BIT_RF_GATE2         = 16'h0002;
@@ -1773,12 +1780,14 @@ end
   localparam BIT_DDS_PS0          = 16'h0400;
   localparam BIT_DDS_PS1          = 16'h0800;
   localparam BIT_ZMON_EN          = 16'h1000;                           // <JLC_TEMP_ZMON_EN>
-  
+  localparam BIT_DDS_INIT         = 16'h2000;                           // Do DDS init sequence
   localparam BIT_SPI_DBG_MODE     = 16'h4000;                           // Enable this SPI debugger
   localparam BIT_TEMP_SYS_RST     = 16'h8000;                           // <JLC_TEMP_RST>
 
   // Mux these debug controls
   assign dbg_spi_mode = 1'b0; //(dbg_enables & BIT_SPI_DBG_MODE) == 16'h4000 ? 1'b1 : 1'b0;   // Mux SPI outputs   
+
+  assign dds_init = (dbg_enables & BIT_DDS_INIT) ? 1'b1 : 1'b0;
 
   wire dbg_rfgate;
   assign dbg_rfgate = dbg_enables & BIT_RF_GATE ? 1'b1 : 1'b0;  
@@ -1815,23 +1824,23 @@ end
   
   wire dbg_ddsiorst;
   assign dbg_ddsiorst = dbg_enables & BIT_DDS_IORST ? 1'b1 : 1'b0; 
-  assign rmr_DDS_IORST = dbg_spi_mode == 1'b1 ? dbg_ddsiorst : 1'b0;
+  assign DDS_IORST = dbg_spi_mode == 1'b1 ? dbg_ddsiorst : rmr_DDS_IORST;
   
   wire dbg_ddsioup;
   assign dbg_ddsioup = dbg_enables & BIT_DDS_IOUP ? 1'b1 : 1'b0;
-  assign rmr_DDS_IOUP = dbg_spi_mode == 1'b1 ? dbg_ddsioup : 1'b0;
+  assign DDS_IOUP = (dbg_spi_mode == 1'b1) ? dbg_ddsioup : rmr_DDS_IOUP;
   
   wire dbg_ddssync;
   assign dbg_ddssync = dbg_enables & BIT_DDS_SYNC ? 1'b1 : 1'b0;
-  assign rmr_DDS_SYNC = dbg_spi_mode == 1'b1 ? dbg_ddssync : 1'b0;
+  assign DDS_SYNC = dbg_spi_mode == 1'b1 ? dbg_ddssync : rmr_DDS_SYNC;
   
   wire dbg_ddsps0;
   assign dbg_ddsps0 = dbg_enables & BIT_DDS_PS0 ? 1'b1 : 1'b0;
-  assign rmr_DDS_PS0 = dbg_spi_mode == 1'b1 ? dbg_ddsps0 : 1'b0;
+  assign DDS_PS0 = dbg_spi_mode == 1'b1 ? dbg_ddsps0 : rmr_DDS_PS0;
    
   wire dbg_ddsps1;
   assign dbg_ddsps1 = dbg_enables & BIT_DDS_PS1 ? 1'b1 : 1'b0;
-  assign rmr_DDS_PS1 = dbg_spi_mode == 1'b1 ? dbg_ddsps1 : 1'b0;
+  assign DDS_PS1 = dbg_spi_mode == 1'b1 ? dbg_ddsps1 : rmr_DDS_PS1;
    
   wire dbg_zmonen;
   assign dbg_zmonen = dbg_enables & BIT_ZMON_EN ? 1'b1 : 1'b0;
@@ -1892,19 +1901,12 @@ end
  
  assign ACTIVE_LEDn = hwdbg_stat[255]?count2[24]:count2[25];
  
- assign  DDS_MOSI    = hwdbg_stat[254] ? jlc_DDS_MOSI  : rmr_DDS_MOSI;   //  F2    O    AD9954 DDS SPI+ I/F
- assign  DDS_SSn     = hwdbg_stat[254] ? jlc_DDS_SSn   : rmr_DDS_SSn;    //  G2    O
- assign  DDS_SCLK    = hwdbg_stat[254] ? jlc_DDS_SCLK  : rmr_DDS_SCLK;   //  G1    O       
- assign  DDS_IORST   = hwdbg_stat[254] ? jlc_DDS_IORST : rmr_DDS_IORST;  //  H2    O       
- assign  DDS_IOUP    = hwdbg_stat[254] ? jlc_DDS_IOUP  : rmr_DDS_IOUP;   //  H1    O       
- assign  DDS_SYNC    = hwdbg_stat[254] ? jlc_DDS_SYNC  : rmr_DDS_SYNC;   //  K1    O
- assign  DDS_PS0     = hwdbg_stat[254] ? jlc_DDS_PS0   : rmr_DDS_PS0;    //  J1    O
- assign  DDS_PS1     = hwdbg_stat[254] ? jlc_DDS_PS0   : rmr_DDS_PS0;    //  L2    O
-   
   // 22-Jun have to scope MMC signals
-  assign FPGA_MCU4 = CONV; //MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.
-  assign FPGA_MCU3 = ADC_SCLK; //MMC_CMD; //count3[15];    // 200MHz div'd by 2^16.
-  assign FPGA_MCU2 = ZMON_EN;
-  assign FPGA_MCU1 = MMC_CMD;
+  assign FPGA_MCU4 = DDS_MOSI; //CONV; //MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.
+  assign FPGA_MCU3 = DDS_SCLK; // ADC_SCLK; //MMC_CMD; //count3[15];    // 200MHz div'd by 2^16.
+  //assign FPGA_MCU2 = ZMON_EN;
+  //assign FPGA_MCU1 = MMC_CMD;
+
+  assign  spiDevsDoInit = hwdbg_ctl[253];
 
   endmodule

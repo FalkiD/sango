@@ -19,7 +19,7 @@
 // ---------------------------------------------------------------------------------
 // AD9954 Application Summary:
 //     Single-Tone Mode, RefClk(~100MHz) x 4, SPI w/MSB-1st,
-//     DDS_MOSI change on falling edge of DDS_SCLK.
+//     dds_MOSI change on falling edge of dds_SCLK.
 //
 //
 // ---------------------------------------------------------------------------------
@@ -30,25 +30,6 @@
 
 `include "timescale.v"        // Every source file needs this include
 
-`define LOG2(x) \
-   (x <= 2) ? 1 : \
-   (x <= 4) ? 2 : \
-   (x <= 8) ? 3 : \
-   (x <= 16) ? 4 : \
-   (x <= 32) ? 5 : \
-   (x <= 64) ? 6 : \
-   (x <= 128) ? 7 : \
-   (x <= 256) ? 8 : \
-   (x <= 512) ? 9 : \
-   (x <= 1024) ? 10 : \
-   (x <= 2048) ? 11 : \
-   (x <= 4096) ? 12 : \
-   (x <= 8192) ? 13 : \
-   (x <= 16384) ? 14 : \
-   (x <= 32768) ? 15 : \
-   (x <= 65536) ? 16 : \
-   -1
-
 
 module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK_FREQ=25000000)
   (
@@ -56,6 +37,7 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
     input                  clk_i,                    // 
     input                  rst_i,                    // 
     input                  doInit_i,                 // do an init sequence. 
+    output                 dds_initd_o,              // initialization done.
     input        [35:0]    hwdbg_dat_i,              // hwdbg data input.
     input                  hwdbg_we_i,               // hwdbg we.
     input        [31:0]    freqproc_dat_i,           // opcproc data input.
@@ -67,7 +49,7 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
     input                  dds_spi_miso_i,           // 
     output                 dds_spi_ss_n_o,           // 
     output                 dds_spi_iorst_o,          // 
-    output reg             dds_spi_ioup_o = 1'b0,    // 
+    output                 dds_spi_ioup_o,          // 
     output                 dds_spi_sync_o,           // 
     output                 dds_spi_ps0_o,            // 
     output                 dds_spi_ps1_o,            // 
@@ -77,31 +59,28 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
     output                 dbg3_o                    // Utility debug output #3.
   );
 
-   // Freq Gen Info
-//   localparam  SPI_CLK_RATIO      = CLK_FREQ / SPI_CLK_FREQ % 256; // Assumes even integral ratio => 4.
-//   localparam  SPI_CLK_DUTYCY     = SPI_CLK_RATIO % 256;             // Assumes any  integral ratio.
-//   localparam  SPI_CLK_DIVSIZ     = `LOG2(SPI_CLK_RATIO);
-//   localparam  SPI_DUT_DIVSIZ     = `LOG2(SPI_CLK_DUTYCY);
-
    // DDS SPI State Machine State Codes
    localparam  DDS_SPI_STATE_IDLE = 3'b000;
    localparam  DDS_SPI_STATE_CS0  = 3'b001;
    localparam  DDS_SPI_STATE_CS1  = 3'b010;
    localparam  DDS_SPI_STATE_SHF0 = 3'b100;
    localparam  DDS_SPI_STATE_SHF1 = 3'b101;
-   localparam  DDS_SPI_STATE_IOU0 = 3'b110;
-   localparam  DDS_SPI_STATE_IOU1 = 3'b111;
 
   
-   reg  [3:0]                     dds_clk_cntr         = 4'b0;
+   reg  [3:0]                     dds_clk_cnt          = 4'b0;
    reg                            dds_spi_sclk         = 1'b1;
    reg                            dds_spi_wtck         = 1'b0;                 // 1-tick just prior to falling edge of dds_spi_clk
    reg                            dds_spi_wtckr        = 1'b0;                 // 1-tick just prior to falling edge of dds_spi_clk
    reg                            dds_spi_rtck         = 1'b0;                 // 1-tick just prior to rising  edge of dds_spi_clk
    reg                            dds_spi_rtckr        = 1'b0;                 // 
 
-   wire [35:0]                    dds_fifo_dati_w      = ({36{hwdbg_we_i}} & {hwdbg_dat_i}) | ({36{freqproc_we_i}} & {4'b0100, freqproc_dat_i}); 
-   wire                           dds_fifo_we          = freqproc_we_i | hwdbg_we_i;
+   reg                            dds_init_we          = 1'b0;
+   reg  [35:0]                    dds_init_datr        = 36'b0;
+
+   wire [35:0]                    dds_fifo_dati_w      = ( ({36{hwdbg_we_i}}    & hwdbg_dat_i)               | 
+                                                           ({36{freqproc_we_i}} & {4'b1100, freqproc_dat_i}) |
+                                                           ({36{dds_init_we}}   & dds_init_datr) ); 
+   wire                           dds_fifo_we          = freqproc_we_i | hwdbg_we_i | dds_init_we;
    reg  [35:0]                    dds_fifo_datir       = 36'b0;
    reg                            dds_fifo_wer         = 1'b0;
 
@@ -117,22 +96,28 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
    reg  [39:0]                    dds_ops_shftr        = 40'b0;
    reg  [6:0]                     shftCnt              = 1'b0;
    
+   reg                            dds_doInitr          = 1'b0;
+   reg                            dds_initing          = 1'b0;  // Load FIFO w/ init words.
+   reg                            dds_spi_iorst        = 1'b0;
+   reg                            dds_iorsting         = 1'b0;
+   reg                            dds_init_loading     = 1'b0;
+   reg  [4:0]                     dds_iorsting_cnt     = 5'b0_0000;
+   reg                            dds_initd            = 1'b0;  // Completely done SPI-ing init.
+   reg  [15:0]                    dds_init_op_cntr     = 4'b0000;
+   
+   reg                            dds_interOpGap       = 1'b0;
+   reg  [4:0]                     dds_interOpGap_cnt   = 5'b0_0000;
+   
    reg                            dds_spi_ss           = 1'b0;
-   wire                           dds_spi_ss_s         = ~dds_fifo_empty_w & dds_spi_wtck & (dds_spi_state == DDS_SPI_STATE_IDLE);
+   wire                           dds_spi_ss_s         = (~dds_fifo_empty_w & dds_spi_wtck &
+                                                            (dds_spi_state == DDS_SPI_STATE_IDLE) & ~dds_init_loading & ~dds_interOpGap & ~dds_spi_ioup);
    reg                            dds_spi_ss_k         = 1'b0;
    reg                            dds_spi_do_ioup      = 1'b0;
-   reg                            dds_spi_pre_ioup     = 1'b0;
-   reg                            dds_spi_pre_ioup1r   = 1'b0;
-   reg                            dds_spi_pre_ioup2r   = 1'b0;
-   reg                            dds_spi_pre_ioup3r   = 1'b0;
-   reg                            dds_spi_pre_ioup4r   = 1'b0;
-   reg                            dds_spi_pre_ioup5r   = 1'b0;
-   reg                            dds_spi_pre_ioup6r   = 1'b0;
-   reg                            dds_spi_pre_ioup7r   = 1'b0;
+   reg                            dds_spi_ioup_ce      = 1'b0;
    reg                            dds_spi_ioup         = 1'b0;
-   reg  [7:0]                     dds_spi_ioup_cntr    = 8'b0000_0000;
+   reg                            dds_spi_ioupr        = 1'b0;
+   reg  [4:0]                     dds_spi_ioup_cnt     = 5'b0_0000;
 
-   
    
    // Generate: dds_spi_sclk   (e.g. SPI_CLK_RATIO == 8)
    //           dds_spi_wtck
@@ -143,7 +128,7 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
    //                    __    __    __    __    __    __    __    __    __    __    __    __    __    __    __    __   
    // clk_i           __/  \__/  \__/  \__/  \__/  \__/  \__/| \__/  \__/  \__/  \__/| \__/  \__/  \__/  \__/| \__/  \__ 
    //                 ___ _____ _____|_____ _____ _____ _____|_____ _____ _____ _____|_____ _____ _____ _____|_____ _____
-   // dds_clk_cntr    ___X__6__X__7__X__0__X__1__X__2__X__3__X__4__X__5__X__6__X__7__X__0__X__1__X__2__X__3__X__4__X__5__X
+   // dds_clk_cnt     ___X__6__X__7__X__0__X__1__X__2__X__3__X__4__X__5__X__6__X__7__X__0__X__1__X__2__X__3__X__4__X__5__X
    //                      N-2   N-1 |            N/2-2 N/2-1|             N-2   N-1 |            N/2-2 N/2-1|
    //                                |                       |                       |                       |
    //                                |_______________________|                       |_______________________|
@@ -157,7 +142,7 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
                                      
    always @(posedge clk_i) begin
       if (rst_i) begin
-         dds_clk_cntr             <= 4'b0;
+         dds_clk_cnt              <= 4'b0;
          dds_spi_sclk             <= 1'b1;
          dds_spi_wtck             <= 1'b0;
          dds_spi_wtckr            <= 1'b0;
@@ -170,26 +155,26 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
          dds_spi_rtck             <= 1'b0;
          dds_spi_rtckr            <= dds_spi_rtck;
 
-         dds_clk_cntr             <= dds_clk_cntr + 4'b0001;
-         
-            case(dds_clk_cntr) 
-            4'b0110: begin
-               dds_spi_rtck       <= 1'b1;              // dds_spi_rtck to be high during last tck of
-            end                                         //     before rising edge of dds_spi_sclk.
-            4'b0111: begin
-               dds_spi_sclk       <= 1'b0;              //  high half of dds_spi_sclk.
-            end                                         //     before falling edge clk_i.
-            4'b1110: begin
-               dds_spi_wtck       <= 1'b1;              // dds_spi_wtck to be high during last tck
-            end
-            4'b1111: begin
-               dds_spi_sclk       <= 1'b1;              // dds_spi_sclk starts out as high.
-               dds_clk_cntr       <= 4'b0000;
-            end
-         endcase  // End of case(dds_clk_cntr)
+         dds_clk_cnt              <= dds_clk_cnt + 4'b0001;
+
+         case(dds_clk_cnt) 
+         4'b0110: begin
+            dds_spi_wtck       <= 1'b1;              // dds_spi_rtck to be high during last tck
+         end                                         //     before falling edge of dds_spi_sclk.
+         4'b0111: begin
+            dds_spi_sclk       <= 1'b0;              // falling edge of dds_spi_sclk next tick.
+         end                                         //
+         4'b1110: begin
+            dds_spi_rtck       <= 1'b1;              // dds_spi_rtck rising edge last tck
+         end
+         4'b1111: begin
+            dds_spi_sclk       <= 1'b1;              // dds_spi_sclk starts out as high.
+            dds_clk_cnt        <= 4'b0000;           // rising  edge of dds_spi_sclk next tick.
+         end
+         endcase  // End of case(dds_clk_cnt)
       end  // End of if (rst_i) begin else portion
    end  // end of always @(posedge CLK)
-   // end of Generate dds_spi_sclk
+   // end of generate dds_spi_sclk
 
    // dds_fifo_datir/ dds_fifo_dato_w Format:
    //
@@ -257,9 +242,9 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
 
    // Input FIFO instantiation for DDS commands from either opcode processor or hwdbg uart.
    snglClkFifoParmd #(
-    .USE_BRAM(0),
-    .WIDTH(36),
-    .DEPTH(4)
+      .USE_BRAM          (0),
+      .WIDTH             (36),
+      .DEPTH             (4)
    )
    ddsInFifo
    (
@@ -284,74 +269,142 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
          dds_spi_state            <= DDS_SPI_STATE_IDLE;
          dds_spi_ss               <= 1'b0;
          dds_spi_ss_k             <= 1'b0;
-         dds_spi_pre_ioup         <= 1'b0;
-         dds_spi_pre_ioup1r       <= 1'b0;
-         dds_spi_pre_ioup2r       <= 1'b0;
-         dds_spi_pre_ioup3r       <= 1'b0;
-         dds_spi_pre_ioup4r       <= 1'b0;
-         dds_spi_pre_ioup5r       <= 1'b0;
-         dds_spi_pre_ioup6r       <= 1'b0;
-         dds_spi_pre_ioup7r       <= 1'b0;
+         dds_spi_iorst            <= 1'b0;
          dds_spi_ioup             <= 1'b0;
-         dds_spi_ioup_o           <= 1'b0;
-         dds_spi_ioup_cntr        <= 8'b0000_0000;
+         dds_spi_ioupr            <= 1'b0;
+         dds_spi_ioup_ce          <= 1'b0;
+         dds_spi_ioup_cnt         <= 5'b0_0000;
          dds_ops_shftr            <= 40'b0;
          shftCnt                  <= 6'b00_0000;
          dds_fifo_rdr             <= 1'b0;
          dds_fifo_rdrr            <= 1'b0;
          dds_fifo_dator           <= 36'b0;
+         dds_doInitr              <= 1'b0;
+         dds_initing              <= 1'b0;
+         dds_init_loading         <= 1'b0;
+         dds_initd                <= 1'b0;
+         dds_iorsting             <= 1'b0;
+         dds_iorsting_cnt         <= 5'b0_0000;
+         dds_init_we              <= 1'b0;
+         dds_init_op_cntr         <= 4'b0000;
+         dds_interOpGap           <= 1'b0;
+         dds_interOpGap_cnt       <= 5'b0_0000;
       end
       else begin
          // One-tick signals
-         dds_spi_pre_ioup         <= 1'b0;
          dds_fifo_rdr             <= 1'b0;
+         dds_init_we              <= 1'b0;
          
          // Everytime signals
          dds_spi_ss               <= ~dds_spi_ss_k & (dds_spi_ss | dds_spi_ss_s);
-         dds_spi_ss_k             <=(dds_spi_state == DDS_SPI_STATE_SHF1);
-         dds_spi_pre_ioup1r       <= dds_spi_pre_ioup;
-         dds_spi_pre_ioup2r       <= dds_spi_pre_ioup1r;
-         dds_spi_pre_ioup3r       <= dds_spi_pre_ioup2r;
-         dds_spi_pre_ioup4r       <= dds_spi_pre_ioup3r;
-         dds_spi_pre_ioup5r       <= dds_spi_pre_ioup4r;
-         dds_spi_pre_ioup6r       <= dds_spi_pre_ioup5r;
-         dds_spi_pre_ioup7r       <= dds_spi_pre_ioup6r;
-         dds_spi_ioup             <= ~(dds_spi_ioup_cntr == 8'h7F) & (dds_spi_ioup | dds_spi_pre_ioup7r);
-         dds_spi_ioup_o           <= dds_spi_ioup;
-         
-         if (dds_spi_pre_ioup6r) begin
-            dds_spi_ioup_cntr     <= 8'h00;
+         dds_spi_ss_k             <= (shftCnt == 6'b00_0000) & (dds_clk_cnt == 4'b0110) & (dds_spi_state == DDS_SPI_STATE_SHF0);
+
+
+         // Do init sequence (kicked off by doInit_i == 1'b1).
+         dds_doInitr              <= doInit_i;
+         if (doInit_i & ~dds_doInitr) begin
+            dds_spi_state         <= DDS_SPI_STATE_IDLE;
+            dds_init_loading      <= 1'b1;
+            dds_initing           <= 1'b1;
+            dds_initd             <= 1'b0;
+            dds_init_op_cntr      <= 4'b0000;
+            dds_iorsting          <= 1'b1;
+            dds_iorsting_cnt      <= 5'b0_0001;
+         end
+         if (dds_iorsting) begin
+            if (dds_iorsting_cnt == 5'b0_1111) begin
+               dds_iorsting       <= 1'b0;
+               dds_iorsting_cnt   <= 5'b0_0000;
+            end
+            else begin
+               dds_iorsting_cnt   <= dds_iorsting_cnt + 5'b0_0001;
+            end            
          end
          else begin
-            if (dds_spi_ioup) begin
-               dds_spi_ioup_cntr  <= dds_spi_ioup_cntr + 8'h01;
+         end
+         dds_spi_iorst            <= dds_iorsting;
+
+
+         if (dds_interOpGap) begin
+            dds_interOpGap_cnt    <= dds_interOpGap_cnt + 5'b0_0001;
+            if (dds_interOpGap_cnt == 5'b1_1111) begin
+               dds_interOpGap     <= 1'b0;
+               dds_interOpGap_cnt <= 5'b0_0000;
             end
          end
-         
+
+         if (dds_initing) begin
+            case (dds_init_op_cntr)
+            4'b0011: begin
+               dds_init_datr   <= 36'h0_00000240;
+               dds_init_we     <= 1'b1;              // 1-tick signal
+               dds_init_op_cntr<= dds_init_op_cntr + 4'b0001;
+            end
+            4'b0111: begin
+               dds_init_datr   <= 36'h1_00020800;
+               dds_init_we     <= 1'b1;              // 1-tick signal
+               dds_init_op_cntr<= dds_init_op_cntr + 4'b0001;
+            end
+            4'b1011: begin
+               dds_init_datr   <= 36'hC_1B637E53;    // Generates an ioup pulse that returns low after operation.
+               dds_init_we     <= 1'b1;              // 1-tick signal
+               dds_init_op_cntr<= dds_init_op_cntr + 4'b0001;
+            end
+            4'b1111: begin
+               dds_init_op_cntr<= 4'b1111;
+               dds_init_loading<= 1'b0;
+            end
+            default: begin
+               dds_init_op_cntr<= dds_init_op_cntr + 4'b0001;
+            end
+            endcase  // End of case (dds_init_op_cntr)
+         end  // End of if (dds_initing)
+
+
+         // dds FIFO reads and shifting
          dds_fifo_rdr             <= dds_spi_ss_s;
          dds_fifo_rdrr            <= dds_fifo_rdr;
          dds_fifo_dator           <= dds_fifo_dato_w;
-         
          if ( dds_fifo_rdr ) begin
             dds_ops_shftr         <= {1'b0, 4'b0000, dds_fifo_dato_w[34:0]};
          end
          else if (dds_spi_wtck) begin
             dds_ops_shftr         <= {dds_ops_shftr[38:0], 1'b0}; 
          end
-         
+         if ( dds_fifo_rdrr ) begin
+            dds_spi_do_ioup       <= dds_fifo_dator[35];
+            shftCnt               <= AD9954_numRegBits(dds_fifo_dator[34:32]);
+         end        
          if ( dds_spi_ss & dds_spi_wtck ) begin
             shftCnt               <= shftCnt - 6'b00_0001;
          end
          
-         if ( dds_fifo_rdrr ) begin
-            dds_spi_do_ioup       <= dds_fifo_dator[35];
-            shftCnt               <= AD9954_numRegBits(dds_fifo_dator[34:32]);
+         
+         // Generate dds_IOUP pulse
+         if (dds_spi_ioup_ce) begin
+            dds_spi_ioup_cnt      <= dds_spi_ioup_cnt  + 5'b0_0001;
+            case (dds_spi_ioup_cnt)
+            5'b0_1111: begin
+               dds_spi_ioup       <= 1'b1;  // Assert   the IOUP pulse.
+            end
+            5'b1_1111: begin
+               dds_spi_ioup       <= 1'b0;  // Deassert the IOUP pulse.
+               dds_initing        <= 1'b0;  // If you were initing, the first IOUP pulse kills dds_initing and
+               dds_initd          <= 1'b1;  //                                           sets  dds_initd.
+               dds_spi_ioup_ce    <= 1'b0;
+               dds_spi_ioup_cnt   <= 5'b0_0000;
+               dds_interOpGap     <= 1'b1;
+            end
+            endcase  // End of case (dds_spi_ioup_cnt)
          end
+         dds_spi_ioup             <= ~(dds_spi_ioup_cnt == 5'b1_1111) & (dds_spi_ioup | (dds_spi_ioup_cnt == 5'b0_1111));
+         dds_spi_ioupr            <= dds_spi_ioup; 
+         
          
          // DDS SPI State Machine: state-by-state case statement
          case (dds_spi_state)
          DDS_SPI_STATE_IDLE: begin
-            if (~dds_fifo_rdr) begin
+            if (~dds_fifo_rdr | dds_init_loading | dds_interOpGap | dds_spi_ioup) begin
                dds_spi_state      <= DDS_SPI_STATE_IDLE;
             end
             else begin
@@ -378,10 +431,18 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
             end
          end //  End of DDS_SPI_STATE_SHF0: case.
          DDS_SPI_STATE_SHF1: begin
-            dds_spi_state         <= DDS_SPI_STATE_IDLE;
+            if (dds_spi_do_ioup | dds_spi_ioup_ce) begin
+               dds_spi_state         <= DDS_SPI_STATE_SHF1;
+            end
+            else begin
+               dds_spi_state         <= DDS_SPI_STATE_IDLE;
+            end
             if (dds_spi_do_ioup) begin
                dds_spi_do_ioup       <= 1'b0;
-               dds_spi_pre_ioup      <= 1'b1;
+               dds_spi_ioup_ce       <= 1'b1;
+            end 
+            else begin
+               dds_interOpGap        <= 1'b1;
             end
          end //  End of DDS_SPI_STATE_SHF0: case.
          endcase //  End of case (dds_spi_state)
@@ -397,9 +458,9 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
    //  DDS_REG_POW0_LEN   = 16 bits
    //
    function [5:0] AD9954_numRegBits;
-      input [2:0] DDS_regAddr;
+      input [2:0] dds_regAddr;
       begin
-         case (DDS_regAddr[2:0])
+         case (dds_regAddr[2:0])
             3'h0: AD9954_numRegBits = 6'h27;  // CFR0 (# of bits - 1) + 8 = 39 decimal.
             3'h1: AD9954_numRegBits = 6'h1F;  // CFR1 (# of bits - 1) + 8 = 31 decimal.
             3'h2: AD9954_numRegBits = 6'h17;  // ASF  (# of bits - 1) + 8 = 23 decimal.
@@ -418,14 +479,17 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
    assign  dds_spi_sclk_o     = dds_spi_ss ? dds_spi_sclk : 1'b1; 
    assign  dds_spi_ss_n_o     = ~dds_spi_ss;
    
-   assign  dds_spi_iorst_o    = 1'b0; 
+   assign  dds_spi_iorst_o    = dds_spi_iorst;
+   assign  dds_spi_ioup_o     = dds_spi_ioupr; 
    assign  dds_spi_sync_o     = 1'b0; 
    assign  dds_spi_ps0_o      = 1'b0; 
    assign  dds_spi_ps1_o      = 1'b0; 
 
+   assign  dds_initd_o        = dds_initd;
+       
    assign  dbg0_o             = dds_spi_ss;
-   assign  dbg1_o             = dds_spi_sclk;
-   assign  dbg2_o             = dds_ops_shftr[39];
+   assign  dbg1_o             = dds_ops_shftr[39];
+   assign  dbg2_o             = dds_spi_iorst;
    assign  dbg3_o             = dds_spi_ioup;
 
 endmodule

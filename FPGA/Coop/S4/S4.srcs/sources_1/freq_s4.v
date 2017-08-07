@@ -66,7 +66,7 @@ module freq_s4 #(parameter FILL_BITS = 6,
   localparam MULTIPLIER_CLOCKS = 6'd6;
   reg  [5:0]       latency_counter;    // wait for multiplier & divider 
 
-  reg  [31:0]      K = 32'h0C00DEF5;        // Tuning word scale
+  reg  [31:0]      K = 32'h030037BD;    //32'h0C00DEF5;        // Tuning word scale
   wire [63:0]      FTW;                     // FTW calculated
   reg              multiply;
 
@@ -93,15 +93,18 @@ module freq_s4 #(parameter FILL_BITS = 6,
     
   always @(posedge sys_clk)
   begin
-    if(!sys_rst_n)
-    begin
+    if(!sys_rst_n) begin
       state <= FRQ_IDLE;            
       frq_fifo_ren_o <= 0;
       ftw_o <= 32'd0;
       status_o <= `SUCCESS;
     end
-    else if(freq_en == 1'b1)
-    begin
+    else if(freq_en == 1'b1) begin
+      if(frequency == 0) begin
+        // FPGA was just powered ON, initialize all HW... TBD
+        
+        frequency <= 32'd2450;
+      end
       case(state)
       FRQ_WAIT: begin
         if(latency_counter == 0) begin
