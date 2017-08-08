@@ -276,10 +276,6 @@ reg  [15:0]  sys_state = 0;             // s4 system state (e.g. running a patte
 wire         pulse_busy;
 wire [31:0]  sys_mode;                  // MODE opcode can set system-wide flags
 
-//// Initialize ourselves at startup
-//wire        initialized = 1'b0;
-//reg  [3:0]  init_clks = 4'd10; 
-
 // Use 0x4000 if dbg_enables to turn ON SPI debugger mode
 // Otherwise SPI outputs are driven by various processor modules
 wire         dbg_spi_mode;
@@ -298,6 +294,9 @@ reg  [15:0]  count4;
 
 wire         sys_clk;
 wire         sys_rst_n;
+// initialize hw after a reset
+reg          initialize = 1'b0;
+reg          hw_init = 1'b0;
 
 wire         spiDevsDoInit;
 
@@ -738,12 +737,20 @@ always @(posedge clk050)
     count4 <= count4+1;
   end
 
-// Initialize things at startup??
-//always @(posedge sys_clk) begin
-//  if (!initialized) begin
-//
-//  end
-//end
+// Initialize things after reset pulse
+always @(posedge sys_clk) begin
+  if (!sys_rst_n) begin
+    initialize <= 1'b1;
+  end
+  else begin
+    if(initialize == 1'b1) begin
+      hw_init <= 1'b1;
+      initialize <= 1'b0;
+    end
+    else 
+      hw_init <= 1'b0;
+  end
+end
 
   // Instantiate VHDL fifo that mmc_tester instance 
   // is using to store opcodes (opcode processor input fifo)
@@ -1783,7 +1790,6 @@ end
   // We'll run at 12.5MHz (100MHz/8), CPOL=0, CPHA=0
   //////////////////////////////////////////////////////
   
-  // top level SPI busy flag used by mmc_test_pack 
   // SPI debug command processsor
   // ******************************************************
   // ** 18-Jul-2017 note: 0x4000 is used to turn ON SPI  **
@@ -1823,7 +1829,7 @@ end
   // Mux these debug controls
   assign dbg_spi_mode = 1'b0; //(dbg_enables & BIT_SPI_DBG_MODE) == 16'h4000 ? 1'b1 : 1'b0;   // Mux SPI outputs   
 
-  assign dds_init = (dbg_enables & BIT_DDS_INIT) ? 1'b1 : 1'b0;
+  assign dds_init = (dbg_enables & BIT_DDS_INIT) || (hw_init == 1'b1) ? 1'b1 : 1'b0;
 
   wire dbg_rfgate;
   assign dbg_rfgate = dbg_enables & BIT_RF_GATE ? 1'b1 : 1'b0;  
