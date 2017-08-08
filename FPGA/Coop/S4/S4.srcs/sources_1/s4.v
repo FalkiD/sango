@@ -418,44 +418,44 @@ wire [31:0]  ftw_fifo_dat_i; // = 32'h0000_0000;          // frequency tuning wo
 wire         ftw_fifo_wen; // = 1'b0;            // frequency tuning word fifo we.
 wire         ftw_fifo_full;           // ftw fifo full.
 wire         ftw_fifo_mt;             // ftw fifo empty.
-wire         dds_init;                // pulse to do DDS init sequence
+wire         dds_init;                // pulse to do DDS init sequence, SYN also
 
 // Power processor wires
-wire [38:0] pwr_fifo_dat_i;          // to fifo from opc, power or cal value. 
+wire [38:0]  pwr_fifo_dat_i;          // to fifo from opc, power or cal value. 
                                      // Upper 7 bits are opcode, cal or user power
-wire        pwr_fifo_wen;            // power fifo write enable
-wire [38:0] pwr_fifo_dat_o;          // to power processor
-wire        pwr_fifo_ren;            // power fifo read enable
-wire        pwr_fifo_mt;             // power fifo empty flag
-wire        pwr_fifo_full;           // power fifo full flag
-wire [7:0]  pwr_status;              // power processor status
+wire         pwr_fifo_wen;            // power fifo write enable
+wire [38:0]  pwr_fifo_dat_o;          // to power processor
+wire         pwr_fifo_ren;            // power fifo read enable
+wire         pwr_fifo_mt;             // power fifo empty flag
+wire         pwr_fifo_full;           // power fifo full flag
+wire [7:0]   pwr_status;              // power processor status
 wire [`PWR_FIFO_FILL_BITS-1:0]   pwr_fifo_count;
 // power processor outputs, mux'd to main outputs
-wire        pwr_mosi;
-wire        pwr_sclk;
-wire        pwr_ssn;       
-wire        pwr_vsw;       
+wire         pwr_mosi;
+wire         pwr_sclk;
+wire         pwr_ssn;       
+wire         pwr_vsw;       
 
 // Pulse processor & fifo wires
-wire [63:0] pls_fifo_dat_i;          // to pulse fifo from opc
-wire        pls_fifo_wen;            // pulse fifo write enable
-wire [63:0] pls_fifo_dat_o;          // from pulse fifo to pulse processor
-wire        pls_fifo_ren;            // pulse fifo read enable
-wire        pls_fifo_mt;             // pulse fifo empty flag
-wire        pls_fifo_full;           // pulse fifo full flag
-wire [7:0]  pls_status;              // pulse processor status
+wire [63:0]  pls_fifo_dat_i;          // to pulse fifo from opc
+wire         pls_fifo_wen;            // pulse fifo write enable
+wire [63:0]  pls_fifo_dat_o;          // from pulse fifo to pulse processor
+wire         pls_fifo_ren;            // pulse fifo read enable
+wire         pls_fifo_mt;             // pulse fifo empty flag
+wire         pls_fifo_full;           // pulse fifo full flag
+wire [7:0]   pls_status;              // pulse processor status
 wire [`PWR_FIFO_FILL_BITS-1:0]   pls_fifo_count;
-wire        pls_zmonen;              // from pulse processor to ZMON_EN
-wire        pls_rfgate;              // from pulse processor to RF_GATE
-wire        pls_rfgate2;             // from pulse processor to RF_GATE2
+wire         pls_zmonen;              // from pulse processor to ZMON_EN
+wire         pls_rfgate;              // from pulse processor to RF_GATE
+wire         pls_rfgate2;             // from pulse processor to RF_GATE2
 
 // Measurement fifo wires
-wire [31:0] meas_fifo_dat_i;          // to results fifo from measurement processing in pulse processor
-wire        meas_fifo_wen;            // meas fifo write enable
-wire [31:0] meas_fifo_dat_o;          // from meas fifo to opc response fifo
-wire        meas_fifo_ren;            // meas fifo read enable
-wire        meas_fifo_mt;             // meas fifo empty flag
-wire        meas_fifo_full;           // meas fifo full flag
+wire [31:0]  meas_fifo_dat_i;          // to results fifo from measurement processing in pulse processor
+wire         meas_fifo_wen;            // meas fifo write enable
+wire [31:0]  meas_fifo_dat_o;          // from meas fifo to opc response fifo
+wire         meas_fifo_ren;            // meas fifo read enable
+wire         meas_fifo_mt;             // meas fifo empty flag
+wire         meas_fifo_full;           // meas fifo full flag
 wire [`GLBL_MMC_FILL_LEVEL_BITS-1:0]   meas_fifo_count;
 
 // Bias enable wire
@@ -474,7 +474,6 @@ wire [6:0]   opc_state;               // For debugging
     
 //    // Debugging
 wire [15:0]  dbg_opcodes;
-//wire [15:0]  last_length_w;
 
 // SPI debugging connections for w 03000040 command
 // Write up to 14 byte to SPI device
@@ -497,6 +496,12 @@ wire         rmr_DDS_IOUP;
 wire         rmr_DDS_SYNC;
 wire         rmr_DDS_PS0;
 wire         rmr_DDS_PS1;
+// LTC6946 SYN wires
+wire         synth_ssn;
+wire         synth_sclk;
+wire         synth_mosi;
+wire         synth_miso;
+wire         synth_mute;
 
 //////////////////////////////////////////////////////////
 // Backdoor fifo variables
@@ -1329,13 +1334,12 @@ always @(posedge clk050)
 // *  07/17/2017  JLC                                                           *
 // *    - instantiating AD9954 dds spi module.                                  *
 // *                                                                            *
-// ******************************************************************************
-  
+// ******************************************************************************  
     dds_spi #(
       .VRSN                       (`VERSION),
       .CLK_FREQ                   (`GLBL_CLK_FREQ_MCU),    // <JLC_TEMP_CLK
       .SPI_CLK_FREQ               (25000000)
-    ) dds_spi
+    ) dds_spi_io
     (                                                      // 
       // infrastructure, etc.
       .clk_i                      (sys_clk),               // 
@@ -1364,6 +1368,38 @@ always @(posedge clk050)
       .dbg3_o                     (FPGA_MCU2)              // DDS_IOUP
      );
 
+
+// ******************************************************************************
+// * JLC SPI (for LTC6946)                                                 *
+// *                                                                            *
+// *  08/06/2017  JLC                                                           *
+// *    - instantiating LTC6946 SYN spi module.                                  *
+// *                                                                            *
+// ******************************************************************************  
+    ltc_spi #(
+      .VRSN                       (`VERSION),
+      .CLK_FREQ                   (`GLBL_CLK_FREQ_MCU),    // <JLC_TEMP_CLK
+      .SPI_CLK_FREQ               (20000000)
+    ) syn_spi_io
+  (
+    .clk_i                        (sys_clk),               // 
+    .rst_i                        (!sys_rst_n),            // 
+    .doInit_i                     (dds_init),              // do an init sequence. 
+    .hwdbg_dat_i                  (hwdbg_ctl[35:0]),       // hwdbg data input.
+    .hwdbg_we_i                   (extd_fifo_wr_dds_w),    // hwdbg we.
+    .syn_fifo_full_o              (),                      // opcproc fifo full.
+    .syn_fifo_empty_o             (),                      // opcproc fifo empty.
+    .syn_spi_sclk_o               (synth_sclk),            // 
+    .syn_spi_mosi_o               (synth_mosi),            //
+    .syn_spi_miso_i               (SYN_MISO),              // 
+    .syn_spi_ss_n_o               (synth_ssn),             // 
+    .syn_stat_i                   (SYN_STAT),              // Features set by LTC6946.reg1[5:0] (addr == 4'h1)
+    .syn_mute_n_o                 (synth_mute),            // 1=>RF; 0=>MUTE.
+    .dbg0_o                       (),                      // SYN_SSn.
+    .dbg1_o                       (),                      // syn_ops_shftr[15]
+    .dbg2_o                       (),                      // SYN_SCLK
+    .dbg3_o                       ()                       // syn_initing
+  );
 
 /////////////////////////////////////////////////
 //  Maintain overall system state information 
@@ -1758,9 +1794,9 @@ end
   // Connect SPI to wires based on which device is selected.
   localparam SPI_VGA = 4'd1, SPI_SYN = 4'd2, SPI_DDS = 4'd3, SPI_ZMON = 4'd4;
 
-  assign SYN_SSn  = (dbg_spi_device == SPI_SYN) ? SPI_SSn  : 1'b1;
-  assign SYN_SCLK = (dbg_spi_device == SPI_SYN) ? SPI_SCLK : 1'b0;
-  assign SYN_MOSI = (dbg_spi_device == SPI_SYN) ? SPI_MOSI : 1'b0;
+  assign SYN_SSn  = (dbg_spi_device == SPI_SYN) ? SPI_SSn  : synth_ssn;
+  assign SYN_SCLK = (dbg_spi_device == SPI_SYN) ? SPI_SCLK : synth_sclk;
+  assign SYN_MOSI = (dbg_spi_device == SPI_SYN) ? SPI_MOSI : synth_mosi;
 
   assign DDS_SSn  = (dbg_spi_device == SPI_DDS) ? SPI_SSn  : rmr_DDS_SSn;
   assign DDS_SCLK = (dbg_spi_device == SPI_DDS) ? SPI_SCLK : rmr_DDS_SCLK;
@@ -1820,7 +1856,7 @@ end
   
   wire dbg_synmute;
   assign dbg_synmute = dbg_enables & BIT_SYN_MUTE ? 1'b0 : 1'b1;
-  assign SYN_MUTE = dbg_spi_mode == 1'b1 ? dbg_synmute : 1'b0;
+  assign SYN_MUTE = dbg_spi_mode == 1'b1 ? dbg_synmute : synth_mute;
   
   wire dbg_ddsiorst;
   assign dbg_ddsiorst = dbg_enables & BIT_DDS_IORST ? 1'b1 : 1'b0; 
@@ -1902,8 +1938,8 @@ end
  assign ACTIVE_LEDn = hwdbg_stat[255]?count2[24]:count2[25];
  
   // 22-Jun have to scope MMC signals
-  assign FPGA_MCU4 = DDS_MOSI; //CONV; //MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.
-  assign FPGA_MCU3 = DDS_SCLK; // ADC_SCLK; //MMC_CMD; //count3[15];    // 200MHz div'd by 2^16.
+  assign FPGA_MCU4 = SYN_MOSI; //DDS_MOSI; //CONV; //MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.
+  assign FPGA_MCU3 = SYN_SCLK; //DDS_SCLK; // ADC_SCLK; //MMC_CMD; //count3[15];    // 200MHz div'd by 2^16.
   //assign FPGA_MCU2 = ZMON_EN;
   //assign FPGA_MCU1 = MMC_CMD;
 
