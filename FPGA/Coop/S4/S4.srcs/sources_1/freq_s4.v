@@ -47,6 +47,7 @@ module freq_s4 #(parameter FILL_BITS = 6,
   input  wire [FILL_BITS-1:0] frq_fifo_count_i, // fifo count, for debug message only
 
   // This writes to FIFO in the DDS SPI instance
+  output reg  [31:0]      dbg_ftw_o,         // show in debugger, looks like rubbish
   output reg  [31:0]      ftw_o,             // tuning word output, to DDS input fifo          
   output reg              ftw_wen_o,         // frequency tuning word fifo we.
 
@@ -67,7 +68,7 @@ module freq_s4 #(parameter FILL_BITS = 6,
   localparam MULTIPLIER_CLOCKS = 6'd6;
   reg  [5:0]       latency_counter;    // wait for multiplier & divider 
 
-  reg  [31:0]      K = 32'h030037BD;    //32'h0C00DEF5;        // Tuning word scale
+  reg  [31:0]      K = 32'h30037BD4;    //32'h0C00DEF5 (*4 since using 100MHz instead of 400MHz);        // Tuning word scale
   wire [63:0]      FTW;                     // FTW calculated
   reg              multiply;
 
