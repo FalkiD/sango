@@ -47,7 +47,8 @@ module freq_s4 #(parameter FILL_BITS = 6,
   input  wire [FILL_BITS-1:0] frq_fifo_count_i, // fifo count, for debug message only
 
   // This writes to FIFO in the DDS SPI instance
-  output reg  [31:0]      ftw_o,             // tuning word output          
+  output reg  [31:0]      ftw_o,             // tuning word output, to DDS input fifo          
+  output reg              ftw_wen_o,         // frequency tuning word fifo we.
 
   output wire [15:0]      frequency_o,       // System frequency so all top-level modules can access
 
@@ -89,7 +90,8 @@ module freq_s4 #(parameter FILL_BITS = 6,
   localparam FRQ_DDS_MULT  = 4;
 //  localparam FRQ_DDS_RND  =  5;
   localparam FRQ_WRITE     = 6;
-  localparam FRQ_WAIT      = 7;
+  localparam FRQ_FIFO_WRT  = 7;
+  localparam FRQ_WAIT      = 8;
     
   always @(posedge sys_clk)
   begin
@@ -97,6 +99,7 @@ module freq_s4 #(parameter FILL_BITS = 6,
       state <= FRQ_IDLE;            
       frq_fifo_ren_o <= 0;
       ftw_o <= 32'd0;
+      ftw_wen_o = 1'b0;
       status_o <= `SUCCESS;
     end
     else if(freq_en == 1'b1) begin
@@ -140,6 +143,11 @@ module freq_s4 #(parameter FILL_BITS = 6,
           ftw_o <= FTW[63:32] + 32'd1;
         else
           ftw_o <= FTW[63:32];
+        ftw_wen_o = 1'b1;
+        state <= FRQ_FIFO_WRT;
+      end
+      FRQ_FIFO_WRT: begin
+        ftw_wen_o = 1'b0;
         state <= FRQ_IDLE;
         status_o <= `SUCCESS;
       end

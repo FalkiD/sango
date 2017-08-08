@@ -412,7 +412,6 @@ wire         frq_fifo_ren;            // frequency fifo read enable
 wire         frq_fifo_mt;             // frequency fifo empty flag
 wire         frq_fifo_full;           // frequency fifo full flag
 wire [5:0]   frq_fifo_count;
-wire [31:0]  ft_bytes;                // frequency tuning word SPI bytes for DDS SPI
 wire [7:0]   frq_status;              // frequency processor status
 // DDS processor wires
 wire [31:0]  ftw_fifo_dat_i; // = 32'h0000_0000;          // frequency tuning word fifo input(SPI data) from frequency processor.
@@ -1109,7 +1108,8 @@ always @(posedge clk050)
     .frq_fifo_empty_i   (frq_fifo_mt),          // fifo empty flag
     .frq_fifo_count_i   (frq_fifo_count),       // fifo count, for debug message only
 
-    .ftw_o              (ft_bytes),             // Debug only, tuning word output, SPI bytes to DDS SPI          
+    .ftw_o              (ftw_fifo_dat_i),       // frequency tuning word fifo input(SPI data) to DDS SPI          
+    .ftw_wen_o          (ftw_fifo_wen),         // frequency tuning word fifo we.
 
     .frequency_o        (frequency),            // System frequency so all modules can access
 
@@ -1344,10 +1344,10 @@ always @(posedge clk050)
       .doInit_i                   (dds_init),              // do an init sequence. 
       .hwdbg_dat_i                (hwdbg_ctl[35:0]),       // hwdbg data input.
       .hwdbg_we_i                 (extd_fifo_wr_dds_w),    // hwdbg we.
-      .freqproc_dat_i             ({32{1'b0}}),            // opcproc data input.
-      .freqproc_we_i              (1'b0),                  // opcproc we.
-      .dds_fifo_full_o            (),                      // opcproc full.
-      .dds_fifo_empty_o           (),                      // opcproc empty.
+      .freqproc_dat_i             (ftw_fifo_dat_i),        // frequency tuning word fifo input(SPI data).
+      .freqproc_we_i              (ftw_fifo_wen),          // frequency tuning word fifo we.
+      .dds_fifo_full_o            (ftw_fifo_full),         // ftw fifo full.
+      .dds_fifo_empty_o           (ftw_fifo_mt),           // ftw fifo empty.
       .dds_spi_sclk_o             (rmr_DDS_SCLK),          // 
       .dds_spi_mosi_o             (rmr_DDS_MOSI),          //
       .dds_spi_miso_i             (rmr_DDS_MISO),          // 

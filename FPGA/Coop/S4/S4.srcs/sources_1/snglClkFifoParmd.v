@@ -62,8 +62,11 @@ module snglClkFifoParmd #(
   localparam ADDRSIZ          = `LOG2(DEPTH);
 
 
-  reg  [ADDRSIZ-1:0]          wrAddr = 0;
-  reg  [ADDRSIZ-1:0]          rdAddr = 0;
+  reg  [ADDRSIZ:0]            wrAddr = 0;
+  reg  [ADDRSIZ:0]            rdAddr = 0;
+
+  wire [ADDRSIZ-1:0]          wrAAddr = wrAddr[ADDRSIZ-1:0];
+  wire [ADDRSIZ-1:0]          rdAAddr = rdAddr[ADDRSIZ-1:0];
 
   generate
     if (USE_BRAM == 1) begin
@@ -71,18 +74,18 @@ module snglClkFifoParmd #(
       (* ram_style = "block" *) reg  [WIDTH-1:0]  fifoRAM[DEPTH-1:0];
       always @(posedge CLK) begin
         if (RST) begin
-          wrAddr                  <= 0;
-          rdAddr                  <= 0;
-          DO                      <= {WIDTH{1'b0}};
+          wrAddr                    <= 0;
+          rdAddr                    <= 0;
+          DO                        <= {WIDTH{1'b0}};
         end
         else begin
           if (WEN) begin
-            fifoRAM[wrAddr]      <= DI;
-            wrAddr               <= wrAddr + ({ {(ADDRSIZ-1){1'b0}}, 1'b1});
+            fifoRAM[wrAAddr]        <= DI;
+            wrAddr                  <= wrAddr + ({ {(ADDRSIZ-1){1'b0}}, 1'b1});
           end
-          DO                     <= fifoRAM[rdAddr];
+          DO                        <= fifoRAM[rdAAddr];
           if (REN) begin
-            rdAddr               <= rdAddr + ({ {(ADDRSIZ-1){1'b0}}, 1'b1});
+            rdAddr                  <= rdAddr + ({ {(ADDRSIZ-1){1'b0}}, 1'b1});
           end
         end
       end  // end of always @(posedge CLK)
@@ -92,18 +95,18 @@ module snglClkFifoParmd #(
       (* ram_style = "distributed" *) reg  [WIDTH-1:0]  fifoRAM[DEPTH-1:0];
       always @(posedge CLK) begin
         if (RST) begin
-          wrAddr                 <= 0;
-          rdAddr                 <= 0;
-          DO                     <= {WIDTH{1'b0}};
+          wrAddr                    <= 0;
+          rdAddr                    <= 0;
+          DO                        <= {WIDTH{1'b0}};
         end
         else begin
           if (WEN) begin
-            fifoRAM[wrAddr]      <= DI;
-            wrAddr               <= wrAddr + ({ {(ADDRSIZ-1){1'b0}}, 1'b1});
+            fifoRAM[wrAAddr]        <= DI;
+            wrAddr                  <= wrAddr + ({ {(ADDRSIZ-1){1'b0}}, 1'b1});
           end
-          DO                     <= fifoRAM[rdAddr];
+          DO                        <= fifoRAM[rdAAddr];
           if (REN) begin
-            rdAddr               <= rdAddr + ({ {(ADDRSIZ-1){1'b0}}, 1'b1});
+            rdAddr                  <= rdAddr + ({ {(ADDRSIZ-1){1'b0}}, 1'b1});
           end
         end
       end  // end of always @ (posedge CLK)
@@ -111,7 +114,7 @@ module snglClkFifoParmd #(
   endgenerate
 
 
-  assign MT       = (wrAddr == rdAddr);
-  assign FULL     = ((rdAddr - wrAddr) == ({ {(ADDRSIZ-1){1'b0}}, 1'b1}));
+  assign MT       = (wrAAddr == rdAAddr) & (wrAddr[ADDRSIZ] == rdAddr[ADDRSIZ]);
+  assign FULL     = (wrAAddr == rdAAddr) & (wrAddr[ADDRSIZ] != rdAddr[ADDRSIZ]);
    
 endmodule  // end of module snglClkFifoParmd
