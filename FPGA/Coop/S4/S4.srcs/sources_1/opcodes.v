@@ -53,13 +53,6 @@
 `define STATE_RD_MEAS4              7'h17
 `define STATE_DBG3                  7'h18
 
-// If the input fifo has incomplete data, wait this many ticks 
-// before clearing it (so we never get stuck in odd state)
-`define WAIT_FIFO_TMO              1000
-
-// Max fetch attempts with FIFO empty ON
-//`define MAX_FETCH_ATTEMPTS          8'd50
-
 // Write pattern mode versus normal (execute immediately) mode
 `define NORMAL_PROCESSOR            1'b0
 `define WRITE_PATTERN               1'b1
@@ -838,7 +831,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         rsp_source <= GENERAL_ARR;
         meas_fifo_ren_o <= 1'b0;                        
         mode_o <= 32'h0000_0000;
-        //opc_fifo_timeout <= `WAIT_FIFO_TMO;
         bias_enable_o <= 1'b0;
         fifo_rst_o <= 1'b0;
     end

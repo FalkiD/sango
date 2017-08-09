@@ -270,8 +270,8 @@ wire         clk200;
 wire         clk050;
 
 // The current system state:
-wire [15:0]  frequency;
-reg  [11:0]  dbm_x10;
+wire [31:0]  frequency;                 // in Hertz
+wire [11:0]  dbm_x10;
 reg  [15:0]  sys_state = 0;             // s4 system state (e.g. running a pattern)
 wire         pulse_busy;
 wire [31:0]  sys_mode;                  // MODE opcode can set system-wide flags
@@ -417,7 +417,7 @@ wire [31:0]  ftw_fifo_dat_i; // = 32'h0000_0000;          // frequency tuning wo
 wire         ftw_fifo_wen; // = 1'b0;            // frequency tuning word fifo we.
 wire         ftw_fifo_full;           // ftw fifo full.
 wire         ftw_fifo_mt;             // ftw fifo empty.
-wire         dds_init;                // pulse to do DDS init sequence, SYN also
+wire         hardware_init;           // pulse to do DDS/SYN/VGA init sequences
 
 // Power processor wires
 wire [38:0]  pwr_fifo_dat_i;          // to fifo from opc, power or cal value. 
@@ -1018,7 +1018,7 @@ end
     .mmc_dat_siz_o     (mmc_dat_siz),
     
     // 31-Mar RMR added a crapload of debug signals
-    // signals for spi debug data written to MMC debug terminal (03000030 X Y Z...)
+    // signals for spi debug data written to MMC debug terminal (03000040 X Y Z...)
     .dbg_spi_data0_o    (arr_spi_bytes[0]),
     .dbg_spi_data1_o    (arr_spi_bytes[1]),
     .dbg_spi_data2_o    (arr_spi_bytes[2]),
@@ -1041,7 +1041,8 @@ end
     
     // opcode_processor (instantiation of opcodes module) refactored to top level (arty_main.v or s4.v).
     // connect the mmc fifo's to the opcode processor here.
-    // 12-Jul first article must use back-door UART entry since LPC MMC interface is not working
+    // 12-Jul added back-door UART entry since LPC MMC interface wasn't working
+    // MMC has since been fixed & will be primary (only?) interface
     .bkd_opc_load_new   (opc_load_new),
     .bkd_opc_load_ack   (opc_load_ack),
     .bkd_opc_dat0_o    (opc_dat0),
@@ -1080,7 +1081,7 @@ end
     .bkd_rsp_datE_i     (opc_rspE),
     .bkd_rsp_datF_i     (opc_rspF),
 
-    // MMC is working, connect these to mux with backdoor UART
+    // MMC is working! MMC fifo connections
     // Read from MMC fifo connections
     .opc_fif_dat_o      (mmc_fif_dat),          // MMC opcode fifo from mmc_tester into mux
     .opc_fif_ren_i      (mmc_fif_ren),          // mmc fifo read enable
@@ -1100,8 +1101,11 @@ end
     .opc_status1_i     ({9'd0, opc_state, 8'd0, opc_status}),   // opc_state__opc_status
     //.opc_status2_i     ({10'd0, frq_fifo_count[5:0], 6'd0, opc_fifo_count[`GLBL_RSP_FILL_LEVEL_BITS-1:0]})
     .opc_status2_i     ({opc_rspf_cnt, opc_fifo_count}),        // rsp_fifo_count__opc_fifo_count
-    .opc_status3_i     ({16'h0000, dbg_opcodes[15:0]})          // first_opcode__last_opcode in lower 16 bits
+    .opc_status3_i     ({16'h0000, dbg_opcodes[15:0]}),         // first_opcode__last_opcode in lower 16 bits
+    .sys_status4_i     (frequency),              // system frequency setting in Hertz
+    .sys_status5_i     ({20'h0, dbm_x10})        // power(dBm x10) setting
     );
+
 
   // Frequency processor instance. 
   // Input:requested frequency in MHz in fifo
@@ -1141,6 +1145,8 @@ end
     
     .power_en           (opc_enable),
 
+    .doInit_i           (hardware_init),         // Initialize DAC's
+
     .pwr_fifo_i         (pwr_fifo_dat_o),       // power processor fifo input
     .pwr_fifo_ren_o     (pwr_fifo_ren),         // power processor fifo read line
     .pwr_fifo_mt_i      (pwr_fifo_mt),          // power fifo empty flag
@@ -1153,6 +1159,8 @@ end
 
     .frequency_i        (frequency),            // current system frequency
     
+    .dbmx10_o           (dbm_x10),              // present power setting for all top-level modules to access
+
     .status_o           (pwr_status)            // 0=busy, SUCCESS when done, or an error code
   );
 
@@ -1352,7 +1360,7 @@ end
       .clk_i                      (sys_clk),               // 
       .rst_i                      (!sys_rst_n),            // 
   
-      .doInit_i                   (dds_init),              // do an init sequence. 
+      .doInit_i                   (hardware_init),         // do an init sequence. 
       .hwdbg_dat_i                (hwdbg_ctl[35:0]),       // hwdbg data input.
       .hwdbg_we_i                 (extd_fifo_wr_dds_w),    // hwdbg we.
       .freqproc_dat_i             (ftw_fifo_dat_i),        // frequency tuning word fifo input(SPI data).
@@ -1371,8 +1379,8 @@ end
   
       .dbg0_o                     (),             //
       .dbg1_o                     (),             //
-      .dbg2_o                     (FPGA_MCU1),             // DDS_IORST
-      .dbg3_o                     (FPGA_MCU2)              // DDS_IOUP
+      .dbg2_o                     (),             // DDS_IORST
+      .dbg3_o                     ()              // DDS_IOUP
      );
 
 
@@ -1391,8 +1399,8 @@ end
   (
     .clk_i                        (sys_clk),               // 
     .rst_i                        (!sys_rst_n),            // 
-    .doInit_i                     (dds_init),              // do an init sequence. 
-    .hwdbg_dat_i                  (hwdbg_ctl[35:0]),       // hwdbg data input.
+    .doInit_i                     (hardware_init),         // do an init sequence. 
+    .hwdbg_dat_i                  (hwdbg_ctl[11:0]),       // hwdbg data input.
     .hwdbg_we_i                   (extd_fifo_wr_dds_w),    // hwdbg we.
     .syn_fifo_full_o              (),                      // opcproc fifo full.
     .syn_fifo_empty_o             (),                      // opcproc fifo empty.
@@ -1829,7 +1837,7 @@ end
   // Mux these debug controls
   assign dbg_spi_mode = 1'b0; //(dbg_enables & BIT_SPI_DBG_MODE) == 16'h4000 ? 1'b1 : 1'b0;   // Mux SPI outputs   
 
-  assign dds_init = (dbg_enables & BIT_DDS_INIT) || (hw_init == 1'b1) ? 1'b1 : 1'b0;
+  assign hardware_init = (dbg_enables & BIT_DDS_INIT) || (hw_init == 1'b1) ? 1'b1 : 1'b0;
 
   wire dbg_rfgate;
   assign dbg_rfgate = dbg_enables & BIT_RF_GATE ? 1'b1 : 1'b0;  
@@ -1944,10 +1952,10 @@ end
  assign ACTIVE_LEDn = hwdbg_stat[255]?count2[24]:count2[25];
  
   // 22-Jun have to scope MMC signals
-  assign FPGA_MCU4 = DDS_MOSI; //SYN_MOSI; //CONV; //MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.
-  assign FPGA_MCU3 = DDS_SCLK; //SYN_SCLK; // ADC_SCLK; //MMC_CMD; //count3[15];    // 200MHz div'd by 2^16.
-  //assign FPGA_MCU2 = ZMON_EN;
-  //assign FPGA_MCU1 = MMC_CMD;
+  assign FPGA_MCU4 = VGA_MOSI; //DDS_MOSI; //SYN_MOSI; //CONV; //MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.
+  assign FPGA_MCU3 = VGA_SCLK; //DDS_SCLK; //SYN_SCLK; // ADC_SCLK; //MMC_CMD; //count3[15];    // 200MHz div'd by 2^16.
+  assign FPGA_MCU2 = DDS_MOSI; //ZMON_EN;
+  assign FPGA_MCU1 = DDS_SCLK; //MMC_CMD;
 
   assign  spiDevsDoInit = hwdbg_ctl[253];
 

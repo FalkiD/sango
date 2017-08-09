@@ -51,7 +51,7 @@ module freq_s4 #(parameter FILL_BITS = 6,
   output reg  [31:0]      ftw_o,             // tuning word output, to DDS input fifo          
   output reg              ftw_wen_o,         // frequency tuning word fifo we.
 
-  output wire [15:0]      frequency_o,       // System frequency so all top-level modules can access
+  output wire [31:0]      frequency_o,       // System frequency(Hz) so all top-level modules can access
 
   output reg  [7:0]       status_o           // 0=Busy, SUCCESS when done, or an error code
 );
@@ -62,7 +62,7 @@ module freq_s4 #(parameter FILL_BITS = 6,
   reg [6:0]       next_spiwr_state;   // saved while waiting for SPI writes to finish before next request
 
   reg  [31:0]      frequency = 32'd0;
-  assign frequency_o = frequency[15:0];     // keep global frequency updated
+  assign frequency_o = frequency;     // keep global frequency updated
   
   // Latency for multiply operation, Xilinx multiplier
   localparam MULTIPLIER_CLOCKS = 6'd6;
@@ -106,8 +106,7 @@ module freq_s4 #(parameter FILL_BITS = 6,
     else if(freq_en == 1'b1) begin
       if(frequency == 0) begin
         // FPGA was just powered ON, initialize all HW... TBD
-        
-        frequency <= 32'd2450;
+        frequency <= 32'd2450000000;    // Hz
       end
       case(state)
       FRQ_WAIT: begin
@@ -129,7 +128,7 @@ module freq_s4 #(parameter FILL_BITS = 6,
         state <= FRQ_READ;
       end
       FRQ_READ: begin
-        frequency <= frq_fifo_i;
+        frequency <= frq_fifo_i;        // requested frequency in Hertz
         state <= FRQ_DDS_MULT;
       end
       FRQ_DDS_MULT: begin

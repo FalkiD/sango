@@ -161,7 +161,9 @@ package mmc_test_pack is
     opc_oc_cnt_i        : in  unsigned(31 downto 0);    -- count of opcodes processed
     opc_status1_i       : in  unsigned(31 downto 0);    -- LS 16 bits=opc status, MS 16-bits=opc_state
     opc_status2_i       : in  unsigned(31 downto 0);    -- rsp_fifo_count__opc_fifo_count    
-    opc_status3_i       : in  unsigned(31 downto 0)     -- LS 16 bits=MS 8 bits=RSP fifo level, LS 8 bits=OPC fifo level
+    opc_status3_i       : in  unsigned(31 downto 0);    -- LS 16 bits=MS 8 bits=RSP fifo level, LS 8 bits=OPC fifo level
+    sys_status4_i       : in  unsigned(31 downto 0);    -- system frequency setting in Hertz
+    sys_status5_i       : in  unsigned(31 downto 0)     -- LS 12 bits=system power, dBm x 10
   );
   end component;
 
@@ -853,7 +855,9 @@ use work.async_syscon_pack.all;
     opc_oc_cnt_i   : in  unsigned(31 downto 0);         -- LS 16 bits=count of opcodes processed, MS 16 bits=opc fifo level
     opc_status1_i  : in  unsigned(31 downto 0);         -- LS 16 bits=opc status, MS 16-bits=opc_state
     opc_status2_i  : in  unsigned(31 downto 0);         -- rsp_fifo_count__opc_fifo_count
-    opc_status3_i  : in  unsigned(31 downto 0)          -- LS 16 bits=MS 8 bits=RSP fifo level, LS 8 bits=OPC fifo level
+    opc_status3_i  : in  unsigned(31 downto 0);         -- MS 16 bits=MS 8 bits=RSP fifo level, LS 8 bits=OPC fifo level
+    sys_status4_i  : in  unsigned(31 downto 0);         -- system frequency setting in Hertz
+    sys_status5_i  : in  unsigned(31 downto 0)          -- LS 12 bits=system power, dBm x 10
   );
   end mmc_tester;
 
@@ -1194,8 +1198,8 @@ begin
     bkd_rsp_dat7_i                                 when 16#7#,      -- response data
     bkd_rsp_dat8_i                                 when 16#8#,      -- response data
     bkd_rsp_dat9_i                                 when 16#9#,      -- response data
-    bkd_rsp_datA_i                                 when 16#A#,      -- response data
-    bkd_rsp_datB_i                                 when 16#B#,      -- response data
+    sys_status5_i                                  when 16#A#,      -- LS 12 bits=system power, dBm x 10
+    sys_status4_i                                  when 16#B#,      -- system frequency setting in Hertz
     opc_status3_i                                  when 16#C#,      -- 1st_opcode__last_opcode in lower 16 bits
     opc_status2_i                                  when 16#D#,      -- rsp_fifo_count__opc_fifo_count
     opc_status1_i                                  when 16#E#,      -- opc_state__opc_status
