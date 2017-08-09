@@ -38,7 +38,6 @@ module freq_s4 #(parameter FILL_BITS = 6,
   input  wire             sys_rst_n,
     
   input  wire             freq_en,
-  input  wire             spi_idle, // Only write SPI data when DDS/SYN SPI idle (needed?)
 
   // Frequency(ies) are in Hz in input fifo
   input  wire [FRQ_BITS-1:0] frq_fifo_i,        // frequency fifo

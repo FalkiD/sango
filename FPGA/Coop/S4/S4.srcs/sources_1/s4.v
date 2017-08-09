@@ -421,7 +421,7 @@ wire         hardware_init;           // pulse to do DDS/SYN/VGA init sequences
 
 // Power processor wires
 wire [38:0]  pwr_fifo_dat_i;          // to fifo from opc, power or cal value. 
-                                     // Upper 7 bits are opcode, cal or user power
+                                      // Upper 7 bits are opcode, cal or user power
 wire         pwr_fifo_wen;            // power fifo write enable
 wire [38:0]  pwr_fifo_dat_o;          // to power processor
 wire         pwr_fifo_ren;            // power fifo read enable
@@ -1116,7 +1116,6 @@ end
     .sys_rst_n          (sys_rst_n),
     
     .freq_en            (opc_enable),
-    .spi_idle           (1'b1),
 
     // Frequency(ies) are in Hz in input fifo
     .frq_fifo_i         (frq_fifo_dat_o),       // frequency fifo
@@ -1415,53 +1414,6 @@ end
     .dbg2_o                       (),                      // SYN_SCLK
     .dbg3_o                       ()                       // syn_initing
   );
-
-/////////////////////////////////////////////////
-//  Maintain overall system state information 
-/////////////////////////////////////////////////
-  always @(*) begin
-    // Opcode processor status is opc_status
-    // Frequency status is frq_status
-    // Power processor status is pwr_status
-    // Pulse processor status is pls_status
-    // Pattern processor status is ptn_status
-    if(opc_rspf_rdy)
-      sys_state = sys_state | `STATE_RSP_READY;
-    else
-      sys_state = sys_state & ~(`STATE_RSP_READY);
-
-// This creates timing loop error            
-//    if(opc_status == 0)
-//      sys_state = sys_state | `STATE_OPC_BUSY;
-//    else
-//      sys_state = sys_state & ~(`STATE_OPC_BUSY);
-            
-//    if(frq_status == 0)
-//      sys_state = sys_state | `STATE_FRQ_BUSY;
-//    else
-//      sys_state = sys_state & ~(`STATE_FRQ_BUSY);
-        
-//    if(pwr_status == 0)
-//      sys_state = sys_state | `STATE_PWR_BUSY;
-//    else
-//      sys_state = sys_state & ~(`STATE_PWR_BUSY);
-            
-//    if(pls_status == 0)
-//      sys_state <= sys_state | `STATE_PLS_BUSY;
-//    else
-//      sys_state <= sys_state & ~(`STATE_PLS_BUSY);
-
-//    if(ptn_status == 0)
-//      sys_state = sys_state | `STATE_PTN_BUSY;
-//    else
-//      sys_state = sys_state & ~(`STATE_PTN_BUSY);
-
-//    if(spi_busy)
-//      sys_state = sys_state | `STATE_SPI_BUSY;
-//    else
-//      sys_state = sys_state & ~(`STATE_SPI_BUSY);
-
-  end
 
 
 // ******************************************************************************
@@ -1808,14 +1760,6 @@ end
   // Connect SPI to wires based on which device is selected.
   localparam SPI_VGA = 4'd1, SPI_SYN = 4'd2, SPI_DDS = 4'd3, SPI_ZMON = 4'd4;
 
-  assign SYN_SSn  = (dbg_spi_device == SPI_SYN) ? SPI_SSn  : synth_ssn;
-  assign SYN_SCLK = (dbg_spi_device == SPI_SYN) ? SPI_SCLK : synth_sclk;
-  assign SYN_MOSI = (dbg_spi_device == SPI_SYN) ? SPI_MOSI : synth_mosi;
-
-  assign DDS_SSn  = (dbg_spi_device == SPI_DDS) ? SPI_SSn  : rmr_DDS_SSn;
-  assign DDS_SCLK = (dbg_spi_device == SPI_DDS) ? SPI_SCLK : rmr_DDS_SCLK;
-  assign DDS_MOSI = (dbg_spi_device == SPI_DDS) ? SPI_MOSI : rmr_DDS_MOSI;
-
   // S4 Enables/lines
   localparam BIT_RF_GATE          = 16'h0001;
   localparam BIT_RF_GATE2         = 16'h0002;
@@ -1835,66 +1779,72 @@ end
   localparam BIT_TEMP_SYS_RST     = 16'h8000;                           // <JLC_TEMP_RST>
 
   // Mux these debug controls
-  assign dbg_spi_mode = 1'b0; //(dbg_enables & BIT_SPI_DBG_MODE) == 16'h4000 ? 1'b1 : 1'b0;   // Mux SPI outputs   
-
+  assign dbg_spi_mode = (dbg_enables & BIT_SPI_DBG_MODE) == 16'h4000 ? 1'b1 : 1'b0;   // Mux SPI outputs   
   assign hardware_init = (dbg_enables & BIT_DDS_INIT) || (hw_init == 1'b1) ? 1'b1 : 1'b0;
 
-  wire dbg_rfgate;
-  assign dbg_rfgate = dbg_enables & BIT_RF_GATE ? 1'b1 : 1'b0;  
-  assign RF_GATE = dbg_spi_mode == 1'b1 ? dbg_rfgate : pls_rfgate;
-  
-  wire dbg_rfgate2;
-  assign dbg_rfgate2 = dbg_enables & BIT_RF_GATE2 ? 1'b1 : 1'b0;  
-  assign RF_GATE2 = dbg_spi_mode == 1'b1 ? dbg_rfgate2 : pls_rfgate2;
+  assign SYN_SSn  = (dbg_spi_mode == 1'b1 && dbg_spi_device == SPI_SYN) ? SPI_SSn  : synth_ssn;
+  assign SYN_SCLK = (dbg_spi_mode == 1'b1 && dbg_spi_device == SPI_SYN) ? SPI_SCLK : synth_sclk;
+  assign SYN_MOSI = (dbg_spi_mode == 1'b1 && dbg_spi_device == SPI_SYN) ? SPI_MOSI : synth_mosi;
 
-  // VGA SPI mux
-  // How can this friggin mux not be working???
+  assign DDS_SSn  = (dbg_spi_mode == 1'b1 && dbg_spi_device == SPI_DDS) ? SPI_SSn  : rmr_DDS_SSn;
+  assign DDS_SCLK = (dbg_spi_mode == 1'b1 && dbg_spi_device == SPI_DDS) ? SPI_SCLK : rmr_DDS_SCLK;
+  assign DDS_MOSI = (dbg_spi_mode == 1'b1 && dbg_spi_device == SPI_DDS) ? SPI_MOSI : rmr_DDS_MOSI;
+
+  // RF_GATE outputs, from dbg_enables or pulse processor
+  wire dbg_rfgate;
+  assign dbg_rfgate = (dbg_enables & BIT_RF_GATE) ? 1'b1 : 1'b0;  
+  assign RF_GATE = (dbg_spi_mode == 1'b1) ? dbg_rfgate : pls_rfgate;
+  wire dbg_rfgate2;
+  assign dbg_rfgate2 = (dbg_enables & BIT_RF_GATE2) ? 1'b1 : 1'b0;  
+  assign RF_GATE2 = (dbg_spi_mode == 1'b1) ? dbg_rfgate2 : pls_rfgate2;
+
+  // VGA SPI mux, connect to debug SPI or power processor
   wire dbg_vgavsw;
-  assign dbg_vgavsw = dbg_enables & BIT_VGA_VSW ? 1'b1 : 1'b0;  
-  assign VGA_VSW = pwr_vsw; //dbg_spi_mode == 1'b1 ? dbg_vgavsw : pwr_vsw;
+  assign dbg_vgavsw = (dbg_enables & BIT_VGA_VSW) ? 1'b1 : 1'b0;  
+  assign VGA_VSW = (dbg_spi_mode == 1'b1) ? dbg_vgavsw : pwr_vsw;
   wire dbg_vgassn;
-  assign dbg_vgassn = dbg_spi_device == SPI_VGA ? SPI_SSn : 1'b1;  
-  assign VGA_SSn = dbg_spi_mode == 1'b1 ? dbg_vgassn : pwr_ssn;
+  assign dbg_vgassn = (dbg_spi_device == SPI_VGA) ? SPI_SSn : 1'b1;  
+  assign VGA_SSn = (dbg_spi_mode == 1'b1) ? dbg_vgassn : pwr_ssn;
   wire dbg_vgasclk;
-  assign dbg_vgasclk = dbg_spi_device == SPI_VGA ? SPI_SCLK : 1'b0;  
-  assign VGA_SCLK = dbg_spi_mode == 1'b1 ? dbg_vgassn : pwr_sclk;
+  assign dbg_vgasclk = (dbg_spi_device == SPI_VGA) ? SPI_SCLK : 1'b0;  
+  assign VGA_SCLK = (dbg_spi_mode == 1'b1) ? dbg_vgassn : pwr_sclk;
   wire dbg_vgamosi;
-  assign dbg_vgamosi = dbg_spi_device == SPI_VGA ? SPI_MOSI : 1'b0;  
-  assign VGA_MOSI = dbg_spi_mode == 1'b1 ? dbg_vgamosi : pwr_mosi;
+  assign dbg_vgamosi = (dbg_spi_device == SPI_VGA) ? SPI_MOSI : 1'b0;  
+  assign VGA_MOSI = (dbg_spi_mode == 1'b1) ? dbg_vgamosi : pwr_mosi;
   assign VGA_VSWn = !VGA_VSW;
 
   wire dbg_bias;
-  assign dbg_bias = dbg_enables & BIT_PA_BIAS_EN ? 1'b1 : 1'b0;  
-  assign DRV_BIAS_EN = dbg_spi_mode == 1'b1 ? dbg_bias : bias_en;
+  assign dbg_bias = (dbg_enables & BIT_PA_BIAS_EN) ? 1'b1 : 1'b0;  
+  assign DRV_BIAS_EN = (dbg_spi_mode == 1'b1) ? dbg_bias : bias_en;
   assign PA_BIAS_EN = DRV_BIAS_EN;
   
   wire dbg_synmute;
-  assign dbg_synmute = dbg_enables & BIT_SYN_MUTE ? 1'b0 : 1'b1;
-  assign SYN_MUTE = dbg_spi_mode == 1'b1 ? dbg_synmute : synth_mute;
+  assign dbg_synmute = (dbg_enables & BIT_SYN_MUTE) ? 1'b0 : 1'b1;
+  assign SYN_MUTE = (dbg_spi_mode == 1'b1) ? dbg_synmute : synth_mute;
   
   wire dbg_ddsiorst;
-  assign dbg_ddsiorst = dbg_enables & BIT_DDS_IORST ? 1'b1 : 1'b0; 
-  assign DDS_IORST = dbg_spi_mode == 1'b1 ? dbg_ddsiorst : rmr_DDS_IORST;
+  assign dbg_ddsiorst = (dbg_enables & BIT_DDS_IORST) ? 1'b1 : 1'b0; 
+  assign DDS_IORST = (dbg_spi_mode == 1'b1) ? dbg_ddsiorst : rmr_DDS_IORST;
   
   wire dbg_ddsioup;
-  assign dbg_ddsioup = dbg_enables & BIT_DDS_IOUP ? 1'b1 : 1'b0;
+  assign dbg_ddsioup = (dbg_enables & BIT_DDS_IOUP) ? 1'b1 : 1'b0;
   assign DDS_IOUP = (dbg_spi_mode == 1'b1) ? dbg_ddsioup : rmr_DDS_IOUP;
   
   wire dbg_ddssync;
-  assign dbg_ddssync = dbg_enables & BIT_DDS_SYNC ? 1'b1 : 1'b0;
-  assign DDS_SYNC = dbg_spi_mode == 1'b1 ? dbg_ddssync : rmr_DDS_SYNC;
+  assign dbg_ddssync = (dbg_enables & BIT_DDS_SYNC) ? 1'b1 : 1'b0;
+  assign DDS_SYNC = (dbg_spi_mode == 1'b1) ? dbg_ddssync : rmr_DDS_SYNC;
   
   wire dbg_ddsps0;
-  assign dbg_ddsps0 = dbg_enables & BIT_DDS_PS0 ? 1'b1 : 1'b0;
-  assign DDS_PS0 = dbg_spi_mode == 1'b1 ? dbg_ddsps0 : rmr_DDS_PS0;
+  assign dbg_ddsps0 = (dbg_enables & BIT_DDS_PS0) ? 1'b1 : 1'b0;
+  assign DDS_PS0 = (dbg_spi_mode == 1'b1) ? dbg_ddsps0 : rmr_DDS_PS0;
    
   wire dbg_ddsps1;
-  assign dbg_ddsps1 = dbg_enables & BIT_DDS_PS1 ? 1'b1 : 1'b0;
-  assign DDS_PS1 = dbg_spi_mode == 1'b1 ? dbg_ddsps1 : rmr_DDS_PS1;
+  assign dbg_ddsps1 = (dbg_enables & BIT_DDS_PS1) ? 1'b1 : 1'b0;
+  assign DDS_PS1 = (dbg_spi_mode == 1'b1) ? dbg_ddsps1 : rmr_DDS_PS1;
    
   wire dbg_zmonen;
-  assign dbg_zmonen = dbg_enables & BIT_ZMON_EN ? 1'b1 : 1'b0;
-  assign ZMON_EN = dbg_spi_mode == 1'b1 ? dbg_zmonen : pls_zmonen;
+  assign dbg_zmonen = (dbg_enables & BIT_ZMON_EN) ? 1'b1 : 1'b0;
+  assign ZMON_EN = (dbg_spi_mode == 1'b1) ? dbg_zmonen : pls_zmonen;
   
   assign dbg_sys_rst_i = dbg_enables & BIT_TEMP_SYS_RST ? 1'b1 : 1'b0;   // <JLC_TEMP_RST>
 
