@@ -242,7 +242,7 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
    snglClkFifoParmd #(
       .USE_BRAM          (0),
       .WIDTH             (12),
-      .DEPTH             (8)
+      .DEPTH             (9)
    )
    synInFifo
    (
@@ -355,8 +355,10 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
                syn_init_we     <= 1'b1;              // 1-tick signal
                syn_init_op_cntr<= syn_init_op_cntr + 5'b0_0001;
             end
-            5'b1_1111: begin
+            5'b1_0101: begin
                syn_init_op_cntr<= 5'b1_1111;
+            end
+            5'b1_1111: begin
                syn_init_loading<= 1'b0;
             end
             default: begin

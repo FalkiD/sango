@@ -1,4 +1,5 @@
 //------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 // (C) Copyright 2017, Ampleon Inc.
 //     All rights reserved.
 //
@@ -297,8 +298,6 @@ wire         sys_rst_n;
 // initialize hw after a reset
 reg          initialize = 1'b0;
 reg          hw_init = 1'b0;
-
-wire         spiDevsDoInit;
 
 wire         mmcm_rst_i;
 wire         mmcm_pwrdn_i;
@@ -1898,15 +1897,12 @@ end
     end
  end  // end of always @ (posedge clk).
  
- 
  assign ACTIVE_LEDn = hwdbg_stat[255]?count2[24]:count2[25];
  
   // 22-Jun have to scope MMC signals
-  assign FPGA_MCU4 = VGA_MOSI; //DDS_MOSI; //SYN_MOSI; //CONV; //MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.
-  assign FPGA_MCU3 = VGA_SCLK; //DDS_SCLK; //SYN_SCLK; // ADC_SCLK; //MMC_CMD; //count3[15];    // 200MHz div'd by 2^16.
-  assign FPGA_MCU2 = DDS_MOSI; //ZMON_EN;
-  assign FPGA_MCU1 = DDS_SCLK; //MMC_CMD;
-
-  assign  spiDevsDoInit = hwdbg_ctl[253];
+  assign FPGA_MCU4 = DDS_MOSI; //DDS_MOSI; //CONV; //MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.
+  assign FPGA_MCU3 = DDS_SCLK; //DDS_SCLK; // ADC_SCLK; //MMC_CMD; //count3[15];    // 200MHz div'd by 2^16.
+  assign FPGA_MCU2 = SYN_MOSI;  //ZMON_EN;
+  assign FPGA_MCU1 = SYN_SCLK;  //MMC_CMD;
 
   endmodule
