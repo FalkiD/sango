@@ -40,6 +40,7 @@ module pulse #(parameter FILL_BITS = 4)
     input  wire         rf_enable_i,        // RF enabled by MCU, Interlock, etc.
     output wire         rf_gate_o,          // RF_GATE line
     output wire         rf_gate2_o,         // RF_GATE2 line
+    input  wire         dbg_rf_gate_i,      // Debug mode assert RF_GATE lines
 
     output wire         zmon_en_o,          // Enable ZMON
     output wire         conv_o,             // CONV pulse
@@ -76,9 +77,9 @@ module pulse #(parameter FILL_BITS = 4)
     reg             conv;
     reg             adc_sclk;
 
-    // connect ZMON lines
-    assign rf_gate_o = rf_gate;
-    assign rf_gate2_o = rf_gate2;
+    // connect external wires
+    assign rf_gate_o = dbg_rf_gate_i ? 1'b1 : rf_gate;
+    assign rf_gate2_o = dbg_rf_gate_i ? 1'b1 : rf_gate2;
     assign zmon_en_o = zmon_en;
     assign adc_sclk_o = adc_sclk;
     assign conv_o = conv;

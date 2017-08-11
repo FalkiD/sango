@@ -472,6 +472,7 @@ wire [6:0]   opc_state;               // For debugging
     
 //    // Debugging
 wire [15:0]  dbg_opcodes;
+wire         dbg_opc_rfgate;          // Driven by RF_GATE bit of sys_mode, MODE opcode, for debugging
 
 // SPI debugging connections for w 03000040 command
 // Write up to 14 byte to SPI device
@@ -1183,6 +1184,7 @@ end
     .rf_enable_i        (1'b1),                 // RF enabled by MCU, Interlock, etc.
     .rf_gate_o          (pls_rfgate),           // RF_GATE line
     .rf_gate2_o         (pls_rfgate2),          // RF_GATE2 line
+    .dbg_rf_gate_i      (dbg_opc_rfgate),       // Debug mode assert RF_GATE lines
 
     .zmon_en_o          (pls_zmonen),           // Enable ZMON
     .conv_o             (CONV),                 // CONV pulse
@@ -1852,6 +1854,8 @@ end
   assign syscon_rxd = FPGA_RXD;
   assign FPGA_TXD   = syscon_txd;
 
+  // Debugging, assert RF_GATE lines based on MODE opcode & RF_GATE bit
+  assign dbg_opc_rfgate = (sys_mode[15:0] & BIT_RF_GATE) == BIT_RF_GATE ? 1'b1 : 1'b0;
 
 // ******************************************************************************
 // *                                                                            *
