@@ -1407,6 +1407,7 @@ end
     .syn_spi_miso_i               (SYN_MISO),              // 
     .syn_spi_ss_n_o               (synth_ssn),             // 
     .syn_stat_i                   (SYN_STAT),              // Features set by LTC6946.reg1[5:0] (addr == 4'h1)
+    .syn_mute_n_i                 (1'b1),                  // Drive below mute wire, RF ON for initial debugging.
     .syn_mute_n_o                 (synth_mute),            // 1=>RF; 0=>MUTE.
     .dbg0_o                       (),                      // SYN_SSn.
     .dbg1_o                       (),                      // syn_ops_shftr[15]

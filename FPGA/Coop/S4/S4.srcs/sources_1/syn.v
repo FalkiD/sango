@@ -46,6 +46,7 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
     input                  syn_spi_miso_i,           // 
     output                 syn_spi_ss_n_o,           // 
     input                  syn_stat_i,               // Features set by LTC6946.reg1[5:0] (addr == 4'h1)
+    input                  syn_mute_n_i,             // Drive MUTE from other modules
     output                 syn_mute_n_o,             // 1=>RF; 0=>MUTE.
     output                 dbg0_o,                   // Utility debug output #0.
     output                 dbg1_o,                   // Utility debug output #1.
@@ -242,7 +243,7 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
    snglClkFifoParmd #(
       .USE_BRAM          (0),
       .WIDTH             (12),
-      .DEPTH             (9)
+      .DEPTH             (10)
    )
    synInFifo
    (
@@ -440,6 +441,7 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
    assign  syn_spi_mosi_o     = syn_spi_ss ? syn_ops_shftr[15] : 1'b0;
    assign  syn_spi_sclk_o     = syn_spi_ss ? syn_spi_sclk : 1'b1; 
    assign  syn_spi_ss_n_o     = ~syn_spi_ss;
+   assign  syn_mute_n_o       = syn_mute_n_i;       // Drive MUTE from other modules, 1=>RF; 0=>MUTE.
    
    assign  syn_initd_o        = syn_initd;
        
