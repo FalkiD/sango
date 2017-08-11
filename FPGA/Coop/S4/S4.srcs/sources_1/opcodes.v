@@ -27,9 +27,6 @@
 `include "status.h"
 `include "opcodes.h"
 
-`define BUF_WIDTH 9
-`define BUF_SIZE ( 1<<`BUF_WIDTH )
-
 `define STATE_IDLE                  7'h01
 `define STATE_FETCH_FIRST           7'h02   // 1 extra clock after assert rd_en   
 `define STATE_FETCH                 7'h03
@@ -128,18 +125,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 //    output reg  [15:0] last_length_o
     );
 
-`ifdef XILINX_SIMULATOR
-    integer         fileopcode = 0;
-    integer         filefreqs = 0;
-    integer         filepwr = 0;
-    integer         filepulse = 0;
-    integer         filebias = 0;
-    integer         fileopcerr = 0;
-    integer         filepattern = 0;
-    reg [7:0]       dbgdata;
-    reg             dumpRAM;
-`endif
-
     reg          operating_mode = 0; // 0=normal, process & run opcodes. 1=save pattern mode, write opcodes to pattern RAM
     reg  [6:0]   state = 0;          // Use as flag in hardware to indicate first starting up
     reg  [6:0]   next_state = `STATE_IDLE;
@@ -201,9 +186,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         if( !sys_rst_n || state == 0) begin //|| (state != `STATE_IDLE && fifo_rd_empty_i == 1))
             reset_opcode_processor();
             counter <= 0;
-    `ifdef XILINX_SIMULATOR
-            dumpRAM <= 1'b0;
-    `endif
         end
         else if(enable == 1) begin
             if((state == `STATE_IDLE && fifo_rd_count_i >= `MIN_OPCODE_SIZE) ||
@@ -366,11 +348,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                         end
                         state <= `STATE_DATA;
                     end
-                `ifdef XILINX_SIMULATOR
-                    if(fileopcode == 0)
-                        fileopcode = $fopen("./opc_from_fifo.txt", "a");
-                    $fdisplay (fileopcode, "%02h, length:%d", (fifo_dat_i & 8'hFE) >> 1, length);
-                `endif
                 end
                 `STATE_WAIT_DATA: begin // Wait for asynch FIFO to receive all our data
                     if(fifo_rd_count_i >= length) begin
@@ -437,9 +414,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                   frq_wr_en_o <= 0;   // All off until next opcode ready
                   pwr_wr_en_o <= 0;
                   pulse_wr_en_o <= 0;
-                 `ifdef XILINX_SIMULATOR
-                    fifo_empty_note();  // checks for fifo empty, logs it if so
-                 `endif
                   next_opcode();
                 end
                 default:
@@ -459,9 +433,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 //    begin
 //        ptn_start_addr_o <= address;    // address 
 //        ptn_processor_en_o <= 1'b1;     // run pattern processor
-//    `ifdef XILINX_SIMULATOR
-//        dumpRAM <= 1'b1;
-//    `endif
 //    end
 //    endtask
 
@@ -474,50 +445,11 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 
     task done_opcode_block;
     begin
-        `ifdef XILINX_SIMULATOR
-            $fdisplay (fileopcode, "Terminated on 0, count:%d", opcode_counter_o);
-            $fclose(fileopcode);
-            fileopcode = 0;
-            $fclose(filefreqs);
-            filefreqs = 0;
-            $fclose(filepwr);
-            filepwr = 0;
-            $fclose(filepulse);
-            filepulse = 0;
-            $fclose(filebias);
-            filebias = 0;
-            $fclose(fileopcerr);
-            fileopcerr = 0;
-            $fclose(filepattern);
-            filepattern = 0;
-        `endif
         // Normal, successful end of opcode block
         // already done fifo_rd_en_o <= 0;   // Disable read fifo
         state <= `STATE_BEGIN_RESPONSE;
     end
     endtask
-
-`ifdef XILINX_SIMULATOR
-    task fifo_empty_note;
-    begin
-        if(fifo_rd_empty_i) begin
-            $fdisplay (fileopcode, "Done processing opcodes, count:%d", opcode_counter_o);
-            $fclose(fileopcode);
-            fileopcode = 0;
-            $fclose(filefreqs);
-            filefreqs = 0;
-            $fclose(filepwr);
-            filepwr = 0;
-            $fclose(filepulse);
-            filepulse = 0;
-            $fclose(filebias);
-            filebias = 0;
-            $fclose(fileopcerr);
-            fileopcerr = 0;
-        end
-    end
-    endtask
-`endif
 
     //
     // Most opcodes run here
@@ -544,22 +476,12 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 //                                    (saved_opc_byte << 56) |
 //                                    (uinttmp[31:0] << 24);
 //                    state <= `STATE_WR_PTN1;
-//                `ifdef XILINX_SIMULATOR
-//                    if(filepattern == 0)
-//                        filepattern = $fopen("./pattern_ram.txt", "a");
-//                    $fdisplay (filepattern, "FREQ %d to pattern RAM", uinttmp[31:0]);
-//                `endif
 //                end
 //                else begin
                     frequency_o <= uinttmp[31:0];
                     frq_wr_en_o <= 1;   // enable write frequency FIFO
                     // Don't process anymore opcodes until fifo is written (1-tick)
                     state <= `STATE_FIFO_WRITE;
-                `ifdef XILINX_SIMULATOR
-                    if(filefreqs == 0)
-                        filefreqs = $fopen("./opcode_freqs_to_fifo.txt", "a");
-                    $fdisplay (filefreqs, "Wrote %d Hz to freq processor fifo", uinttmp[31:0]);
-                `endif
 //                end
             end
             `POWER: begin
@@ -572,11 +494,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 //                                    (saved_opc_byte << 56) |
 //                                    (uinttmp[31:0] << 24);
 //                    state <= `STATE_WR_PTN1;
-//                `ifdef XILINX_SIMULATOR
-//                    if(filepattern == 0)
-//                        filepattern 0= $fopen("./pattern_ram.txt", "a");
-//                    $fdisplay (filepattern, "POWER 0x%h to pattern RAM", uinttmp[31:0]);
-//                `endif
 //                end
 //                else begin
                     power_o <= {opcode[6:0], uinttmp[31:0]};
@@ -584,11 +501,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     // Don't process anymore opcodes until fifo is written
                     state <= `STATE_FIFO_WRITE;
 
-                `ifdef XILINX_SIMULATOR
-                    if(filepwr == 0)
-                        filepwr = $fopen("./opcode_pwr_to_fifo.txt", "a");
-                    $fdisplay (filepwr, "Wrote 0x%h to power processor fifo", uinttmp[31:0]);
-                `endif
 //                end
             end
             `CALPWR: begin  // power processor handles both user power requests and power cal commands
@@ -596,11 +508,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
               pwr_wr_en_o <= 1;   // enable write power FIFO
               // Don't process anymore opcodes until fifo is written
               state <= `STATE_FIFO_WRITE;
-            `ifdef XILINX_SIMULATOR
-              if(filepwr == 0)
-                filepwr = $fopen("./opcode_pwr_to_fifo.txt", "a");
-              $fdisplay (filepwr, "Wrote 0x%h (calpwr) to power processor fifo", uinttmp[31:0]);
-            `endif
             end
             `PULSE: begin
 //                if(operating_mode == `WRITE_PATTERN) begin // Write pattern mode
@@ -612,21 +519,11 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 //                                    (saved_opc_byte << 56) |
 //                                    uinttmp[55:0];
 //                    state <= `STATE_WR_PTN1;
-//                   `ifdef XILINX_SIMULATOR
-//                        if(filepattern == 0)
-//                            filepattern = $fopen("./pattern_ram.txt", "a");
-//                        $fdisplay (filepattern, "PULSE 0x%h to pattern RAM", uinttmp[63:0]);
-//                   `endif
 //                end
 //                else begin
                     pulse_o <= uinttmp[63:0];
                     pulse_wr_en_o <= 1;   // enable write ulse FIFO
                     state <= `STATE_FIFO_WRITE;                                    
-                `ifdef XILINX_SIMULATOR
-                    if(filepulse == 0)
-                        filepulse = $fopen("./opcode_pulse_to_fifo.txt", "a");
-                    $fdisplay (filepulse, "Wrote 0x%h to pulse processor fifo", uinttmp[63:0]);
-                `endif
 //                end
             end
             `BIAS: begin
@@ -638,48 +535,23 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 //                                    (saved_opc_byte << 56) |
 //                                    (uinttmp[15:0] << 40);
 //                    state <= `STATE_WR_PTN1;
-//                `ifdef XILINX_SIMULATOR
-//                    if(filepattern == 0)
-//                        filepattern = $fopen("./pattern_ram.txt", "a");
-//                    $fdisplay (filepattern, "BIAS 0x%h to pattern RAM", uinttmp[15:0]);
-//                `endif
 //                end
 //                else begin
               bias_enable_o <= uinttmp[8];  // ls byte is channel, always 1 for S4. Lsb of next byte is On/Off
               next_opcode();
-            `ifdef XILINX_SIMULATOR
-              if(filebias == 0)
-                filebias = $fopen("./opcode_bias_to_fifo.txt", "a");
-                $fdisplay (filebias, "BiasEnable:%d", uinttmp[8]);
-            `endif
 //                end
             end
             `MODE: begin
                 mode_o <= uinttmp[31:0];    // Flags are set, next opcode
                 next_opcode();
-           `ifdef XILINX_SIMULATOR
-                if(fileopcode == 0)
-                    fileopcode = $fopen("./opc_from_fifo.txt", "a");
-                $fdisplay (fileopcode, "MODE=0x%h", uinttmp[31:0]);
-           `endif
             end
             `TRIGCONF: begin
                 trig_conf <= uinttmp[31:0];
                 next_opcode();
-           `ifdef XILINX_SIMULATOR
-                if(fileopcode == 0)
-                    fileopcode = $fopen("./opc_from_fifo.txt", "a");
-                $fdisplay (fileopcode, "TRIG_CONF=0x%h", uinttmp[31:0]);
-           `endif
             end
             `SYNCCONF: begin
                 sync_conf <= uinttmp[15:0];
                 next_opcode();
-           `ifdef XILINX_SIMULATOR
-                if(fileopcode == 0)
-                    fileopcode = $fopen("./opc_from_fifo.txt", "a");
-                $fdisplay (fileopcode, "SYNC_CONF=0x%h", uinttmp[15:0]);
-           `endif
             end
     //                        `PAINTFCFG:
     //                            begin
@@ -704,11 +576,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 //                        ptn_wr_en_o <= 1'b1; 
 //                        state <= `STATE_WR_PTN1;
 //                        operating_mode <= 1'b0;     // Done writing pattern
-//                   `ifdef XILINX_SIMULATOR
-//                        if(filepattern == 0)
-//                            filepattern = $fopen("./pattern_ram.txt", "a");
-//                        $fdisplay (filepattern, "PAT_END 0x%h to pattern RAM", uinttmp[31:0]);
-//                   `endif
 //                    end
 //                    else begin
 //                        stop_pattern();
@@ -749,11 +616,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         // Normally pattern data, can be debug or echo opcodes
         // Pattern data is not valid when a pattern is running (opcodes w/integer args are valid)
 //        if(system_state_i & `STATE_PTN_BUSY) begin
-//        `ifdef XILINX_SIMULATOR
-//            if(fileopcerr == 0)
-//                fileopcerr = $fopen("./opcode_status.txt", "a");
-//            $fdisplay (fileopcerr, "*ERROR*:Cannot write pattern data while pattern is running");
-//        `endif
 //            status_o <= `ERR_PATTERN_RUNNING;
 //            state <= `STATE_BEGIN_RESPONSE;
 //        end
@@ -761,13 +623,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             case(opcode)
             `ECHO: begin
                 if(response_fifo_full_i) begin
-                `ifdef XILINX_SIMULATOR
-                    if(fileopcerr == 0)
-                        fileopcerr = $fopen("./opcode_status.txt", "a");
-                    $fdisplay (fileopcerr, "*ERROR*:Response fifo is full, ECHO can't write response");
-                    $fclose(fileopcerr);
-                    fileopcerr = 0;
-                `endif
                     status_o <= `ERR_RSP_FIFO_FULL;
                     state <= `STATE_BEGIN_RESPONSE;
                 end
