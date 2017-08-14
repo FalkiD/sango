@@ -18,8 +18,8 @@ d 10 us ;            -- Initial delay
 u 0.5 ms ;            -- <CR> (Allows autobaud to obtain lock on baud rate.)
 
 --u 0.5 ms w 300002c 4000; -- SPI debug mode, processors should not drive SPI
---u 0.5 ms w 3000040 03 01 17 FF F0; -- Both DAC's full scale
---u 0.5 ms w 3000040 03 03 A5 5A 03; -- 3 bytes to SPI device #
+--u 0.5 ms w 3000040 01 03 17 FF F0; -- Both DAC's full scale
+--u 0.5 ms w 3000040 03 03 A5 5A 03; -- 3 bytes to SPI device #3
 
 u 0.5 ms w 3000009 010624DE; -- Set DDS for sd_clk_o of 400kHz
 u 0.5 ms w 300000E 0; -- Set host DMA address at 0x00

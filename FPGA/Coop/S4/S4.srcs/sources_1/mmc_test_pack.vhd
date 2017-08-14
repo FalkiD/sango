@@ -163,7 +163,7 @@ package mmc_test_pack is
     opc_status2_i       : in  unsigned(31 downto 0);    -- rsp_fifo_count__opc_fifo_count    
     opc_status3_i       : in  unsigned(31 downto 0);    -- LS 16 bits=MS 8 bits=RSP fifo level, LS 8 bits=OPC fifo level
     sys_status4_i       : in  unsigned(31 downto 0);    -- system frequency setting in Hertz
-    sys_status5_i       : in  unsigned(31 downto 0)     -- LS 12 bits=system power, dBm x 10
+    sys_status5_i       : in  unsigned(31 downto 0)     -- MS 16 bits=SYN_STAT pin,1=PLL_LOCK, 0=not, LS 12 bits=system power, dBm x 10
   );
   end component;
 
@@ -857,7 +857,7 @@ use work.async_syscon_pack.all;
     opc_status2_i  : in  unsigned(31 downto 0);         -- rsp_fifo_count__opc_fifo_count
     opc_status3_i  : in  unsigned(31 downto 0);         -- MS 16 bits=MS 8 bits=RSP fifo level, LS 8 bits=OPC fifo level
     sys_status4_i  : in  unsigned(31 downto 0);         -- system frequency setting in Hertz
-    sys_status5_i  : in  unsigned(31 downto 0)          -- LS 12 bits=system power, dBm x 10
+    sys_status5_i  : in  unsigned(31 downto 0)          -- MS 16 bits=SYN_STAT pin,1=PLL_LOCK, 0=not, LS 12 bits=system power, dBm x 10
   );
   end mmc_tester;
 

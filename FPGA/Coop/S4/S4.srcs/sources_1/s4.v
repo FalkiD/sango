@@ -1099,11 +1099,10 @@ end
     // Debugging, these go from 0300003F down
     .opc_oc_cnt_i      (opc_count),                             // first_opcode__last_opcode__opcodes_procesed
     .opc_status1_i     ({9'd0, opc_state, 8'd0, opc_status}),   // opc_state__opc_status
-    //.opc_status2_i     ({10'd0, frq_fifo_count[5:0], 6'd0, opc_fifo_count[`GLBL_RSP_FILL_LEVEL_BITS-1:0]})
     .opc_status2_i     ({opc_rspf_cnt, opc_fifo_count}),        // rsp_fifo_count__opc_fifo_count
     .opc_status3_i     ({16'h0000, dbg_opcodes[15:0]}),         // first_opcode__last_opcode in lower 16 bits
     .sys_status4_i     (frequency),              // system frequency setting in Hertz
-    .sys_status5_i     ({20'h0, dbm_x10})        // power(dBm x10) setting
+    .sys_status5_i     ({15'h0, SYN_STAT, 4'd0, dbm_x10}) // MS 16 bits=SYN_STAT pin,1=PLL_LOCK, 0=not locked. 16 LSB's=power(dBm x10) setting
     );
 
 
@@ -1792,6 +1791,15 @@ end
   assign DDS_SCLK = (dbg_spi_mode == 1'b1 && dbg_spi_device == SPI_DDS) ? SPI_SCLK : rmr_DDS_SCLK;
   assign DDS_MOSI = (dbg_spi_mode == 1'b1 && dbg_spi_device == SPI_DDS) ? SPI_MOSI : rmr_DDS_MOSI;
 
+  // VGA SPI mux, connect to debug SPI or power processor
+  wire dbg_vgavsw;
+  assign dbg_vgavsw = (dbg_enables & BIT_VGA_VSW) ? 1'b1 : 1'b0;  
+  assign VGA_VSW = (dbg_spi_mode == 1'b1) ? dbg_vgavsw : pwr_vsw;
+  assign VGA_SSn = (dbg_spi_mode == 1'b1 && dbg_spi_device == SPI_VGA) ? SPI_SSn : pwr_ssn;
+  assign VGA_SCLK = (dbg_spi_mode == 1'b1 && dbg_spi_device == SPI_VGA) ? SPI_SCLK : pwr_sclk;
+  assign VGA_MOSI = (dbg_spi_mode == 1'b1 && dbg_spi_device == SPI_VGA) ? SPI_MOSI : pwr_mosi;
+  assign VGA_VSWn = !VGA_VSW;
+
   // RF_GATE outputs, from dbg_enables or pulse processor
   wire dbg_rfgate;
   assign dbg_rfgate = (dbg_enables & BIT_RF_GATE) ? 1'b1 : 1'b0;  
@@ -1799,21 +1807,6 @@ end
   wire dbg_rfgate2;
   assign dbg_rfgate2 = (dbg_enables & BIT_RF_GATE2) ? 1'b1 : 1'b0;  
   assign RF_GATE2 = (dbg_spi_mode == 1'b1) ? dbg_rfgate2 : pls_rfgate2;
-
-  // VGA SPI mux, connect to debug SPI or power processor
-  wire dbg_vgavsw;
-  assign dbg_vgavsw = (dbg_enables & BIT_VGA_VSW) ? 1'b1 : 1'b0;  
-  assign VGA_VSW = (dbg_spi_mode == 1'b1) ? dbg_vgavsw : pwr_vsw;
-  wire dbg_vgassn;
-  assign dbg_vgassn = (dbg_spi_device == SPI_VGA) ? SPI_SSn : 1'b1;  
-  assign VGA_SSn = (dbg_spi_mode == 1'b1) ? dbg_vgassn : pwr_ssn;
-  wire dbg_vgasclk;
-  assign dbg_vgasclk = (dbg_spi_device == SPI_VGA) ? SPI_SCLK : 1'b0;  
-  assign VGA_SCLK = (dbg_spi_mode == 1'b1) ? dbg_vgassn : pwr_sclk;
-  wire dbg_vgamosi;
-  assign dbg_vgamosi = (dbg_spi_device == SPI_VGA) ? SPI_MOSI : 1'b0;  
-  assign VGA_MOSI = (dbg_spi_mode == 1'b1) ? dbg_vgamosi : pwr_mosi;
-  assign VGA_VSWn = !VGA_VSW;
 
   wire dbg_bias;
   assign dbg_bias = (dbg_enables & BIT_PA_BIAS_EN) ? 1'b1 : 1'b0;  
