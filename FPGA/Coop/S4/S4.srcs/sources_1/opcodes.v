@@ -663,7 +663,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         frq_wr_en_o <= 1'b0;
         pwr_wr_en_o <= 1'b0;
         pulse_wr_en_o <= 1'b0;
-//        bias_wr_en_o <= 1'b0;
         opcode_counter_o <= 32'h0000_0000;
         uinttmp <= 64'h0000_0000_0000_0000;
         response_wr_en_o <= 1'b0;
