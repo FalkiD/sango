@@ -183,8 +183,8 @@ set_property PACKAGE_PIN B2 [get_ports {SYN_MISO}]
 set_property IOSTANDARD LVCMOS33 [get_ports {SYN_MISO}]
 set_property PACKAGE_PIN E2 [get_ports {SYN_STAT}]
 set_property IOSTANDARD LVCMOS33 [get_ports {SYN_STAT}]
-set_property PACKAGE_PIN D1 [get_ports {SYN_MUTE}]
-set_property IOSTANDARD LVCMOS33 [get_ports {SYN_MUTE}]
+set_property PACKAGE_PIN D1 [get_ports {SYN_MUTEn}]
+set_property IOSTANDARD LVCMOS33 [get_ports {SYN_MUTEn}]
 
 
 

@@ -35,7 +35,9 @@
 // Revision 1.00.A  07/26/2017 RMR Merged Coop & Rick
 // Revision 1.00.B  08/01/2017 JLC DDS SPI Init & Re-Freq AD9954
 // Revision 1.00.C  08/04/2017 JLC DDS SPI Init & Re-Freq AD9954 & dds.v (esp. sclk-data) cleanup.
+// Revision 1.00.D  08/04/2017 JLC SYN SPI Init for LTC6946.
+// Revision 1.00.E  08/04/2017 JLC SYN SPI Init for LTC6946 resequenced to wait for DDS init.
 //
 //------------------------------------------------------------------------------
 
-`define VERSION 16'h1_00_C     // V.vv.r FPGA development revision
+`define VERSION 16'h1_00_E     // V.vv.r FPGA development revision

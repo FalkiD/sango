@@ -49,10 +49,17 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
     input                  dds_spi_miso_i,           // 
     output                 dds_spi_ss_n_o,           // 
     output                 dds_spi_iorst_o,          // 
-    output                 dds_spi_ioup_o,          // 
+    output                 dds_spi_ioup_o,           // 
     output                 dds_spi_sync_o,           // 
     output                 dds_spi_ps0_o,            // 
     output                 dds_spi_ps1_o,            // 
+
+    // control SYN, initialize after DDS initialization completes
+    output                 dds_synth_mute_n_o,       // DDS will drive SYN_MUTE, 1=>RF; 0=>MUTE.
+    output                 dds_synth_doInit_o,       // SYN doInit wire, pulse after DDS init finishes
+    output                 dds_synth_initing_o,      // SYN doInit wire, pulse after DDS init finishes
+    input                  dds_synth_stat_i,         // DDS will mute synth until synth_stat_i (== synth PLL locked).
+
     output                 dbg0_o,                   // Utility debug output #0.
     output                 dbg1_o,                   // Utility debug output #1.
     output                 dbg2_o,                   // Utility debug output #2.
@@ -108,16 +115,22 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
    reg                            dds_interOpGap       = 1'b0;
    reg  [4:0]                     dds_interOpGap_cnt   = 5'b0_0000;
    
-   reg                            dds_spi_ss           = 1'b0;
-   wire                           dds_spi_ss_s         = (~dds_fifo_empty_w & dds_spi_wtck &
-                                                            (dds_spi_state == DDS_SPI_STATE_IDLE) & ~dds_init_loading & ~dds_interOpGap & ~dds_spi_ioup);
    reg                            dds_spi_ss_k         = 1'b0;
    reg                            dds_spi_do_ioup      = 1'b0;
    reg                            dds_spi_ioup_ce      = 1'b0;
    reg                            dds_spi_ioup         = 1'b0;
    reg                            dds_spi_ioupr        = 1'b0;
    reg  [4:0]                     dds_spi_ioup_cnt     = 5'b0_0000;
+   reg                            dds_spi_ss           = 1'b0;
+   wire                           dds_spi_ss_s         = (~dds_fifo_empty_w & dds_spi_wtck &
+                                                            (dds_spi_state == DDS_SPI_STATE_IDLE) & ~dds_init_loading & ~dds_interOpGap & ~dds_spi_ioup);
 
+   // DDS will drive SYN_MUTEn, 1=>RF; 0=>MUTE. Mute when initializing or
+   // changing frequency. Unmute when DDS SPI has finished and SYN_STAT
+   // turns ON indicating PLL lock
+   reg                            dds_synth_mute_n     = 1'b0;  // Mute synthesizer until DDS SPI finishes & SYN pll locked.
+   reg                            dds_synth_doInit     = 1'b0;  // Do SYN init when DDS init has finished
+   reg                            dds_synth_initing    = 1'b0;
    
    // Generate: dds_spi_sclk   (e.g. SPI_CLK_RATIO == 8)
    //           dds_spi_wtck
@@ -289,6 +302,8 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
          dds_init_op_cntr         <= 4'b0000;
          dds_interOpGap           <= 1'b0;
          dds_interOpGap_cnt       <= 5'b0_0000;
+         dds_synth_mute_n         <= 1'b0;          // Mute synthesizer until DDS SPI finishes
+         dds_synth_doInit         <= 1'b0;          // Do SYN init when DDS init has finished
       end
       else begin
          // One-tick signals
@@ -299,7 +314,8 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
          dds_spi_ss               <= ~dds_spi_ss_k & (dds_spi_ss | dds_spi_ss_s);
          dds_spi_ss_k             <= (shftCnt == 6'b00_0000) & (dds_clk_cnt == 4'b0110) & (dds_spi_state == DDS_SPI_STATE_SHF0);
 
-
+         dds_synth_doInit         <= ~dds_spi_ioup & dds_spi_ioupr; // Asset on falling tick of dds_spi_ioup
+         
          // Do init sequence (kicked off by doInit_i == 1'b1).
          dds_doInitr              <= doInit_i;
          if (doInit_i & ~dds_doInitr) begin
@@ -310,6 +326,8 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
             dds_init_op_cntr      <= 4'b0000;
             dds_iorsting          <= 1'b1;
             dds_iorsting_cnt      <= 5'b0_0001;
+            dds_synth_mute_n      <= 1'b0;  // Mute synthesizer
+            dds_synth_doInit      <= 1'b0;  // clear flag
          end
          if (dds_iorsting) begin
             if (dds_iorsting_cnt == 5'b0_1111) begin
@@ -378,8 +396,7 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
          if ( dds_spi_ss & dds_spi_wtck ) begin
             shftCnt               <= shftCnt - 6'b00_0001;
          end
-         
-         
+
          // Generate dds_IOUP pulse
          if (dds_spi_ioup_ce) begin
             dds_spi_ioup_cnt      <= dds_spi_ioup_cnt  + 5'b0_0001;
@@ -394,12 +411,26 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
                dds_spi_ioup_ce    <= 1'b0;
                dds_spi_ioup_cnt   <= 5'b0_0000;
                dds_interOpGap     <= 1'b1;
+               dds_synth_doInit   <= 1'b1;  // Init SYN now that DDS init SPI has finished            
+               dds_synth_initing  <= 1'b1;  // Init SYN now that DDS init SPI has finished            
+               dds_synth_mute_n   <= 1'b0;  // DDS is ready. After RESET SYN is not ready until SYN finishes init
             end
             endcase  // End of case (dds_spi_ioup_cnt)
          end
          dds_spi_ioup             <= ~(dds_spi_ioup_cnt == 5'b1_1111) & (dds_spi_ioup | (dds_spi_ioup_cnt == 5'b0_1111));
          dds_spi_ioupr            <= dds_spi_ioup; 
-         
+
+         // Handle SYN initing status
+       `ifdef XILINX_SIMULATOR
+         // ...can't ever use SYN_STAT in SIM
+         if (dds_initd) begin //dds_synth_stat_i) begin
+       `else
+         // Can't use SYN_STAT until that's working...
+         if (dds_synth_stat_i) begin
+       `endif         
+            dds_synth_initing <= 1'b0;  // Stop indicating synth init.
+            dds_synth_mute_n  <= 1'b1;  // Stop muting synth.
+         end
          
          // DDS SPI State Machine: state-by-state case statement
          case (dds_spi_state)
@@ -473,24 +504,28 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
       end    
    endfunction
 
-   assign  dds_fifo_full_o    = dds_fifo_full_w;
-   assign  dds_fifo_empty_o   = dds_fifo_empty_w;
-   assign  dds_spi_mosi_o     = dds_spi_ss ? dds_ops_shftr[39] : 1'b0;
-   assign  dds_spi_sclk_o     = dds_spi_ss ? dds_spi_sclk : 1'b1; 
-   assign  dds_spi_ss_n_o     = ~dds_spi_ss;
+   assign  dds_fifo_full_o        = dds_fifo_full_w;
+   assign  dds_fifo_empty_o       = dds_fifo_empty_w;
+   assign  dds_spi_mosi_o         = dds_spi_ss ? dds_ops_shftr[39] : 1'b0;
+   assign  dds_spi_sclk_o         = dds_spi_ss ? dds_spi_sclk : 1'b1; 
+   assign  dds_spi_ss_n_o         = ~dds_spi_ss;
    
-   assign  dds_spi_iorst_o    = dds_spi_iorst;
-   assign  dds_spi_ioup_o     = dds_spi_ioupr; 
-   assign  dds_spi_sync_o     = 1'b0; 
-   assign  dds_spi_ps0_o      = 1'b0; 
-   assign  dds_spi_ps1_o      = 1'b0; 
+   assign  dds_spi_iorst_o        = dds_spi_iorst;
+   assign  dds_spi_ioup_o         = dds_spi_ioupr; 
+   assign  dds_spi_sync_o         = 1'b0; 
+   assign  dds_spi_ps0_o          = 1'b0; 
+   assign  dds_spi_ps1_o          = 1'b0; 
 
-   assign  dds_initd_o        = dds_initd;
-       
-   assign  dbg0_o             = dds_spi_ss;
-   assign  dbg1_o             = dds_ops_shftr[39];
-   assign  dbg2_o             = dds_spi_iorst;
-   assign  dbg3_o             = dds_spi_ioup;
+   assign  dds_initd_o            = dds_initd;
+
+   assign  dds_synth_mute_n_o     = dds_synth_mute_n;
+   assign  dds_synth_doInit_o     = dds_synth_doInit;
+   assign  dds_synth_initing_o    = dds_synth_initing;
+          
+   assign  dbg0_o                 = dds_spi_ss;
+   assign  dbg1_o                 = dds_ops_shftr[39];
+   assign  dbg2_o                 = dds_spi_iorst;
+   assign  dbg3_o                 = dds_spi_ioup;
 
 endmodule
 

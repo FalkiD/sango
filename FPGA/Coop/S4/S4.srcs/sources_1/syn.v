@@ -46,8 +46,7 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
     input                  syn_spi_miso_i,           // 
     output                 syn_spi_ss_n_o,           // 
     input                  syn_stat_i,               // Features set by LTC6946.reg1[5:0] (addr == 4'h1)
-    input                  syn_mute_n_i,             // Drive MUTE from other modules
-    output                 syn_mute_n_o,             // 1=>RF; 0=>MUTE.
+    output reg             syn_mute_n_o,             // 1=>RF; 0=>MUTE.
     output                 dbg0_o,                   // Utility debug output #0.
     output                 dbg1_o,                   // Utility debug output #1.
     output                 dbg2_o,                   // Utility debug output #2.
@@ -88,21 +87,25 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
    reg  [15:0]                    syn_ops_shftr        = 16'b0;
    reg  [5:0]                     shftCnt              = 5'b0_0000;
    
-   reg                            syn_spi_ss           = 1'b0;
-   wire                           syn_spi_ss_s         = (~syn_fifo_empty_w & syn_spi_wtck &
-                                                            (syn_spi_state == SYN_SPI_STATE_IDLE) & ~syn_init_loading & ~syn_interOpGap);
-   reg                            syn_spi_ss_k         = 1'b0;
-
    reg                            syn_doInitr          = 1'b0;
    reg                            syn_initing          = 1'b0;  // Load FIFO w/ init words.
+   reg                            syn_init_shfting     = 1'b0;  // Load FIFO w/ init words.
    reg                            syn_init_loading     = 1'b0;
    reg                            syn_initd            = 1'b0;  // Completely done SPI-ing init.
-   reg  [15:0]                    syn_init_op_cntr     = 4'b0000;
+   reg  [5:0]                     syn_init_op_cntr     = 6'b00_0000;
    reg                            syn_init_we          = 1'b0;
    reg  [11:0]                    syn_init_datr;
+   reg  [4:0]                     syn_init_done_cntr   = 5'b0_0000;
    
    reg                            syn_interOpGap       = 1'b0;
    reg  [4:0]                     syn_interOpGap_cnt   = 5'b0_0000;
+
+   reg                            syn_spi_ss           = 1'b0;
+   wire                           syn_spi_ss_s         = (~syn_fifo_empty_w & syn_spi_wtck &
+                                                            (syn_spi_state == SYN_SPI_STATE_IDLE) &
+//                                                            (~syn_init_loading | syn_fifo_full_w) &
+                                                             ~syn_interOpGap);
+   reg                            syn_spi_ss_k         = 1'b0;
    
    
    // Generate: syn_spi_sclk   (e.g. SPI_CLK_RATIO == 8)
@@ -243,7 +246,7 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
    snglClkFifoParmd #(
       .USE_BRAM          (0),
       .WIDTH             (12),
-      .DEPTH             (10)
+      .DEPTH             (8)
    )
    synInFifo
    (
@@ -276,12 +279,15 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
          syn_doInitr              <= 1'b0;
          syn_initing              <= 1'b0;
          syn_init_loading         <= 1'b0;
+         syn_init_shfting         <= 1'b0;
          syn_init_we              <= 1'b0;
          syn_init_datr            <= 12'b0;
-         syn_init_op_cntr         <= 4'b0000;
+         syn_init_op_cntr         <= 6'b00_0000;
          syn_initd                <= 1'b0;
          syn_interOpGap           <= 1'b0;
          syn_interOpGap_cnt       <= 5'b0_0000;
+         syn_mute_n_o             <= 1'b0;          // Mute until init done
+         syn_init_done_cntr       <= 5'b0_0001; 
       end
       else begin
          // One-tick signals
@@ -299,76 +305,78 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
          if (doInit_i & ~syn_doInitr) begin
             syn_spi_state         <= SYN_SPI_STATE_IDLE;
             syn_init_loading      <= 1'b1;
+            syn_init_shfting      <= 1'b1;
             syn_initing           <= 1'b1;
             syn_initd             <= 1'b0;
-            syn_init_op_cntr      <= 5'b0_0000;
+            syn_init_op_cntr      <= 6'b00_0000;
+            syn_mute_n_o          <= 1'b0;          // Mute until init done
          end
          
-         if (syn_initing) begin
+         if (syn_init_loading & ~syn_fifo_full_w) begin
+            if (syn_init_op_cntr != 6'b11_1111) begin
+               syn_init_op_cntr <= syn_init_op_cntr + 6'b00_0001;
+            end
             case (syn_init_op_cntr)
-            5'b0_0001: begin
+            6'b00_0011: begin
                syn_init_datr   <= 12'h2_0A;
                syn_init_we     <= 1'b1;              // 1-tick signal
-               syn_init_op_cntr<= syn_init_op_cntr + 5'b0_0001;
+               // syn_init_op_cntr<= syn_init_op_cntr + 5'b0_0001;
             end
-            5'b0_0011: begin
+            6'b00_0111: begin
                syn_init_datr   <= 12'h3_10;
                syn_init_we     <= 1'b1;              // 1-tick signal
-               syn_init_op_cntr<= syn_init_op_cntr + 5'b0_0001;
+               // syn_init_op_cntr<= syn_init_op_cntr + 5'b0_0001;
             end
-            5'b0_0101: begin
+            6'b00_1011: begin
                syn_init_datr   <= 12'h4_01;
                syn_init_we     <= 1'b1;              // 1-tick signal
-               syn_init_op_cntr<= syn_init_op_cntr + 5'b0_0001;
+               // syn_init_op_cntr<= syn_init_op_cntr + 5'b0_0001;
             end
-            5'b0_0111: begin
+            6'b00_1111: begin
                syn_init_datr   <= 12'h5_00;
                syn_init_we     <= 1'b1;              // 1-tick signal
-               syn_init_op_cntr<= syn_init_op_cntr + 5'b0_0001;
+               // syn_init_op_cntr<= syn_init_op_cntr + 5'b0_0001;
             end
-            5'b0_1001: begin
+            6'b01_0011: begin
                syn_init_datr   <= 12'h6_E5;
                syn_init_we     <= 1'b1;              // 1-tick signal
-               syn_init_op_cntr<= syn_init_op_cntr + 5'b0_0001;
+               // syn_init_op_cntr<= syn_init_op_cntr + 5'b0_0001;
             end
-            5'b0_1011: begin
+            6'b01_0111: begin
                syn_init_datr   <= 12'h7_83;
                syn_init_we     <= 1'b1;              // 1-tick signal
-               syn_init_op_cntr<= syn_init_op_cntr + 5'b0_0001;
+               // syn_init_op_cntr<= syn_init_op_cntr + 5'b0_0001;
             end
-            5'b0_1101: begin
+            6'b01_1011: begin
                syn_init_datr   <= 12'h8_F9;
                syn_init_we     <= 1'b1;              // 1-tick signal
-               syn_init_op_cntr<= syn_init_op_cntr + 5'b0_0001;
+               // syn_init_op_cntr<= syn_init_op_cntr + 5'b0_0001;
             end
-            5'b0_1111: begin
+            6'b01_1111: begin
                syn_init_datr   <= 12'h9_1A;
                syn_init_we     <= 1'b1;              // 1-tick signal
-               syn_init_op_cntr<= syn_init_op_cntr + 5'b0_0001;
+               // syn_init_op_cntr<= syn_init_op_cntr + 5'b0_0001;
             end
-            5'b1_0001: begin
+            6'b10_0011: begin
                syn_init_datr   <= 12'hA_C0;
                syn_init_we     <= 1'b1;              // 1-tick signal
-               syn_init_op_cntr<= syn_init_op_cntr + 5'b0_0001;
+               // syn_init_op_cntr<= syn_init_op_cntr + 5'b0_0001;
             end
-            5'b1_0011: begin
+            6'b10_0111: begin
                syn_init_datr   <= 12'h2_08;
                syn_init_we     <= 1'b1;              // 1-tick signal
-               syn_init_op_cntr<= syn_init_op_cntr + 5'b0_0001;
+               // syn_init_op_cntr<= syn_init_op_cntr + 5'b0_0001;
             end
-            5'b1_0101: begin
-               syn_init_op_cntr<= 5'b1_1111;
+            6'b10_1011: begin
+//               syn_init_op_cntr<= 5'b1_1111;
             end
-            5'b1_1111: begin
+            6'b11_1111: begin
                syn_init_loading<= 1'b0;
             end
             default: begin
-               if (~syn_fifo_full_w) begin
-                  syn_init_op_cntr<= syn_init_op_cntr + 5'b0_0001;
-               end
             end
             endcase  // End of case (syn_init_op_cntr)
-         end  // End of if (syn_initing)
+         end  // End of if (syn_init_loading)
 
          if (syn_interOpGap) begin
             syn_interOpGap_cnt    <= syn_interOpGap_cnt + 5'b0_0001;
@@ -401,7 +409,8 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
          // SYN SPI State Machine: state-by-state case statement
          case (syn_spi_state)
          SYN_SPI_STATE_IDLE: begin
-            if (~syn_fifo_rdr | syn_init_loading | syn_interOpGap) begin
+//            if (~syn_fifo_rdr | syn_init_loading | syn_interOpGap) begin
+            if (~syn_fifo_rdr | syn_interOpGap) begin
                syn_spi_state      <= SYN_SPI_STATE_IDLE;
             end
             else begin
@@ -430,8 +439,19 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
          SYN_SPI_STATE_SHF1: begin
             syn_spi_state         <= SYN_SPI_STATE_IDLE;
             syn_interOpGap        <= 1'b1;
+            if (syn_init_shfting) begin
+               syn_init_done_cntr <= syn_init_done_cntr + 5'b0_0001; 
+            end
          end //  End of SYN_SPI_STATE_SHF1: case.
          endcase //  End of case (syn_spi_state)
+         
+         if(syn_initing && (syn_init_done_cntr == 5'b0_1010)) begin
+            syn_initing           <= 1'b0;
+            syn_init_shfting      <= 1'b0;
+            syn_initd             <= 1'b1;
+            syn_mute_n_o          <= 1'b1; // Unmute
+         end
+         
       end  // End of always @(posedge clk_i)  ... SYN SPI State Machine ...
    end // End of always @(posedge clk_i)  
    
@@ -441,10 +461,7 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
    assign  syn_spi_mosi_o     = syn_spi_ss ? syn_ops_shftr[15] : 1'b0;
    assign  syn_spi_sclk_o     = syn_spi_ss ? syn_spi_sclk : 1'b1; 
    assign  syn_spi_ss_n_o     = ~syn_spi_ss;
-   assign  syn_mute_n_o       = syn_mute_n_i;       // Drive MUTE from other modules, 1=>RF; 0=>MUTE.
    
-   assign  syn_initd_o        = syn_initd;
-       
    assign  dbg0_o             = syn_spi_ss;
    assign  dbg1_o             = syn_ops_shftr[15];
    assign  dbg2_o             = syn_spi_sclk;

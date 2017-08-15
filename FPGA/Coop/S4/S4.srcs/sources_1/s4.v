@@ -228,7 +228,7 @@ module s4
   output             SYN_SCLK,           //  C1    O       
   output             SYN_SSn,            //  C1    O
   input              SYN_STAT,           //  B1    O
-  output             SYN_MUTE,           //  E2    O
+  output             SYN_MUTEn,          //  E2    O
 
   output             DDS_MOSI,           //  F2    O        AD9954 DDS SPI+ I/F
   input              DDS_MISO,           //  E1    I
@@ -296,8 +296,8 @@ reg  [15:0]  count4;
 wire         sys_clk;
 wire         sys_rst_n;
 // initialize hw after a reset
-reg          initialize = 1'b0;
-reg          hw_init = 1'b0;
+reg          initialize = 1'b1;
+reg          hw_init = 1'b1;
 
 wire         mmcm_rst_i;
 wire         mmcm_pwrdn_i;
@@ -416,7 +416,8 @@ wire [31:0]  ftw_fifo_dat_i; // = 32'h0000_0000;          // frequency tuning wo
 wire         ftw_fifo_wen; // = 1'b0;            // frequency tuning word fifo we.
 wire         ftw_fifo_full;           // ftw fifo full.
 wire         ftw_fifo_mt;             // ftw fifo empty.
-wire         hardware_init;           // pulse to do DDS/SYN/VGA init sequences
+wire         hardware_init;           // pulse to do DDS/VGA init sequences
+wire         dds_init_done;           // pulse to do SYN init sequence after DDS has finished init
 
 // Power processor wires
 wire [38:0]  pwr_fifo_dat_i;          // to fifo from opc, power or cal value. 
@@ -500,7 +501,11 @@ wire         synth_ssn;
 wire         synth_sclk;
 wire         synth_mosi;
 wire         synth_miso;
-wire         synth_mute;
+wire         syn_synth_mute_n;      // SYN processor muting SYN
+// SYN/DDS shared signals
+wire         dds_synth_mute_n;      // DDS processor muting SYN
+wire         dds_synth_doInit;      // Init SYN when DDS init has completed
+wire         dds_synth_initing;     // SYN initializing
 
 //////////////////////////////////////////////////////////
 // Backdoor fifo variables
@@ -743,12 +748,11 @@ always @(posedge sys_clk) begin
     initialize <= 1'b1;
   end
   else begin
-    if(initialize == 1'b1) begin
+    if(initialize == 1'b1)
       hw_init <= 1'b1;
-      initialize <= 1'b0;
-    end
-    else 
+    else
       hw_init <= 1'b0;
+    initialize <= 1'b0;
   end
 end
 
@@ -1375,6 +1379,12 @@ end
       .dds_spi_sync_o             (rmr_DDS_SYNC),          // 
       .dds_spi_ps0_o              (rmr_DDS_PS0),           // 
       .dds_spi_ps1_o              (rmr_DDS_PS1),           // 
+      
+      // DDS will drive SYN_MUTEn, 1=>RF; 0=>MUTE.
+      .dds_synth_mute_n_o         (dds_synth_mute_n),     // mute SYN whilst changing frequency
+      .dds_synth_stat_i           (SYN_STAT),             // ON=SYN PLL is locked
+      .dds_synth_doInit_o         (dds_synth_doInit),     // Init SYN when DDS init has completed
+      .dds_synth_initing_o        (dds_synth_initing),    // Init SYN when DDS init has completed
   
       .dbg0_o                     (),             //
       .dbg1_o                     (),             //
@@ -1395,26 +1405,25 @@ end
       .CLK_FREQ                   (`GLBL_CLK_FREQ_MCU),    // <JLC_TEMP_CLK
       .SPI_CLK_FREQ               (20000000)
     ) syn_spi_io
-  (
-    .clk_i                        (sys_clk),               // 
-    .rst_i                        (!sys_rst_n),            // 
-    .doInit_i                     (hardware_init),         // do an init sequence. 
-    .hwdbg_dat_i                  (hwdbg_ctl[11:0]),       // hwdbg data input.
-    .hwdbg_we_i                   (extd_fifo_wr_dds_w),    // hwdbg we.
-    .syn_fifo_full_o              (),                      // opcproc fifo full.
-    .syn_fifo_empty_o             (),                      // opcproc fifo empty.
-    .syn_spi_sclk_o               (synth_sclk),            // 
-    .syn_spi_mosi_o               (synth_mosi),            //
-    .syn_spi_miso_i               (SYN_MISO),              // 
-    .syn_spi_ss_n_o               (synth_ssn),             // 
-    .syn_stat_i                   (SYN_STAT),              // Features set by LTC6946.reg1[5:0] (addr == 4'h1)
-    .syn_mute_n_i                 (1'b1),                  // Drive below mute wire, RF ON for initial debugging.
-    .syn_mute_n_o                 (synth_mute),            // 1=>RF; 0=>MUTE.
-    .dbg0_o                       (),                      // SYN_SSn.
-    .dbg1_o                       (),                      // syn_ops_shftr[15]
-    .dbg2_o                       (),                      // SYN_SCLK
-    .dbg3_o                       ()                       // syn_initing
-  );
+    (
+      .clk_i                        (sys_clk),               // 
+      .rst_i                        (!sys_rst_n),            // 
+      .doInit_i                     (dds_synth_doInit),      // do an init sequence after DDS init has finished. 
+      .hwdbg_dat_i                  (hwdbg_ctl[11:0]),       // hwdbg data input.
+      .hwdbg_we_i                   (extd_fifo_wr_dds_w),    // hwdbg we.
+      .syn_fifo_full_o              (),                      // opcproc fifo full.
+      .syn_fifo_empty_o             (),                      // opcproc fifo empty.
+      .syn_spi_sclk_o               (synth_sclk),            // 
+      .syn_spi_mosi_o               (synth_mosi),            //
+      .syn_spi_miso_i               (SYN_MISO),              // 
+      .syn_spi_ss_n_o               (synth_ssn),             // 
+      .syn_stat_i                   (SYN_STAT),              // Features set by LTC6946.reg1[5:0] (addr == 4'h1)
+      .syn_mute_n_o                 (syn_synth_mute_n),      // 1=>RF; 0=>MUTE.
+      .dbg0_o                       (),                      // SYN_SSn.
+      .dbg1_o                       (),                      // syn_ops_shftr[15]
+      .dbg2_o                       (),                      // SYN_SCLK
+      .dbg3_o                       ()                       // syn_initing
+    );
 
 
 // ******************************************************************************
@@ -1509,201 +1518,201 @@ end
     end
   end
 
+//// No longer needed
+//// ******************************************************************************
+//// *                                                                            *
+//// *  Load opcode fifo from the mmc_tester instance                             *
+//// *  (Initially using mmc debug uart)                                          *
+//// *  Load the opcode processor fifo using back-door UART                       *
+//// *                                                                            *
+//// ******************************************************************************
+//  reg  [4:0]    bkd_opc_state;
+//  reg  [5:0]    bkd_counter;
+//  `define BKD_COUNT 6'd63
+//  `define BKD_IDLE  5'd0
+//  `define BKD_WR0   5'd1
+//  `define BKD_WR1   5'd2
+//  `define BKD_WR2   5'd3
+//  `define BKD_WR3   5'd4
+//  `define BKD_NEXT  5'd5
+//  `define BKD_WRREG 5'd6
+//  `define BKD_DONE  5'd7
+//  `define BKD_SPCR  5'd8
+//  `define BKD_BUG   5'd9
+//  always @(posedge sys_clk) begin
+//    if(!sys_rst_n) begin
+//      opc_load_ack <= 1'b0;
+//      bkd_opc_state <= `BKD_IDLE;
+//      bkd_counter <= 6'd0;
+//      //opc_enable <= 1'b0;
+//    end
+//    else if(opc_load_new == 1'b1) begin
+//      if(opc_load_ack == 1'b0) begin    // we haven't loaded opc yet
+//        case(bkd_opc_state)
+//        `BKD_IDLE: begin
+//          opc_inreg <= opc_dat0;   
+//          opc_load_ack <= 1'b0;
+//          bkd_counter <= 6'd0;
+//          bkd_opc_state <= `BKD_WR0;
+//        end
+//        `BKD_WR0: begin
+//          bkd_fif_dat_i <= opc_inreg[7:0];
+//          bkd_fif_wen <= 1'b1;     // writes on 1st clock even though count takes another clock to update
+//          bkd_counter <= bkd_counter + 1;
+//          bkd_opc_state <= `BKD_WR1;
+//        end
+//        `BKD_WR1: begin
+//          bkd_fif_dat_i <= opc_inreg[15:8];
+//          bkd_counter <= bkd_counter + 1;
+//          bkd_opc_state <= `BKD_WR2;
+//        end
+//        `BKD_WR2: begin
+//          bkd_fif_dat_i <= opc_inreg[23:16];
+//          bkd_counter <= bkd_counter + 1;
+//          bkd_opc_state <= `BKD_WR3;
+//        end
+//        `BKD_WR3: begin
+//          bkd_fif_dat_i <= opc_inreg[31:24];
+//          bkd_counter <= bkd_counter + 1;
+//          if(bkd_counter == `BKD_COUNT)
+//            bkd_opc_state <= `BKD_DONE;
+//          else
+//            bkd_opc_state <= `BKD_NEXT;
+//        end
+//        `BKD_NEXT: begin // Next word
+//          case(bkd_counter) 
+//          4:  opc_inreg <= opc_dat1;           
+//          8:  opc_inreg <= opc_dat2;           
+//          12: opc_inreg <= opc_dat3;           
+//          16: opc_inreg <= opc_dat4;           
+//          20: opc_inreg <= opc_dat5;           
+//          24: opc_inreg <= opc_dat6;           
+//          28: opc_inreg <= opc_dat7;           
+//          32: opc_inreg <= opc_dat8;           
+//          36: opc_inreg <= opc_dat9;           
+//          40: opc_inreg <= opc_datA;           
+//          44: opc_inreg <= opc_datB;           
+//          48: opc_inreg <= opc_datC;           
+//          52: opc_inreg <= opc_datD;           
+//          56: opc_inreg <= opc_datE;           
+//          60: opc_inreg <= opc_datF;
+//          endcase
+//          bkd_opc_state <= `BKD_WR0;
+//          bkd_fif_wen <= 1'b0;
+//        end
+//        `BKD_DONE: begin
+//          opc_load_ack <= 1'b1;
+//          bkd_fif_wen <= 1'b0;
+//          //opc_enable <= 1'b1;
+//          bkd_opc_state <= `BKD_IDLE;
+//        end
+//        endcase    
+//      end
+//    end
+//    else begin
+//      // If we have loaded opc & acknowledged mmc_tester
+//      // once mmc_tester clears opc_load_new we must clear
+//      // opc_load_ack (handshake)
+//      if(opc_load_ack == 1'b1)
+//        opc_load_ack <= 1'b0;    
+//    end 
+//  end
 
-// ******************************************************************************
-// *                                                                            *
-// *  Load opcode fifo from the mmc_tester instance                             *
-// *  (Initially using mmc debug uart)                                          *
-// *  Load the opcode processor fifo using back-door UART                       *
-// *                                                                            *
-// ******************************************************************************
-  reg  [4:0]    bkd_opc_state;
-  reg  [5:0]    bkd_counter;
-  `define BKD_COUNT 6'd63
-  `define BKD_IDLE  5'd0
-  `define BKD_WR0   5'd1
-  `define BKD_WR1   5'd2
-  `define BKD_WR2   5'd3
-  `define BKD_WR3   5'd4
-  `define BKD_NEXT  5'd5
-  `define BKD_WRREG 5'd6
-  `define BKD_DONE  5'd7
-  `define BKD_SPCR  5'd8
-  `define BKD_BUG   5'd9
-  always @(posedge sys_clk) begin
-    if(!sys_rst_n) begin
-      opc_load_ack <= 1'b0;
-      bkd_opc_state <= `BKD_IDLE;
-      bkd_counter <= 6'd0;
-      //opc_enable <= 1'b0;
-    end
-    else if(opc_load_new == 1'b1) begin
-      if(opc_load_ack == 1'b0) begin    // we haven't loaded opc yet
-        case(bkd_opc_state)
-        `BKD_IDLE: begin
-          opc_inreg <= opc_dat0;   
-          opc_load_ack <= 1'b0;
-          bkd_counter <= 6'd0;
-          bkd_opc_state <= `BKD_WR0;
-        end
-        `BKD_WR0: begin
-          bkd_fif_dat_i <= opc_inreg[7:0];
-          bkd_fif_wen <= 1'b1;     // writes on 1st clock even though count takes another clock to update
-          bkd_counter <= bkd_counter + 1;
-          bkd_opc_state <= `BKD_WR1;
-        end
-        `BKD_WR1: begin
-          bkd_fif_dat_i <= opc_inreg[15:8];
-          bkd_counter <= bkd_counter + 1;
-          bkd_opc_state <= `BKD_WR2;
-        end
-        `BKD_WR2: begin
-          bkd_fif_dat_i <= opc_inreg[23:16];
-          bkd_counter <= bkd_counter + 1;
-          bkd_opc_state <= `BKD_WR3;
-        end
-        `BKD_WR3: begin
-          bkd_fif_dat_i <= opc_inreg[31:24];
-          bkd_counter <= bkd_counter + 1;
-          if(bkd_counter == `BKD_COUNT)
-            bkd_opc_state <= `BKD_DONE;
-          else
-            bkd_opc_state <= `BKD_NEXT;
-        end
-        `BKD_NEXT: begin // Next word
-          case(bkd_counter) 
-          4:  opc_inreg <= opc_dat1;           
-          8:  opc_inreg <= opc_dat2;           
-          12: opc_inreg <= opc_dat3;           
-          16: opc_inreg <= opc_dat4;           
-          20: opc_inreg <= opc_dat5;           
-          24: opc_inreg <= opc_dat6;           
-          28: opc_inreg <= opc_dat7;           
-          32: opc_inreg <= opc_dat8;           
-          36: opc_inreg <= opc_dat9;           
-          40: opc_inreg <= opc_datA;           
-          44: opc_inreg <= opc_datB;           
-          48: opc_inreg <= opc_datC;           
-          52: opc_inreg <= opc_datD;           
-          56: opc_inreg <= opc_datE;           
-          60: opc_inreg <= opc_datF;
-          endcase
-          bkd_opc_state <= `BKD_WR0;
-          bkd_fif_wen <= 1'b0;
-        end
-        `BKD_DONE: begin
-          opc_load_ack <= 1'b1;
-          bkd_fif_wen <= 1'b0;
-          //opc_enable <= 1'b1;
-          bkd_opc_state <= `BKD_IDLE;
-        end
-        endcase    
-      end
-    end
-    else begin
-      // If we have loaded opc & acknowledged mmc_tester
-      // once mmc_tester clears opc_load_new we must clear
-      // opc_load_ack (handshake)
-      if(opc_load_ack == 1'b1)
-        opc_load_ack <= 1'b0;    
-    end 
-  end
 
-
-// ******************************************************************************
-// *                                                                            *
-// *  Send opcode response fifo to the mmc_tester instance                      *
-// *  (Initially using mmc debug uart)                                          *
-// *  Send the opcode processor response fifo using back-door UART              *
-// *                                                                            *
-// ******************************************************************************
-reg  [4:0]    bkd_rsp_state;
-reg  [6:0]    bkd_rsp_counter;
-reg           bkd_rsp_run;
-always @(posedge sys_clk) begin
-  if(!sys_rst_n) begin
-    opc_rsp_new <= 1'b0;
-    bkd_rsp_run <= 1'b0;
-    bkd_rsp_state <= `BKD_IDLE;
-    bkd_rsp_counter <= 7'd0;
-  end
-  else if(opc_rspf_rdy == 1'b1 || bkd_rsp_run) begin
-      case(bkd_rsp_state)
-      `BKD_IDLE: begin
-        opc_rsp_new <= 1'b0;
-        bkd_rsp_counter <= 7'd0;
-        bkd_rsp_run <= 1'b1;
-        bkd_rsp_state <= `BKD_WR0;
-      end
-      `BKD_WR0: begin
-        opc_outreg[7:0] <= bkd_rspf_dat_o;
-        bkd_rspf_ren <= 1'b1;
-        bkd_rsp_counter <= bkd_rsp_counter + 1;
-        bkd_rsp_state <= `BKD_SPCR; // Takes extra clk to start reading
-      end
-      `BKD_SPCR: begin
-        bkd_rsp_state <= `BKD_BUG;
-      end
-      `BKD_BUG: begin
-        bkd_rsp_state <= `BKD_WR1;
-      end
-      `BKD_WR1: begin
-        opc_outreg[15:8] <= bkd_rspf_dat_o;
-        bkd_rsp_counter <= bkd_rsp_counter + 1;
-        bkd_rsp_state <= `BKD_WR2;
-      end
-      `BKD_WR2: begin
-        opc_outreg[23:16] <= bkd_rspf_dat_o;
-        bkd_rsp_counter <= bkd_rsp_counter + 1;
-        bkd_rsp_state <= `BKD_WR3;
-      end
-      `BKD_WR3: begin
-        opc_outreg[31:24] <= bkd_rspf_dat_o;
-        bkd_rsp_counter <= bkd_rsp_counter + 1;
-        if(bkd_rsp_counter == `BKD_COUNT)
-          bkd_rsp_state <= `BKD_DONE;
-        else
-          bkd_rsp_state <= `BKD_WRREG;
-          bkd_rspf_ren <= 1'b0;
-      end
-      `BKD_WRREG: begin // Save value
-        case(bkd_rsp_counter) 
-        4:  opc_rsp0 <= opc_outreg;           
-        8:  opc_rsp1 <= opc_outreg;           
-        12: opc_rsp2 <= opc_outreg;           
-        16: opc_rsp3 <= opc_outreg;           
-        20: opc_rsp4 <= opc_outreg;           
-        24: opc_rsp5 <= opc_outreg;           
-        28: opc_rsp6 <= opc_outreg;           
-        32: opc_rsp7 <= opc_outreg;           
-        36: opc_rsp8 <= opc_outreg;           
-        40: opc_rsp9 <= opc_outreg;           
-        44: opc_rspA <= opc_outreg;           
-        48: opc_rspB <= opc_outreg;           
-        52: opc_rspC <= opc_outreg;           
-        56: opc_rspD <= opc_outreg;           
-        60: opc_rspE <= opc_outreg;           
-        64: opc_rspF <= opc_outreg;           
-        endcase
-        bkd_rsp_state <= `BKD_WR0;
-        bkd_rspf_ren <= 1'b1;
-      end
-      `BKD_DONE: begin
-        opc_rsp_new <= 1'b1;
-        bkd_rspf_ren <= 1'b0;
-        bkd_rsp_run <= 1'b0;
-        bkd_rsp_state <= `BKD_IDLE;
-      end
-      endcase
-  end
-  else begin
-    // When rsp fifo length is not equal the response length
-    // the opc_rspf_rdy flag clears. When mmc_tester acks
-    // our response we must clear opc_rsp_new 
-    if(opc_rsp_ack == 1'b1)
-      opc_rsp_new <= 1'b0;    
-  end 
-end
+//// ******************************************************************************
+//// *                                                                            *
+//// *  Send opcode response fifo to the mmc_tester instance                      *
+//// *  (Initially using mmc debug uart)                                          *
+//// *  Send the opcode processor response fifo using back-door UART              *
+//// *                                                                            *
+//// ******************************************************************************
+//reg  [4:0]    bkd_rsp_state;
+//reg  [6:0]    bkd_rsp_counter;
+//reg           bkd_rsp_run;
+//always @(posedge sys_clk) begin
+//  if(!sys_rst_n) begin
+//    opc_rsp_new <= 1'b0;
+//    bkd_rsp_run <= 1'b0;
+//    bkd_rsp_state <= `BKD_IDLE;
+//    bkd_rsp_counter <= 7'd0;
+//  end
+//  else if(opc_rspf_rdy == 1'b1 || bkd_rsp_run) begin
+//      case(bkd_rsp_state)
+//      `BKD_IDLE: begin
+//        opc_rsp_new <= 1'b0;
+//        bkd_rsp_counter <= 7'd0;
+//        bkd_rsp_run <= 1'b1;
+//        bkd_rsp_state <= `BKD_WR0;
+//      end
+//      `BKD_WR0: begin
+//        opc_outreg[7:0] <= bkd_rspf_dat_o;
+//        bkd_rspf_ren <= 1'b1;
+//        bkd_rsp_counter <= bkd_rsp_counter + 1;
+//        bkd_rsp_state <= `BKD_SPCR; // Takes extra clk to start reading
+//      end
+//      `BKD_SPCR: begin
+//        bkd_rsp_state <= `BKD_BUG;
+//      end
+//      `BKD_BUG: begin
+//        bkd_rsp_state <= `BKD_WR1;
+//      end
+//      `BKD_WR1: begin
+//        opc_outreg[15:8] <= bkd_rspf_dat_o;
+//        bkd_rsp_counter <= bkd_rsp_counter + 1;
+//        bkd_rsp_state <= `BKD_WR2;
+//      end
+//      `BKD_WR2: begin
+//        opc_outreg[23:16] <= bkd_rspf_dat_o;
+//        bkd_rsp_counter <= bkd_rsp_counter + 1;
+//        bkd_rsp_state <= `BKD_WR3;
+//      end
+//      `BKD_WR3: begin
+//        opc_outreg[31:24] <= bkd_rspf_dat_o;
+//        bkd_rsp_counter <= bkd_rsp_counter + 1;
+//        if(bkd_rsp_counter == `BKD_COUNT)
+//          bkd_rsp_state <= `BKD_DONE;
+//        else
+//          bkd_rsp_state <= `BKD_WRREG;
+//          bkd_rspf_ren <= 1'b0;
+//      end
+//      `BKD_WRREG: begin // Save value
+//        case(bkd_rsp_counter) 
+//        4:  opc_rsp0 <= opc_outreg;           
+//        8:  opc_rsp1 <= opc_outreg;           
+//        12: opc_rsp2 <= opc_outreg;           
+//        16: opc_rsp3 <= opc_outreg;           
+//        20: opc_rsp4 <= opc_outreg;           
+//        24: opc_rsp5 <= opc_outreg;           
+//        28: opc_rsp6 <= opc_outreg;           
+//        32: opc_rsp7 <= opc_outreg;           
+//        36: opc_rsp8 <= opc_outreg;           
+//        40: opc_rsp9 <= opc_outreg;           
+//        44: opc_rspA <= opc_outreg;           
+//        48: opc_rspB <= opc_outreg;           
+//        52: opc_rspC <= opc_outreg;           
+//        56: opc_rspD <= opc_outreg;           
+//        60: opc_rspE <= opc_outreg;           
+//        64: opc_rspF <= opc_outreg;           
+//        endcase
+//        bkd_rsp_state <= `BKD_WR0;
+//        bkd_rspf_ren <= 1'b1;
+//      end
+//      `BKD_DONE: begin
+//        opc_rsp_new <= 1'b1;
+//        bkd_rspf_ren <= 1'b0;
+//        bkd_rsp_run <= 1'b0;
+//        bkd_rsp_state <= `BKD_IDLE;
+//      end
+//      endcase
+//  end
+//  else begin
+//    // When rsp fifo length is not equal the response length
+//    // the opc_rspf_rdy flag clears. When mmc_tester acks
+//    // our response we must clear opc_rsp_new 
+//    if(opc_rsp_ack == 1'b1)
+//      opc_rsp_new <= 1'b0;    
+//  end 
+//end
 
   // Flag when pulse processor is busy. Opcode processor has to wait for done to return measurements
   assign pulse_busy = (pls_status == 8'd1) ? 1'b0 : 1'b1;
@@ -1780,66 +1789,68 @@ end
   localparam BIT_TEMP_SYS_RST     = 16'h8000;                           // <JLC_TEMP_RST>
 
   // Mux these debug controls
-  assign dbg_spi_mode = (dbg_enables & BIT_SPI_DBG_MODE) == 16'h4000 ? 1'b1 : 1'b0;   // Mux SPI outputs   
-  assign hardware_init = (dbg_enables & BIT_DDS_INIT) || (hw_init == 1'b1) ? 1'b1 : 1'b0;
+  assign dbg_spi_mode = ((dbg_enables & BIT_SPI_DBG_MODE) == 16'h4000); // Mux SPI outputs   
+  assign hardware_init = ((dbg_enables & BIT_DDS_INIT) == BIT_DDS_INIT) || hw_init;
 
-  assign SYN_SSn  = (dbg_spi_mode == 1'b1 && dbg_spi_device == SPI_SYN) ? SPI_SSn  : synth_ssn;
-  assign SYN_SCLK = (dbg_spi_mode == 1'b1 && dbg_spi_device == SPI_SYN) ? SPI_SCLK : synth_sclk;
-  assign SYN_MOSI = (dbg_spi_mode == 1'b1 && dbg_spi_device == SPI_SYN) ? SPI_MOSI : synth_mosi;
+  assign SYN_SSn  = (dbg_spi_mode && dbg_spi_device == SPI_SYN) ? SPI_SSn  : synth_ssn;
+  assign SYN_SCLK = (dbg_spi_mode && dbg_spi_device == SPI_SYN) ? SPI_SCLK : synth_sclk;
+  assign SYN_MOSI = (dbg_spi_mode && dbg_spi_device == SPI_SYN) ? SPI_MOSI : synth_mosi;
 
-  assign DDS_SSn  = (dbg_spi_mode == 1'b1 && dbg_spi_device == SPI_DDS) ? SPI_SSn  : rmr_DDS_SSn;
-  assign DDS_SCLK = (dbg_spi_mode == 1'b1 && dbg_spi_device == SPI_DDS) ? SPI_SCLK : rmr_DDS_SCLK;
-  assign DDS_MOSI = (dbg_spi_mode == 1'b1 && dbg_spi_device == SPI_DDS) ? SPI_MOSI : rmr_DDS_MOSI;
+  assign DDS_SSn  = (dbg_spi_mode && dbg_spi_device == SPI_DDS) ? SPI_SSn  : rmr_DDS_SSn;
+  assign DDS_SCLK = (dbg_spi_mode && dbg_spi_device == SPI_DDS) ? SPI_SCLK : rmr_DDS_SCLK;
+  assign DDS_MOSI = (dbg_spi_mode && dbg_spi_device == SPI_DDS) ? SPI_MOSI : rmr_DDS_MOSI;
 
   // VGA SPI mux, connect to debug SPI or power processor
   wire dbg_vgavsw;
-  assign dbg_vgavsw = (dbg_enables & BIT_VGA_VSW) ? 1'b1 : 1'b0;  
-  assign VGA_VSW = (dbg_spi_mode == 1'b1) ? dbg_vgavsw : pwr_vsw;
-  assign VGA_SSn = (dbg_spi_mode == 1'b1 && dbg_spi_device == SPI_VGA) ? SPI_SSn : pwr_ssn;
-  assign VGA_SCLK = (dbg_spi_mode == 1'b1 && dbg_spi_device == SPI_VGA) ? SPI_SCLK : pwr_sclk;
-  assign VGA_MOSI = (dbg_spi_mode == 1'b1 && dbg_spi_device == SPI_VGA) ? SPI_MOSI : pwr_mosi;
+  assign dbg_vgavsw = ((dbg_enables & BIT_VGA_VSW) == BIT_VGA_VSW);  
+  assign VGA_VSW = dbg_spi_mode ? dbg_vgavsw : pwr_vsw;
+  assign VGA_SSn  = (dbg_spi_mode && dbg_spi_device == SPI_VGA) ? SPI_SSn  : pwr_ssn;
+  assign VGA_SCLK = (dbg_spi_mode && dbg_spi_device == SPI_VGA) ? SPI_SCLK : pwr_sclk;
+  assign VGA_MOSI = (dbg_spi_mode && dbg_spi_device == SPI_VGA) ? SPI_MOSI : pwr_mosi;
   assign VGA_VSWn = !VGA_VSW;
 
   // RF_GATE outputs, from dbg_enables or pulse processor
   wire dbg_rfgate;
-  assign dbg_rfgate = (dbg_enables & BIT_RF_GATE) ? 1'b1 : 1'b0;  
-  assign RF_GATE = (dbg_spi_mode == 1'b1) ? dbg_rfgate : pls_rfgate;
+  assign dbg_rfgate = ((dbg_enables & BIT_RF_GATE) == BIT_RF_GATE);  
+  assign RF_GATE = dbg_spi_mode ? dbg_rfgate : pls_rfgate;
   wire dbg_rfgate2;
-  assign dbg_rfgate2 = (dbg_enables & BIT_RF_GATE2) ? 1'b1 : 1'b0;  
-  assign RF_GATE2 = (dbg_spi_mode == 1'b1) ? dbg_rfgate2 : pls_rfgate2;
+  assign dbg_rfgate2 = ((dbg_enables & BIT_RF_GATE2) == BIT_RF_GATE2);  
+  assign RF_GATE2 = dbg_spi_mode ? dbg_rfgate2 : pls_rfgate2;
 
   wire dbg_bias;
-  assign dbg_bias = (dbg_enables & BIT_PA_BIAS_EN) ? 1'b1 : 1'b0;  
-  assign DRV_BIAS_EN = (dbg_spi_mode == 1'b1) ? dbg_bias : bias_en;
+  assign dbg_bias = ((dbg_enables & BIT_PA_BIAS_EN) == BIT_PA_BIAS_EN);  
+  assign DRV_BIAS_EN = dbg_spi_mode ? dbg_bias : bias_en;
   assign PA_BIAS_EN = DRV_BIAS_EN;
   
-  wire dbg_synmute;
-  assign dbg_synmute = (dbg_enables & BIT_SYN_MUTE) ? 1'b0 : 1'b1;
-  assign SYN_MUTE = (dbg_spi_mode == 1'b1) ? dbg_synmute : synth_mute;
+  wire dbg_synth_mute_n;
+  assign dbg_synth_mute_n = ((dbg_enables & BIT_SYN_MUTE) == BIT_SYN_MUTE);
+  wire synth_mute_n;
+  assign synth_mute_n = (dds_synth_mute_n && syn_synth_mute_n);
+  assign SYN_MUTEn = dbg_spi_mode ? dbg_synth_mute_n : synth_mute_n;
   
   wire dbg_ddsiorst;
-  assign dbg_ddsiorst = (dbg_enables & BIT_DDS_IORST) ? 1'b1 : 1'b0; 
-  assign DDS_IORST = (dbg_spi_mode == 1'b1) ? dbg_ddsiorst : rmr_DDS_IORST;
+  assign dbg_ddsiorst = ((dbg_enables & BIT_DDS_IORST) == BIT_DDS_IORST); 
+  assign DDS_IORST = dbg_spi_mode ? dbg_ddsiorst : rmr_DDS_IORST;
   
   wire dbg_ddsioup;
-  assign dbg_ddsioup = (dbg_enables & BIT_DDS_IOUP) ? 1'b1 : 1'b0;
-  assign DDS_IOUP = (dbg_spi_mode == 1'b1) ? dbg_ddsioup : rmr_DDS_IOUP;
+  assign dbg_ddsioup = ((dbg_enables & BIT_DDS_IOUP) == BIT_DDS_IOUP);
+  assign DDS_IOUP = dbg_spi_mode ? dbg_ddsioup : rmr_DDS_IOUP;
   
   wire dbg_ddssync;
-  assign dbg_ddssync = (dbg_enables & BIT_DDS_SYNC) ? 1'b1 : 1'b0;
-  assign DDS_SYNC = (dbg_spi_mode == 1'b1) ? dbg_ddssync : rmr_DDS_SYNC;
+  assign dbg_ddssync = ((dbg_enables & BIT_DDS_SYNC) == BIT_DDS_SYNC);
+  assign DDS_SYNC = dbg_spi_mode ? dbg_ddssync : rmr_DDS_SYNC;
   
   wire dbg_ddsps0;
-  assign dbg_ddsps0 = (dbg_enables & BIT_DDS_PS0) ? 1'b1 : 1'b0;
-  assign DDS_PS0 = (dbg_spi_mode == 1'b1) ? dbg_ddsps0 : rmr_DDS_PS0;
+  assign dbg_ddsps0 = ((dbg_enables & BIT_DDS_PS0) == BIT_DDS_PS0);
+  assign DDS_PS0 = dbg_spi_mode ? dbg_ddsps0 : rmr_DDS_PS0;
    
   wire dbg_ddsps1;
-  assign dbg_ddsps1 = (dbg_enables & BIT_DDS_PS1) ? 1'b1 : 1'b0;
-  assign DDS_PS1 = (dbg_spi_mode == 1'b1) ? dbg_ddsps1 : rmr_DDS_PS1;
+  assign dbg_ddsps1 = ((dbg_enables & BIT_DDS_PS1) == BIT_DDS_PS1);
+  assign DDS_PS1 = dbg_spi_mode ? dbg_ddsps1 : rmr_DDS_PS1;
    
   wire dbg_zmonen;
-  assign dbg_zmonen = (dbg_enables & BIT_ZMON_EN) ? 1'b1 : 1'b0;
-  assign ZMON_EN = (dbg_spi_mode == 1'b1) ? dbg_zmonen : pls_zmonen;
+  assign dbg_zmonen = ((dbg_enables & BIT_ZMON_EN) == BIT_ZMON_EN);
+  assign ZMON_EN = dbg_spi_mode ? dbg_zmonen : pls_zmonen;
   
   assign dbg_sys_rst_i = dbg_enables & BIT_TEMP_SYS_RST ? 1'b1 : 1'b0;   // <JLC_TEMP_RST>
 
@@ -1848,7 +1859,7 @@ end
   assign FPGA_TXD   = syscon_txd;
 
   // Debugging, assert RF_GATE lines based on MODE opcode & RF_GATE bit
-  assign dbg_opc_rfgate = (sys_mode[15:0] & BIT_RF_GATE) == BIT_RF_GATE ? 1'b1 : 1'b0;
+  assign dbg_opc_rfgate = ((sys_mode[15:0] & BIT_RF_GATE) == BIT_RF_GATE);
 
 // ******************************************************************************
 // *                                                                            *
@@ -1901,6 +1912,6 @@ end
   assign FPGA_MCU4 = DDS_MOSI; //DDS_MOSI; //CONV; //MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.
   assign FPGA_MCU3 = DDS_SCLK; //DDS_SCLK; // ADC_SCLK; //MMC_CMD; //count3[15];    // 200MHz div'd by 2^16.
   assign FPGA_MCU2 = SYN_MOSI;  //ZMON_EN;
-  assign FPGA_MCU1 = SYN_SCLK;  //MMC_CMD;
+  assign FPGA_MCU1 = dbg_spi_mode; //SYN_SCLK;  //MMC_CMD;
 
   endmodule

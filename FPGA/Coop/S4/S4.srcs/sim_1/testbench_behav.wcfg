@@ -27,12 +27,12 @@
    </db_ref_list>
    <zoom_setting>
       <ZoomStartTime time="0fs"></ZoomStartTime>
-      <ZoomEndTime time="615870698565fs"></ZoomEndTime>
-      <Cursor1Time time="0fs"></Cursor1Time>
+      <ZoomEndTime time="50127840000001fs"></ZoomEndTime>
+      <Cursor1Time time="8798235000000fs"></Cursor1Time>
    </zoom_setting>
    <column_width_setting>
       <NameColumnWidth column_width="102"></NameColumnWidth>
-      <ValueColumnWidth column_width="50"></ValueColumnWidth>
+      <ValueColumnWidth column_width="95"></ValueColumnWidth>
    </column_width_setting>
    <WVObjectSize size="52" />
    <wvobject fp_name="/testbench/dut_clk" type="logic">
@@ -179,9 +179,9 @@
       <obj_property name="ElementShortName">SYN_STAT</obj_property>
       <obj_property name="ObjectShortName">SYN_STAT</obj_property>
    </wvobject>
-   <wvobject fp_name="/testbench/SYN_MUTE" type="logic">
-      <obj_property name="ElementShortName">SYN_MUTE</obj_property>
-      <obj_property name="ObjectShortName">SYN_MUTE</obj_property>
+   <wvobject fp_name="/testbench/dut_0/SYN_MUTEn" type="logic">
+      <obj_property name="ElementShortName">SYN_MUTEn</obj_property>
+      <obj_property name="ObjectShortName">SYN_MUTEn</obj_property>
    </wvobject>
    <wvobject fp_name="/testbench/DDS_MOSI" type="logic">
       <obj_property name="ElementShortName">DDS_MOSI</obj_property>

@@ -80,7 +80,7 @@ port (
   SYN_SCLK      : out std_logic;             --  C1    O       
   SYN_SSn       : out std_logic;              --  C1    O
   SYN_STAT      : in  std_logic;             --  B1    O
-  SYN_MUTE      : out std_logic;             --  E2    O
+  SYN_MUTEn     : out std_logic;             --  E2    O
 
   DDS_MOSI      : out std_logic;             --  F2    O        AD9954 DDS SPI+ I/F
   DDS_MISO      : in  std_logic;             --  E1    I
@@ -152,7 +152,7 @@ end component;
   signal SYN_SCLK      : std_logic := '0';                 --  C1    O       
   signal SYN_SSn       : std_logic := '0';                  --  C1    O
   signal SYN_STAT      : std_logic := '0';                 --  B1    O
-  signal SYN_MUTE      : std_logic := '0';                 --  E2    O
+  signal SYN_MUTEn     : std_logic := '0';                 --  E2    O
 
   signal DDS_MOSI      : std_logic := '0';                 --  F2    O        AD9954 DDS SPI+ I/F
   signal DDS_MISO      : std_logic := '0';                 --  E1    I
@@ -249,7 +249,7 @@ begin
       SYN_SCLK    => SYN_SCLK,             --  C1    O       
       SYN_SSn     => SYN_SSn,              --  C1    O
       SYN_STAT    => SYN_STAT,             --  B1    O
-      SYN_MUTE    => SYN_MUTE,             --  E2    O
+      SYN_MUTEn   => SYN_MUTEn,            --  E2    O
     
       DDS_MOSI    => DDS_MOSI,             --  F2    O        AD9954 DDS SPI+ I/F
       DDS_MISO    => DDS_MISO,             --  E1    I
