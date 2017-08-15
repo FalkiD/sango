@@ -286,11 +286,7 @@ wire         dbg_sys_rst_i;
 reg  [9:0]   dbg_sys_rst_sr   = 0; //10'b0;
 reg          dbg_sys_rst_n    = 1'b1;
 
-//reg  [39:0]  count1;
-reg  [25:0]  count2;
-reg          count2tc = 1'b0;
-//reg  [15:0]  count3;
-//reg  [15:0]  count4;
+reg  [26:0]  count2;
 
 wire         sys_clk;
 wire         sys_rst_n;
@@ -322,84 +318,27 @@ wire         mmc_tlm;
 // MMC card I/O proxy signals
 wire  [7:0]  MMC_DAT_i;
 
-// Backside HW signals  
-wire [255:0] hwdbg_ctl;
-reg  [255:0] hwdbg_stat;
-
 wire         syscon_rxd;
 wire         syscon_txd;
 
-wire         extd_fifo_wr_stb_w;
-wire [3:0]   extd_fifo_wr_addr_w;
-wire         extd_fifo_wr_dds_w       = extd_fifo_wr_stb_w & (extd_fifo_wr_addr_w == 4'h0);
-wire         hwdbg_sys_rst_i          = extd_fifo_wr_stb_w & (extd_fifo_wr_addr_w == 4'h6);
-
-// 12-Jul LPC MMC interface is not working so we must use 
-// MMC UART back door from mmc_tester debugger
-// to receive opcodes & send responses
-// Use 16 32-bit words to transfer 64 byte opcode blocks
-wire            opc_load_new;       // Load new opcode block into opcode fifo, from mmc_tester
-reg             opc_load_ack;       // Done loading opcodes block
-wire [31:0]     opc_dat0;
-wire [31:0]     opc_dat1;
-wire [31:0]     opc_dat2;
-wire [31:0]     opc_dat3;
-wire [31:0]     opc_dat4;
-wire [31:0]     opc_dat5;
-wire [31:0]     opc_dat6;
-wire [31:0]     opc_dat7;
-wire [31:0]     opc_dat8;
-wire [31:0]     opc_dat9;
-wire [31:0]     opc_datA;
-wire [31:0]     opc_datB;
-wire [31:0]     opc_datC;
-wire [31:0]     opc_datD;
-wire [31:0]     opc_datE;
-wire [31:0]     opc_datF;
-reg  [31:0]     opc_inreg;          // Mux'd above 16 wires
-// same for the opcode processor response, goes through mmc_tester debug uart
-reg             opc_rsp_new;       // Send opcode response block to mmc_tester uart
-wire            opc_rsp_ack;       // Done sending response
-reg  [31:0]     opc_rsp0;
-reg  [31:0]     opc_rsp1;
-reg  [31:0]     opc_rsp2;
-reg  [31:0]     opc_rsp3;
-reg  [31:0]     opc_rsp4;
-reg  [31:0]     opc_rsp5;
-reg  [31:0]     opc_rsp6;
-reg  [31:0]     opc_rsp7;
-reg  [31:0]     opc_rsp8;
-reg  [31:0]     opc_rsp9;
-reg  [31:0]     opc_rspA;
-reg  [31:0]     opc_rspB;
-reg  [31:0]     opc_rspC;
-reg  [31:0]     opc_rspD;
-reg  [31:0]     opc_rspE;
-reg  [31:0]     opc_rspF;
-reg  [31:0]     opc_outreg;         // Mux'd above 16 response wires
-
 // opcode processor wires:
-wire         opc_enable;                // control needed...      
-wire         opc_fifo_enable;           // enable opcode processor in & out fifo's
-wire         opc_fifo_rst;              // reset for opcode processor fifo's
-reg  [7:0]   opc_fifo_dat_i;            // mmc_tester opcode fifo writes can go here
-reg          opc_fifo_wen;              // opcode fifo write line
-wire         opc_fifo_mt;               // opcode fifo empty flag
-wire [`GLBL_MMC_FILL_LEVEL_BITS-1:0] opc_fifo_count;   // opcode fifo fill level
-wire [7:0]   opc_fifo_dat_o;            // opcode processor reads from here
-wire         opc_fifo_ren;              // opcode fifo read line 
-wire         opc_fifo_full;             // used?
-wire         opc_inpf_rst;              // opcode processor resets input fifo on first null opcode
+wire            opc_enable;         // control needed...      
+wire            opc_fifo_enable;    // enable opcode processor in & out fifo's
+wire            opc_fifo_rst;       // reset for opcode processor fifo's
 
-wire [7:0]   opc_rspf_w;              // to fifo, response bytes(status, measurements, echo, etc)
-wire         opc_rspf_wen;            // response fifo write enable
-wire         opc_rspf_mt;             // response fifo empty flag
-wire         opc_rspf_fl;             // response fifo full  flag
-wire         opc_rspf_rdy;            // response fifo is waiting
-reg          opc_rspf_ren;            // response fifo read enable
-wire [7:0]   opc_rspf_dat_o;          // response fifo output data, used to generate response block
-wire [`GLBL_MMC_FILL_LEVEL_BITS-1:0] opc_rsp_len;    // update response length when response is ready
-wire [`GLBL_MMC_FILL_LEVEL_BITS-1:0] opc_rspf_cnt;   // response fifo count, opcode processor asserts 
+wire  [7:0]     mmc_fif_dat;        // MMC read fifo into opcode processor 
+wire            mmc_fif_ren;        // MMC read enable, out of opcode processor into mmc_tester
+wire            mmc_fif_mt;         // MMC read fifo empty
+wire  [`GLBL_MMC_FILL_LEVEL_BITS-1:0]  mmc_fif_cnt;    // MMC read fifo count
+wire            mmc_inpf_rst;       // opcode processor can reset input fifo
+
+wire  [7:0]     mmc_rspf_dat;       // MMC write fifo, out of opcode processor into mmc_tester 
+wire            mmc_rspf_wen;       // MMC write enable 
+wire            mmc_rspf_mt;        // MMC write fifo empty 
+wire            mmc_rspf_fl;        // MMC write fifo full
+wire  [`GLBL_MMC_FILL_LEVEL_BITS-1:0]  mmc_rspf_cnt;   // MMC write fifo count
+wire            mmc_rsp_rdy;        // Response ready
+wire  [`GLBL_MMC_FILL_LEVEL_BITS-1:0]  mmc_rsp_len;    // Response length written by opcode processor
 
 // Frequency processor wires
 wire [31:0]  frq_fifo_dat_i;          // to fifo from opc, frequency output in MHz
@@ -506,49 +445,6 @@ wire         synth_doInit;          // asserted by dds_synth_doInit or dbg_synth
 wire         dds_synth_mute_n;      // DDS processor muting SYN
 wire         dds_synth_doInit;      // Init SYN when DDS init has completed
 wire         dds_synth_initing;     // SYN initializing
-
-//////////////////////////////////////////////////////////
-// Backdoor fifo variables
-//////////////////////////////////////////////////////////
-reg   [7:0]     bkd_fif_dat_i;
-reg             bkd_fif_wen; 
-
-wire  [7:0]     bkd_rspf_dat_i; 
-reg             bkd_rspf_ren; 
-
-//////////////////////////////////////////////////////////
-// Mux variables for opcode processor I/O 2-way mux
-// between MMC fifo's & backdoor UART fifo's
-// MMC is select=0, default
-//////////////////////////////////////////////////////////
-wire  [7:0]     mmc_fif_dat;    // MMC read fifo into mux, out of mux into opcode processor 
-wire            mmc_fif_ren;    // MMC read enable, out of opcode processor, thru mux, into mmc_tester
-wire            mmc_fif_mt;     // MMC read fifo empty
-wire  [`GLBL_MMC_FILL_LEVEL_BITS-1:0]  mmc_fif_cnt;    // MMC read fifo count
-wire            mmc_inpf_rst;   // opcode processor resets input fifo on first null opcode
-
-wire  [7:0]     mmc_rspf_dat;   // MMC write fifo, out of opcode processor, thru mux, into mmc_tester 
-wire            mmc_rspf_wen;   // MMC write enable 
-wire            mmc_rspf_mt;    // MMC write fifo empty 
-wire            mmc_rspf_fl;    // MMC write fifo full
-wire  [`GLBL_MMC_FILL_LEVEL_BITS-1:0]  mmc_rspf_cnt;   // MMC write fifo count
-wire            mmc_rsp_rdy;    // Response ready
-wire  [`GLBL_MMC_FILL_LEVEL_BITS-1:0]  mmc_rsp_len;    // Response length written by opcode processor
-
-// mux 1, is backdoor UART fifo's
-wire  [7:0]     bkd_fif_dat_o;
-wire            bkd_fif_ren; 
-wire            bkd_fif_mt; 
-wire  [`GLBL_MMC_FILL_LEVEL_BITS-1:0]  bkd_fif_cnt; 
-wire            bkd_inpf_rst;   // opcode processor resets input fifo on first null opcode
-
-wire  [7:0]     bkd_rspf_dat_o; 
-wire            bkd_rspf_wen; 
-wire            bkd_rspf_mt; 
-wire            bkd_rspf_fl; 
-wire  [`GLBL_MMC_FILL_LEVEL_BITS-1:0]  bkd_rspf_cnt; 
-wire            bkd_rsp_rdy; 
-wire  [`GLBL_MMC_FILL_LEVEL_BITS-1:0]  bkd_rsp_len; 
 
 //------------------------------------------------------------------------
 // Start of logic
@@ -677,10 +573,8 @@ MMCME2_BASE_inst (
 // Create a "hwdbg dbg_sys_rst_n" synchronous self-timed pulse. <JLC_TEMP_RST>
 always @(posedge sys_clk)
 begin
-  dbg_sys_rst_sr <= {dbg_sys_rst_sr[8:0], (dbg_sys_rst_i | hwdbg_sys_rst_i)};
+  dbg_sys_rst_sr <= {dbg_sys_rst_sr[8:0], dbg_sys_rst_i};
   dbg_sys_rst_n <= !(!dbg_sys_rst_sr[9] & |dbg_sys_rst_sr[8:0]);  // output 9 ticks of dbg_sys_rst_n == 1'b0.
-//  dbg_sys_rst_sr <= {dbg_sys_rst_sr[8:0], dbg_sys_rst_i};
-//  dbg_sys_rst_n <= !(&{!dbg_sys_rst_sr[9], | dbg_sys_rst_sr[8:0]});  // output 9 ticks of dbg_sys_rst_n == 1'b0.
 end
 
 assign sys_rst_n = MCU_TRIG ? 1'b0 : dbg_sys_rst_n;
@@ -692,18 +586,6 @@ assign opc_fifo_enable = 1'b1;
 assign opc_fifo_rst = 1'b0;
 assign opc_enable = 1'b1;
 
-//// Create a "time-alive" counter.
-////   2^40 @ 100MHz wraps at ~3.05 hours.
-////
-//always @(posedge sys_clk)
-//  if (!sys_rst_n) begin
-//    count1 <= 0;
-//  end
-//  else begin
-//    count1 <= count1+1;
-//  end
-
-
 // Create a "blink" counter.
 //   2^28 @ 100MHz wraps at ~4.5 seconds. Use this to indicate FPGA running
 //   2^26 @ 100MHz wraps at ~1.5 seconds.
@@ -714,36 +596,10 @@ assign opc_enable = 1'b1;
 always @(posedge sys_clk)
   if (!sys_rst_n) begin
     count2     <= 0;
-    count2tc   <= 1'b0;
   end
   else begin
     count2     <= count2+1;
-    count2tc   <= (count2 == 26'h3FFFFFF);
   end
-
-
-//// Create another "blink" counter (16-bit).
-////   2^16 @ 200MHz wraps at ~0.328 us.
-////
-//always @(posedge clk200)
-//  if (!sys_rst_n) begin
-//    count3 <= 16'h0000;
-//  end
-//  else begin
-//    count3 <= count3+1;
-//  end
-
-
-//// Create another "blink" counter (16-bit).
-////   2^17 @ 100MHz wraps at ~1.311 ms.
-////
-//always @(posedge clk050)
-//  if (!sys_rst_n) begin
-//    count4 <= 16'h0000;
-//  end
-//  else begin
-//    count4 <= count4+1;
-//  end
 
 // Initialize things after reset pulse
 always @(posedge sys_clk) begin
@@ -758,74 +614,6 @@ always @(posedge sys_clk) begin
     initialize <= 1'b0;
   end
 end
-
-  // Instantiate VHDL fifo that mmc_tester instance 
-  // is using to store opcodes (opcode processor input fifo)
-  swiss_army_fifo #(
-    .USE_BRAM(1),           // BRAM=1 requires 1 extra clock before read data is ready
-    .WIDTH(8),
-    .DEPTH(512),
-    .FILL_LEVEL_BITS(`GLBL_MMC_FILL_LEVEL_BITS),
-    .PF_FULL_POINT(`GLBL_MMC_FILL_LEVEL_BITS-1),
-    .PF_FLAG_POINT(`GLBL_MMC_FILL_LEVEL_BITS>>1),
-    .PF_EMPTY_POINT(1)
-  ) input_opcodes(
-      .sys_rst_n(sys_rst_n),
-      .sys_clk(sys_clk),
-      .sys_clk_en(opc_fifo_enable),
-        
-      .reset_i(opc_inpf_rst),
-
-      // backdoor UART writes entries        
-      .fifo_wr_i(bkd_fif_wen),
-      .fifo_din(bkd_fif_dat_i),
-
-      // opcode fifo mux reads entries
-      .fifo_rd_i(bkd_fif_ren),
-      .fifo_dout(bkd_fif_dat_o),
-      .fifo_fill_level(bkd_fif_cnt),
-      .fifo_full(),
-      .fifo_empty(bkd_fif_mt),
-      .fifo_pf_full(),
-      .fifo_pf_flag(),
-      .fifo_pf_empty()           
-  );
-
-  // Instantiate VHDL fifo that opcode processor instance 
-  // is using to store responses (opcode processor output fifo)
-    //////////////////////////////////////////////
-  // The response to all opcodes will be 
-  // written to this fifo. This fifo will be
-  // used for status, echo, and measurement
-  // opcodes.
-  swiss_army_fifo #(
-    .USE_BRAM(1),               // BRAM=1 requires 1 extra clock before read data is ready
-    .WIDTH(8),
-    .DEPTH(65536),
-    .FILL_LEVEL_BITS(`GLBL_MMC_FILL_LEVEL_BITS),
-    .PF_FULL_POINT(`GLBL_MMC_FILL_LEVEL_BITS-1),
-    .PF_FLAG_POINT(`GLBL_MMC_FILL_LEVEL_BITS>>1),
-    .PF_EMPTY_POINT(1)
-  ) opcode_response(
-      .sys_rst_n(sys_rst_n),
-      .sys_clk(sys_clk),
-      .sys_clk_en(opc_fifo_enable),
-      
-      .reset_i(opc_fifo_rst),
-      
-      .fifo_wr_i(bkd_rspf_wen),                 // response fifo write enable
-      .fifo_din(bkd_rspf_dat_i),                // to fifo, response bytes(status, measurements, echo, etc)
-      
-      .fifo_rd_i(bkd_rspf_ren),                 // response fifo read enable
-      .fifo_dout(bkd_rspf_dat_o),               // response fifo output data, used to generate response block
-      
-      .fifo_fill_level(bkd_rspf_cnt),           // response fifo count
-      .fifo_full(bkd_rspf_fl),                  // response fifo full  flag
-      .fifo_empty(bkd_rspf_mt),                 // response fifo empty flag
-      .fifo_pf_full(),
-      .fifo_pf_flag(),
-      .fifo_pf_empty()           
-  );
 
 
 ///////////////////////////////////////////////////////////////////////
@@ -1050,43 +838,43 @@ end
     // connect the mmc fifo's to the opcode processor here.
     // 12-Jul added back-door UART entry since LPC MMC interface wasn't working
     // MMC has since been fixed & will be primary (only?) interface
-    .bkd_opc_load_new   (opc_load_new),
-    .bkd_opc_load_ack   (opc_load_ack),
-    .bkd_opc_dat0_o    (opc_dat0),
-    .bkd_opc_dat1_o    (opc_dat1),
-    .bkd_opc_dat2_o    (opc_dat2),
-    .bkd_opc_dat3_o    (opc_dat3),
-    .bkd_opc_dat4_o    (opc_dat4),
-    .bkd_opc_dat5_o    (opc_dat5),
-    .bkd_opc_dat6_o    (opc_dat6),
-    .bkd_opc_dat7_o    (opc_dat7),
-    .bkd_opc_dat8_o    (opc_dat8),
-    .bkd_opc_dat9_o    (opc_dat9),
-    .bkd_opc_datA_o    (opc_datA),
-    .bkd_opc_datB_o    (opc_datB),
-    .bkd_opc_datC_o    (opc_datC),
-    .bkd_opc_datD_o    (opc_datD),
-    .bkd_opc_datE_o    (opc_datE),
-    .bkd_opc_datF_o    (opc_datF),
+    .bkd_opc_load_new  (),
+    .bkd_opc_load_ack  (),
+    .bkd_opc_dat0_o    (),
+    .bkd_opc_dat1_o    (),
+    .bkd_opc_dat2_o    (),
+    .bkd_opc_dat3_o    (),
+    .bkd_opc_dat4_o    (),
+    .bkd_opc_dat5_o    (),
+    .bkd_opc_dat6_o    (),
+    .bkd_opc_dat7_o    (),
+    .bkd_opc_dat8_o    (),
+    .bkd_opc_dat9_o    (),
+    .bkd_opc_datA_o    (),
+    .bkd_opc_datB_o    (),
+    .bkd_opc_datC_o    (),
+    .bkd_opc_datD_o    (),
+    .bkd_opc_datE_o    (),
+    .bkd_opc_datF_o    (),
 
-    .bkd_rsp_i          (opc_rsp_new),       // Send opcode response block to mmc_tester uart
-    .bkd_rsp_ack_o      (opc_rsp_ack),       // Done sending response
-    .bkd_rsp_dat0_i     (opc_rsp0),
-    .bkd_rsp_dat1_i     (opc_rsp1),
-    .bkd_rsp_dat2_i     (opc_rsp2),
-    .bkd_rsp_dat3_i     (opc_rsp3),
-    .bkd_rsp_dat4_i     (opc_rsp4),
-    .bkd_rsp_dat5_i     (opc_rsp5),
-    .bkd_rsp_dat6_i     (opc_rsp6),
-    .bkd_rsp_dat7_i     (opc_rsp7),
-    .bkd_rsp_dat8_i     (opc_rsp8),
-    .bkd_rsp_dat9_i     (opc_rsp9),
-    .bkd_rsp_datA_i     (opc_rspA),
-    .bkd_rsp_datB_i     (opc_rspB),
-    .bkd_rsp_datC_i     (opc_rspC),
-    .bkd_rsp_datD_i     (opc_rspD),
-    .bkd_rsp_datE_i     (opc_rspE),
-    .bkd_rsp_datF_i     (opc_rspF),
+    .bkd_rsp_i         (),       // Send opcode response block to mmc_tester uart
+    .bkd_rsp_ack_o     (),       // Done sending response
+    .bkd_rsp_dat0_i    (),
+    .bkd_rsp_dat1_i    (),
+    .bkd_rsp_dat2_i    (),
+    .bkd_rsp_dat3_i    (),
+    .bkd_rsp_dat4_i    (),
+    .bkd_rsp_dat5_i    (),
+    .bkd_rsp_dat6_i    (),
+    .bkd_rsp_dat7_i    (),
+    .bkd_rsp_dat8_i    (),
+    .bkd_rsp_dat9_i    (),
+    .bkd_rsp_datA_i    (),
+    .bkd_rsp_datB_i    (),
+    .bkd_rsp_datC_i    (),
+    .bkd_rsp_datD_i    (),
+    .bkd_rsp_datE_i    (),
+    .bkd_rsp_datF_i    (),
 
     // MMC is working! MMC fifo connections
     // Read from MMC fifo connections
@@ -1233,24 +1021,24 @@ end
 
     .enable                     (opc_enable),
 
-    .fifo_dat_i                 (opc_fifo_dat_o),   // fifo read data bus
-    .fifo_rd_en_o               (opc_fifo_ren),     // fifo read line
-    .fifo_rd_empty_i            (opc_fifo_mt),      // fifo empty flag
-    .fifo_rd_count_i            (opc_fifo_count),   // fifo fill level
-    .fifo_rst_o                 (opc_inpf_rst),     // opcode processor resets input fifo at first null opcode 
+    .fifo_dat_i                 (mmc_fif_dat),      // fifo read data bus
+    .fifo_rd_en_o               (mmc_fif_ren),      // fifo read line
+    .fifo_rd_empty_i            (mmc_fif_mt),       // fifo empty flag
+    .fifo_rd_count_i            (mmc_fif_cnt),      // fifo fill level
+    .fifo_rst_o                 (mmc_inpf_rst),     // opcode processor resets input fifo at first null opcode 
 
     .system_state_i             (sys_state),        // s4 system state (e.g. running a pattern)
     .mode_o                     (sys_mode),         // MODE opcode can set system-wide flags
     .pulse_busy_i               (pulse_busy),       // Pulse processor is busy
 
-    .response_o                 (opc_rspf_w),       // to fifo, response bytes(status, measurements, echo, etc)
-    .response_wr_en_o           (opc_rspf_wen),     // response fifo write enable
-    .response_fifo_empty_i      (opc_rspf_mt),      // response fifo empty flag
-    .response_fifo_full_i       (opc_rspf_fl),      // response fifo full  flag
+    .response_o                 (mmc_rspf_dat),     // to mmc fifo, response bytes(status, measurements, echo, etc)
+    .response_wr_en_o           (mmc_rspf_wen),     // response fifo write enable
+    .response_fifo_empty_i      (mmc_rspf_mt),      // response fifo empty flag
+    .response_fifo_full_i       (mmc_rspf_fl),      // response fifo full  flag
     // response_ready when fifo_length==response_length
-    .response_ready_o           (opc_rspf_rdy),     // response fifo is waiting
-    .response_length_o          (opc_rsp_len),      // update response length when response is ready
-    .response_fifo_count_i      (opc_rspf_cnt),     // response fifo count
+    .response_ready_o           (mmc_rsp_rdy),     // response fifo is waiting
+    .response_length_o          (mmc_rsp_len),      // update response length when response is ready
+    .response_fifo_count_i      (mmc_rspf_cnt),     // response fifo count
 
     .frequency_o                (frq_fifo_dat_i),   // to fifo, frequency output in MHz
     .frq_wr_en_o                (frq_fifo_wen),     // frequency fifo write enable
@@ -1259,8 +1047,6 @@ end
                                                     
     .power_o                    (pwr_fifo_dat_i),   // to fifo, power & opcode in upper 7 bits
     .pwr_wr_en_o                (pwr_fifo_wen),     // power fifo write enable
-//    .pwr_fifo_empty_i,          (pwr_fifo_mt),      // power fifo empty flag
-//    .pwr_fifo_full_i,           (pwr_fifo_full),    // power fifo full flag
                                                     
     .pulse_o                    (pls_fifo_dat_i),   // to fifo, pulse opcode
     .pulse_wr_en_o              (pls_fifo_wen),     // pulse fifo write enable
@@ -1289,66 +1075,6 @@ end
     // .last_length_o              ()                   //    
   );
 
-  // Opcode mux between backdoor UART and default MMC bus
-  opc_mux #(
-    .MMC_FILL_LEVEL_BITS(`GLBL_MMC_FILL_LEVEL_BITS),
-    .RSP_FILL_LEVEL_BITS(`GLBL_RSP_FILL_LEVEL_BITS)
-  )
-  opcode_io 
-  (
-    .sys_clk                    (sys_clk),
-    .sys_rst_n                  (sys_rst_n),
-    .enable_i                   (opc_fifo_enable),
-      
-    .select_i                   (1'b0),             // 1'b0=>MMC, 1'b1=>Backdoor UART
-      
-      // opcode processor connections. opc_fifo_full local var not used
-    .opc_fif_dat_o              (opc_fifo_dat_o),   // output of mux, input to opcode processor
-    .opc_fif_ren_i              (opc_fifo_ren),     // fifo read line, from opcode processor to MMC fifo
-    .opc_fif_mt_o               (opc_fifo_mt),      // MMC opcode fifo empty flag to opcode processor
-    .opc_fif_cnt_o              (opc_fifo_count),   // MMC fifo fill level to opcode processor
-    .opc_inpf_rst_i             (opc_inpf_rst),     // opcode processor resets input fifo at first null opcode, opc to MMC/BKD fifo
-
-    .opc_rspf_dat_i             (opc_rspf_w),       // from opcode processor to MMC response fifo
-    .opc_rspf_wen_i             (opc_rspf_wen),     // MMC response fifo write enable
-    .opc_rspf_mt_o              (opc_rspf_mt),      // MMC response fifo empty
-    .opc_rspf_fl_o              (opc_rspf_fl),      // MMC response fifo full
-    .opc_rspf_cnt_o             (opc_rspf_cnt),     // MMC response fifo count
-    .opc_rsp_rdy_i              (opc_rspf_rdy),     // response fifo is waiting
-    .opc_rsp_len_i              (opc_rsp_len),      // response length written by opcode processor
-
-      // mux'd connections
-      // mux 0, default, is MMC fifo's
-    .mmc_fif_dat_i              (mmc_fif_dat),      // mux 0 is MMC
-    .mmc_fif_ren_o              (mmc_fif_ren),      // 
-    .mmc_fif_mt_i               (mmc_fif_mt),       // 
-    .mmc_fif_cnt_i              (mmc_fif_cnt),      // 
-    .mmc_inpf_rst_o             (mmc_inpf_rst),     //
-   
-    .mmc_rspf_dat_o             (mmc_rspf_dat),     // 
-    .mmc_rspf_wen_o             (mmc_rspf_wen),     // 
-    .mmc_rspf_mt_i              (mmc_rspf_mt),      // 
-    .mmc_rspf_fl_i              (mmc_rspf_fl),      // 
-    .mmc_rspf_cnt_i             (mmc_rspf_cnt),     // 
-    .mmc_rsp_rdy_o              (mmc_rsp_rdy),      // 
-    .mmc_rsp_len_o              (mmc_rsp_len),      // response length written by opcode processor
-  
-      // mux 1, is backdoor UART fifo's
-    .bkd_fif_dat_i              (bkd_fif_dat_o),   // mux 1 is backdor UART
-    .bkd_fif_ren_o              (bkd_fif_ren),     // 
-    .bkd_fif_mt_i               (bkd_fif_mt),      // 
-    .bkd_fif_cnt_i              (bkd_fif_cnt),     //
-    .bkd_inpf_rst_o             (bkd_inpf_rst),    // Reset opcode processor input fifo, to backdoor fifo 
-   
-    .bkd_rspf_dat_o             (bkd_rspf_dat_i),  // 
-    .bkd_rspf_wen_o             (bkd_rspf_wen),    // 
-    .bkd_rspf_mt_i              (bkd_rspf_mt),     // 
-    .bkd_rspf_fl_i              (bkd_rspf_fl),     // 
-    .bkd_rspf_cnt_i             (bkd_rspf_cnt),    // 
-    .bkd_rsp_rdy_o              (bkd_rsp_rdy),     // 
-    .bkd_rsp_len_o              (bkd_rsp_len)      // response length written by opcode processor
-  );
-
 // ******************************************************************************
 // * JLC Debug SPI (for AD9954)                                                 *
 // *                                                                            *
@@ -1367,8 +1093,8 @@ end
       .rst_i                      (!sys_rst_n),            // 
   
       .doInit_i                   (hardware_init),         // do an init sequence. 
-      .hwdbg_dat_i                (hwdbg_ctl[35:0]),       // hwdbg data input.
-      .hwdbg_we_i                 (extd_fifo_wr_dds_w),    // hwdbg we.
+      .hwdbg_dat_i                (36'd0),                 // hwdbg data input.
+      .hwdbg_we_i                 (1'b0),                  // hwdbg we.
       .freqproc_dat_i             (ftw_fifo_dat_i),        // frequency tuning word fifo input(SPI data).
       .freqproc_we_i              (ftw_fifo_wen),          // frequency tuning word fifo we.
       .dds_fifo_full_o            (ftw_fifo_full),         // ftw fifo full.
@@ -1412,8 +1138,8 @@ end
       .clk_i                        (sys_clk),               // 
       .rst_i                        (!sys_rst_n),            // 
       .doInit_i                     (synth_doInit),          // do an init sequence after DDS init has finished or on debug command h0020 
-      .hwdbg_dat_i                  (hwdbg_ctl[11:0]),       // hwdbg data input.
-      .hwdbg_we_i                   (extd_fifo_wr_dds_w),    // hwdbg we.
+      .hwdbg_dat_i                  (12'd0),                 // hwdbg data input.
+      .hwdbg_we_i                   (1'b0),                  // hwdbg we.
       .syn_fifo_full_o              (),                      // opcproc fifo full.
       .syn_fifo_empty_o             (),                      // opcproc fifo empty.
       .syn_spi_sclk_o               (synth_sclk),            // 
@@ -1521,201 +1247,9 @@ end
     end
   end
 
-//// No longer needed
-//// ******************************************************************************
-//// *                                                                            *
-//// *  Load opcode fifo from the mmc_tester instance                             *
-//// *  (Initially using mmc debug uart)                                          *
-//// *  Load the opcode processor fifo using back-door UART                       *
-//// *                                                                            *
-//// ******************************************************************************
-//  reg  [4:0]    bkd_opc_state;
-//  reg  [5:0]    bkd_counter;
-//  `define BKD_COUNT 6'd63
-//  `define BKD_IDLE  5'd0
-//  `define BKD_WR0   5'd1
-//  `define BKD_WR1   5'd2
-//  `define BKD_WR2   5'd3
-//  `define BKD_WR3   5'd4
-//  `define BKD_NEXT  5'd5
-//  `define BKD_WRREG 5'd6
-//  `define BKD_DONE  5'd7
-//  `define BKD_SPCR  5'd8
-//  `define BKD_BUG   5'd9
-//  always @(posedge sys_clk) begin
-//    if(!sys_rst_n) begin
-//      opc_load_ack <= 1'b0;
-//      bkd_opc_state <= `BKD_IDLE;
-//      bkd_counter <= 6'd0;
-//      //opc_enable <= 1'b0;
-//    end
-//    else if(opc_load_new == 1'b1) begin
-//      if(opc_load_ack == 1'b0) begin    // we haven't loaded opc yet
-//        case(bkd_opc_state)
-//        `BKD_IDLE: begin
-//          opc_inreg <= opc_dat0;   
-//          opc_load_ack <= 1'b0;
-//          bkd_counter <= 6'd0;
-//          bkd_opc_state <= `BKD_WR0;
-//        end
-//        `BKD_WR0: begin
-//          bkd_fif_dat_i <= opc_inreg[7:0];
-//          bkd_fif_wen <= 1'b1;     // writes on 1st clock even though count takes another clock to update
-//          bkd_counter <= bkd_counter + 1;
-//          bkd_opc_state <= `BKD_WR1;
-//        end
-//        `BKD_WR1: begin
-//          bkd_fif_dat_i <= opc_inreg[15:8];
-//          bkd_counter <= bkd_counter + 1;
-//          bkd_opc_state <= `BKD_WR2;
-//        end
-//        `BKD_WR2: begin
-//          bkd_fif_dat_i <= opc_inreg[23:16];
-//          bkd_counter <= bkd_counter + 1;
-//          bkd_opc_state <= `BKD_WR3;
-//        end
-//        `BKD_WR3: begin
-//          bkd_fif_dat_i <= opc_inreg[31:24];
-//          bkd_counter <= bkd_counter + 1;
-//          if(bkd_counter == `BKD_COUNT)
-//            bkd_opc_state <= `BKD_DONE;
-//          else
-//            bkd_opc_state <= `BKD_NEXT;
-//        end
-//        `BKD_NEXT: begin // Next word
-//          case(bkd_counter) 
-//          4:  opc_inreg <= opc_dat1;           
-//          8:  opc_inreg <= opc_dat2;           
-//          12: opc_inreg <= opc_dat3;           
-//          16: opc_inreg <= opc_dat4;           
-//          20: opc_inreg <= opc_dat5;           
-//          24: opc_inreg <= opc_dat6;           
-//          28: opc_inreg <= opc_dat7;           
-//          32: opc_inreg <= opc_dat8;           
-//          36: opc_inreg <= opc_dat9;           
-//          40: opc_inreg <= opc_datA;           
-//          44: opc_inreg <= opc_datB;           
-//          48: opc_inreg <= opc_datC;           
-//          52: opc_inreg <= opc_datD;           
-//          56: opc_inreg <= opc_datE;           
-//          60: opc_inreg <= opc_datF;
-//          endcase
-//          bkd_opc_state <= `BKD_WR0;
-//          bkd_fif_wen <= 1'b0;
-//        end
-//        `BKD_DONE: begin
-//          opc_load_ack <= 1'b1;
-//          bkd_fif_wen <= 1'b0;
-//          //opc_enable <= 1'b1;
-//          bkd_opc_state <= `BKD_IDLE;
-//        end
-//        endcase    
-//      end
-//    end
-//    else begin
-//      // If we have loaded opc & acknowledged mmc_tester
-//      // once mmc_tester clears opc_load_new we must clear
-//      // opc_load_ack (handshake)
-//      if(opc_load_ack == 1'b1)
-//        opc_load_ack <= 1'b0;    
-//    end 
-//  end
-
-
-//// ******************************************************************************
-//// *                                                                            *
-//// *  Send opcode response fifo to the mmc_tester instance                      *
-//// *  (Initially using mmc debug uart)                                          *
-//// *  Send the opcode processor response fifo using back-door UART              *
-//// *                                                                            *
-//// ******************************************************************************
-//reg  [4:0]    bkd_rsp_state;
-//reg  [6:0]    bkd_rsp_counter;
-//reg           bkd_rsp_run;
-//always @(posedge sys_clk) begin
-//  if(!sys_rst_n) begin
-//    opc_rsp_new <= 1'b0;
-//    bkd_rsp_run <= 1'b0;
-//    bkd_rsp_state <= `BKD_IDLE;
-//    bkd_rsp_counter <= 7'd0;
-//  end
-//  else if(opc_rspf_rdy == 1'b1 || bkd_rsp_run) begin
-//      case(bkd_rsp_state)
-//      `BKD_IDLE: begin
-//        opc_rsp_new <= 1'b0;
-//        bkd_rsp_counter <= 7'd0;
-//        bkd_rsp_run <= 1'b1;
-//        bkd_rsp_state <= `BKD_WR0;
-//      end
-//      `BKD_WR0: begin
-//        opc_outreg[7:0] <= bkd_rspf_dat_o;
-//        bkd_rspf_ren <= 1'b1;
-//        bkd_rsp_counter <= bkd_rsp_counter + 1;
-//        bkd_rsp_state <= `BKD_SPCR; // Takes extra clk to start reading
-//      end
-//      `BKD_SPCR: begin
-//        bkd_rsp_state <= `BKD_BUG;
-//      end
-//      `BKD_BUG: begin
-//        bkd_rsp_state <= `BKD_WR1;
-//      end
-//      `BKD_WR1: begin
-//        opc_outreg[15:8] <= bkd_rspf_dat_o;
-//        bkd_rsp_counter <= bkd_rsp_counter + 1;
-//        bkd_rsp_state <= `BKD_WR2;
-//      end
-//      `BKD_WR2: begin
-//        opc_outreg[23:16] <= bkd_rspf_dat_o;
-//        bkd_rsp_counter <= bkd_rsp_counter + 1;
-//        bkd_rsp_state <= `BKD_WR3;
-//      end
-//      `BKD_WR3: begin
-//        opc_outreg[31:24] <= bkd_rspf_dat_o;
-//        bkd_rsp_counter <= bkd_rsp_counter + 1;
-//        if(bkd_rsp_counter == `BKD_COUNT)
-//          bkd_rsp_state <= `BKD_DONE;
-//        else
-//          bkd_rsp_state <= `BKD_WRREG;
-//          bkd_rspf_ren <= 1'b0;
-//      end
-//      `BKD_WRREG: begin // Save value
-//        case(bkd_rsp_counter) 
-//        4:  opc_rsp0 <= opc_outreg;           
-//        8:  opc_rsp1 <= opc_outreg;           
-//        12: opc_rsp2 <= opc_outreg;           
-//        16: opc_rsp3 <= opc_outreg;           
-//        20: opc_rsp4 <= opc_outreg;           
-//        24: opc_rsp5 <= opc_outreg;           
-//        28: opc_rsp6 <= opc_outreg;           
-//        32: opc_rsp7 <= opc_outreg;           
-//        36: opc_rsp8 <= opc_outreg;           
-//        40: opc_rsp9 <= opc_outreg;           
-//        44: opc_rspA <= opc_outreg;           
-//        48: opc_rspB <= opc_outreg;           
-//        52: opc_rspC <= opc_outreg;           
-//        56: opc_rspD <= opc_outreg;           
-//        60: opc_rspE <= opc_outreg;           
-//        64: opc_rspF <= opc_outreg;           
-//        endcase
-//        bkd_rsp_state <= `BKD_WR0;
-//        bkd_rspf_ren <= 1'b1;
-//      end
-//      `BKD_DONE: begin
-//        opc_rsp_new <= 1'b1;
-//        bkd_rspf_ren <= 1'b0;
-//        bkd_rsp_run <= 1'b0;
-//        bkd_rsp_state <= `BKD_IDLE;
-//      end
-//      endcase
-//  end
-//  else begin
-//    // When rsp fifo length is not equal the response length
-//    // the opc_rspf_rdy flag clears. When mmc_tester acks
-//    // our response we must clear opc_rsp_new 
-//    if(opc_rsp_ack == 1'b1)
-//      opc_rsp_new <= 1'b0;    
-//  end 
-//end
+  /////////////////////////////////
+  // Concurrent assignments
+  /////////////////////////////////
 
   // Flag when pulse processor is busy. Opcode processor has to wait for done to return measurements
   assign pulse_busy = (pls_status == 8'd1) ? 1'b0 : 1'b1;
@@ -1867,53 +1401,8 @@ end
 
   // Debugging, assert RF_GATE lines based on MODE opcode & RF_GATE bit
   assign dbg_opc_rfgate = ((sys_mode[15:0] & BIT_RF_GATE) == BIT_RF_GATE);
-
-// ******************************************************************************
-// *                                                                            *
-// *  04/11/2017  JLC                                                           *
-// *    - added HW DBG UART.                                                    *
-// *                                                                            *
-// ******************************************************************************
-
-  uart #(
-  .VRSN                       (`VERSION),
-  .CLK_FREQ                   (`GLBL_CLK_FREQ_MCU),    // <JLC_TEMP_CLK
-  .BAUD                       (115200)
-) hwdbg_uart
-(                                                      // diag/debug control signal outputs
-  // infrastructure, etc.
-  .clk_i                      (sys_clk),               // 
-  .rst_i                      (!sys_rst_n),            // 
-  .rx_enbl                    (count2tc),
-  .RxD_i                      (FPGA_RXD2),             // "RxD" from USB serial bridge to FPGA
-  .TxD_o                      (FPGA_TXD2),             // "TxD" from FPGA to USB serial bridge
-  .extd_fifo_wr_stb_o         (extd_fifo_wr_stb_w),
-  .extd_fifo_wr_addr_o        (extd_fifo_wr_addr_w),
-  .dbg0_o                     (),                      //  1-bit output: debug outpin #0.
-  .dbg1_o                     (),                      //  1-bit output: debug outpin #1.
-  .dbg2_o                     (),                      //  1-bit output: debug outpin #2.
-  
-  // diag/debug control signal outputs
-  .hw_ctl_o                   (hwdbg_ctl),             //  256-bit control outputs
-
-  // diag/debug status  signal inputs
-  .hw_stat_i                  (hwdbg_stat),
-  .gp_opc_cnt_i               (opc_count),             // count of opcodes processed from top level
-  .ptn_opc_cnt_i              (32'hdeadbeef),          // 32-bit input:  count of pattern opcodes processed from top level
-  .sys_stat_vec_i             (sys_state)              // 16-bit input:  status to show, system_state for now
- );
-
-  // Snapshot:  capture data for R & S commands.   
-  always @(posedge sys_clk) begin
-    if (!sys_rst_n) begin
-       hwdbg_stat                      <= 256'b0;
-    end
-    else begin
-       hwdbg_stat                      <= hwdbg_ctl;
-    end
-  end  // end of always @ (posedge clk).
  
-  assign ACTIVE_LEDn = RF_GATE ? count2[24]: count2[25];
+  assign ACTIVE_LEDn = RF_GATE ? count2[24]: count2[26];
  
   // 22-Jun have to scope MMC signals
   assign FPGA_MCU4 = DDS_MOSI; //DDS_MOSI; //CONV; //MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.
