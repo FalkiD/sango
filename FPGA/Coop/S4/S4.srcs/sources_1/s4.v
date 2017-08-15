@@ -834,48 +834,6 @@ end
     .dbg_spi_busy_i     (dbg_spi_busy),     // asserted while top processes SPI bytes
     .dbg_enables_o      (dbg_enables),
     
-    // opcode_processor (instantiation of opcodes module) refactored to top level (arty_main.v or s4.v).
-    // connect the mmc fifo's to the opcode processor here.
-    // 12-Jul added back-door UART entry since LPC MMC interface wasn't working
-    // MMC has since been fixed & will be primary (only?) interface
-    .bkd_opc_load_new  (),
-    .bkd_opc_load_ack  (),
-    .bkd_opc_dat0_o    (),
-    .bkd_opc_dat1_o    (),
-    .bkd_opc_dat2_o    (),
-    .bkd_opc_dat3_o    (),
-    .bkd_opc_dat4_o    (),
-    .bkd_opc_dat5_o    (),
-    .bkd_opc_dat6_o    (),
-    .bkd_opc_dat7_o    (),
-    .bkd_opc_dat8_o    (),
-    .bkd_opc_dat9_o    (),
-    .bkd_opc_datA_o    (),
-    .bkd_opc_datB_o    (),
-    .bkd_opc_datC_o    (),
-    .bkd_opc_datD_o    (),
-    .bkd_opc_datE_o    (),
-    .bkd_opc_datF_o    (),
-
-    .bkd_rsp_i         (),       // Send opcode response block to mmc_tester uart
-    .bkd_rsp_ack_o     (),       // Done sending response
-    .bkd_rsp_dat0_i    (),
-    .bkd_rsp_dat1_i    (),
-    .bkd_rsp_dat2_i    (),
-    .bkd_rsp_dat3_i    (),
-    .bkd_rsp_dat4_i    (),
-    .bkd_rsp_dat5_i    (),
-    .bkd_rsp_dat6_i    (),
-    .bkd_rsp_dat7_i    (),
-    .bkd_rsp_dat8_i    (),
-    .bkd_rsp_dat9_i    (),
-    .bkd_rsp_datA_i    (),
-    .bkd_rsp_datB_i    (),
-    .bkd_rsp_datC_i    (),
-    .bkd_rsp_datD_i    (),
-    .bkd_rsp_datE_i    (),
-    .bkd_rsp_datF_i    (),
-
     // MMC is working! MMC fifo connections
     // Read from MMC fifo connections
     .opc_fif_dat_o      (mmc_fif_dat),          // MMC opcode fifo from mmc_tester into mux

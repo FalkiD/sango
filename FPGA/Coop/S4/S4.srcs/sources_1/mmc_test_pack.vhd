@@ -99,49 +99,6 @@ package mmc_test_pack is
     dbg_spi_busy_i      : in  std_logic;
     dbg_enables_o       : out unsigned(15 downto 0);  --toggle various enables/wires
 
-    -- opcode_processor : (instance of "opcodes") refactored to top level.
-    -- connect the mmc fifo's to the opcode processor.
-    -- 12-Jul-2017 For first articles, LPCOpen MMC interface not working,
-    -- use the MMC UART to enter 64-byte opcode blocks & read 64-byte responses
-    -- Either way, opcode processor i/o goes thru these mmc_tester connections
-    bkd_opc_load_new    : out std_logic;
-    bkd_opc_load_ack    : in  std_logic;
-    bkd_opc_dat0_o     : out unsigned(31 downto 0);
-    bkd_opc_dat1_o     : out unsigned(31 downto 0);
-    bkd_opc_dat2_o     : out unsigned(31 downto 0);
-    bkd_opc_dat3_o     : out unsigned(31 downto 0);
-    bkd_opc_dat4_o     : out unsigned(31 downto 0);
-    bkd_opc_dat5_o     : out unsigned(31 downto 0);
-    bkd_opc_dat6_o     : out unsigned(31 downto 0);
-    bkd_opc_dat7_o     : out unsigned(31 downto 0);
-    bkd_opc_dat8_o     : out unsigned(31 downto 0);
-    bkd_opc_dat9_o     : out unsigned(31 downto 0);
-    bkd_opc_datA_o     : out unsigned(31 downto 0);
-    bkd_opc_datB_o     : out unsigned(31 downto 0);
-    bkd_opc_datC_o     : out unsigned(31 downto 0);
-    bkd_opc_datD_o     : out unsigned(31 downto 0);
-    bkd_opc_datE_o     : out unsigned(31 downto 0);
-    bkd_opc_datF_o     : out unsigned(31 downto 0);
-
-    bkd_rsp_i           : in  std_logic;
-    bkd_rsp_ack_o       : out std_logic;
-    bkd_rsp_dat0_i      : in unsigned(31 downto 0);
-    bkd_rsp_dat1_i      : in unsigned(31 downto 0);
-    bkd_rsp_dat2_i      : in unsigned(31 downto 0);
-    bkd_rsp_dat3_i      : in unsigned(31 downto 0);
-    bkd_rsp_dat4_i      : in unsigned(31 downto 0);
-    bkd_rsp_dat5_i      : in unsigned(31 downto 0);
-    bkd_rsp_dat6_i      : in unsigned(31 downto 0);
-    bkd_rsp_dat7_i      : in unsigned(31 downto 0);
-    bkd_rsp_dat8_i      : in unsigned(31 downto 0);
-    bkd_rsp_dat9_i      : in unsigned(31 downto 0);
-    bkd_rsp_datA_i      : in unsigned(31 downto 0);
-    bkd_rsp_datB_i      : in unsigned(31 downto 0);
-    bkd_rsp_datC_i      : in unsigned(31 downto 0);
-    bkd_rsp_datD_i      : in unsigned(31 downto 0);
-    bkd_rsp_datE_i      : in unsigned(31 downto 0);
-    bkd_rsp_datF_i      : in unsigned(31 downto 0);
-
     ------ Connect MMC fifos to opcode processor ----------
     -- Read from MMC fifo connections
     opc_fif_dat_o       : out unsigned( 7 downto 0);    -- MMC opcode fifo
@@ -792,50 +749,6 @@ use work.async_syscon_pack.all;
     dbg_spi_busy_i      : in  std_logic;            --top level is writing SPI bytes
     dbg_enables_o       : out unsigned(15 downto 0); --toggle various enables/wires
 
-    -- opcode_processor : opcodes refactored to top level.
-    -- connect the mmc fifo's to the opcode processor.
-    -- 12-Jul-2017 For first articles, LPCOpen MMC interface not working,
-    -- use the MMC UART to enter 64-byte opcode blocks & read 64-byte responses
-    -- Either way, opcode processor i/o goes thru these mmc_tester connections
-    -- For first article back door, write 16 32-bit words to s4.v for processing
-    bkd_opc_load_new    : out std_logic;
-    bkd_opc_load_ack    : in  std_logic;
-    bkd_opc_dat0_o      : out unsigned(31 downto 0);
-    bkd_opc_dat1_o      : out unsigned(31 downto 0);
-    bkd_opc_dat2_o      : out unsigned(31 downto 0);
-    bkd_opc_dat3_o      : out unsigned(31 downto 0);
-    bkd_opc_dat4_o      : out unsigned(31 downto 0);
-    bkd_opc_dat5_o      : out unsigned(31 downto 0);
-    bkd_opc_dat6_o      : out unsigned(31 downto 0);
-    bkd_opc_dat7_o      : out unsigned(31 downto 0);
-    bkd_opc_dat8_o      : out unsigned(31 downto 0);
-    bkd_opc_dat9_o      : out unsigned(31 downto 0);
-    bkd_opc_datA_o      : out unsigned(31 downto 0);
-    bkd_opc_datB_o      : out unsigned(31 downto 0);
-    bkd_opc_datC_o      : out unsigned(31 downto 0);
-    bkd_opc_datD_o      : out unsigned(31 downto 0);
-    bkd_opc_datE_o      : out unsigned(31 downto 0);
-    bkd_opc_datF_o      : out unsigned(31 downto 0);
-    
-    bkd_rsp_i           : in  std_logic;
-    bkd_rsp_ack_o       : out std_logic;
-    bkd_rsp_dat0_i      : in unsigned(31 downto 0);
-    bkd_rsp_dat1_i      : in unsigned(31 downto 0);
-    bkd_rsp_dat2_i      : in unsigned(31 downto 0);
-    bkd_rsp_dat3_i      : in unsigned(31 downto 0);
-    bkd_rsp_dat4_i      : in unsigned(31 downto 0);
-    bkd_rsp_dat5_i      : in unsigned(31 downto 0);
-    bkd_rsp_dat6_i      : in unsigned(31 downto 0);
-    bkd_rsp_dat7_i      : in unsigned(31 downto 0);
-    bkd_rsp_dat8_i      : in unsigned(31 downto 0);
-    bkd_rsp_dat9_i      : in unsigned(31 downto 0);
-    bkd_rsp_datA_i      : in unsigned(31 downto 0);
-    bkd_rsp_datB_i      : in unsigned(31 downto 0);
-    bkd_rsp_datC_i      : in unsigned(31 downto 0);
-    bkd_rsp_datD_i      : in unsigned(31 downto 0);
-    bkd_rsp_datE_i      : in unsigned(31 downto 0);
-    bkd_rsp_datF_i      : in unsigned(31 downto 0);
-
     -- connect opcode processor to mmc fifo's    
     -- MMC read fifo to opcode processor
     opc_fif_dat_o       : out unsigned( 7 downto 0);     -- MMC opcode fifo
@@ -1188,16 +1101,6 @@ begin
 
   with to_integer(syscon_adr(3 downto 0)) select
   o_reg_dat_rd <=
-    bkd_rsp_dat0_i                                 when 16#0#,      -- status
-    bkd_rsp_dat1_i                                 when 16#1#,      -- response data
-    bkd_rsp_dat2_i                                 when 16#2#,      -- response data
-    bkd_rsp_dat3_i                                 when 16#3#,      -- response data
-    bkd_rsp_dat4_i                                 when 16#4#,      -- response data
-    bkd_rsp_dat5_i                                 when 16#5#,      -- response data
-    bkd_rsp_dat6_i                                 when 16#6#,      -- response data
-    bkd_rsp_dat7_i                                 when 16#7#,      -- response data
-    bkd_rsp_dat8_i                                 when 16#8#,      -- response data
-    bkd_rsp_dat9_i                                 when 16#9#,      -- response data
     sys_status5_i                                  when 16#A#,      -- LS 12 bits=system power, dBm x 10
     sys_status4_i                                  when 16#B#,      -- system frequency setting in Hertz
     opc_status3_i                                  when 16#C#,      -- 1st_opcode__last_opcode in lower 16 bits
@@ -1231,8 +1134,6 @@ begin
       dbg_enables_o <= to_unsigned(0, dbg_enables_o'length);
       dbg_spi_state <= 0;
       
-      -- Backdoor UART opcode entry/response
-      bkd_opc_load_new <= '0';
     elsif (sys_clk'event and sys_clk='1') then
       -- Default values
       reg_gdcount_clear <= '0';
@@ -1278,51 +1179,22 @@ begin
         end case;
       end if;
       
-      -- Opcode processor register writes, 03000030 x y z ...
-      -- back door to opcode processor
-      -- back door will use 16 32-bit words for a 64 byte opcode block 
-      if (o_reg_sel='1' and syscon_we='1') then
-        case to_integer(syscon_adr(3 downto 0)) is
-          when 16#0# =>
-            bkd_opc_load_new <= '0';
-            bkd_opc_dat0_o <= syscon_dat_wr(31 downto 0);
-          when 16#1# =>
-            bkd_opc_dat1_o <= syscon_dat_wr(31 downto 0);
-          when 16#2# =>
-            bkd_opc_dat2_o <= syscon_dat_wr(31 downto 0);
-          when 16#3# =>
-            bkd_opc_dat3_o <= syscon_dat_wr(31 downto 0);
-          when 16#4# =>
-            bkd_opc_dat4_o <= syscon_dat_wr(31 downto 0);
-          when 16#5# =>
-            bkd_opc_dat5_o <= syscon_dat_wr(31 downto 0);
-          when 16#6# =>
-            bkd_opc_dat6_o <= syscon_dat_wr(31 downto 0);
-          when 16#7# =>
-            bkd_opc_dat7_o <= syscon_dat_wr(31 downto 0);
-          when 16#8# =>
-            bkd_opc_dat8_o <= syscon_dat_wr(31 downto 0);
-          when 16#9# =>
-            bkd_opc_dat9_o <= syscon_dat_wr(31 downto 0);
-          when 16#A# =>
-            bkd_opc_datA_o <= syscon_dat_wr(31 downto 0);
-          when 16#B# =>
-            bkd_opc_datB_o <= syscon_dat_wr(31 downto 0);
-          when 16#C# =>
-            bkd_opc_datC_o <= syscon_dat_wr(31 downto 0);
-          when 16#D# =>
-            bkd_opc_datD_o <= syscon_dat_wr(31 downto 0);
-          when 16#E# =>
-            bkd_opc_datE_o <= syscon_dat_wr(31 downto 0);
-          when 16#F# =>
-            bkd_opc_datF_o <= syscon_dat_wr(31 downto 0);
-            bkd_opc_load_new <= '1';
-          when others =>
-            null;
-          end case;
-      elsif (bkd_opc_load_ack='1') then
-        bkd_opc_load_new <= '0';
-      end if;            
+--      if (o_reg_sel='1' and syscon_we='1') then
+--        case to_integer(syscon_adr(3 downto 0)) is
+--          when 16#0# =>
+--            bkd_opc_load_new <= '0';
+--            bkd_opc_dat0_o <= syscon_dat_wr(31 downto 0);
+--          when 16#1# =>
+--            bkd_opc_dat1_o <= syscon_dat_wr(31 downto 0);
+--          when 16#F# =>
+--            bkd_opc_datF_o <= syscon_dat_wr(31 downto 0);
+--            bkd_opc_load_new <= '1';
+--          when others =>
+--            null;
+--          end case;
+--      elsif (bkd_opc_load_ack='1') then
+--        bkd_opc_load_new <= '0';
+--      end if;            
 
       -- spi debug, SPI debug register writes, 03000040 x y z ...
       if (r_reg_sel='1' and syscon_we='1') then
