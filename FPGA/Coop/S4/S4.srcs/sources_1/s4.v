@@ -286,12 +286,11 @@ wire         dbg_sys_rst_i;
 reg  [9:0]   dbg_sys_rst_sr   = 0; //10'b0;
 reg          dbg_sys_rst_n    = 1'b1;
 
-// <JLC_TEMP_DBG>
-reg  [39:0]  count1;
+//reg  [39:0]  count1;
 reg  [25:0]  count2;
 reg          count2tc = 1'b0;
-reg  [15:0]  count3;
-reg  [15:0]  count4;
+//reg  [15:0]  count3;
+//reg  [15:0]  count4;
 
 wire         sys_clk;
 wire         sys_rst_n;
@@ -502,6 +501,7 @@ wire         synth_sclk;
 wire         synth_mosi;
 wire         synth_miso;
 wire         syn_synth_mute_n;      // SYN processor muting SYN
+wire         synth_doInit;          // asserted by dds_synth_doInit or dbg_synth_doInit
 // SYN/DDS shared signals
 wire         dds_synth_mute_n;      // DDS processor muting SYN
 wire         dds_synth_doInit;      // Init SYN when DDS init has completed
@@ -692,20 +692,23 @@ assign opc_fifo_enable = 1'b1;
 assign opc_fifo_rst = 1'b0;
 assign opc_enable = 1'b1;
 
-// Create a "time-alive" counter.
-//   2^40 @ 100MHz wraps at ~3.05 hours.
-//
-always @(posedge sys_clk)
-  if (!sys_rst_n) begin
-    count1 <= 0;
-  end
-  else begin
-    count1 <= count1+1;
-  end
+//// Create a "time-alive" counter.
+////   2^40 @ 100MHz wraps at ~3.05 hours.
+////
+//always @(posedge sys_clk)
+//  if (!sys_rst_n) begin
+//    count1 <= 0;
+//  end
+//  else begin
+//    count1 <= count1+1;
+//  end
 
 
 // Create a "blink" counter.
-//   2^26 @ 100MHz wraps at ~1.5  seconds.
+//   2^28 @ 100MHz wraps at ~4.5 seconds. Use this to indicate FPGA running
+//   2^26 @ 100MHz wraps at ~1.5 seconds.
+//   2^20 ! 100MHz wraps at ~1 ms 
+//   2^25 ! 100MHz wraps at ~32 ms 
 //   2^40 @ 100MHz wraps at ~3.05 hours.
 //
 always @(posedge sys_clk)
@@ -719,28 +722,28 @@ always @(posedge sys_clk)
   end
 
 
-// Create another "blink" counter (16-bit).
-//   2^16 @ 200MHz wraps at ~0.328 us.
-//
-always @(posedge clk200)
-  if (!sys_rst_n) begin
-    count3 <= 16'h0000;
-  end
-  else begin
-    count3 <= count3+1;
-  end
+//// Create another "blink" counter (16-bit).
+////   2^16 @ 200MHz wraps at ~0.328 us.
+////
+//always @(posedge clk200)
+//  if (!sys_rst_n) begin
+//    count3 <= 16'h0000;
+//  end
+//  else begin
+//    count3 <= count3+1;
+//  end
 
 
-// Create another "blink" counter (16-bit).
-//   2^16 @ 50MHz wraps at ~1.311 ms.
-//
-always @(posedge clk050)
-  if (!sys_rst_n) begin
-    count4 <= 16'h0000;
-  end
-  else begin
-    count4 <= count4+1;
-  end
+//// Create another "blink" counter (16-bit).
+////   2^17 @ 100MHz wraps at ~1.311 ms.
+////
+//always @(posedge clk050)
+//  if (!sys_rst_n) begin
+//    count4 <= 16'h0000;
+//  end
+//  else begin
+//    count4 <= count4+1;
+//  end
 
 // Initialize things after reset pulse
 always @(posedge sys_clk) begin
@@ -1408,7 +1411,7 @@ end
     (
       .clk_i                        (sys_clk),               // 
       .rst_i                        (!sys_rst_n),            // 
-      .doInit_i                     (dds_synth_doInit),      // do an init sequence after DDS init has finished. 
+      .doInit_i                     (synth_doInit),          // do an init sequence after DDS init has finished or on debug command h0020 
       .hwdbg_dat_i                  (hwdbg_ctl[11:0]),       // hwdbg data input.
       .hwdbg_we_i                   (extd_fifo_wr_dds_w),    // hwdbg we.
       .syn_fifo_full_o              (),                      // opcproc fifo full.
@@ -1776,7 +1779,7 @@ end
   localparam BIT_VGA_VSW          = 16'h0004;
   localparam BIT_DRV_BIAS_EN      = 16'h0008;
   localparam BIT_PA_BIAS_EN       = 16'h0010;
-  localparam BIT_SYN_STAT         = 16'h0020;
+  localparam BIT_SYN_INIT         = 16'h0020;       // 15-Aug use to cause SYN init
   localparam BIT_SYN_MUTE         = 16'h0040;
   localparam BIT_DDS_IORST        = 16'h0080;
   localparam BIT_DDS_IOUP         = 16'h0100;
@@ -1827,6 +1830,10 @@ end
   wire synth_mute_n;
   assign synth_mute_n = (dds_synth_mute_n && syn_synth_mute_n);
   assign SYN_MUTEn = dbg_spi_mode ? dbg_synth_mute_n : synth_mute_n;
+
+  // Cause SYN Init on BIT_SYN_INIT assert
+  assign dbg_syn_doInit = ((dbg_enables & BIT_SYN_INIT) == BIT_SYN_INIT);
+  assign synth_doInit = (dbg_syn_doInit || dds_synth_doInit) ? 1'b1 : 1'b0;
   
   wire dbg_ddsiorst;
   assign dbg_ddsiorst = ((dbg_enables & BIT_DDS_IORST) == BIT_DDS_IORST); 
@@ -1896,22 +1903,22 @@ end
   .sys_stat_vec_i             (sys_state)              // 16-bit input:  status to show, system_state for now
  );
 
- // Snapshot:  capture data for R & S commands.   
- always @(posedge sys_clk) begin
+  // Snapshot:  capture data for R & S commands.   
+  always @(posedge sys_clk) begin
     if (!sys_rst_n) begin
        hwdbg_stat                      <= 256'b0;
     end
     else begin
        hwdbg_stat                      <= hwdbg_ctl;
     end
- end  // end of always @ (posedge clk).
+  end  // end of always @ (posedge clk).
  
- assign ACTIVE_LEDn = hwdbg_stat[255]?count2[24]:count2[25];
+  assign ACTIVE_LEDn = RF_GATE ? count2[24]: count2[25];
  
   // 22-Jun have to scope MMC signals
   assign FPGA_MCU4 = DDS_MOSI; //DDS_MOSI; //CONV; //MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.
   assign FPGA_MCU3 = DDS_SCLK; //DDS_SCLK; // ADC_SCLK; //MMC_CMD; //count3[15];    // 200MHz div'd by 2^16.
   assign FPGA_MCU2 = SYN_MOSI;  //ZMON_EN;
-  assign FPGA_MCU1 = dbg_spi_mode; //SYN_SCLK;  //MMC_CMD;
+  assign FPGA_MCU1 = SYN_SCLK;  //MMC_CMD;
 
   endmodule

@@ -21,6 +21,10 @@ u 0.5 ms ;            -- <CR> (Allows autobaud to obtain lock on baud rate.)
 --u 0.5 ms w 3000040 01 03 17 FF F0; -- Both DAC's full scale
 --u 0.5 ms w 3000040 03 03 A5 5A 03; -- 3 bytes to SPI device #3
 
+-- Test syn_doInit from debug commands
+--u 1.0 ms w 300002c 0020; -- Do SYN init
+--u 1.0 ms w 300002c 0;
+
 u 0.5 ms w 3000009 010624DE; -- Set DDS for sd_clk_o of 400kHz
 u 0.5 ms w 300000E 0; -- Set host DMA address at 0x00
 u 0.5 ms w 3000000 200 0; -- Set blk_size=512, blk_count=0
