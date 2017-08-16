@@ -1069,7 +1069,7 @@ end
       
       // DDS will drive SYN_MUTEn, 1=>RF; 0=>MUTE.
       .dds_synth_mute_n_o         (dds_synth_mute_n),     // mute SYN whilst changing frequency
-      .dds_synth_stat_i           (SYN_STAT),             // ON=SYN PLL is locked
+      .dds_synth_stat_i           (syn_synth_mute_n),  // SYN Lock not working yet   SYN_STAT),             // ON=SYN PLL is locked
       .dds_synth_doInit_o         (dds_synth_doInit),     // Init SYN when DDS init has completed
       .dds_synth_initing_o        (dds_synth_initing),    // Init SYN when DDS init has completed
   
@@ -1320,7 +1320,7 @@ end
   wire dbg_synth_mute_n;
   assign dbg_synth_mute_n = ((dbg_enables & BIT_SYN_MUTE) == BIT_SYN_MUTE);
   wire synth_mute_n;
-  assign synth_mute_n = (dds_synth_mute_n && syn_synth_mute_n);
+  assign synth_mute_n = (dds_synth_mute_n & syn_synth_mute_n);
   assign SYN_MUTEn = dbg_spi_mode ? dbg_synth_mute_n : synth_mute_n;
 
   // Cause SYN Init on BIT_SYN_INIT assert

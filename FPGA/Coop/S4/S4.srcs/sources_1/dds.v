@@ -412,7 +412,7 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
                dds_spi_ioup_cnt   <= 5'b0_0000;
                dds_interOpGap     <= 1'b1;
                dds_synth_doInit   <= 1'b1;  // Init SYN now that DDS init SPI has finished            
-               dds_synth_initing  <= 1'b1;  // Init SYN now that DDS init SPI has finished            
+               dds_synth_initing  <= 1'b1;  // Assert SYN initing flag            
                dds_synth_mute_n   <= 1'b0;  // DDS is ready. After RESET SYN is not ready until SYN finishes init
             end
             endcase  // End of case (dds_spi_ioup_cnt)
@@ -421,13 +421,8 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
          dds_spi_ioupr            <= dds_spi_ioup; 
 
          // Handle SYN initing status
-       `ifdef XILINX_SIMULATOR
-         // ...can't ever use SYN_STAT in SIM
-         if (dds_initd) begin //dds_synth_stat_i) begin
-       `else
-         // Can't use SYN_STAT until that's working...
          if (dds_synth_stat_i) begin
-       `endif         
+         // Can't use SYN_STAT until that's working...
             dds_synth_initing <= 1'b0;  // Stop indicating synth init.
             dds_synth_mute_n  <= 1'b1;  // Stop muting synth.
          end
