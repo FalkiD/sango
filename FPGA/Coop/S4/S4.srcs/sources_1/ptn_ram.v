@@ -36,7 +36,7 @@ module ptn_ram #(parameter DEPTH=65536,
   input  clk, 
   input  we, 
   input  en, 
-  input  [DEPTH_BITS-1:0] addr, 
+  input  [DEPTH_BITS-1:0] addr_i, 
   input  [WIDTH-1:0] data_i, 
   output [WIDTH-1:0] data_o
 );
@@ -48,8 +48,8 @@ module ptn_ram #(parameter DEPTH=65536,
   always @(posedge clk) begin
     if (en) begin
       if (we)
-        RAM[addr] <= data_i;
-        read_addr <= addr;
+        RAM[addr_i] <= data_i;
+        read_addr <= addr_i;
       end
   end
 

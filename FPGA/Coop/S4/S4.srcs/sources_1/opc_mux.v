@@ -10,7 +10,7 @@
 // Target Devices: Artix-7
 // Tool Versions: 
 // Description: Mux opcode processor I/O between MMC fifo's 
-//              and the backdoor UART. MMC is the default.
+//              and the pattern processor. MMC is the default.
 // 
 // Dependencies: 
 // 
@@ -29,7 +29,7 @@ module opc_mux #(parameter MMC_FILL_LEVEL_BITS = 16,
     input wire      sys_rst_n,
     input wire      enable_i,
     
-    input wire      select_i,   // 1'b0=>MMC, 1'b1=>Backdoor UART
+    input wire      select_i,   // 1'b0=>MMC, 1'b1=>pattern processor
     
     // opcode processor connections
     output reg  [7:0]           opc_fif_dat_o,          // output of mux, input to opcode processor
@@ -64,56 +64,56 @@ module opc_mux #(parameter MMC_FILL_LEVEL_BITS = 16,
     output reg                  mmc_rsp_rdy_o,          // 
     output reg  [MMC_FILL_LEVEL_BITS-1:0] mmc_rsp_len_o,// update response length when response is ready
 
-    // mux 1, is backdoor UART fifo's
-    input  wire [7:0]           bkd_fif_dat_i,          // mux 0 is MMC
-    output reg                  bkd_fif_ren_o,          // 
-    input  wire                 bkd_fif_mt_i,           // 
-    input  wire [MMC_FILL_LEVEL_BITS-1:0] bkd_fif_cnt_i,// 
-    output reg                  bkd_inpf_rst_o,         // opcode processor resets input fifo at first null opcode
+    // mux 1, is pattern processor fifo's
+    input  wire [7:0]           ptn_fif_dat_i,          // mux 0 is MMC
+    output reg                  ptn_fif_ren_o,          // 
+    input  wire                 ptn_fif_mt_i,           // 
+    input  wire [MMC_FILL_LEVEL_BITS-1:0] ptn_fif_cnt_i,// 
+    output reg                  ptn_inpf_rst_o,         // opcode processor resets input fifo at first null opcode
  
-    output reg  [7:0]           bkd_rspf_dat_o,         // 
-    output reg                  bkd_rspf_wen_o,         // 
-    input  wire                 bkd_rspf_mt_i,          // 
-    input  wire                 bkd_rspf_fl_i,          // 
-    input  wire [MMC_FILL_LEVEL_BITS-1:0] bkd_rspf_cnt_i, 
+    output reg  [7:0]           ptn_rspf_dat_o,         // 
+    output reg                  ptn_rspf_wen_o,         // 
+    input  wire                 ptn_rspf_mt_i,          // 
+    input  wire                 ptn_rspf_fl_i,          // 
+    input  wire [MMC_FILL_LEVEL_BITS-1:0] ptn_rspf_cnt_i, 
 
-    output reg                  bkd_rsp_rdy_o,          // 
-    output reg  [MMC_FILL_LEVEL_BITS-1:0] bkd_rsp_len_o // update response length when response is ready
+    output reg                  ptn_rsp_rdy_o,          // 
+    output reg  [MMC_FILL_LEVEL_BITS-1:0] ptn_rsp_len_o // update response length when response is ready
 );
 
   always @(*) begin
     if(enable_i && sys_rst_n == 1'b1) begin
       if(select_i == 1'b0) begin
-        opc_fif_dat_o = mmc_fif_dat_i;
-        mmc_fif_ren_o = opc_fif_ren_i;          // fifo read line, from opcode processor to MMC fifo
-        opc_fif_mt_o = mmc_fif_mt_i;            // MMC opcode fifo empty flag to opcode processor
-        opc_fif_cnt_o = mmc_fif_cnt_i;          // MMC fifo fill level to opcode processor
-        mmc_inpf_rst_o = opc_inpf_rst_i;        // opcode processor resets input fifo at first null opcode
+        opc_fif_dat_o  = mmc_fif_dat_i;
+        mmc_fif_ren_o  = opc_fif_ren_i;          // fifo read line, from opcode processor to MMC fifo
+        opc_fif_mt_o   = mmc_fif_mt_i;           // MMC opcode fifo empty flag to opcode processor
+        opc_fif_cnt_o  = mmc_fif_cnt_i;          // MMC fifo fill level to opcode processor
+        mmc_inpf_rst_o = opc_inpf_rst_i;         // opcode processor resets input fifo at first null opcode
        
-        mmc_rspf_dat_o = opc_rspf_dat_i;        // from opcode processor to MMC response fifo
-        mmc_rspf_wen_o = opc_rspf_wen_i;        // MMC response fifo write enable
-        opc_rspf_mt_o = mmc_rspf_mt_i;          // MMC response fifo empty
-        opc_rspf_fl_o = mmc_rspf_fl_i;          // MMC response fifo full
+        mmc_rspf_dat_o = opc_rspf_dat_i;         // from opcode processor to MMC response fifo
+        mmc_rspf_wen_o = opc_rspf_wen_i;         // MMC response fifo write enable
+        opc_rspf_mt_o  = mmc_rspf_mt_i;          // MMC response fifo empty
+        opc_rspf_fl_o  = mmc_rspf_fl_i;          // MMC response fifo full
         opc_rspf_cnt_o = mmc_rspf_cnt_i;
 
-        mmc_rsp_rdy_o = opc_rsp_rdy_i;          
-        mmc_rsp_len_o = opc_rsp_len_i;
+        mmc_rsp_rdy_o  = opc_rsp_rdy_i;          
+        mmc_rsp_len_o  = opc_rsp_len_i;
       end
       else begin
-        opc_fif_dat_o = bkd_fif_dat_i;
-        bkd_fif_ren_o = opc_fif_ren_i;          // fifo read line, from opcode processor to MMC fifo
-        opc_fif_mt_o = bkd_fif_mt_i;            // backdoor opcode fifo empty flag to opcode processor
-        opc_fif_cnt_o = bkd_fif_cnt_i;          // backdoor fifo fill level to opcode processor
-        bkd_inpf_rst_o = opc_inpf_rst_i;        // opcode processor resets input fifo at first null opcode
+        opc_fif_dat_o  = ptn_fif_dat_i;
+        ptn_fif_ren_o  = opc_fif_ren_i;          // fifo read line, from opcode processor to pattern fifo
+        opc_fif_mt_o   = ptn_fif_mt_i;           // pattern opcode fifo empty flag to opcode processor
+        opc_fif_cnt_o  = ptn_fif_cnt_i;          // pattern fifo fill level to opcode processor
+        ptn_inpf_rst_o = opc_inpf_rst_i;         // opcode processor can reset input fifo at first null opcode
      
-        bkd_rspf_dat_o = opc_rspf_dat_i;        // from opcode processor to backdoor response fifo
-        bkd_rspf_wen_o = opc_rspf_wen_i;        // backdoor response fifo write enable
-        opc_rspf_mt_o = bkd_rspf_mt_i;          // backdoor response fifo empty
-        opc_rspf_fl_o = bkd_rspf_fl_i;          // backdoor response fifo full
-        opc_rspf_cnt_o = bkd_rspf_cnt_i;
+        ptn_rspf_dat_o = opc_rspf_dat_i;         // from opcode processor to pattern response fifo
+        ptn_rspf_wen_o = opc_rspf_wen_i;         // pattern response fifo write enable
+        opc_rspf_mt_o  = ptn_rspf_mt_i;          // pattern response fifo empty
+        opc_rspf_fl_o  = ptn_rspf_fl_i;          // pattern response fifo full
+        opc_rspf_cnt_o = ptn_rspf_cnt_i;
 
-        bkd_rsp_rdy_o = opc_rsp_rdy_i;          
-        bkd_rsp_len_o = opc_rsp_len_i;
+        ptn_rsp_rdy_o  = opc_rsp_rdy_i;          
+        ptn_rsp_len_o  = opc_rsp_len_i;
       end
     end  
   end
