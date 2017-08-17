@@ -991,8 +991,6 @@ end
 
 
   patterns #(
-        .FIFO_DEPTH(65536),
-        .FIFO_BITS(`GLBL_MMC_FILL_LEVEL_BITS),
         .PTN_DEPTH(`PATTERN_DEPTH),
         .PTN_BITS(`PATTERN_FILL_BITS),
         .WIDTH(`PATTERN_WORD)
