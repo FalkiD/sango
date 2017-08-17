@@ -58,4 +58,10 @@
 // above this threshhold. Need to detect and clear this condition
 `define MIN_OPCODE_SIZE     2       // Min bytes in read FIFO to process opcodes
 
+// Opcode processor mode/pattern commands
+`define OPCODE_NORMAL       4'd0
+`define PTNCMD_LOAD         4'd1
+`define PTNCMD_RUN          4'd2
+`define PTNCMD_STOP         4'd3
+
 `endif

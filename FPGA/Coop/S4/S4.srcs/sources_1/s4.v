@@ -180,9 +180,9 @@
 `define GLBL_RSP_FILL_LEVEL_BITS 10
 `define PWR_FIFO_FILL_BITS       4
 
-`define PATTERN_DEPTH           64
-`define PATTERN_FILL_BITS       6
-`define PATTERN_WORD            96      // bits wide
+`define PATTERN_DEPTH           32768
+`define PATTERN_FILL_BITS       15
+`define PATTERN_WORD            104      // bits wide
 
 // -----------------------------------------------------------------------------
 
@@ -326,51 +326,51 @@ wire         syscon_rxd;
 wire         syscon_txd;
 
 // opcode processor wires:
-wire            opc_enable;         // control needed...      
-wire            opc_fifo_enable;    // enable opcode processor in & out fifo's
-wire            opc_fifo_rst;       // reset for opcode processor fifo's
+wire         opc_enable;         // control needed...      
+wire         opc_fifo_enable;    // enable opcode processor in & out fifo's
+wire         opc_fifo_rst;       // reset for opcode processor fifo's
 
-wire  [7:0]     opc_fif_dat;        // MMC read fifo into opcode processor 
-wire            opc_fif_ren;        // MMC read enable, out of opcode processor into mmc_tester
-wire            opc_fif_mt;         // MMC read fifo empty
+wire  [7:0]  opc_fif_dat;        // MMC read fifo into opcode processor 
+wire         opc_fif_ren;        // MMC read enable, out of opcode processor into mmc_tester
+wire         opc_fif_mt;         // MMC read fifo empty
 wire  [`GLBL_MMC_FILL_LEVEL_BITS-1:0]  opc_fif_cnt;    // MMC read fifo count
-wire            opc_inpf_rst;       // opcode processor can reset input fifo
+wire         opc_inpf_rst;       // opcode processor can reset input fifo
 
-wire  [7:0]     opc_rspf_dat;       // MMC write fifo, out of opcode processor into mmc_tester 
-wire            opc_rspf_wen;       // MMC write enable 
-wire            opc_rspf_mt;        // MMC write fifo empty 
-wire            opc_rspf_fl;        // MMC write fifo full
+wire  [7:0]  opc_rspf_dat;       // MMC write fifo, out of opcode processor into mmc_tester 
+wire         opc_rspf_wen;       // MMC write enable 
+wire         opc_rspf_mt;        // MMC write fifo empty 
+wire         opc_rspf_fl;        // MMC write fifo full
 wire  [`GLBL_MMC_FILL_LEVEL_BITS-1:0]  opc_rspf_cnt;   // MMC write fifo count
-wire            opc_rsp_rdy;        // Response ready
+wire         opc_rsp_rdy;        // Response ready
 wire  [`GLBL_MMC_FILL_LEVEL_BITS-1:0]  opc_rsp_len;    // Response length written by opcode processor
 
 // opcode processor mux wires, MMC
-wire  [7:0]     mmc_fif_dat;        // MMC read fifo into opcode processor 
-wire            mmc_fif_ren;        // MMC read enable, out of opcode processor into mmc_tester
-wire            mmc_fif_mt;         // MMC read fifo empty
+wire  [7:0]  mmc_fif_dat;        // MMC read fifo into opcode processor 
+wire         mmc_fif_ren;        // MMC read enable, out of opcode processor into mmc_tester
+wire         mmc_fif_mt;         // MMC read fifo empty
 wire  [`GLBL_MMC_FILL_LEVEL_BITS-1:0]  mmc_fif_cnt;    // MMC read fifo count
-wire            mmc_inpf_rst;       // opcode processor can reset input fifo
+wire         mmc_inpf_rst;       // opcode processor can reset input fifo
 
-wire  [7:0]     mmc_rspf_dat;       // MMC write fifo, out of opcode processor into mmc_tester 
-wire            mmc_rspf_wen;       // MMC write enable 
-wire            mmc_rspf_mt;        // MMC write fifo empty 
-wire            mmc_rspf_fl;        // MMC write fifo full
+wire  [7:0]  mmc_rspf_dat;       // MMC write fifo, out of opcode processor into mmc_tester 
+wire         mmc_rspf_wen;       // MMC write enable 
+wire         mmc_rspf_mt;        // MMC write fifo empty 
+wire         mmc_rspf_fl;        // MMC write fifo full
 wire  [`GLBL_MMC_FILL_LEVEL_BITS-1:0]  mmc_rspf_cnt;   // MMC write fifo count
-wire            mmc_rsp_rdy;        // Response ready
+wire         mmc_rsp_rdy;        // Response ready
 wire  [`GLBL_MMC_FILL_LEVEL_BITS-1:0]  mmc_rsp_len;    // Response length written by opcode processor
 // opcode processor mux wires, pattern processor
-wire  [7:0]     ptn_fif_dat;        // MMC read fifo into opcode processor 
-wire            ptn_fif_ren;        // MMC read enable, out of opcode processor into mmc_tester
-wire            ptn_fif_mt;         // MMC read fifo empty
+wire  [7:0]  ptn_fif_dat;        // MMC read fifo into opcode processor 
+wire         ptn_fif_ren;        // MMC read enable, out of opcode processor into mmc_tester
+wire         ptn_fif_mt;         // MMC read fifo empty
 wire  [`GLBL_MMC_FILL_LEVEL_BITS-1:0]  ptn_fif_cnt;    // MMC read fifo count
-wire            ptn_inpf_rst;       // opcode processor can reset input fifo
+wire         ptn_inpf_rst;       // opcode processor can reset input fifo
 
-wire  [7:0]     ptn_rspf_dat;       // MMC write fifo, out of opcode processor into mmc_tester 
-wire            ptn_rspf_wen;       // MMC write enable 
-wire            ptn_rspf_mt;        // MMC write fifo empty 
-wire            ptn_rspf_fl;        // MMC write fifo full
+wire  [7:0]  ptn_rspf_dat;       // MMC write fifo, out of opcode processor into mmc_tester 
+wire         ptn_rspf_wen;       // MMC write enable 
+wire         ptn_rspf_mt;        // MMC write fifo empty 
+wire         ptn_rspf_fl;        // MMC write fifo full
 wire  [`GLBL_MMC_FILL_LEVEL_BITS-1:0]  ptn_rspf_cnt;   // MMC write fifo count
-wire            ptn_rsp_rdy;        // Response ready
+wire         ptn_rsp_rdy;        // Response ready
 wire  [`GLBL_MMC_FILL_LEVEL_BITS-1:0]  ptn_rsp_len;    // Response length written by opcode processor
 
 // Frequency processor wires
@@ -431,19 +431,22 @@ wire [`GLBL_MMC_FILL_LEVEL_BITS-1:0]   meas_fifo_count;
 // Bias enable wire
 wire         bias_en;                 // bias control
 
-// pattern opcodes are saved in pattern RAM.
-wire         ptn_wen;                 // opcode processor saves pattern opcodes to pattern RAM 
-wire [15:0]  ptn_addr;                // address 
-wire [95:0]  ptn_dat;                 // 12 bytes, 3 bytes patClk tick, 9 bytes for opcode, length, and data   
-wire         ptn_proc_en;             // Run pattern processor 
-wire [15:0]  ptn_start_addr;          // address
-wire [7:0]   ptn_status;              // status from pattern processor 
+// Pattern processor wires.
+wire                            ptn_wen;         // opcode processor saves pattern opcodes to pattern RAM 
+wire [`PATTERN_FILL_BITS-1:0]   ptn_addr;        // address
+wire [23:0]                     ptn_clk;         // patclk, pattern tick, tick=100ns
+wire [`PATTERN_WORD-1:0]        ptn_data;        // 12 bytes, 3 bytes patClk tick, 9 bytes for opcode, length, and data   
+wire                            ptn_proc_en;     // Run pattern processor 
+wire [`PATTERN_FILL_BITS-1:0]   ptn_start_addr;  // address
+wire [7:0]                      ptn_status;      // status from pattern processor 
+wire [3:0]                      ptn_cmd;         // Command/mode, i.e. writing pattern, run pattern, stop, etc
 
+// Opcode processing statistics
 wire [31:0]  opc_count;               // count opcodes for status info                     
 wire [7:0]   opc_status;              // NULL opcode terminates, done=0, or error code
 wire [6:0]   opc_state;               // For debugging
     
-//    // Debugging
+// Debugging
 wire [15:0]  dbg_opcodes;
 wire         dbg_opc_rfgate;          // Driven by RF_GATE bit of sys_mode, MODE opcode, for debugging
 
@@ -999,21 +1002,27 @@ end
     .sys_clk            (sys_clk),
     .sys_rst_n          (sys_rst_n),
   
-    .ptn_en             (opc_enable),
+    .ptn_en             (1'b1), //ptn_proc_en),
+    
+    .ptn_data_io        (ptn_data),             // Write pattern data word from opcode processor during pattern load
+                                                // Read word from pattern RAM when running pattern
+    .ptn_addr_i         (ptn_addr),             // Write to or run from this pattern address
+    .ptn_wen_i          (ptn_wen),              // Pattern RAM write enable
+    .ptn_cmd_i          (ptn_cmd),              // Command/mode, i.e. writing pattern, run pattern, stop, etc
 
-    // Read from pattern processor fifo connections
-    .ptn_fif_dat_o      (ptn_fif_dat),          // MMC opcode fifo from mmc_tester into mux
-    .ptn_fif_ren_i      (ptn_fif_ren),          // mmc fifo read enable
-    .ptn_fif_mt_o       (ptn_fif_mt),           // mmc opcode fifo empty
-    .ptn_rd_cnt_o       (ptn_fif_cnt),          // mmc opcode fifo fill level 
-    .ptn_rd_reset_i     (ptn_inpf_rst),         // Synchronous mmc opcode fifo reset
-    //    -- Write to pattern processor response fifo connections
-    .ptn_rspf_dat_i     (ptn_rspf_dat),         // MMC response fifo
-    .ptn_rspf_we_i      (ptn_rspf_wen),         // response fifo write line             
-    .ptn_rspf_mt_o      (ptn_rspf_mt),          // response fifo empty
-    .ptn_rspf_fl_o      (ptn_rspf_fl),          // response fifo full
-    .ptn_rspf_reset_i   (opc_fifo_rst),         // Synchronous mmc response fifo reset
-    .ptn_rspf_cnt_o     (ptn_rspf_cnt),         // MMC response fifo fill level
+//    // Read from pattern processor fifo connections
+//    .ptn_fif_dat_o      (ptn_fif_dat),          // pattern opcode fifo to mux
+//    .ptn_fif_ren_i      (ptn_fif_ren),          // pattern opcode fifo read enable
+//    .ptn_fif_mt_o       (ptn_fif_mt),           // pattern opcode fifo empty
+//    .ptn_rd_cnt_o       (ptn_fif_cnt),          // pattern opcode fifo fill level 
+//    .ptn_rd_reset_i     (ptn_inpf_rst),         // Synchronous pattern opcode fifo reset
+//    // Write to pattern processor response fifo connections
+//    .ptn_rspf_dat_i     (ptn_rspf_dat),         // pattern response fifo
+//    .ptn_rspf_we_i      (ptn_rspf_wen),         // response fifo write line             
+//    .ptn_rspf_mt_o      (ptn_rspf_mt),          // response fifo empty
+//    .ptn_rspf_fl_o      (ptn_rspf_fl),          // response fifo full
+//    .ptn_rspf_reset_i   (opc_fifo_rst),         // Synchronous mmc response fifo reset
+//    .ptn_rspf_cnt_o     (ptn_rspf_cnt),         // pattern response fifo fill level
 
     .status_o           (ptn_status)            // pattern processor status
   );
@@ -1027,7 +1036,8 @@ end
 
   opcodes #(
      .MMC_FILL_LEVEL_BITS(`GLBL_MMC_FILL_LEVEL_BITS),
-     .RSP_FILL_LEVEL_BITS(`GLBL_RSP_FILL_LEVEL_BITS)
+     .RSP_FILL_LEVEL_BITS(`GLBL_RSP_FILL_LEVEL_BITS),
+     .PTN_FILL_BITS(`PATTERN_FILL_BITS)
   ) opcode_processor (
     .sys_rst_n                  (sys_rst_n),
     .sys_clk                    (sys_clk),
@@ -1069,17 +1079,15 @@ end
     .meas_fifo_cnt_i            (meas_fifo_count),  // measurements in fifo after pulse/pattern
                                                     
     .bias_enable_o              (bias_en),          // bias control
-                                                    
+
     // pattern opcodes are saved in pattern RAM.
-//    .ptn_wr_en_o,             // opcode processor saves pattern opcodes to pattern RAM 
-//    .ptn_addr_o,       // address 
-//    .ptn_data_o,       // 12 bytes, 3 bytes patClk tick, 9 bytes for opcode, length, and data   
-//    .ptn_data_i,           // 12 bytes, 3 bytes patClk tick, 9 bytes for opcode, length, and data   
+    .ptn_wen_o                  (ptn_wen),          // opcode processor saves pattern opcodes to pattern RAM 
+    .ptn_addr_o                 (ptn_addr),         // address 
+    .ptn_data                   (ptn_data),         // 12 bytes, 3 bytes patClk tick, 9 bytes for opcode, length, and data   
+    .ptn_proc_en_o              (ptn_proc_en),      // Run pattern processor 
+    .ptn_start_addr_o           (ptn_start_addr),   // address 
                                                     
-//    .ptn_processor_en_o,      // Run pattern processor 
-//    .[15:0] ptn_start_addr_o, // address 
-                                                    
-    .opcode_counter_o           (opc_count),     // count opcodes for status info   
+    .opcode_counter_o           (opc_count),        // count opcodes for status info   
                                                         
     // Debugging
     .status_o                   (opc_status),         // NULL opcode terminates, done=0, or error code
