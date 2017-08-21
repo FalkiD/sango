@@ -36,9 +36,10 @@ architecture struct of testbench is
   -----------------------------------
 component s4
 port (
-  -- commented out as per <JLC_TEMP_NO_L12>
-  --input              FPGA_CLK,           //  P10   I        + Diff FPGA CLK From S4 Board U34/Si53307
-  --input              FPGA_CLKn,          //  N10   I        - and A3/100MHx Oscillator can.
+  -- Comment these lines out to use FPGA_MCLK
+  FPGA_CLK      : in  std_logic;        --  P10   I        + Diff FPGA CLK From S4 Board U34/Si53307
+  FPGA_CLKn     : in  std_logic;        --  N10   I        - and A3/100MHx Oscillator can.
+
   ACTIVE_LEDn   : out std_logic;        --  T14   O
 
   MMC_CLK       : inout std_logic;      --  N11   I        MCU<-->MMC-Slave I/F 
@@ -114,8 +115,10 @@ end component;
 
     -- Common Signals
   signal dut_clk       : std_logic := '0';
-
     -- Signals from unit under test, so they show up in testbench
+  signal FPGA_CLK      : std_logic;      --  R13   I                       
+  signal FPGA_CLKn     : std_logic;      --  N10   I        - and A3/100MHx Oscillator can.
+
   signal MMC_CLK       : std_logic;      --  N11   I        MCU<-->MMC-Slave I/F 
   signal MMC_IRQn      : std_logic := '0';     --  P8    O        MCU SDIO_SD pin, low==MMC card present       
   signal MMC_CMD       : std_logic;      --  R7    I       
@@ -208,6 +211,10 @@ begin
   -- Instantiate Unit Under Test
   dut_0 : s4
   port map(
+      -- Comment these two lines when using FPGA_MCLK
+      FPGA_CLK    => CLK,
+      FPGA_CLKn   => not CLK,
+
       ACTIVE_LEDn =>  open,        --  T14   O
     
       MMC_CLK     => MMC_CLK,      --  N11   IO        MCU<-->MMC-Slave I/F 
