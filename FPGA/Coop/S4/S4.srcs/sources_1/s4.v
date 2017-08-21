@@ -218,7 +218,7 @@ module s4
   output             FPGA_TXD,           //  N16   O        MMC UART
   input              FPGA_RXD,           //  P15   I        MMC UART
 
-                                         //     FPGA_MCLK is temporarily 102MHz LVCMOS33 FPGA Clk Input.  <USE_FPGA_MCLK>
+                                         //     FPGA_MCLK is temporarily 102MHz LVCMOS33 FPGA Clk Input.  <JLC_TEMP_NO_L12>
   input              FPGA_MCLK,          //  R13   I                       
                                          //     FPGA_M*   is HW DBG I/F
   output             FPGA_MCU1,          //  P10   I 
@@ -536,9 +536,9 @@ assign  mmcm_pwrdn_i  = 1'b0;
 //`ifndef JLC_TEMP_NO_MMCM
 //MMCME2_BASE #(
 //  .BANDWIDTH("OPTIMIZED"), // Jitter programming (OPTIMIZED, HIGH, LOW)
-//  .CLKFBOUT_MULT_F(`CLKFB_FACTOR_MCU),  // Multiply value for all CLKOUT (2.000-64.000)   = Fpfd/Fclkin1
+//  .CLKFBOUT_MULT_F(`CLKFB_FACTOR_MCU),  // Multiply value for all CLKOUT (2.000-64.000)   = Fpfd/Fclkin1  <JLC_TEMP_CLK>
 //  .CLKFBOUT_PHASE(0.000),  // Phase offset in degrees of CLKFB (-360.000-360.000).
-//  .CLKIN1_PERIOD(9.800),  // Input clock period in ns to ps resolution (i.e. 33.333 is 30 MHz).
+//  .CLKIN1_PERIOD(9.800),  // Input clock period in ns to ps resolution (i.e. 33.333 is 30 MHz).           <JLC_TEMP_CLK>
 //  // CLKOUT0_DIVIDE - CLKOUT6_DIVIDE: Divide amount for each CLKOUT (1-128)
 //  .CLKOUT0_DIVIDE_F(10),   // 1000MHz / 10.0 = 100MHz  Divide amount for CLKOUT0 (1.000-128.000).
 //  .CLKOUT1_DIVIDE(5),      // 1000MHz /  5.0 = 200MHz
