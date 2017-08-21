@@ -167,15 +167,19 @@
 `define MS001      1500000/20       // 1.5ms 
 */
 
-// >>>>> Coop's `define's <<<<<
-// 
+// MMCM in case no clock available? Not normally used (unless non-100MHz clocks needed)
 `define JLC_TEMP_NO_MMCM 1             // 1 -> Don't use MMCME2_BASE; Use 100MHz straight in.  0 -> Use MMCME2_BASE.
-`define JLC_TEMP_NO_L12 1              // Temp workaround depop'd L12. JLC 03/17/2017    JLC_TEMP_NO_L12> (causes <JLC_TEMP_CLK>)
-`define JLC_TEMP_CLK 1                 //  "       "        "      "                     JLC_TEMP_CLK
-`define GLBL_CLK_FREQ_BRD 100000000.0  //  "       "        "      "                     JLC_TEMP_CLK
-`define GLBL_CLK_FREQ_MCU 102000000.0  //  "       "        "      "                     JLC_TEMP_CLK
-`define CLKFB_FACTOR_BRD 10.000        //  "       "        "      "                     JLC_TEMP_CLK
-`define CLKFB_FACTOR_MCU 9.800         //  "       "        "      "                     JLC_TEMP_CLK
+
+// Which clock, FPGA_MCU pin from MCU, or FPGA_CLK, CLKn differential clock from
+// synthesizer clock. Synthesizer clock requires L12 in place (+5V)
+// ********************************************************************************************
+// ** Note ** To use Synthesizer clock its pins must be un-commented in the contraints file  **
+// ********************************************************************************************
+//`define USE_FPGA_MCLK    1             // Use MCU clock, 102MHz
+`define GLBL_CLK_FREQ   100000000.0  //  "       "        "      "
+// When using FPGA_MCLK: `define GLBL_CLK_FREQ 102000000.0
+//`define CLKFB_FACTOR_BRD 10.000        //  "       "        "      "
+//`define CLKFB_FACTOR_MCU 9.800         //  "       "        "      "
 `define GLBL_MMC_FILL_LEVEL_BITS 16
 `define GLBL_RSP_FILL_LEVEL_BITS 10
 `define PWR_FIFO_FILL_BITS       4
@@ -188,9 +192,11 @@
 
 module s4  
 (
-  // commented out as per <JLC_TEMP_NO_L12> and <JLC_TEMP_CLK>
-  //input              FPGA_CLK,           //  P10   I        + Diff FPGA CLK From S4 Board U34/Si53307
-  //input              FPGA_CLKn,          //  N10   I        - and A3/100MHx Oscillator can.
+`ifndef USE_FPGA_MCLK
+  input              FPGA_CLK,           //  P10   I        + Diff FPGA CLK From S4 Board U34/Si53307
+  input              FPGA_CLKn,          //  N10   I        - and A3/100MHx Oscillator can.
+`endif
+
   output             ACTIVE_LEDn,        //  T14   O       
 
   inout              MMC_CLK,            //  N11   I        MCU<-->MMC-Slave I/F
@@ -212,7 +218,7 @@ module s4
   output             FPGA_TXD,           //  N16   O        MMC UART
   input              FPGA_RXD,           //  P15   I        MMC UART
 
-                                         //     FPGA_MCLK is temporarily 102MHz LVCMOS33 FPGA Clk Input.  <JLC_TEMP_NO_L12>
+                                         //     FPGA_MCLK is temporarily 102MHz LVCMOS33 FPGA Clk Input.  <USE_FPGA_MCLK>
   input              FPGA_MCLK,          //  R13   I                       
                                          //     FPGA_M*   is HW DBG I/F
   output             FPGA_MCU1,          //  P10   I 
@@ -265,14 +271,15 @@ module s4
 // Local signals
 wire         clk_diff_rcvd;
 wire         clkin;
-wire         clkfbprebufg;
-wire         clk100prebufg;
-wire         clk200prebufg;
-wire         clk050prebufg;
-wire         clkfb;
-wire         clk100;
-wire         clk200;
-wire         clk050;
+// MMCM clocking instance can be uncommented if other clocks are needed
+//wire         clkfbprebufg;
+//wire         clk100prebufg;
+//wire         clk200prebufg;
+//wire         clk050prebufg;
+//wire         clkfb;
+//wire         clk100;
+//wire         clk200;
+//wire         clk050;
 
 // The current system state:
 wire [31:0]  frequency;                 // in Hertz
@@ -285,7 +292,6 @@ wire [31:0]  sys_mode;                  // MODE opcode can set system-wide flags
 // Otherwise SPI outputs are driven by various processor modules
 wire         dbg_spi_mode;
 
-// <JLC_TEMP_RST>
 wire         dbg_sys_rst_i;
 reg  [9:0]   dbg_sys_rst_sr   = 0; //10'b0;
 reg          dbg_sys_rst_n    = 1'b1;
@@ -526,88 +532,87 @@ assign  mmcm_pwrdn_i  = 1'b0;
 //
 //
 
-//  <JLC_TEMP_NO_MMCM>
-`ifndef JLC_TEMP_NO_MMCM
-MMCME2_BASE #(
-  .BANDWIDTH("OPTIMIZED"), // Jitter programming (OPTIMIZED, HIGH, LOW)
-  .CLKFBOUT_MULT_F(`CLKFB_FACTOR_MCU),  // Multiply value for all CLKOUT (2.000-64.000)   = Fpfd/Fclkin1  <JLC_TEMP_CLK>
-  .CLKFBOUT_PHASE(0.000),  // Phase offset in degrees of CLKFB (-360.000-360.000).
-  .CLKIN1_PERIOD(9.800),  // Input clock period in ns to ps resolution (i.e. 33.333 is 30 MHz).           <JLC_TEMP_CLK>
-  // CLKOUT0_DIVIDE - CLKOUT6_DIVIDE: Divide amount for each CLKOUT (1-128)
-  .CLKOUT0_DIVIDE_F(10),   // 1000MHz / 10.0 = 100MHz  Divide amount for CLKOUT0 (1.000-128.000).
-  .CLKOUT1_DIVIDE(5),      // 1000MHz /  5.0 = 200MHz
-  .CLKOUT2_DIVIDE(20),     // 1000MHz / 20.0 =  50MHz
-  .CLKOUT3_DIVIDE(1),
-  .CLKOUT4_DIVIDE(1),
-  .CLKOUT5_DIVIDE(1),
-  .CLKOUT6_DIVIDE(1),
-  // CLKOUT0_DUTY_CYCLE - CLKOUT6_DUTY_CYCLE: Duty cycle for each CLKOUT (0.01-0.99).
-  .CLKOUT0_DUTY_CYCLE(0.50),
-  .CLKOUT1_DUTY_CYCLE(0.50),
-  .CLKOUT2_DUTY_CYCLE(0.50),
-  .CLKOUT3_DUTY_CYCLE(0.50),
-  .CLKOUT4_DUTY_CYCLE(0.50),
-  .CLKOUT5_DUTY_CYCLE(0.50),
-  .CLKOUT6_DUTY_CYCLE(0.50),
-  // CLKOUT0_PHASE - CLKOUT6_PHASE: Phase offset for each CLKOUT (-360.000-360.000).
-  .CLKOUT0_PHASE(0.000),
-  .CLKOUT1_PHASE(0.000),
-  .CLKOUT2_PHASE(0.000),
-  .CLKOUT3_PHASE(0.000),
-  .CLKOUT4_PHASE(0.000),
-  .CLKOUT5_PHASE(0.000),
-  .CLKOUT6_PHASE(0.000),
-  .CLKOUT4_CASCADE("FALSE"), // Cascade CLKOUT4 counter with CLKOUT6 (FALSE, TRUE)
-  .DIVCLK_DIVIDE(1),         // Master division value (1-106):   Fpfd = CLKIN1/DIVCLK_DIVIDE.
-  .REF_JITTER1(0.010),       // Reference input jitter in UI (0.000-0.999).
-  .STARTUP_WAIT("FALSE")     // Delays DONE until MMCM is locked (FALSE, TRUE)
-)
-MMCME2_BASE_inst (
-  // Clock Outputs: 1-bit (each) output: User configurable clock outputs
-  .CLKOUT0(clk100prebufg), // 1-bit output: CLKOUT0
-  .CLKOUT0B(), // 1-bit output: Inverted CLKOUT0
-  .CLKOUT1(clk200prebufg), // 1-bit output: CLKOUT1
-  .CLKOUT1B(), // 1-bit output: Inverted CLKOUT1
-  .CLKOUT2(clk050prebufg), // 1-bit output: CLKOUT2
-  .CLKOUT2B(), // 1-bit output: Inverted CLKOUT2
-  .CLKOUT3(), // 1-bit output: CLKOUT3
-  .CLKOUT3B(), // 1-bit output: Inverted CLKOUT3
-  .CLKOUT4(), // 1-bit output: CLKOUT4
-  .CLKOUT5(), // 1-bit output: CLKOUT5
-  .CLKOUT6(), // 1-bit output: CLKOUT6
-  // Feedback Clocks: 1-bit (each) output: Clock feedback ports
-  .CLKFBOUT(clkfbprebufg), // 1-bit output: Feedback clock
-  .CLKFBOUTB(), // 1-bit output: Inverted CLKFBOUT
-  // Status Ports: 1-bit (each) output: MMCM status ports
-  .LOCKED(mmcm_locked_o), // 1-bit output: LOCK
-  // Clock Inputs: 1-bit (each) input: Clock input
-  .CLKIN1(clkin), // 1-bit input: Clock
-  // Control Ports: 1-bit (each) input: MMCM control ports
-  .PWRDWN(mmcm_pwrdn_i), // 1-bit input: Power-down
-  .RST(mmcm_rst_i), // 1-bit input: Reset
-  // Feedback Clocks: 1-bit (each) input: Clock feedback ports
-  .CLKFBIN(clkfb) // 1-bit input: Feedback clock
-);
-// End of MMCME2_BASE_inst instantiation
+////  <JLC_TEMP_NO_MMCM>
+//`ifndef JLC_TEMP_NO_MMCM
+//MMCME2_BASE #(
+//  .BANDWIDTH("OPTIMIZED"), // Jitter programming (OPTIMIZED, HIGH, LOW)
+//  .CLKFBOUT_MULT_F(`CLKFB_FACTOR_MCU),  // Multiply value for all CLKOUT (2.000-64.000)   = Fpfd/Fclkin1
+//  .CLKFBOUT_PHASE(0.000),  // Phase offset in degrees of CLKFB (-360.000-360.000).
+//  .CLKIN1_PERIOD(9.800),  // Input clock period in ns to ps resolution (i.e. 33.333 is 30 MHz).
+//  // CLKOUT0_DIVIDE - CLKOUT6_DIVIDE: Divide amount for each CLKOUT (1-128)
+//  .CLKOUT0_DIVIDE_F(10),   // 1000MHz / 10.0 = 100MHz  Divide amount for CLKOUT0 (1.000-128.000).
+//  .CLKOUT1_DIVIDE(5),      // 1000MHz /  5.0 = 200MHz
+//  .CLKOUT2_DIVIDE(20),     // 1000MHz / 20.0 =  50MHz
+//  .CLKOUT3_DIVIDE(1),
+//  .CLKOUT4_DIVIDE(1),
+//  .CLKOUT5_DIVIDE(1),
+//  .CLKOUT6_DIVIDE(1),
+//  // CLKOUT0_DUTY_CYCLE - CLKOUT6_DUTY_CYCLE: Duty cycle for each CLKOUT (0.01-0.99).
+//  .CLKOUT0_DUTY_CYCLE(0.50),
+//  .CLKOUT1_DUTY_CYCLE(0.50),
+//  .CLKOUT2_DUTY_CYCLE(0.50),
+//  .CLKOUT3_DUTY_CYCLE(0.50),
+//  .CLKOUT4_DUTY_CYCLE(0.50),
+//  .CLKOUT5_DUTY_CYCLE(0.50),
+//  .CLKOUT6_DUTY_CYCLE(0.50),
+//  // CLKOUT0_PHASE - CLKOUT6_PHASE: Phase offset for each CLKOUT (-360.000-360.000).
+//  .CLKOUT0_PHASE(0.000),
+//  .CLKOUT1_PHASE(0.000),
+//  .CLKOUT2_PHASE(0.000),
+//  .CLKOUT3_PHASE(0.000),
+//  .CLKOUT4_PHASE(0.000),
+//  .CLKOUT5_PHASE(0.000),
+//  .CLKOUT6_PHASE(0.000),
+//  .CLKOUT4_CASCADE("FALSE"), // Cascade CLKOUT4 counter with CLKOUT6 (FALSE, TRUE)
+//  .DIVCLK_DIVIDE(1),         // Master division value (1-106):   Fpfd = CLKIN1/DIVCLK_DIVIDE.
+//  .REF_JITTER1(0.010),       // Reference input jitter in UI (0.000-0.999).
+//  .STARTUP_WAIT("FALSE")     // Delays DONE until MMCM is locked (FALSE, TRUE)
+//)
+//MMCME2_BASE_inst (
+//  // Clock Outputs: 1-bit (each) output: User configurable clock outputs
+//  .CLKOUT0(clk100prebufg), // 1-bit output: CLKOUT0
+//  .CLKOUT0B(), // 1-bit output: Inverted CLKOUT0
+//  .CLKOUT1(clk200prebufg), // 1-bit output: CLKOUT1
+//  .CLKOUT1B(), // 1-bit output: Inverted CLKOUT1
+//  .CLKOUT2(clk050prebufg), // 1-bit output: CLKOUT2
+//  .CLKOUT2B(), // 1-bit output: Inverted CLKOUT2
+//  .CLKOUT3(), // 1-bit output: CLKOUT3
+//  .CLKOUT3B(), // 1-bit output: Inverted CLKOUT3
+//  .CLKOUT4(), // 1-bit output: CLKOUT4
+//  .CLKOUT5(), // 1-bit output: CLKOUT5
+//  .CLKOUT6(), // 1-bit output: CLKOUT6
+//  // Feedback Clocks: 1-bit (each) output: Clock feedback ports
+//  .CLKFBOUT(clkfbprebufg), // 1-bit output: Feedback clock
+//  .CLKFBOUTB(), // 1-bit output: Inverted CLKFBOUT
+//  // Status Ports: 1-bit (each) output: MMCM status ports
+//  .LOCKED(mmcm_locked_o), // 1-bit output: LOCK
+//  // Clock Inputs: 1-bit (each) input: Clock input
+//  .CLKIN1(clkin), // 1-bit input: Clock
+//  // Control Ports: 1-bit (each) input: MMCM control ports
+//  .PWRDWN(mmcm_pwrdn_i), // 1-bit input: Power-down
+//  .RST(mmcm_rst_i), // 1-bit input: Reset
+//  // Feedback Clocks: 1-bit (each) input: Clock feedback ports
+//  .CLKFBIN(clkfb) // 1-bit input: Feedback clock
+//);
+//// End of MMCME2_BASE_inst instantiation
 
-  BUFG BUFG_clkfb  (.I(clkfbprebufg),  .O(clkfb));
-  BUFG BUFG_clk100 (.I(clk100prebufg), .O(clk100));
-  BUFG BUFG_clk200 (.I(clk200prebufg), .O(clk200));
-  BUFG BUFG_clk050 (.I(clk050prebufg), .O(clk050));
-  assign sys_clk   = clk100;
-`else
+//  BUFG BUFG_clkfb  (.I(clkfbprebufg),  .O(clkfb));
+//  BUFG BUFG_clk100 (.I(clk100prebufg), .O(clk100));
+//  BUFG BUFG_clk200 (.I(clk200prebufg), .O(clk200));
+//  BUFG BUFG_clk050 (.I(clk050prebufg), .O(clk050));
+//  assign sys_clk   = clk100;
+//`else
   assign sys_clk   = clkin;
-`endif
+//`endif
 
-//  <JLC_TEMP_NO_L12>
-`ifndef JLC_TEMP_NO_L12
+`ifndef USE_FPGA_MCLK
   IBUFGDS IBUFGDS_clkin  (.I(FPGA_CLK), .IB(FPGA_CLKn), .O(clk_diff_rcvd));
   BUFG BUFG_clkin  (.I(clk_diff_rcvd),    .O(clkin));
 `else
   BUFG BUFG_clkin  (.I(FPGA_MCLK),   .O(clkin));
 `endif
 
-// Create a "hwdbg dbg_sys_rst_n" synchronous self-timed pulse. <JLC_TEMP_RST>
+// Create a "hwdbg dbg_sys_rst_n" synchronous self-timed pulse.
 always @(posedge sys_clk)
 begin
   dbg_sys_rst_sr <= {dbg_sys_rst_sr[8:0], dbg_sys_rst_i};
@@ -800,7 +805,7 @@ end
 // *                                                                            *
 // ******************************************************************************
   mmc_tester #(
-    .SYS_CLK_RATE         (`GLBL_CLK_FREQ_MCU),
+    .SYS_CLK_RATE         (`GLBL_CLK_FREQ),
     .SYS_LEDS             (16),    // <TBD> Eventually these need to go away.
     .SYS_SWITCHES         (8),     // <TBD> Eventually these need to go away.
     .EXT_CSD_INIT_FILE    ("ext_csd_init.txt"), // Initial contents of EXT_CSD
@@ -1103,7 +1108,7 @@ end
 // ******************************************************************************  
     dds_spi #(
       .VRSN                       (`VERSION),
-      .CLK_FREQ                   (`GLBL_CLK_FREQ_MCU),    // <JLC_TEMP_CLK
+      .CLK_FREQ                   (`GLBL_CLK_FREQ),
       .SPI_CLK_FREQ               (25000000)
     ) dds_spi_io
     (                                                      // 
@@ -1150,7 +1155,7 @@ end
 // ******************************************************************************  
     ltc_spi #(
       .VRSN                       (`VERSION),
-      .CLK_FREQ                   (`GLBL_CLK_FREQ_MCU),    // <JLC_TEMP_CLK
+      .CLK_FREQ                   (`GLBL_CLK_FREQ),
       .SPI_CLK_FREQ               (20000000)
     ) syn_spi_io
     (
@@ -1403,10 +1408,10 @@ opcode_io
   localparam BIT_DDS_SYNC         = 16'h0200;
   localparam BIT_DDS_PS0          = 16'h0400;
   localparam BIT_DDS_PS1          = 16'h0800;
-  localparam BIT_ZMON_EN          = 16'h1000;                           // <JLC_TEMP_ZMON_EN>
+  localparam BIT_ZMON_EN          = 16'h1000;
   localparam BIT_DDS_INIT         = 16'h2000;                           // Do DDS init sequence
   localparam BIT_SPI_DBG_MODE     = 16'h4000;                           // Enable this SPI debugger
-  localparam BIT_TEMP_SYS_RST     = 16'h8000;                           // <JLC_TEMP_RST>
+  localparam BIT_TEMP_SYS_RST     = 16'h8000;
 
   // Mux these debug controls
   assign dbg_spi_mode = ((dbg_enables & BIT_SPI_DBG_MODE) == 16'h4000); // Mux SPI outputs   
@@ -1476,7 +1481,7 @@ opcode_io
   assign dbg_zmonen = ((dbg_enables & BIT_ZMON_EN) == BIT_ZMON_EN);
   assign ZMON_EN = dbg_spi_mode ? dbg_zmonen : pls_zmonen;
   
-  assign dbg_sys_rst_i = dbg_enables & BIT_TEMP_SYS_RST ? 1'b1 : 1'b0;   // <JLC_TEMP_RST>
+  assign dbg_sys_rst_i = dbg_enables & BIT_TEMP_SYS_RST ? 1'b1 : 1'b0;
 
   // FPGA_RXD/TXD to/from MMC UART RXD/TXD
   assign syscon_rxd = FPGA_RXD;
