@@ -3,6 +3,8 @@
 -- Package containing SD Card interface modules,
 -- and related support modules.
 --
+-- 15-Aug-2017 RMR Backdoor opcodes not needed, SPI debugger still at 3000040
+-- xx-Jun-2017 RMR Changed SPI debugger to 'w 03000040' so backdoor opcode could use 3000030 
 -- 31-Mar-2017 RMR Added SPI debug capability to 'w 03000030'
 --
 library IEEE;

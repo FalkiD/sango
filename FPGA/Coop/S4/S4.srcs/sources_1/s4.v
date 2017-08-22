@@ -180,9 +180,10 @@
 // When using FPGA_MCLK: `define GLBL_CLK_FREQ 102000000.0
 //`define CLKFB_FACTOR_BRD 10.000        //  "       "        "      "
 //`define CLKFB_FACTOR_MCU 9.800         //  "       "        "      "
-`define GLBL_MMC_FILL_LEVEL_BITS 16
-`define GLBL_RSP_FILL_LEVEL_BITS 10
-`define PWR_FIFO_FILL_BITS       4
+`define GLBL_MMC_FILL_LEVEL         8192
+`define GLBL_MMC_FILL_LEVEL_BITS    13
+`define GLBL_RSP_FILL_LEVEL_BITS    10
+`define PWR_FIFO_FILL_BITS          4
 
 `define PATTERN_DEPTH           32768
 `define PATTERN_FILL_BITS       15
@@ -771,7 +772,7 @@ end
     swiss_army_fifo #(
       .USE_BRAM(1),
       .WIDTH(32),
-      .DEPTH(65536),
+      .DEPTH(`GLBL_MMC_FILL_LEVEL),
       .FILL_LEVEL_BITS(`GLBL_MMC_FILL_LEVEL_BITS),
       .PF_FULL_POINT(`GLBL_MMC_FILL_LEVEL_BITS-1),
       .PF_FLAG_POINT(`GLBL_MMC_FILL_LEVEL_BITS>>1),
@@ -810,7 +811,7 @@ end
     .SYS_SWITCHES         (8),     // <TBD> Eventually these need to go away.
     .EXT_CSD_INIT_FILE    ("ext_csd_init.txt"), // Initial contents of EXT_CSD
     .HOST_RAM_ADR_BITS    (14), // Determines amount of BRAM in MMC host
-    .MMC_FIFO_DEPTH       (65536), // (2048),
+    .MMC_FIFO_DEPTH       (`GLBL_MMC_FILL_LEVEL), // (2048),
     .MMC_FILL_LEVEL_BITS  (`GLBL_MMC_FILL_LEVEL_BITS),    // (16),
     .RSP_FILL_LEVEL_BITS  (`GLBL_RSP_FILL_LEVEL_BITS),    // (10),
     .MMC_RAM_ADR_BITS     (9)      // 512 bytes, 1st sector (17)
@@ -894,7 +895,7 @@ end
     // Debugging, these go from 0300003F down
     .opc_oc_cnt_i      (opc_count),                             // first_opcode__last_opcode__opcodes_procesed
     .opc_status1_i     ({9'd0, opc_state, 8'd0, opc_status}),   // opc_state__opc_status
-    .opc_status2_i     ({opc_rspf_cnt[15:0], opc_fif_cnt[15:0]}), // rsp_fifo_count__opc_fifo_count
+    .opc_status2_i     ({8'd0, opc_rspf_cnt[7:0], 8'd0, opc_fif_cnt[7:0]}), // rsp_fifo_count__opc_fifo_count
     .opc_status3_i     ({16'h0000, dbg_opcodes[15:0]}),         // first_opcode__last_opcode in lower 16 bits
     .sys_status4_i     (frequency),                             // system frequency setting in Hertz
     .sys_status5_i     ({15'h0, SYN_STAT, 4'd0, dbm_x10}) // MS 16 bits=SYN_STAT pin,1=PLL_LOCK, 0=not locked. 16 LSB's=power(dBm x10) setting
