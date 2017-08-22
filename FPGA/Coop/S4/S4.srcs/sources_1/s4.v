@@ -180,8 +180,8 @@
 // When using FPGA_MCLK: `define GLBL_CLK_FREQ 102000000.0
 //`define CLKFB_FACTOR_BRD 10.000        //  "       "        "      "
 //`define CLKFB_FACTOR_MCU 9.800         //  "       "        "      "
-`define GLBL_MMC_FILL_LEVEL         8192
-`define GLBL_MMC_FILL_LEVEL_BITS    13
+`define GLBL_MMC_FILL_LEVEL         2048
+`define GLBL_MMC_FILL_LEVEL_BITS    11
 `define GLBL_RSP_FILL_LEVEL_BITS    10
 `define PWR_FIFO_FILL_BITS          4
 
