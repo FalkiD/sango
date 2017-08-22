@@ -41,8 +41,8 @@
 `define STATE_WRITE_LENGTH2         7'h0e
 `define STATE_RSP_OPCODE            7'h0f
 `define STATE_WRITE_RESPONSE        7'h10
-`define STATE_WR_PTN1               7'h11
-`define STATE_WR_PTN2               7'h12
+`define STATE_WR_PTN                7'h11
+//`define STATE_WR_PTN2               7'h12
 `define STATE_WMD                   7'h13
 `define STATE_RD_MEAS1              7'h14
 `define STATE_RD_MEAS2              7'h15
@@ -59,7 +59,8 @@
 module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                  parameter RSP_FILL_LEVEL_BITS = 10,
                  parameter PTN_FILL_BITS = 16,
-                 parameter PTN_WORD = 104,
+                 parameter PTN_WR_WORD = 96,
+                 parameter PTN_RD_WORD = 72,
                  parameter HUNDRED_MS = 10000000,    // 10e6 ticks per 100ms
                  parameter TWOFIFTY_MS = 50000000     // 25e6 ticks per 250ms
   )
@@ -106,9 +107,9 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     // pattern opcodes are saved in pattern RAM.
     output reg                      ptn_wen_o,    // opcode processor saves pattern opcodes to pattern RAM 
     output wire [PTN_FILL_BITS-1:0] ptn_addr_o,   // address 
-    inout  wire [PTN_WORD-1:0]      ptn_data,     // 13 bytes, 3 bytes patClk tick, 10 bytes for opcode, length, and data   
-    output reg                      ptn_proc_en_o,// Run pattern processor 
-    output reg  [PTN_FILL_BITS-1:0] ptn_start_addr_o, // address 
+    output wire [PTN_WR_WORD-1:0]   ptn_data_o,   // 12 bytes, 3 bytes patClk tick, 9 bytes for opcode and its data   
+    input  wire [PTN_RD_WORD-1:0]   ptn_data_i,   // next pattern opcode to run, 0 if nothing to do   
+    output reg                      ptn_run_o,    // run pattern 
 
     output reg  [31:0] opcode_counter_o,        // count opcodes for status info                     
     output reg  [7:0]  status_o,                // NULL opcode terminates, done=0, or error code
@@ -140,10 +141,10 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     // Pattern data registers
     reg  [PTN_FILL_BITS-1:0]        ptn_addr;           // pattern address to write
     reg  [23:0]                     ptn_clk;            // pattern clock tick to write
-    reg  [PTN_WORD-1:0]             ptn_data_reg;       // ptn_data is inout wire bus
-    reg  [7:0]   ptn_latch_count;    // Clocks to latch data into RAM
-    reg  [7:0]   saved_opc_byte;     // Save opcode byte in case of write to pattern RAM
-    reg  [7:0]   saved_len_byte;     // Save opcode length byte in case of write to pattern RAM
+    reg  [PTN_WR_WORD-1:0]          ptn_data_reg;       // pattern data written to pattern RAM
+    reg  [7:0]                      ptn_latch_count;    // Clocks to latch data into RAM
+    reg  [7:0]                      saved_opc_byte;     // Save opcode byte in case of write to pattern RAM
+    reg  [7:0]                      saved_len_byte;     // Save opcode length byte in case of write to pattern RAM
 
     reg  [31:0]  trig_conf;          // trigger configuration, from trig_conf opcode
     reg  [15:0]  sync_conf;          // sync configuration, from sync_conf opcode
@@ -180,7 +181,21 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             counter <= 0;
         end
         else if(enable == 1) begin
-            if((state == `STATE_IDLE && fifo_rd_count_i >= `MIN_OPCODE_SIZE) ||
+
+            // check for pattern data first when running a pattern
+            if(operating_mode == `PTNCMD_RUN && ptn_data_i != `PTNDATA_NONE) begin
+                // execute the next pattern opcode:
+                // --set opcode, length, and uinttmp registers
+                // --set state to STATE_DATA
+                // --execute opcode_integer_args() task to 
+                // kickoff normal processing of uinttmp.               
+                opcode <= uinttmp[6:0];
+                length <= 0;    // jump into processing uinttmp
+                uinttmp <= ptn_data_i[63:0];
+                state <= `STATE_DATA;
+                opcodes_integer_arg();  // go!
+            end
+            else if((state == `STATE_IDLE && fifo_rd_count_i >= `MIN_OPCODE_SIZE) ||
                 state != `STATE_IDLE) begin
                 // not IDLE or at least one opcode has been written to FIFO
                 case(state)
@@ -256,7 +271,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 //                    state <= `STATE_RD_MEAS2;   // read fifo spacer
 //                end
                 `STATE_RD_MEAS1: begin
-                    uinttmp <= 64'd0; //{32'd0, meas_fifo_dat_i};
+                    uinttmp <= {32'd0, meas_fifo_dat_i};
                     //uinttmp <= {32'd0, 32'h7e53_a6b7};
                     response_wr_en_o <= 1'b0;               // don't write extra response byte after meas word
                     meas_fifo_ren_o <= 1'b0;
@@ -384,7 +399,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 end
 
                 // Saved pattern entry to pattern RAM, increment address, back to idle
-                `STATE_WR_PTN1: begin
+                `STATE_WR_PTN: begin
                     if(ptn_latch_count == 0) begin
                         ptn_addr <= ptn_addr + 1;   // increment address 
                         ptn_wen_o <= 1'b0;          // end write pulse 
@@ -393,15 +408,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     else
                         ptn_latch_count = ptn_latch_count - 1;
                 end
-//                `STATE_WR_PTN2: begin
-//                    if(ptn_latch_count == 0) begin
-//                        ptn_addr <= ptn_addr + 1;   // increment address 
-//                        ptn_wr_en_o <= 1'b0;        // end write pulse 
-//                        next_opcode();
-//                    end
-//                    else
-//                        ptn_latch_count = ptn_latch_count - 1;
-//                end
     
                 default:
                 begin
@@ -414,21 +420,22 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         end // if(enable == 1) block
     end // always block    
 
-//    // start running pattern
-//    task start_pattern;
-//    input [15:0] address;    
-//    begin
-//        ptn_start_addr_o <= address;    // address 
-//        ptn_processor_en_o <= 1'b1;     // run pattern processor
-//    end
-//    endtask
+    // start running pattern
+    task start_pattern;
+    input [15:0] address;    
+    begin
+        ptn_addr <= address;    // address 
+        ptn_run_o <= 1'b1;              // run pattern
+        operating_mode <= `PTNCMD_RUN;  // Opcode processor mode to run pattern data
+    end
+    endtask
 
-//    // stop a pattern
-//    task stop_pattern;
-//    begin
-//        ptn_processor_en_o <= 1'b0;     // stop pattern processor 
-//    end
-//    endtask
+    // stop a pattern
+    task stop_pattern;
+    begin
+        ptn_run_o <= 1'b0;     // stop pattern 
+    end
+    endtask
 
     task done_opcode_block;
     begin
@@ -446,19 +453,16 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         // common processsing...
         // These common opcodes can be either executed immediately or 
         // saved into pattern RAM if operating_mode is PTNCMD_LOAD.
-        //
-        // need to refactor, handle writing pattern RAM generically, not per-opcode...
-        //
         if(length == 0) begin   // got all the data, write to correct fifo based on opcode, or execute opcode
             case(opcode)
             `STATUS:  begin
             end
             `FREQ: begin
                 if(operating_mode == `PTNCMD_LOAD) begin // Write pattern mode
-                    // 13 bytes, 3 bytes patClk tick, 1 byte opc len, 1 byte opcode, 8 bytes for left-justified opcode data
-                    ptn_data_reg <= {ptn_clk, saved_len_byte, saved_opc_byte, uinttmp[31:0], 32'd0};
+                    // 12 bytes, 3 bytes patClk tick, 1 byte opcode, 8 bytes for left-justified opcode data
+                    ptn_data_reg <= {ptn_clk, saved_opc_byte, uinttmp};
                     ptn_wen_o <= 1'b1;  // Write the entry 
-                    state <= `STATE_WR_PTN1;
+                    state <= `STATE_WR_PTN;
                 end
                 else begin
                     frequency_o <= uinttmp[31:0];
@@ -469,10 +473,10 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             end
             `POWER: begin
                 if(operating_mode == `PTNCMD_LOAD) begin // Write pattern mode
-                    // 13 bytes, 3 bytes patClk tick, 1 byte opc len, 1 byte opcode, 8 bytes for left-justified opcode data
-                    ptn_data_reg <= {ptn_clk, saved_len_byte, saved_opc_byte, uinttmp[31:0], 32'd0};
+                    // 12 bytes, 3 bytes patClk tick, 1 byte opcode, 8 bytes for left-justified opcode data
+                    ptn_data_reg <= {ptn_clk, saved_opc_byte, uinttmp};
                     ptn_wen_o <= 1'b1;  // Write the entry 
-                    state <= `STATE_WR_PTN1;
+                    state <= `STATE_WR_PTN;
                 end
                 else begin
                     power_o <= {opcode[6:0], uinttmp[31:0]};
@@ -483,10 +487,10 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             end
             `CALPWR: begin  // power processor handles both user power requests and power cal commands
                 if(operating_mode == `PTNCMD_LOAD) begin // Write pattern mode
-                    // 13 bytes, 3 bytes patClk tick, 1 byte opc len, 1 byte opcode, 8 bytes for left-justified opcode data
-                    ptn_data_reg <= {ptn_clk, saved_len_byte, saved_opc_byte, uinttmp[31:0], 32'd0};
+                    // 12 bytes, 3 bytes patClk tick, 1 byte opcode, 8 bytes for left-justified opcode data
+                    ptn_data_reg <= {ptn_clk, saved_opc_byte, uinttmp};
                     ptn_wen_o <= 1'b1;  // Write the entry 
-                    state <= `STATE_WR_PTN1;
+                    state <= `STATE_WR_PTN;
                 end
                 else begin
                     power_o <= {opcode[6:0], uinttmp[31:0]};
@@ -497,10 +501,10 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             end
             `PULSE: begin
                 if(operating_mode == `PTNCMD_LOAD) begin // Write pattern mode
-                    // 13 bytes, 3 bytes patClk tick, 1 byte opc len, 1 byte opcode, 8 bytes for left-justified opcode data
-                    ptn_data_reg <= {ptn_clk, saved_len_byte, saved_opc_byte, uinttmp[63:0]};
+                    // 12 bytes, 3 bytes patClk tick, 1 byte opcode, 8 bytes for left-justified opcode data
+                    ptn_data_reg <= {ptn_clk, saved_opc_byte, uinttmp};
                     ptn_wen_o <= 1'b1;  // Write the entry 
-                    state <= `STATE_WR_PTN1;
+                    state <= `STATE_WR_PTN;
                 end
                 else begin
                     pulse_o <= uinttmp[63:0];
@@ -510,9 +514,10 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             end
             `BIAS: begin
                 if(operating_mode == `PTNCMD_LOAD) begin // Write pattern mode
-                    ptn_data_reg <= {ptn_clk, saved_len_byte, saved_opc_byte, uinttmp[15:0], 23'd0};
+                    // 12 bytes, 3 bytes patClk tick, 1 byte opcode, 8 bytes for left-justified opcode data
+                    ptn_data_reg <= {ptn_clk, saved_opc_byte, uinttmp};
                     ptn_wen_o <= 1'b1;  // Write the entry 
-                    state <= `STATE_WR_PTN1;
+                    state <= `STATE_WR_PTN;
                 end
                 else begin
                     bias_enable_o <= uinttmp[8];  // ls byte is channel, always 1 for S4. Lsb of next byte is On/Off
@@ -543,33 +548,32 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 ptn_clk <= uinttmp[23:0];
                 next_opcode();   
             end
-//            `PTN_PATCTL: begin
-//                case(uinttmp[7:0])
-//                `PTN_END: begin                 // end of pattern writing
-//                    if(operating_mode == `PTNCMD_LOAD) begin // Write pattern mode
-//                    // save opcode in pattern RAM
-//                        ptn_addr_o <= pat_addr; 
-//                        // 11 bytes, 3 bytes patClk tick, 8 bytes for left-jsutified opcode
-//                        ptn_data_o <= (pat_clk << 72) | (`PTN_PATCTL << 56) | (uinttmp[31:0] << 40);   
-//                        ptn_wr_en_o <= 1'b1; 
-//                        state <= `STATE_WR_PTN1;
-//                        operating_mode <= `OPCODE_NORMAL;     // Done writing pattern
-//                    end
-//                    else begin
-//                        stop_pattern();
-//                        next_opcode(); 
-//                    end
-//                end
-//                `PTN_RUN: begin
-//                    start_pattern(uinttmp[31:16]);
-//                    next_opcode(); 
-//                end
-//                `PTN_ABORT: begin
-//                    stop_pattern();
-//                    next_opcode(); 
-//                end
-//                endcase
-//            end
+            `PTN_PATCTL: begin
+                case(uinttmp[7:0])
+                `PTN_END: begin                   // end of pattern writing or running
+                    if(operating_mode == `PTNCMD_LOAD) begin  // Write pattern mode, end of pattern
+                    // save opcode in pattern RAM
+                        // 12 bytes, 3 bytes patclk tick, 1 byte opcode, 8 bytes for opcode data (uinttmp)
+                        ptn_data_reg <= {ptn_clk, saved_opc_byte, uinttmp};
+                        ptn_wen_o <= 1'b1; 
+                        state <= `STATE_WR_PTN;
+                        operating_mode <= `OPCODE_NORMAL;     // Done writing pattern
+                    end
+                    else begin
+                        stop_pattern();
+                        next_opcode(); 
+                    end
+                end
+                `PTN_RUN: begin
+                    start_pattern(uinttmp[31:16]);
+                    next_opcode(); 
+                end
+                `PTN_ABORT: begin
+                    stop_pattern();
+                    next_opcode(); 
+                end
+                endcase
+            end
             default: begin
                 status_o <= `ERR_INVALID_OPCODE;
                 rsp_length <= 0;
@@ -653,8 +657,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         operating_mode <= `OPCODE_NORMAL;
         ptn_addr <= 16'h0000;               // pattern address to write
         ptn_clk <= 24'h00_0000;             // pattern clock tick to write
-        ptn_start_addr_o <= 16'h0000;       // address 
-        ptn_proc_en_o <= 1'b0;              // Stop pattern processor 
+        ptn_run_o <= 1'b0;              // Stop pattern processor 
 
         response_ready <= 1'b0;
         response_length <= 16'h0000;

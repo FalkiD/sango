@@ -140,6 +140,7 @@
 `include "version.v"
 `include "status.h"
 `include "timescale.v"
+`include "opcodes.h"
 
 // -----------------------------------------------------------------------------
 // `define's
@@ -185,9 +186,8 @@
 `define GLBL_RSP_FILL_LEVEL_BITS    10
 `define PWR_FIFO_FILL_BITS          4
 
-`define PATTERN_DEPTH           32768
-`define PATTERN_FILL_BITS       15
-`define PATTERN_WORD            104      // bits wide
+`define PATTERN_DEPTH               8192
+`define PATTERN_FILL_BITS           13
 
 // -----------------------------------------------------------------------------
 
@@ -442,9 +442,9 @@ wire         bias_en;                 // bias control
 wire                            ptn_wen;         // opcode processor saves pattern opcodes to pattern RAM 
 wire [`PATTERN_FILL_BITS-1:0]   ptn_addr;        // address
 wire [23:0]                     ptn_clk;         // patclk, pattern tick, tick=100ns
-wire [`PATTERN_WORD-1:0]        ptn_data;        // 12 bytes, 3 bytes patClk tick, 9 bytes for opcode, length, and data   
-wire                            ptn_proc_en;     // Run pattern processor 
-wire [`PATTERN_FILL_BITS-1:0]   ptn_start_addr;  // address
+wire [`PATTERN_WR_WORD-1:0]     ptn_data;        // 12 bytes, 3 bytes patClk tick, 9 bytes for opcode, length, and data   
+wire [`PATTERN_RD_WORD-1:0]     ptn_next;        // Next pattern opcode to execute, 0 if nothing to do, 9 bytes, opcode and 8 bytes data   
+wire                            ptn_run;         // Run pattern processor 
 wire [7:0]                      ptn_status;      // status from pattern processor 
 wire [3:0]                      ptn_cmd;         // Command/mode, i.e. writing pattern, run pattern, stop, etc
 
@@ -999,7 +999,8 @@ end
   patterns #(
         .PTN_DEPTH(`PATTERN_DEPTH),
         .PTN_BITS(`PATTERN_FILL_BITS),
-        .WIDTH(`PATTERN_WORD)
+        .WR_WIDTH(`PATTERN_WR_WORD),
+        .RD_WIDTH(`PATTERN_RD_WORD)
   )
   ptn_processor 
   (
@@ -1008,25 +1009,12 @@ end
   
     .ptn_en             (1'b1), //ptn_proc_en),
     
-    .ptn_data_io        (ptn_data),             // Write pattern data word from opcode processor during pattern load
-                                                // Read word from pattern RAM when running pattern
+    .ptn_run_i          (ptn_run),
+    .ptn_data_i         (ptn_data),             // Write pattern data word from opcode processor during pattern load
+    .ptn_data_o         (ptn_next),             // Next pattern data to execute, 0 if nothing to do
     .ptn_addr_i         (ptn_addr),             // Write to or run from this pattern address
     .ptn_wen_i          (ptn_wen),              // Pattern RAM write enable
     .ptn_cmd_i          (ptn_cmd),              // Command/mode, i.e. writing pattern, run pattern, stop, etc
-
-//    // Read from pattern processor fifo connections
-//    .ptn_fif_dat_o      (ptn_fif_dat),          // pattern opcode fifo to mux
-//    .ptn_fif_ren_i      (ptn_fif_ren),          // pattern opcode fifo read enable
-//    .ptn_fif_mt_o       (ptn_fif_mt),           // pattern opcode fifo empty
-//    .ptn_rd_cnt_o       (ptn_fif_cnt),          // pattern opcode fifo fill level 
-//    .ptn_rd_reset_i     (ptn_inpf_rst),         // Synchronous pattern opcode fifo reset
-//    // Write to pattern processor response fifo connections
-//    .ptn_rspf_dat_i     (ptn_rspf_dat),         // pattern response fifo
-//    .ptn_rspf_we_i      (ptn_rspf_wen),         // response fifo write line             
-//    .ptn_rspf_mt_o      (ptn_rspf_mt),          // response fifo empty
-//    .ptn_rspf_fl_o      (ptn_rspf_fl),          // response fifo full
-//    .ptn_rspf_reset_i   (opc_fifo_rst),         // Synchronous mmc response fifo reset
-//    .ptn_rspf_cnt_o     (ptn_rspf_cnt),         // pattern response fifo fill level
 
     .status_o           (ptn_status)            // pattern processor status
   );
@@ -1041,7 +1029,9 @@ end
   opcodes #(
      .MMC_FILL_LEVEL_BITS(`GLBL_MMC_FILL_LEVEL_BITS),
      .RSP_FILL_LEVEL_BITS(`GLBL_RSP_FILL_LEVEL_BITS),
-     .PTN_FILL_BITS(`PATTERN_FILL_BITS)
+     .PTN_FILL_BITS(`PATTERN_FILL_BITS),
+     .PTN_WR_WORD(`PATTERN_WR_WORD),
+     .PTN_RD_WORD(`PATTERN_RD_WORD)
   ) opcode_processor (
     .sys_rst_n                  (sys_rst_n),
     .sys_clk                    (sys_clk),
@@ -1087,9 +1077,9 @@ end
     // pattern opcodes are saved in pattern RAM.
     .ptn_wen_o                  (ptn_wen),          // opcode processor saves pattern opcodes to pattern RAM 
     .ptn_addr_o                 (ptn_addr),         // address 
-    .ptn_data                   (ptn_data),         // 12 bytes, 3 bytes patClk tick, 9 bytes for opcode, length, and data   
-    .ptn_proc_en_o              (ptn_proc_en),      // Run pattern processor 
-    .ptn_start_addr_o           (ptn_start_addr),   // address 
+    .ptn_data_o                 (ptn_data),         // 13 bytes, 3 bytes patClk tick, 10 bytes for opcode, length, and data   
+    .ptn_data_i                 (ptn_next),         // 13 bytes, 3 bytes patClk tick, 10 bytes for opcode, length, and data   
+    .ptn_run_o                  (ptn_run),          // run pattern 
                                                     
     .opcode_counter_o           (opc_count),        // count opcodes for status info   
                                                         
@@ -1097,7 +1087,6 @@ end
     .status_o                   (opc_status),         // NULL opcode terminates, done=0, or error code
     .state_o                    (opc_state),          // For debugger display
     .dbg_opcodes_o              (dbg_opcodes)         // first ocode__last_opcode
-    // .last_length_o              ()                   //    
   );
 
 // ******************************************************************************

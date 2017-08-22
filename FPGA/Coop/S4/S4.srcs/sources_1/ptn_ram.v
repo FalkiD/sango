@@ -8,11 +8,9 @@
 // Project Name: 
 // Target Devices: 
 // Tool Versions: 
-// Description: Each entry is 10 bytes.
-// 3 MS bytes are patClk pattern clock tick. 100ns clock, pattern starts at 0
-// 7 LS bytes are saved opcode. Leaves room for PULSE opcode. PULSE opcode is
-// saved without its first byte (Channel)
-// Opcodees will be left-justified in the 7 byte field.
+// Description: Each saved entry is 9 bytes.
+// Index into pattern gives 100ns tick
+// Each entry is 8 bytes opcode data plus the opcode
 // 
 // Dependencies: 
 // 
@@ -42,7 +40,7 @@ module ptn_ram #(parameter DEPTH=65536,
 );
 
   // Xilinx XST-specific meta comment follows:
-  (* ram_style = "distributed" *) reg  [WIDTH-1:0]  RAM[DEPTH-1:0];
+  (* ram_style = "block" *) reg  [WIDTH-1:0]  RAM[DEPTH-1:0];
   reg [DEPTH_BITS-1:0] read_addr;
 
   always @(posedge clk) begin

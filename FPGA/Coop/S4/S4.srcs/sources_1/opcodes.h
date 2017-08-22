@@ -64,4 +64,9 @@
 `define PTNCMD_RUN          4'd2
 `define PTNCMD_STOP         4'd3
 
+`define PATTERN_WR_WORD     96      // 8 bytes data, 1 byte opcode, 3 bytes patclk tick
+`define PATTERN_RD_WORD     72      // 8 bytes data, 1 byte opcode
+
+`define PTNDATA_NONE        72'd0
+
 `endif
