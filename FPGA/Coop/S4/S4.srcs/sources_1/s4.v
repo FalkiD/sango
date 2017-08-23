@@ -445,6 +445,8 @@ wire [23:0]                     ptn_clk;         // patclk, pattern tick, tick=1
 wire [`PATTERN_WR_WORD-1:0]     ptn_data;        // 12 bytes, 3 bytes patClk tick, 9 bytes for opcode, length, and data   
 wire [`PATTERN_RD_WORD-1:0]     ptn_next;        // Next pattern opcode to execute, 0 if nothing to do, 9 bytes, opcode and 8 bytes data   
 wire                            ptn_run;         // Run pattern processor 
+wire [`PATTERN_FILL_BITS-1:0]   ptn_index;       // address of pattern entry to run(only run it once) 
+
 wire [7:0]                      ptn_status;      // status from pattern processor 
 wire [3:0]                      ptn_cmd;         // Command/mode, i.e. writing pattern, run pattern, stop, etc
 
@@ -1009,11 +1011,15 @@ end
   
     .ptn_en             (1'b1), //ptn_proc_en),
     
-    .ptn_run_i          (ptn_run),
-    .ptn_data_i         (ptn_data),             // Write pattern data word from opcode processor during pattern load
-    .ptn_data_o         (ptn_next),             // Next pattern data to execute, 0 if nothing to do
+    .ptn_run_i          (ptn_run),              // Run pattern beginning at ptn_addr
+
     .ptn_addr_i         (ptn_addr),             // Write to or run from this pattern address
+    .ptn_data_i         (ptn_data),             // Write pattern data word from opcode processor during pattern load
     .ptn_wen_i          (ptn_wen),              // Pattern RAM write enable
+
+    .ptn_index_o        (ptn_index),            // index(address) of next pattern entry to be run(run it only once)
+    .ptn_data_o         (ptn_next),             // Next pattern data to execute, 0 if nothing to do
+
     .ptn_cmd_i          (ptn_cmd),              // Command/mode, i.e. writing pattern, run pattern, stop, etc
 
     .status_o           (ptn_status)            // pattern processor status
@@ -1077,8 +1083,9 @@ end
     // pattern opcodes are saved in pattern RAM.
     .ptn_wen_o                  (ptn_wen),          // opcode processor saves pattern opcodes to pattern RAM 
     .ptn_addr_o                 (ptn_addr),         // address 
-    .ptn_data_o                 (ptn_data),         // 13 bytes, 3 bytes patClk tick, 10 bytes for opcode, length, and data   
-    .ptn_data_i                 (ptn_next),         // 13 bytes, 3 bytes patClk tick, 10 bytes for opcode, length, and data   
+    .ptn_data_o                 (ptn_data),         // 12 bytes, 3 bytes patclk tick, 9 bytes for opcode and data   
+    .ptn_data_i                 (ptn_next),         // 9 bytes: opcode and 8 bytes data   
+    .ptn_index_i                (ptn_index),        // address of pattern entry to run next(only run it once, address is unique in RAM)
     .ptn_run_o                  (ptn_run),          // run pattern 
                                                     
     .opcode_counter_o           (opc_count),        // count opcodes for status info   
@@ -1197,7 +1204,7 @@ opcode_io
   .opc_rspf_mt_o              (opc_rspf_mt),      // MMC response fifo empty
   .opc_rspf_fl_o              (opc_rspf_fl),      // MMC response fifo full
   .opc_rspf_cnt_o             (opc_rspf_cnt),     // MMC response fifo count
-  .opc_rsp_rdy_i              (opc_rspf_rdy),     // response fifo is waiting
+  .opc_rsp_rdy_i              (opc_rsp_rdy),      // response fifo is waiting
   .opc_rsp_len_i              (opc_rsp_len),      // response length written by opcode processor
 
     // mux'd connections
@@ -1444,6 +1451,7 @@ opcode_io
   assign SYN_MUTEn = dbg_spi_mode ? dbg_synth_mute_n : synth_mute_n;
 
   // Cause SYN Init on BIT_SYN_INIT assert
+  wire dbg_syn_doInit;
   assign dbg_syn_doInit = ((dbg_enables & BIT_SYN_INIT) == BIT_SYN_INIT);
   assign synth_doInit = (dbg_syn_doInit || dds_synth_doInit) ? 1'b1 : 1'b0;
   
