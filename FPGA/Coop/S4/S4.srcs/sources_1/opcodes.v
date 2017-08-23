@@ -115,19 +115,18 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     output reg  [7:0]  status_o,                // NULL opcode terminates, done=0, or error code
     output wire [6:0]  state_o,                 // For debugger display
     
-//    // Debugging
+    // Debugging
     output reg  [15:0]  dbg_opcodes_o           // 1st opcode in 8 MSB's, last opcode in 8 LSB's
-//    output reg  [15:0] last_length_o
     );
 
     reg  [3:0]   operating_mode = `OPCODE_NORMAL; // 0=normal, process & run opcodes, other cmds for pattern load/run
-    reg  [6:0]   state = 0;             // Use as flag in hardware to indicate first starting up
+    reg  [6:0]   state = `STATE_IDLE;             // Use as flag in hardware to indicate first starting up
     reg  [6:0]   next_state = `STATE_IDLE;
     reg  [6:0]   last_state = `STATE_IDLE;
     reg          blk_rsp_done;       // flag, 1 sent response for block, 0=response not sent yet
     reg  [6:0]   opcode = 0;         // Opcode being processed
     reg  [9:0]   length = 0;         // bytes of opcode data to read
-    (* ram_style = "distributed" *) reg  [63:0]  uinttmp; // Xilinx XST-specific meta comment specifying mem type
+    reg  [63:0]  uinttmp;            // temp for opcode data, up to 8 bytes
     reg          len_upr = 0;        // Persist upper bit of length
     reg          response_ready;     // flag when response ready
     reg  [MMC_FILL_LEVEL_BITS-1:0]  response_length;    // length of response data
@@ -176,7 +175,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 //   0, 0, 0, ECHO, PAINTFCFG, SYNCCONF, TRIGCONF, LENGTH, MODE, BIAS, PULSE, PHASE, POWER, FREQ, STATUS, TERMINATOR
 
     always @( posedge sys_clk) begin
-        if( !sys_rst_n || state == 0) begin //|| (state != `STATE_IDLE && fifo_rd_empty_i == 1))
+        if(!sys_rst_n) begin // || state == 0) begin //|| (state != `STATE_IDLE && fifo_rd_empty_i == 1))
             reset_opcode_processor();
             counter <= 0;
         end
