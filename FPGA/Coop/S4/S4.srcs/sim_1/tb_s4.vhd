@@ -37,8 +37,8 @@ architecture struct of testbench is
 component s4
 port (
   -- Comment these lines out to use FPGA_MCLK
-  FPGA_CLK      : in  std_logic;        --  P10   I        + Diff FPGA CLK From S4 Board U34/Si53307
-  FPGA_CLKn     : in  std_logic;        --  N10   I        - and A3/100MHx Oscillator can.
+  --FPGA_CLK      : in  std_logic;        --  P10   I        + Diff FPGA CLK From S4 Board U34/Si53307
+  --FPGA_CLKn     : in  std_logic;        --  N10   I        - and A3/100MHx Oscillator can.
 
   ACTIVE_LEDn   : out std_logic;        --  T14   O
 
@@ -212,8 +212,8 @@ begin
   dut_0 : s4
   port map(
       -- Comment these two lines when using FPGA_MCLK
-      FPGA_CLK    => CLK,
-      FPGA_CLKn   => not CLK,
+      --FPGA_CLK    => CLK,
+      --FPGA_CLKn   => not CLK,
 
       ACTIVE_LEDn =>  open,        --  T14   O
     

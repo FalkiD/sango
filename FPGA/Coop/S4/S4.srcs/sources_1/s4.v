@@ -176,8 +176,8 @@
 // ********************************************************************************************
 // ** Note ** To use Synthesizer clock its pins must be un-commented in the contraints file  **
 // ********************************************************************************************
-//`define USE_FPGA_MCLK    1             // Use MCU clock, 102MHz
-`define GLBL_CLK_FREQ   100000000.0  //  "       "        "      "
+`define USE_FPGA_MCLK   1             // Use MCU clock, 102MHz
+`define GLBL_CLK_FREQ   102000000.0   //100000000.0  //  "       "        "      "
 // When using FPGA_MCLK: `define GLBL_CLK_FREQ 102000000.0
 //`define CLKFB_FACTOR_BRD 10.000        //  "       "        "      "
 //`define CLKFB_FACTOR_MCU 9.800         //  "       "        "      "

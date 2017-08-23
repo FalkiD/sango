@@ -10,9 +10,9 @@
 
 # Comment these lines to use FPGA_MCLK as main clock
 #FPGA_CLK / FPGA_CLKn
-set_property -dict {PACKAGE_PIN D4 IOSTANDARD LVDS_25} [get_ports FPGA_CLK]
-create_clock -period 10.000 -name FPGA_CLK_pin -waveform {0.000 5.000} -add [get_ports FPGA_CLK]
-set_property -dict {PACKAGE_PIN C4 IOSTANDARD LVDS_25} [get_ports FPGA_CLKn]
+#set_property -dict {PACKAGE_PIN D4 IOSTANDARD LVDS_25} [get_ports FPGA_CLK]
+#create_clock -period 10.000 -name FPGA_CLK_pin -waveform {0.000 5.000} -add [get_ports FPGA_CLK]
+#set_property -dict {PACKAGE_PIN C4 IOSTANDARD LVDS_25} [get_ports FPGA_CLKn]
 
 # ---------------------------------------------------------------------------
 # MMC Interface I/Os

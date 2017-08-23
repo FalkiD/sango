@@ -150,8 +150,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     
     // handle opcode integer argument data in a common way
     reg  [31:0]  shift = 0;          // tmp used building opcode data and returning measurements
-
-    reg  [31:0]  counter;
     
     wire         pulse_busy;
     wire         pwr_busy;
@@ -175,9 +173,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 //   0, 0, 0, ECHO, PAINTFCFG, SYNCCONF, TRIGCONF, LENGTH, MODE, BIAS, PULSE, PHASE, POWER, FREQ, STATUS, TERMINATOR
 
     always @( posedge sys_clk) begin
-        if(!sys_rst_n) begin // || state == 0) begin //|| (state != `STATE_IDLE && fifo_rd_empty_i == 1))
+        if(!sys_rst_n) begin
             reset_opcode_processor();
-            counter <= 0;
         end
         else if(enable == 1) begin
 
@@ -194,7 +191,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 state <= `STATE_DATA;           // process the parsed opcode
             end
             else if((state == `STATE_IDLE && fifo_rd_count_i >= `MIN_OPCODE_SIZE) ||
-                state != `STATE_IDLE) begin
+                     state != `STATE_IDLE) begin
                 // not IDLE or at least one opcode has been written to FIFO
                 case(state)
                 `STATE_IDLE: begin
