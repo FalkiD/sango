@@ -69,4 +69,6 @@
 
 `define PTNDATA_NONE        72'd0
 
+`define SYSCLK_PER_PTN_CLK  6'd10
+
 `endif
