@@ -122,7 +122,8 @@ package mmc_test_pack is
     opc_status2_i       : in  unsigned(31 downto 0);    -- rsp_fifo_count__opc_fifo_count    
     opc_status3_i       : in  unsigned(31 downto 0);    -- LS 16 bits=MS 8 bits=RSP fifo level, LS 8 bits=OPC fifo level
     sys_status4_i       : in  unsigned(31 downto 0);    -- system frequency setting in Hertz
-    sys_status5_i       : in  unsigned(31 downto 0)     -- MS 16 bits=SYN_STAT pin,1=PLL_LOCK, 0=not, LS 12 bits=system power, dBm x 10
+    sys_status5_i       : in  unsigned(31 downto 0);    -- MS 16 bits=SYN_STAT pin,1=PLL_LOCK, 0=not, LS 12 bits=system power, dBm x 10
+    sys_status6_i       : in  unsigned(31 downto 0)     -- LS 16 bits: PTN_Status__PTN_Busy(running) 
   );
   end component;
 
@@ -772,7 +773,8 @@ use work.async_syscon_pack.all;
     opc_status2_i  : in  unsigned(31 downto 0);         -- rsp_fifo_count__opc_fifo_count
     opc_status3_i  : in  unsigned(31 downto 0);         -- MS 16 bits=MS 8 bits=RSP fifo level, LS 8 bits=OPC fifo level
     sys_status4_i  : in  unsigned(31 downto 0);         -- system frequency setting in Hertz
-    sys_status5_i  : in  unsigned(31 downto 0)          -- MS 16 bits=SYN_STAT pin,1=PLL_LOCK, 0=not, LS 12 bits=system power, dBm x 10
+    sys_status5_i  : in  unsigned(31 downto 0);         -- MS 16 bits=SYN_STAT pin,1=PLL_LOCK, 0=not, LS 12 bits=system power, dBm x 10
+    sys_status6_i  : in  unsigned(31 downto 0)          -- LS 16 bits: PTN_Status__PTN_Busy(running) 
   );
   end mmc_tester;
 
@@ -1103,6 +1105,7 @@ begin
 
   with to_integer(syscon_adr(3 downto 0)) select
   o_reg_dat_rd <=
+    sys_status6_i                                  when 16#9#,      -- LS 16 bits=
     sys_status5_i                                  when 16#A#,      -- LS 12 bits=system power, dBm x 10
     sys_status4_i                                  when 16#B#,      -- system frequency setting in Hertz
     opc_status3_i                                  when 16#C#,      -- 1st_opcode__last_opcode in lower 16 bits

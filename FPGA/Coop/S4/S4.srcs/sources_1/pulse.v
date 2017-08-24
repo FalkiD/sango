@@ -158,11 +158,6 @@ module pulse #(parameter FILL_BITS = 4)
     // End of pulse state definitions //
     ////////////////////////////////////////
 
-`ifdef XILINX_SIMULATOR
-    integer         filepulse = 0;
-    reg [7:0]       dbgdata;
-`endif
-
     always @( posedge sys_clk)
     begin
         if(!sys_rst_n) begin
@@ -178,22 +173,24 @@ module pulse #(parameter FILL_BITS = 4)
             rf_gate2 <= 1'b0;
             conv <= 1'b0;
             zmon_en <= 1'b0;
+            status_o <= `SUCCESS;
         end
         else if(pulse_en == 1'b1) begin
             case(state)
             PULSE_IDLE: begin
                 if(!pls_fifo_mt_i && astate == AIdle) begin
                     // pulse requested & measurement Idle
-                    pls_fifo_ren_o <= 1'b1;   // read next value
+                    pls_fifo_ren_o <= 1'b1;     // read next value
                     state <= PULSE_SPACER;
-                    status_o <= 1'b0;
+                    status_o = 8'h00;           // busy
                 end
                 else begin
-                    status_o <= 1'b1;
                     rf_gate <= 1'b0;
                     rf_gate2 <= 1'b0;
                     conv <= 1'b0;
                     zmon_en <= 1'b0;
+                    if(status_o == 8'h00)
+                        status_o <= `SUCCESS;
                 end
             end
             PULSE_SPACER: begin
@@ -241,8 +238,8 @@ module pulse #(parameter FILL_BITS = 4)
             PULSE_DONE: begin
                 // make sure measurement done too before returning to idle
                 if(astate == AIdle) begin
-                    state <= PULSE_IDLE;
                     status_o = `SUCCESS;
+                    state <= PULSE_IDLE;
                 end                
             end
             default:

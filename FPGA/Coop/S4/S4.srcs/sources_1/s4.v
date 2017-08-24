@@ -287,6 +287,7 @@ wire [31:0]  frequency;                 // in Hertz
 wire [11:0]  dbm_x10;
 reg  [15:0]  sys_state = 0;             // s4 system state (e.g. running a pattern)
 wire         pulse_busy;
+wire         ptn_busy;
 wire [31:0]  sys_mode;                  // MODE opcode can set system-wide flags
 
 // Use 0x4000 if dbg_enables to turn ON SPI debugger mode
@@ -446,7 +447,6 @@ wire [`PATTERN_WR_WORD-1:0]     ptn_data;        // 12 bytes, 3 bytes patClk tic
 wire [`PATTERN_RD_WORD-1:0]     ptn_next;        // Next pattern opcode to execute, 0 if nothing to do, 9 bytes, opcode and 8 bytes data   
 wire                            ptn_run;         // Run pattern processor 
 wire [`PATTERN_FILL_BITS-1:0]   ptn_index;       // address of pattern entry to run(only run it once) 
-
 wire [7:0]                      ptn_status;      // status from pattern processor 
 wire [3:0]                      ptn_cmd;         // Command/mode, i.e. writing pattern, run pattern, stop, etc
 
@@ -900,7 +900,8 @@ end
     .opc_status2_i     ({8'd0, opc_rspf_cnt[7:0], 8'd0, opc_fif_cnt[7:0]}), // rsp_fifo_count__opc_fifo_count
     .opc_status3_i     ({16'h0000, dbg_opcodes[15:0]}),         // first_opcode__last_opcode in lower 16 bits
     .sys_status4_i     (frequency),                             // system frequency setting in Hertz
-    .sys_status5_i     ({15'h0, SYN_STAT, 4'd0, dbm_x10}) // MS 16 bits=SYN_STAT pin,1=PLL_LOCK, 0=not locked. 16 LSB's=power(dBm x10) setting
+    .sys_status5_i     ({15'h0, SYN_STAT, 4'd0, dbm_x10}),       // MS 16 bits=SYN_STAT pin,1=PLL_LOCK, 0=not locked. 16 LSB's=power(dBm x10) setting
+    .sys_status6_i     ({16'd0, ptn_status, 7'd0, ptn_busy})     // LSB's: PTN_Status__PTN_Busy(running)
     );
 
 
@@ -1022,7 +1023,7 @@ end
 
     .ptn_cmd_i          (ptn_cmd),              // Command/mode, i.e. writing pattern, run pattern, stop, etc
 
-    .status_o           (ptn_status)            // pattern processor status
+    .status_o           (ptn_status)            // 0=busy, SUCCESS when done, or an error code
   );
 
 // ******************************************************************************
@@ -1087,6 +1088,7 @@ end
     .ptn_data_i                 (ptn_next),         // 9 bytes: opcode and 8 bytes data   
     .ptn_index_i                (ptn_index),        // address of pattern entry to run next(only run it once, address is unique in RAM)
     .ptn_run_o                  (ptn_run),          // run pattern 
+    .ptn_status_i               (ptn_status),       // pattern processor status
                                                     
     .opcode_counter_o           (opc_count),        // count opcodes for status info   
                                                         
@@ -1337,8 +1339,9 @@ opcode_io
   /////////////////////////////////
 
   // Flag when pulse processor is busy. Opcode processor has to wait for done to return measurements
-  assign pulse_busy = (pls_status == 8'd1) ? 1'b0 : 1'b1;
-
+  assign pulse_busy   = (pls_status == 8'h00) ? 1'b1 : 1'b0;
+  assign ptn_busy     = (ptn_status == 8'h00) ? 1'b1 : 1'b0;
+  
   // Implement MMC card tri-state drivers at the top level
     // Drive the clock output when needed
   assign MMC_CLK = mmc_clk_oe?mmc_clk:1'bZ;

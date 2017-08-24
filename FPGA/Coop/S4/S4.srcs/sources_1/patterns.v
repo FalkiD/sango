@@ -96,43 +96,59 @@ module patterns #(parameter PTN_DEPTH = 65536,
         ptn_state <= PTN_IDLE;
     end
     else begin
-        case(ptn_state)
-        PTN_IDLE: begin
-            if(ptn_run_i) begin //ptn_cmd_i == `PTNCMD_RUN) begin
-                ptn_addr_rd <= ptn_addr_i;    // init read index, absolute RAM index
-                sys_counter <= 6'd0;
-                ptn_state <= PTN_RD_RAM;           
-            end           
-        end
-        PTN_RD_RAM: begin
-            ptn_state <= PTN_NEXT;
-        end
-        PTN_NEXT: begin // next opcode
-            ptn_next_data <= ptn_data_rd;
-            sys_counter <= sys_counter + 6'd1;
-            ptn_state <= PTN_OPCODE_GO;    
-        end
-        PTN_OPCODE_GO: begin
-            sys_counter <= sys_counter + 6'd1;
-            ptn_next_data <= 0;     // clear this so only executes once
-            ptn_state <= PTN_WAIT_TICK;
-        end
-        PTN_WAIT_TICK: begin
-            if(sys_counter >= `SYSCLK_PER_PTN_CLK) begin
-                sys_counter <= 6'd0;
-                ptn_addr_rd <= ptn_addr_rd + 1;
-                ptn_state <= PTN_RD_RAM;
+        if(ptn_run_i) begin
+            case(ptn_state)
+            PTN_IDLE: begin
+                //if(ptn_run_i) begin //ptn_cmd_i == `PTNCMD_RUN) begin
+                    ptn_addr_rd <= ptn_addr_i;      // init read index, absolute RAM index
+                    sys_counter <= 6'd0;
+                    ptn_state <= PTN_RD_RAM;
+                    status_o <= 8'h00;              // busy           
+                //end           
             end
-            else
+            PTN_RD_RAM: begin
+                ptn_state <= PTN_NEXT;
+            end
+            PTN_NEXT: begin // next opcode
+                ptn_next_data <= ptn_data_rd;
                 sys_counter <= sys_counter + 6'd1;
+                ptn_state <= PTN_OPCODE_GO;    
+            end
+            PTN_OPCODE_GO: begin
+                sys_counter <= sys_counter + 6'd1;
+                ptn_next_data <= 0;     // clear this so only executes once
+                ptn_state <= PTN_WAIT_TICK;
+            end
+            PTN_WAIT_TICK: begin
+                if(sys_counter >= `SYSCLK_PER_PTN_CLK) begin
+                    sys_counter <= 6'd0;
+                    if(ptn_addr_rd < PTN_DEPTH-1) begin
+                        ptn_addr_rd <= ptn_addr_rd + 1;
+                        ptn_state <= PTN_RD_RAM;
+                    end
+                    else begin
+                        status_o <= `ERR_PATTERN_ADDR;
+                        ptn_state <= PTN_STOP;
+                    end
+                end
+                else
+                    sys_counter <= sys_counter + 6'd1;
+            end
+            PTN_STOP: begin
+                if(ptn_run_i == 1'b0)
+                    ptn_state <= PTN_IDLE;  // Back to idle when caller stops running
+            end
+            default: begin
+                status_o <= `ERR_PATTERN_ADDR;
+                ptn_state <= PTN_STOP;
+            end
+            endcase
         end
-        PTN_STOP: begin
-        
+        else begin
+            ptn_state <= PTN_IDLE;
+            if(status_o == 8'h00)
+                status_o <= `SUCCESS;
         end
-        default: begin
-                
-        end
-        endcase
     end
   end
 

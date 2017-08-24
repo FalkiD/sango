@@ -54,7 +54,9 @@
 `define ERR_UNKNOWN_PULSE_STATE 8'h1e
 `define ERR_PATTERN_OVERRUN     8'h1f
 `define ERR_PATTERN_RUNNING     8'h20
-`define ERR_RSP_FIFO_FULL       8'h21
+`define ERR_PATTERN_ADDR        8'h21   // past end of RAM
+`define ERR_PATTERN_STATE       8'h22   // unknown state
+`define ERR_RSP_FIFO_FULL       8'h23
 
 `define ERR_PTN_FIFO_FULL       8'h30   // Pattern processor error, opcode fifo is full
 

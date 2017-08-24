@@ -111,6 +111,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     input  wire [PTN_RD_WORD-1:0]   ptn_data_i,   // next pattern opcode to run, 0 if nothing to do   
     input  wire [PTN_FILL_BITS-1:0] ptn_index_i,  // address of pattern entry to run(only run it once, address is unique in RAM) 
     output reg                      ptn_run_o,    // run pattern 
+    input  wire [7:0]               ptn_status_i, // pattern processor status
 
     output reg  [31:0] opcode_counter_o,        // count opcodes for status info                     
     output reg  [7:0]  status_o,                // NULL opcode terminates, done=0, or error code
@@ -181,19 +182,24 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         else if(enable == 1) begin
 
             // check for pattern data first when running a pattern
-            if(operating_mode == `PTNCMD_RUN && 
-                (ptn_data_i != `PTNDATA_NONE && 
-                 ptn_index_i != ptn_index_done)) begin
-                // execute the next pattern opcode:
-                // --set opcode, length, and uinttmp registers
-                // --set state to STATE_DATA
-                // --execute opcode_integer_args() task to 
-                // kickoff normal processing of uinttmp.               
-                opcode <= ptn_data_i[70:64];
-                length <= 0;                        // jump into processing uinttmp
-                uinttmp <= ptn_data_i[63:0];
-                ptn_index_done <= ptn_index_i;      // only run it once
-                state <= `STATE_DATA;           // process the parsed opcode
+            if(operating_mode == `PTNCMD_RUN  &&
+                (ptn_data_i != `PTNDATA_NONE && ptn_index_i != ptn_index_done)) begin
+                if(ptn_status_i > `SUCCESS) begin
+                    // there's a problem, stop the pattern
+                    stop_pattern();
+                    status_o <= ptn_status_i;
+                end
+                else begin
+                    // execute the next pattern opcode:
+                    // --set opcode, length, and uinttmp registers
+                    // --set state to STATE_DATA, continue.
+                    // this jumps into normal opcode processing
+                    opcode <= ptn_data_i[70:64];
+                    length <= 0;                        // jump into processing uinttmp
+                    uinttmp <= ptn_data_i[63:0];
+                    ptn_index_done <= ptn_index_i;      // only run it once
+                    state <= `STATE_DATA;               // process the parsed opcode
+                end
             end
             else if((state == `STATE_IDLE && fifo_rd_count_i >= `MIN_OPCODE_SIZE) ||
                      state != `STATE_IDLE) begin
@@ -212,7 +218,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 // Opcode block done, write response fifo: status, pad byte, 
                 // 2 length bytes, then data if any, then assert response_ready
                 `STATE_BEGIN_RESPONSE: begin
-                    if(rsp_length == 0) begin
+                    if(rsp_length == 0) begin  // not using general array, get measurement results
                         rsp_length <= (meas_fifo_cnt_i << 2);   // 4 bytes per word
                         response_length <= (meas_fifo_cnt_i << 2) + `DEFAULT_RESPONSE_LENGTH;  // add room for status byte
                         rsp_source <= MEAS_FIFO;
@@ -272,7 +278,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 //                end
                 `STATE_RD_MEAS1: begin
                     uinttmp <= {32'd0, meas_fifo_dat_i};
-                    //uinttmp <= {32'd0, 32'h7e53_a6b7};
                     response_wr_en_o <= 1'b0;               // don't write extra response byte after meas word
                     meas_fifo_ren_o <= 1'b0;
                     state <= `STATE_RD_MEAS2;
@@ -376,9 +381,9 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 end
                 `STATE_WMD: begin
                   // Got null opcode, done.
-                  // Wait Measurement Delay, wait until pulse processor
-                  // completes so all measurements are done
-                  if(pulse_busy_i == 1'b0) begin
+                  // Wait Measurement Delay, wait until pulse processor and
+                  // pattern processor are not busy (all measurements are done)
+                  if(pulse_busy_i == 1'b0 && ptn_status_i != 8'h00) begin
                     if(blk_rsp_done == 1'b0) begin
                       blk_rsp_done <= 1'b1;      // Flag we've done it
                       // this f's up the MMC core, asserts MMC d0 for a while, count increases to 0x200???  fifo_rst_o <= 1'b1;        // reset input fifo, done with block or blocks
@@ -434,7 +439,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     // stop a pattern
     task stop_pattern;
     begin
-        ptn_run_o <= 1'b0;     // stop pattern 
+        ptn_run_o <= 1'b0;     // stop pattern
+        operating_mode <= `OPCODE_NORMAL; 
     end
     endtask
 
@@ -474,7 +480,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             end
             `POWER: begin
                 if(operating_mode == `PTNCMD_LOAD) begin // Write pattern mode
-                    // 12 bytes, 3 bytes patClk tick, 1 byte opcode, 8 bytes for left-justified opcode data
+                    // 12 bytes, 3 bytes patClk tick, 1 byte opcode, 8 bytes of opcode data
                     ptn_data_reg <= {ptn_clk, 1'b0, saved_opc_byte[7:1], uinttmp};
                     ptn_wen_o <= 1'b1;  // Write the entry 
                     state <= `STATE_WR_PTN;
@@ -488,7 +494,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             end
             `CALPWR: begin  // power processor handles both user power requests and power cal commands
                 if(operating_mode == `PTNCMD_LOAD) begin // Write pattern mode
-                    // 12 bytes, 3 bytes patClk tick, 1 byte opcode, 8 bytes for left-justified opcode data
+                    // 12 bytes, 3 bytes patClk tick, 1 byte opcode, 8 bytes of opcode data
                     ptn_data_reg <= {ptn_clk, 1'b0, saved_opc_byte[7:1], uinttmp};
                     ptn_wen_o <= 1'b1;  // Write the entry 
                     state <= `STATE_WR_PTN;
@@ -502,7 +508,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             end
             `PULSE: begin
                 if(operating_mode == `PTNCMD_LOAD) begin // Write pattern mode
-                    // 12 bytes, 3 bytes patClk tick, 1 byte opcode, 8 bytes for left-justified opcode data
+                    // 12 bytes, 3 bytes patClk tick, 1 byte opcode, 8 bytes of opcode data
                     ptn_data_reg <= {ptn_clk, 1'b0, saved_opc_byte[7:1], uinttmp};
                     ptn_wen_o <= 1'b1;  // Write the entry 
                     state <= `STATE_WR_PTN;
@@ -515,7 +521,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             end
             `BIAS: begin
                 if(operating_mode == `PTNCMD_LOAD) begin // Write pattern mode
-                    // 12 bytes, 3 bytes patClk tick, 1 byte opcode, 8 bytes for left-justified opcode data
+                    // 12 bytes, 3 bytes patClk tick, 1 byte opcode, 8 bytes of opcode data
                     ptn_data_reg <= {ptn_clk, 1'b0, saved_opc_byte[7:1], uinttmp};
                     ptn_wen_o <= 1'b1;  // Write the entry 
                     state <= `STATE_WR_PTN;
@@ -526,8 +532,16 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 end
             end
             `MODE: begin
-                mode_o <= uinttmp[31:0];    // Flags are set, next opcode
-                next_opcode();
+                if(operating_mode == `PTNCMD_LOAD) begin // Write pattern mode
+                    // 12 bytes, 3 bytes patClk tick, 1 byte opcode, 8 bytes of opcode data
+                    ptn_data_reg <= {ptn_clk, 1'b0, saved_opc_byte[7:1], uinttmp};
+                    ptn_wen_o <= 1'b1;  // Write the entry 
+                    state <= `STATE_WR_PTN;
+                end
+                else begin
+                    mode_o <= uinttmp[31:0];    // Flags are set, next opcode
+                    next_opcode();
+                end
             end
             `TRIGCONF: begin
                 trig_conf <= uinttmp[31:0];
@@ -551,8 +565,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 next_opcode();   
             end
             `PTN_PATCTL: begin
-                if(uinttmp == {32'd0, 32'h0001_0000})  // ?? why doesn't this particular read work??
-                    uinttmp = {32'd0, 32'h0100_0001};
                 case(uinttmp[7:0])
                 `PTN_END: begin                   // end of pattern writing or running
                     if(operating_mode == `PTNCMD_LOAD) begin  // Write pattern mode, end of pattern
@@ -586,7 +598,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             endcase
         end // if(length == 0) block
         else begin  // integer argument, 2 to 8 bytes in length
-            // ng cuz variable width??? uinttmp <= {fifo_dat_i, uinttmp[63:8]};
             uinttmp <= uinttmp | (fifo_dat_i << shift);
             if(length == 2)             // Turn OFF with 2 clocks left. 1=last read, 0=begin write fifo
                 fifo_rd_en_o <= 0;      // pause opcode fifo reads
