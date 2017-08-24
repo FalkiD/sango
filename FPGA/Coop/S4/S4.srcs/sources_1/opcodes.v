@@ -118,7 +118,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     output wire [6:0]  state_o,                 // For debugger display
     
     // Debugging
-    output reg  [15:0]  dbg_opcodes_o           // 1st opcode in 8 MSB's, last opcode in 8 LSB's
+    output reg  [23:0]  dbg_opcodes_o           // patadr count in 8 MSB's, 1st opcode in 8 MID's, last opcode in 8 LSB's
     );
 
     reg  [3:0]   operating_mode = `OPCODE_NORMAL; // 0=normal, process & run opcodes, other cmds for pattern load/run
@@ -145,8 +145,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     reg  [23:0]                     ptn_clk;            // pattern clock tick to write
     reg  [PTN_WR_WORD-1:0]          ptn_data_reg;       // pattern data written to pattern RAM
     reg  [7:0]                      ptn_latch_count;    // Clocks to latch data into RAM
+    reg  [7:0]                      ptn_count;
     reg  [7:0]                      saved_opc_byte;     // Save opcode byte in case of write to pattern RAM
-    reg  [7:0]                      saved_len_byte;     // Save opcode length byte in case of write to pattern RAM
 
     reg  [31:0]  trig_conf;          // trigger configuration, from trig_conf opcode
     reg  [15:0]  sync_conf;          // sync configuration, from sync_conf opcode
@@ -321,7 +321,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     shift <= 8'h00;
                     uinttmp <= 64'h0000_0000_0000_0000;
                     length <= {1'b0, fifo_dat_i};
-                    saved_len_byte <= {1'b0, fifo_dat_i};     // Save opcode length byte in case of write to pattern RAM
                     // **** 02-Aug if 0 length then turn OFF read NOW
                     if({1'b0, fifo_dat_i} > (fifo_rd_count_i-1) || fifo_dat_i == 8'h00)
                         fifo_rd_en_o <= 0;                    // must turn OFF REN 1 clock early
@@ -558,6 +557,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 operating_mode <= `PTNCMD_LOAD;     // Write pattern mode
                 ptn_addr <= uinttmp[15:0];          // address
                 ptn_clk <= 24'd0;                   // reset, use as offset to load entries
+                ptn_count <= ptn_count + 8'h01;     // total PTN_PATADR opcodes written(total patterns loaded)
+                dbg_opcodes_o[23:16] <= ptn_count + 8'h01;     // total PTN_PATADR opcodes written(total patterns loaded)
                 next_opcode(); 
             end
             `PTN_PATCLK: begin
@@ -653,7 +654,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     task reset_opcode_processor;
     begin
         opcode <= 0;
-        dbg_opcodes_o <= 16'h0000;   
+        dbg_opcodes_o <= 24'h00_0000;   
         len_upr <= 0;
         length <= 9'b000000000;
         fifo_rd_en_o <= 1'b0;  // Added by John Clayton
@@ -674,6 +675,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         ptn_clk <= 24'h00_0000;             // pattern clock tick to write
         ptn_run_o <= 1'b0;                  // Stop pattern processor 
         ptn_index_done <= 0;                // keep track of which we've run(only run it once)
+        ptn_count <= 8'h00;                 // total patadr opcodes received(debugging only)
 
         response_ready <= 1'b0;
         response_length <= 16'h0000;

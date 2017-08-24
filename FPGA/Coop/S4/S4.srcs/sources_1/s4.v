@@ -456,7 +456,7 @@ wire [7:0]   opc_status;              // NULL opcode terminates, done=0, or erro
 wire [6:0]   opc_state;               // For debugging
     
 // Debugging
-wire [15:0]  dbg_opcodes;
+wire [23:0]  dbg_opcodes;
 wire         dbg_opc_rfgate;          // Driven by RF_GATE bit of sys_mode, MODE opcode, for debugging
 
 // SPI debugging connections for w 03000040 command
@@ -898,10 +898,10 @@ end
     .opc_oc_cnt_i      (opc_count),                             // first_opcode__last_opcode__opcodes_procesed
     .opc_status1_i     ({9'd0, opc_state, 8'd0, opc_status}),   // opc_state__opc_status
     .opc_status2_i     ({8'd0, opc_rspf_cnt[7:0], 8'd0, opc_fif_cnt[7:0]}), // rsp_fifo_count__opc_fifo_count
-    .opc_status3_i     ({16'h0000, dbg_opcodes[15:0]}),         // first_opcode__last_opcode in lower 16 bits
+    .opc_status3_i     ({8'h00, dbg_opcodes}),                  // patadr_count_upper 8 bits____first_opcode__last_opcode in lower 16 bits
     .sys_status4_i     (frequency),                             // system frequency setting in Hertz
-    .sys_status5_i     ({15'h0, SYN_STAT, 4'd0, dbm_x10}),       // MS 16 bits=SYN_STAT pin,1=PLL_LOCK, 0=not locked. 16 LSB's=power(dBm x10) setting
-    .sys_status6_i     ({16'd0, ptn_status, 7'd0, ptn_busy})     // LSB's: PTN_Status__PTN_Busy(running)
+    .sys_status5_i     ({15'h0, SYN_STAT, 4'd0, dbm_x10}),      // MS 16 bits=SYN_STAT pin,1=PLL_LOCK, 0=not locked. 16 LSB's=power(dBm x10) setting
+    .sys_status6_i     ({16'd0, ptn_status, 7'd0, ptn_busy})    // LSB's: PTN_Status__PTN_Busy(running)
     );
 
 
