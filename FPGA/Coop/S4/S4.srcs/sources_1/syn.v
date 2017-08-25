@@ -445,7 +445,7 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
          end //  End of SYN_SPI_STATE_SHF1: case.
          endcase //  End of case (syn_spi_state)
          
-         if(syn_initing && (syn_init_done_cntr == 5'b0_1010)) begin
+         if(syn_initing && (syn_init_done_cntr == 5'b0_1011)) begin
             syn_initing           <= 1'b0;
             syn_init_shfting      <= 1'b0;
             syn_initd             <= 1'b1;

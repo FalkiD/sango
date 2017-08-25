@@ -1134,7 +1134,11 @@ end
       
       // DDS will drive SYN_MUTEn, 1=>RF; 0=>MUTE.
       .dds_synth_mute_n_o         (dds_synth_mute_n),     // mute SYN whilst changing frequency
-      .dds_synth_stat_i           (syn_synth_mute_n),  // SYN Lock not working yet   SYN_STAT),             // ON=SYN PLL is locked
+`ifdef XILINX_SIMULATOR
+      .dds_synth_stat_i           (syn_synth_mute_n),     // Don't hang waiting for non-existent hardware signal
+`else
+      .dds_synth_stat_i           (SYN_STAT),             // ON=SYN PLL is locked
+`endif
       .dds_synth_doInit_o         (dds_synth_doInit),     // Init SYN when DDS init has completed
       .dds_synth_initing_o        (dds_synth_initing),    // Init SYN when DDS init has completed
   
@@ -1143,7 +1147,6 @@ end
       .dbg2_o                     (),             // DDS_IORST
       .dbg3_o                     ()              // DDS_IOUP
      );
-
 
 // ******************************************************************************
 // * JLC SPI (for LTC6946)                                                 *
