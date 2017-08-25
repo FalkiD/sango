@@ -77,8 +77,8 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
    
    // SYN init will be fired off 50ms after DDS init completes
    // ** assuming 100MHz CLK here
-   localparam  FIFTY_MS           = 19'd5000000;    // 50 ms in 10ns ticks
-   reg  [18:0]                    dds_syn_init_dly     = FIFTY_MS;
+   localparam  FIFTY_MS           = 23'd5000000;    // 50 ms in 10ns ticks
+   reg  [22:0]                    dds_syn_init_dly     = FIFTY_MS;
    reg                            dds_syn_countdown    = 1'b0;
    
    reg  [3:0]                     dds_clk_cnt          = 4'b0;
@@ -435,11 +435,11 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
             dds_synth_initing  <= 1'b1;    // Assert SYN initing flag to begin wait 50ms before SYN init            
          end
          if(dds_synth_initing) begin 
-            if(dds_syn_init_dly == 19'd0) begin
+            if(dds_syn_init_dly == 23'd0) begin
                dds_synth_doInit <= 1'b1;        // Init SYN now that DDS init + 50ms done
             end
             else
-               dds_syn_init_dly <= dds_syn_init_dly - 19'd1; 
+               dds_syn_init_dly <= dds_syn_init_dly - 23'd1; 
          end
          // When SYN PLL locks, clear flags & unmute SYN
          if (dds_synth_initing && dds_synth_stat_i) begin

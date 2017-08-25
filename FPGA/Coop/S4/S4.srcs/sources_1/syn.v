@@ -291,7 +291,6 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
       end
       else begin
          // One-tick signals
-         // One-tick signals
          syn_fifo_rdr             <= 1'b0;
          syn_init_we              <= 1'b0;
          
@@ -358,7 +357,7 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
                // syn_init_op_cntr<= syn_init_op_cntr + 5'b0_0001;
             end
             6'b10_0011: begin
-               syn_init_datr   <= 12'hA_C0;
+               syn_init_datr   <= 12'hA_C0;          // 25-Aug we want a big delay before sending this, time for CAL to finish
                syn_init_we     <= 1'b1;              // 1-tick signal
                // syn_init_op_cntr<= syn_init_op_cntr + 5'b0_0001;
             end
