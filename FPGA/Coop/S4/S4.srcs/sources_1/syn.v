@@ -29,7 +29,7 @@
 //----------------------------------------------------------------------------------
 
 `include "timescale.v"        // Every source file needs this include
-
+`include "opcodes.h"
 
 module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK_FREQ=20000000)
   (
@@ -107,6 +107,8 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
                                                              ~syn_interOpGap);
    reg                            syn_spi_ss_k         = 1'b0;
    
+   localparam  FIFTY_MS = 23'd5000000;    // 50 ms in 10ns ticks
+   reg  [22:0]                    syn_cal_dly          = FIFTY_MS;
    
    // Generate: syn_spi_sclk   (e.g. SPI_CLK_RATIO == 8)
    //           syn_spi_wtck
@@ -287,7 +289,8 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
          syn_interOpGap           <= 1'b0;
          syn_interOpGap_cnt       <= 5'b0_0000;
          syn_mute_n_o             <= 1'b0;          // Mute until init done
-         syn_init_done_cntr       <= 5'b0_0001; 
+         syn_init_done_cntr       <= 5'b0_0001;
+         syn_cal_dly              <= 23'd0; 
       end
       else begin
          // One-tick signals
@@ -309,6 +312,7 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
             syn_initd             <= 1'b0;
             syn_init_op_cntr      <= 6'b00_0000;
             syn_mute_n_o          <= 1'b0;          // Mute until init done
+            syn_cal_dly           <= 5; //FIFTY_MS; 
          end
          
          if (syn_init_loading & ~syn_fifo_full_w) begin
@@ -378,10 +382,18 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
          end  // End of if (syn_init_loading)
 
          if (syn_interOpGap) begin
-            syn_interOpGap_cnt    <= syn_interOpGap_cnt + 5'b0_0001;
-            if (syn_interOpGap_cnt == 5'b1_1111) begin
-               syn_interOpGap     <= 1'b0;
-               syn_interOpGap_cnt <= 5'b0_0000;
+            // 25-Aug If we're about to send out register 10, wait 50ms        
+//            if(syn_initing && 
+//                 (syn_init_done_cntr == 5'b0_1001) &&
+//                 (syn_cal_dly > 23'd0) ) begin
+//               syn_cal_dly <= syn_cal_dly - 23'd1;
+//            end
+//            else begin         
+               syn_interOpGap_cnt    <= syn_interOpGap_cnt + 5'b0_0001;
+               if (syn_interOpGap_cnt == 5'b1_1111) begin
+                  syn_interOpGap     <= 1'b0;
+                  syn_interOpGap_cnt <= 5'b0_0000;
+//               end
             end
          end
 
@@ -403,7 +415,6 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
          if ( syn_spi_ss & syn_spi_wtck ) begin
             shftCnt               <= shftCnt - 6'b00_0001;
          end
-         
          
          // SYN SPI State Machine: state-by-state case statement
          case (syn_spi_state)
@@ -443,7 +454,7 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
             end
          end //  End of SYN_SPI_STATE_SHF1: case.
          endcase //  End of case (syn_spi_state)
-         
+                 
          if(syn_initing && (syn_init_done_cntr == 5'b0_1011)) begin
             syn_initing           <= 1'b0;
             syn_init_shfting      <= 1'b0;
