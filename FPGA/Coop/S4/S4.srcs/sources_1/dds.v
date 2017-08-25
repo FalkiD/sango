@@ -442,7 +442,7 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
                dds_syn_init_dly <= dds_syn_init_dly - 23'd1; 
          end
          // When SYN PLL locks, clear flags & unmute SYN
-         if (dds_synth_initing && dds_synth_stat_i) begin
+         if (dds_synth_stat_i) begin
             dds_synth_initing <= 1'b0;  // Stop indicating synth init.
             dds_synth_mute_n  <= 1'b1;  // Stop muting synth.
          end
