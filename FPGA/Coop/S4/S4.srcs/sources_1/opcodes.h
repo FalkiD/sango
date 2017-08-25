@@ -71,11 +71,4 @@
 
 `define SYSCLK_PER_PTN_CLK  6'd10
 
-`ifdef XILINX_SIMULATOR
-   `define FIFTY_MS            23'd500
-`else
-   // assuming 100MHz clock
-   `define FIFTY_MS            23'd5000000
-`endif  
-
 `endif

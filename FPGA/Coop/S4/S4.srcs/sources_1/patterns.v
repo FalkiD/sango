@@ -60,7 +60,6 @@ module patterns #(parameter PTN_DEPTH = 65536,
   reg   [5:0]           sys_counter;                // sys clock counter
   reg   [RD_WIDTH-1:0]  ptn_next_data;
   wire  [RD_WIDTH-1:0]  ptn_data_rd;
-  reg   [PTN_BITS-1:0]  init_addr;                  // used during reset to initialize RAM
 
   localparam PTN_IDLE       = 4'd1;
   localparam PTN_LOAD       = 4'd2;
@@ -70,7 +69,6 @@ module patterns #(parameter PTN_DEPTH = 65536,
   localparam PTN_WAIT_TICK  = 4'd6;
   localparam PTN_OPCODE_GO  = 4'd7;
   localparam PTN_STOP       = 4'd8;
-  localparam PTN_CLEAR_RAM  = 4'd9;
  
   // Pattern RAM
   ptn_ram #(
@@ -95,21 +93,10 @@ module patterns #(parameter PTN_DEPTH = 65536,
         ptn_next_data <= 0;             // do nothing
         sys_counter <= 6'd0;
         ptn_addr_rd <= 0;               // read address when running patterns
-        init_addr <= 0;
-        ptn_state <= PTN_CLEAR_RAM;
-//        ptn_state <= PTN_IDLE;
+        ptn_state <= PTN_IDLE;
     end
     else begin
-        if(ptn_state == PTN_CLEAR_RAM) begin
-            if(init_addr < PTN_DEPTH-1) begin            
-                init_addr <= init_addr + 1;
-            end
-            else begin
-                init_addr <= 0;
-                ptn_state <= PTN_IDLE;
-            end
-        end    
-        else if(ptn_run_i) begin
+        if(ptn_run_i) begin
             case(ptn_state)
             PTN_IDLE: begin
                 //if(ptn_run_i) begin //ptn_cmd_i == `PTNCMD_RUN) begin
@@ -165,13 +152,6 @@ module patterns #(parameter PTN_DEPTH = 65536,
     end
   end
 
-  // Concurrent assignments
-//  assign ptn_tick = ptn_run_i ? ptn_addr_rd : (ptn_data_i[95:72] + ptn_addr_i); 
-//  assign ptn_addr_wr = (ptn_state == PTN_CLEAR_RAM) ? init_addr : ptn_tick;
-//  assign ptn_data = (ptn_state == PTN_CLEAR_RAM) ? 72'd0 : ptn_data_i[71:0]; 
-//  assign ptn_data_o = ptn_run_i ? ptn_next_data : 0;    // next opcode to run or 0 to do nothing
-//  assign ptn_index_o = ptn_tick;                        // unique address of pattern entry to run next
-//  assign ptn_wen = (ptn_state == PTN_CLEAR_RAM) ? 1'b1 : ptn_wen_i;
   assign ptn_tick = ptn_run_i ? ptn_addr_rd : (ptn_data_i[95:72] + ptn_addr_i); 
   assign ptn_data = ptn_data_i[71:0]; 
   assign ptn_data_o = ptn_run_i ? ptn_next_data : 0;    // next opcode to run or 0 to do nothing

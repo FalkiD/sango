@@ -312,7 +312,7 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
             syn_initd             <= 1'b0;
             syn_init_op_cntr      <= 6'b00_0000;
             syn_mute_n_o          <= 1'b0;          // Mute until init done
-            syn_cal_dly           <= 5; //FIFTY_MS; 
+            syn_cal_dly           <= FIFTY_MS; 
          end
          
          if (syn_init_loading & ~syn_fifo_full_w) begin
@@ -383,17 +383,17 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
 
          if (syn_interOpGap) begin
             // 25-Aug If we're about to send out register 10, wait 50ms        
-//            if(syn_initing && 
-//                 (syn_init_done_cntr == 5'b0_1001) &&
-//                 (syn_cal_dly > 23'd0) ) begin
-//               syn_cal_dly <= syn_cal_dly - 23'd1;
-//            end
-//            else begin         
+            if(syn_initing && 
+                 (syn_init_done_cntr == 5'b0_1001) &&
+                 (syn_cal_dly > 23'd0) ) begin
+               syn_cal_dly <= syn_cal_dly - 23'd1;
+            end
+            else begin         
                syn_interOpGap_cnt    <= syn_interOpGap_cnt + 5'b0_0001;
                if (syn_interOpGap_cnt == 5'b1_1111) begin
                   syn_interOpGap     <= 1'b0;
                   syn_interOpGap_cnt <= 5'b0_0000;
-//               end
+               end
             end
          end
 

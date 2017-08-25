@@ -438,8 +438,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     // stop a pattern
     task stop_pattern;
     begin
-        ptn_run_o <= 1'b0;              // stop pattern
-        ptn_index_done <= 0;            // keep track of which we've run(only run each entry once)
+        ptn_run_o <= 1'b0;     // stop pattern
         operating_mode <= `OPCODE_NORMAL; 
     end
     endtask
@@ -677,7 +676,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         ptn_run_o <= 1'b0;                  // Stop pattern processor 
         ptn_index_done <= 0;                // keep track of which we've run(only run it once)
         ptn_count <= 8'h00;                 // total patadr opcodes received(debugging only)
-        ptn_wen_o <= 1'b0;
 
         response_ready <= 1'b0;
         response_length <= 16'h0000;
