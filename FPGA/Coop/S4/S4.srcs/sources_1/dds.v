@@ -55,8 +55,6 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
     output                 dds_spi_ps1_o,            // 
 
     // control SYN, initialize after DDS initialization completes
-    // ** Update: must be way after, try 50ms. DDS reference frequency 
-    // ** has to be stable for SYN to lock
     output                 dds_synth_mute_n_o,       // DDS will drive SYN_MUTE, 1=>RF; 0=>MUTE.
     output                 dds_synth_doInit_o,       // SYN doInit wire, pulse after DDS init finishes
     output                 dds_synth_initing_o,      // SYN doInit wire, pulse after DDS init finishes
@@ -75,12 +73,7 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
    localparam  DDS_SPI_STATE_SHF0 = 3'b100;
    localparam  DDS_SPI_STATE_SHF1 = 3'b101;
 
-   // SYN init will be fired off 50ms after DDS init completes
-   // ** assuming 100MHz CLK here
-   localparam  FIFTY_MS           = 23'd5000000;    // 50 ms in 10ns ticks
-   reg  [22:0]                    dds_syn_init_dly     = FIFTY_MS;
-   reg                            dds_syn_countdown    = 1'b0;
-     
+  
    reg  [3:0]                     dds_clk_cnt          = 4'b0;
    reg                            dds_spi_sclk         = 1'b1;
    reg                            dds_spi_wtck         = 1'b0;                 // 1-tick just prior to falling edge of dds_spi_clk
@@ -311,8 +304,6 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
          dds_interOpGap_cnt       <= 5'b0_0000;
          dds_synth_mute_n         <= 1'b0;          // Mute synthesizer until DDS SPI finishes
          dds_synth_doInit         <= 1'b0;          // Do SYN init when DDS init has finished
-         dds_syn_init_dly         <= FIFTY_MS;
-         dds_syn_countdown        <= 1'b0;
       end
       else begin
          // One-tick signals
@@ -323,7 +314,7 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
          dds_spi_ss               <= ~dds_spi_ss_k & (dds_spi_ss | dds_spi_ss_s);
          dds_spi_ss_k             <= (shftCnt == 6'b00_0000) & (dds_clk_cnt == 4'b0110) & (dds_spi_state == DDS_SPI_STATE_SHF0);
 
-         dds_syn_countdown        <= ~dds_spi_ioup & dds_spi_ioupr; // Asset on falling tick of dds_spi_ioup
+         dds_synth_doInit         <= ~dds_spi_ioup & dds_spi_ioupr; // Asset on falling tick of dds_spi_ioup
          
          // Do init sequence (kicked off by doInit_i == 1'b1).
          dds_doInitr              <= doInit_i;
@@ -420,35 +411,22 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
                dds_spi_ioup_ce    <= 1'b0;
                dds_spi_ioup_cnt   <= 5'b0_0000;
                dds_interOpGap     <= 1'b1;
-               dds_syn_init_dly   <= FIFTY_MS;
-//               dds_synth_doInit   <= 1'b1;  // Init SYN now that DDS init SPI has finished            
-//               dds_synth_initing  <= 1'b1;  // Assert SYN initing flag            
-//               dds_synth_mute_n   <= 1'b0;  // DDS is ready. After RESET SYN is not ready until SYN finishes init
+               dds_synth_doInit   <= 1'b1;  // Init SYN now that DDS init SPI has finished            
+               dds_synth_initing  <= 1'b1;  // Assert SYN initing flag            
+               dds_synth_mute_n   <= 1'b0;  // DDS is ready. After RESET SYN is not ready until SYN finishes init
             end
             endcase  // End of case (dds_spi_ioup_cnt)
          end
          dds_spi_ioup             <= ~(dds_spi_ioup_cnt == 5'b1_1111) & (dds_spi_ioup | (dds_spi_ioup_cnt == 5'b0_1111));
          dds_spi_ioupr            <= dds_spi_ioup; 
 
-          // Handle SYN init after DDS programming (init or otherwise) done
-          // **TBD** Don't need entire sequence once initialized, only
-          // need registers 7 & 10 programmed. 7 is CAL, 10 not sure why, may be unecessary
-          if(dds_syn_countdown) begin       // Asserted at falling edge of IOUP
-             dds_synth_initing  <= 1'b1;    // Assert SYN initing flag to begin wait 50ms before SYN init            
-          end
-          if(dds_synth_initing) begin 
-             if(dds_syn_init_dly == 23'd0) begin
-                dds_synth_doInit <= 1'b1;   // Init SYN now that DDS init + 50ms done
-             end
-             else
-                dds_syn_init_dly <= dds_syn_init_dly - 19'd1; 
-          end
-          // When SYN PLL locks, clear flags & unmute SYN
-         if (dds_synth_initing && dds_synth_stat_i) begin
-             dds_synth_initing <= 1'b0;  // Stop indicating synth init.
-             dds_synth_mute_n  <= 1'b1;  // Stop muting synth.
-          end
- 
+         // Handle SYN initing status
+         if (dds_synth_stat_i) begin
+         // Can't use SYN_STAT until that's working...
+            dds_synth_initing <= 1'b0;  // Stop indicating synth init.
+            dds_synth_mute_n  <= 1'b1;  // Stop muting synth.
+         end
+         
          // DDS SPI State Machine: state-by-state case statement
          case (dds_spi_state)
          DDS_SPI_STATE_IDLE: begin
