@@ -338,21 +338,7 @@ wire         opc_enable;         // control needed...
 wire         opc_fifo_enable;    // enable opcode processor in & out fifo's
 wire         opc_fifo_rst;       // reset for opcode processor fifo's
 
-wire  [7:0]  opc_fif_dat;        // MMC read fifo into opcode processor 
-wire         opc_fif_ren;        // MMC read enable, out of opcode processor into mmc_tester
-wire         opc_fif_mt;         // MMC read fifo empty
-wire  [`GLBL_MMC_FILL_LEVEL_BITS-1:0]  opc_fif_cnt;    // MMC read fifo count
-wire         opc_inpf_rst;       // opcode processor can reset input fifo
-
-wire  [7:0]  opc_rspf_dat;       // MMC write fifo, out of opcode processor into mmc_tester 
-wire         opc_rspf_wen;       // MMC write enable 
-wire         opc_rspf_mt;        // MMC write fifo empty 
-wire         opc_rspf_fl;        // MMC write fifo full
-wire  [`GLBL_MMC_FILL_LEVEL_BITS-1:0]  opc_rspf_cnt;   // MMC write fifo count
-wire         opc_rsp_rdy;        // Response ready
-wire  [`GLBL_MMC_FILL_LEVEL_BITS-1:0]  opc_rsp_len;    // Response length written by opcode processor
-
-// opcode processor mux wires, MMC
+// opcode processor to MMC fifo connections
 wire  [7:0]  mmc_fif_dat;        // MMC read fifo into opcode processor 
 wire         mmc_fif_ren;        // MMC read enable, out of opcode processor into mmc_tester
 wire         mmc_fif_mt;         // MMC read fifo empty
@@ -366,20 +352,6 @@ wire         mmc_rspf_fl;        // MMC write fifo full
 wire  [`GLBL_MMC_FILL_LEVEL_BITS-1:0]  mmc_rspf_cnt;   // MMC write fifo count
 wire         mmc_rsp_rdy;        // Response ready
 wire  [`GLBL_MMC_FILL_LEVEL_BITS-1:0]  mmc_rsp_len;    // Response length written by opcode processor
-// opcode processor mux wires, pattern processor
-wire  [7:0]  ptn_fif_dat;        // MMC read fifo into opcode processor 
-wire         ptn_fif_ren;        // MMC read enable, out of opcode processor into mmc_tester
-wire         ptn_fif_mt;         // MMC read fifo empty
-wire  [`GLBL_MMC_FILL_LEVEL_BITS-1:0]  ptn_fif_cnt;    // MMC read fifo count
-wire         ptn_inpf_rst;       // opcode processor can reset input fifo
-
-wire  [7:0]  ptn_rspf_dat;       // MMC write fifo, out of opcode processor into mmc_tester 
-wire         ptn_rspf_wen;       // MMC write enable 
-wire         ptn_rspf_mt;        // MMC write fifo empty 
-wire         ptn_rspf_fl;        // MMC write fifo full
-wire  [`GLBL_MMC_FILL_LEVEL_BITS-1:0]  ptn_rspf_cnt;   // MMC write fifo count
-wire         ptn_rsp_rdy;        // Response ready
-wire  [`GLBL_MMC_FILL_LEVEL_BITS-1:0]  ptn_rsp_len;    // Response length written by opcode processor
 
 // Frequency processor wires
 wire [31:0]  frq_fifo_dat_i;          // to fifo from opc, frequency output in MHz
@@ -897,7 +869,7 @@ end
     // Debugging, these go from 0300003F down
     .opc_oc_cnt_i      (opc_count),                             // first_opcode__last_opcode__opcodes_procesed
     .opc_status1_i     ({9'd0, opc_state, 8'd0, opc_status}),   // opc_state__opc_status
-    .opc_status2_i     ({8'd0, opc_rspf_cnt[7:0], 8'd0, opc_fif_cnt[7:0]}), // rsp_fifo_count__opc_fifo_count
+    .opc_status2_i     ({8'd0, mmc_rspf_cnt[7:0], 8'd0, mmc_fif_cnt[7:0]}), // rsp_fifo_count__opc_fifo_count
     .opc_status3_i     ({8'h00, dbg_opcodes}),                  // patadr_count_upper 8 bits____first_opcode__last_opcode in lower 16 bits
     .sys_status4_i     (frequency),                             // system frequency setting in Hertz
     .sys_status5_i     ({15'h0, SYN_STAT, 4'd0, dbm_x10}),      // MS 16 bits=SYN_STAT pin,1=PLL_LOCK, 0=not locked. 16 LSB's=power(dBm x10) setting
@@ -1045,24 +1017,24 @@ end
 
     .enable                     (opc_enable),
 
-    .fifo_dat_i                 (opc_fif_dat),      // fifo read data bus
-    .fifo_rd_en_o               (opc_fif_ren),      // fifo read line
-    .fifo_rd_empty_i            (opc_fif_mt),       // fifo empty flag
-    .fifo_rd_count_i            (opc_fif_cnt),      // fifo fill level
-    .fifo_rst_o                 (opc_inpf_rst),     // opcode processor resets input fifo at first null opcode 
+    .fifo_dat_i                 (mmc_fif_dat),      // fifo read data bus
+    .fifo_rd_en_o               (mmc_fif_ren),      // fifo read line
+    .fifo_rd_empty_i            (mmc_fif_mt),       // fifo empty flag
+    .fifo_rd_count_i            (mmc_fif_cnt),      // fifo fill level
+    .fifo_rst_o                 (mmc_inpf_rst),     // opcode processor resets input fifo at first null opcode 
 
     .system_state_i             (sys_state),        // s4 system state (e.g. running a pattern)
     .mode_o                     (sys_mode),         // MODE opcode can set system-wide flags
     .pulse_busy_i               (pulse_busy),       // Pulse processor is busy
 
-    .response_o                 (opc_rspf_dat),     // to mmc fifo, response bytes(status, measurements, echo, etc)
-    .response_wr_en_o           (opc_rspf_wen),     // response fifo write enable
-    .response_fifo_empty_i      (opc_rspf_mt),      // response fifo empty flag
-    .response_fifo_full_i       (opc_rspf_fl),      // response fifo full  flag
+    .response_o                 (mmc_rspf_dat),     // to mmc fifo, response bytes(status, measurements, echo, etc)
+    .response_wr_en_o           (mmc_rspf_wen),     // response fifo write enable
+    .response_fifo_empty_i      (mmc_rspf_mt),      // response fifo empty flag
+    .response_fifo_full_i       (mmc_rspf_fl),      // response fifo full  flag
     // response_ready when fifo_length==response_length
-    .response_ready_o           (opc_rsp_rdy),      // response fifo is waiting
-    .response_length_o          (opc_rsp_len),      // update response length when response is ready
-    .response_fifo_count_i      (opc_rspf_cnt),     // response fifo count
+    .response_ready_o           (mmc_rsp_rdy),      // response fifo is waiting
+    .response_length_o          (mmc_rsp_len),      // update response length when response is ready
+    .response_fifo_count_i      (mmc_rspf_cnt),     // response fifo count
 
     .frequency_o                (frq_fifo_dat_i),   // to fifo, frequency output in MHz
     .frq_wr_en_o                (frq_fifo_wen),     // frequency fifo write enable
@@ -1180,70 +1152,6 @@ end
       .dbg2_o                       (),                      // SYN_SCLK
       .dbg3_o                       ()                       // syn_initing
     );
-
-
-
-// ******************************************************************************
-// * Opcode mux between MMC fifos and pattern processor fifos                   *
-// ******************************************************************************
-opc_mux #(
-  .MMC_FILL_LEVEL_BITS(`GLBL_MMC_FILL_LEVEL_BITS),
-  .RSP_FILL_LEVEL_BITS(`GLBL_RSP_FILL_LEVEL_BITS)
-)
-opcode_io
-(
-  .sys_clk                    (sys_clk),
-  .sys_rst_n                  (sys_rst_n),
-  .enable_i                   (opc_fifo_enable),
-
-  .select_i                   (1'b0),             // 1'b0=>MMC, 1'b1=>pattern processor fifos
-
-    // opcode processor connections. opc_fifo_full local var not used
-  .opc_fif_dat_o              (opc_fif_dat),      // output of mux, input to opcode processor
-  .opc_fif_ren_i              (opc_fif_ren),      // fifo read line, from opcode processor to MMC fifo
-  .opc_fif_mt_o               (opc_fif_mt),       // MMC opcode fifo empty flag to opcode processor
-  .opc_fif_cnt_o              (opc_fif_cnt),      // MMC fifo fill level to opcode processor
-  .opc_inpf_rst_i             (opc_inpf_rst),     // opcode processor resets input fifo at first null opcode, opc to MMC/BKD fifo
-
-  .opc_rspf_dat_i             (opc_rspf_dat),     // from opcode processor to MMC response fifo
-  .opc_rspf_wen_i             (opc_rspf_wen),     // MMC response fifo write enable
-  .opc_rspf_mt_o              (opc_rspf_mt),      // MMC response fifo empty
-  .opc_rspf_fl_o              (opc_rspf_fl),      // MMC response fifo full
-  .opc_rspf_cnt_o             (opc_rspf_cnt),     // MMC response fifo count
-  .opc_rsp_rdy_i              (opc_rsp_rdy),      // response fifo is waiting
-  .opc_rsp_len_i              (opc_rsp_len),      // response length written by opcode processor
-
-    // mux'd connections
-    // mux 0, default, is MMC fifo's
-  .mmc_fif_dat_i              (mmc_fif_dat),      // mux 0 is MMC
-  .mmc_fif_ren_o              (mmc_fif_ren),      //
-  .mmc_fif_mt_i               (mmc_fif_mt),       //
-  .mmc_fif_cnt_i              (mmc_fif_cnt),      //
-  .mmc_inpf_rst_o             (mmc_inpf_rst),     //
-
-  .mmc_rspf_dat_o             (mmc_rspf_dat),     //
-  .mmc_rspf_wen_o             (mmc_rspf_wen),     //
-  .mmc_rspf_mt_i              (mmc_rspf_mt),      //
-  .mmc_rspf_fl_i              (mmc_rspf_fl),      //
-  .mmc_rspf_cnt_i             (mmc_rspf_cnt),     //
-  .mmc_rsp_rdy_o              (mmc_rsp_rdy),      //
-  .mmc_rsp_len_o              (mmc_rsp_len),      // response length written by opcode processor
-
-    // mux 1, pattern processor fifo's
-  .ptn_fif_dat_i              (ptn_fif_dat),     // mux 1 is pattern processor
-  .ptn_fif_ren_o              (ptn_fif_ren),     //
-  .ptn_fif_mt_i               (ptn_fif_mt),      //
-  .ptn_fif_cnt_i              (ptn_fif_cnt),     //
-  .ptn_inpf_rst_o             (ptn_inpf_rst),    // Reset opcode processor input fifo, to pattern processor fifo
-
-  .ptn_rspf_dat_o             (ptn_rspf_dat),    //
-  .ptn_rspf_wen_o             (ptn_rspf_wen),    //
-  .ptn_rspf_mt_i              (ptn_rspf_mt),     //
-  .ptn_rspf_fl_i              (ptn_rspf_fl),     //
-  .ptn_rspf_cnt_i             (ptn_rspf_cnt),    //
-  .ptn_rsp_rdy_o              (ptn_rsp_rdy),     //
-  .ptn_rsp_len_o              (ptn_rsp_len)      // response length written by opcode processor
-);
 
 
 // ******************************************************************************
