@@ -35,6 +35,7 @@
 // static measurements, 0x30 based
 `define MEAS_ZMSIZE			7'h30
 `define MEAS_ZMCTL			7'h31
+`define MEAS                7'h32
 
 // Debug, 0x40 based
 `define DBG_ATTENSPI		7'h40
@@ -70,5 +71,7 @@
 `define PTNDATA_NONE        72'd0
 
 `define SYSCLK_PER_PTN_CLK  6'd10
+
+`define STATUS_RESPONSE_SIZE    16'd22  // 22 bytes defined initially
 
 `endif

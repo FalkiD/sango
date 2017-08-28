@@ -1067,7 +1067,11 @@ end
     // Debugging
     .status_o                   (opc_status),         // NULL opcode terminates, done=0, or error code
     .state_o                    (opc_state),          // For debugger display
-    .dbg_opcodes_o              (dbg_opcodes)         // first ocode__last_opcode
+    .dbg_opcodes_o              (dbg_opcodes),        // first ocode__last_opcode
+    
+    // STATUS command
+    .syn_stat_i                 (SYN_STAT),           // SYN STAT pin, 1=PLL locked
+    .dbm_x10_i                  (dbm_x10)             // dBm x10, system power level    
   );
 
 // ******************************************************************************
