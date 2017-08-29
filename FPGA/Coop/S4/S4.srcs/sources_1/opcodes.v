@@ -528,7 +528,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                         rsp_index <= rsp_index + 1; 
                     end
                     10:   begin
-                        rsp_data[rsp_index] <= {3'd0, fifo_rd_count_i[12:8]};       
+                        rsp_data[rsp_index] <= {6'd0, fifo_rd_count_i[10:8]};       
                         rsp_index <= rsp_index + 1; 
                     end
                     11:    begin
@@ -536,7 +536,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                         rsp_index <= rsp_index + 1; 
                     end
                     12:    begin
-                        rsp_data[rsp_index] <= {3'd0, response_fifo_count_i[12:8]};       
+                        rsp_data[rsp_index] <= {6'd0, response_fifo_count_i[10:8]};       
                         rsp_index <= rsp_index + 1; 
                     end
                     13:    begin
