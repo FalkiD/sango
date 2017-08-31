@@ -82,8 +82,7 @@ module power #(parameter FILL_BITS = 4)
 
   // state modifiers for host set power opcode and initialization mode
   localparam NORMAL_MODE        = 2'd0;
-  localparam HOST_SETPWR        = 2'd1;
-  localparam INIT_DACS          = 2'd2;
+  localparam INIT_DACS          = 2'd1;
 
   // Main Globals
   reg  [6:0]      state = 0;
@@ -368,42 +367,13 @@ module power #(parameter FILL_BITS = 4)
   
   localparam    DAC_WORD0       = 32'h00380000;     // Disable internal refs, Gain=1
   localparam    DAC_WORD1       = 32'h00300003;     // LDAC pin inactive DAC A & B
-  localparam    DACA_FS         = 32'h0000FFF0;     // DAC A input, full scale is minimum power
-  localparam    DACB_FS_WRT     = 32'h0011FFF0;     // Write DAC B input & update all DAC's
-  localparam    INIT_WORDS      = 4;                // will send above 4 words
+  localparam    DACAB_FS        = 32'h0017FFF0;     // DAC AB input, write both. full scale is minimum power
+//  localparam    DACA_FS         = 32'h0000FFF0;     // DAC A input, full scale is minimum power
+//  localparam    DACB_FS_WRT     = 32'h0011FFF0;     // Write DAC B input & update all DAC's
 
   ////////////////////////////////////////
   // End of power state definitions //
   ////////////////////////////////////////
-
-//// *** Set Power from M2:
-//// Convert dB into dac value & send it
-//// dB is relative to dac 0x80(128)
-//static uint8_t SetSynthesizer(uint16_t db, uint16_t *pvmag) {
-//	float value = (float)db/2000.0;
-//	value = pow(10.0, value);
-//	value = value * 128.0 + 0.5;
-//	uint16_t vmag = (uint16_t)value + 0x800; //((pow(10.0, (db/20.0)) * (double)0x800) + 0.5);
-//	*pvmag = vmag;
-//	int16_t phase = 0x800; //GetPhase();
-//#ifdef DEBUG
-//	iprintf("dB:%04d, IDac:0x%03x, QDac:0x%03x\n", db, vmag, phase);
-//#endif
-
-//	// I(magnitude) is DAC A, Q(phase) is DAC B
-//	uint8_t dac_data[3];
-//	dac_data[0] = 0;		// DAC A input
-//	dac_data[1] = (vmag>>4) & 0xff;
-//	dac_data[2] = (vmag&0xf)<<4;
-//	uint8_t status = spiwrrd(SPI_DEV_ID_DAC, sizeof(dac_data), dac_data);
-
-//	dac_data[0] = 0x11;		// Write DAC B input & update all DAC's
-//	dac_data[1] = (phase>>4) & 0xff;
-//	dac_data[2] = (phase&0xf)<<4;
-//	status |= spiwrrd(SPI_DEV_ID_DAC, sizeof(dac_data), dac_data);
-
-//	return status;
-//}
 
   assign VGA_VSW_o = 1'b1;          // We'll use high-gain mode
 
@@ -452,7 +422,7 @@ module power #(parameter FILL_BITS = 4)
             status_o <= `SUCCESS;
         end
         PWR_INIT1: begin
-          if(init_wordnum < 3'd4) begin
+          if(init_wordnum < 3'd3) begin
             pwr_opcode <= `CALPWR;
             case(init_wordnum)
             3'd0: begin
@@ -462,11 +432,11 @@ module power #(parameter FILL_BITS = 4)
               power <= DAC_WORD1;
             end
             3'd2: begin
-              power <= DACA_FS;
+              power <= DACAB_FS;
             end
-            3'd3: begin
-              power <= DACB_FS_WRT;
-            end
+//            3'd3: begin
+//              power <= DACB_FS_WRT;
+//            end
             endcase
             modifier <= INIT_DACS;
             init_wordnum <= init_wordnum + 1;
@@ -493,11 +463,10 @@ module power #(parameter FILL_BITS = 4)
             state <= PWR_DBM;
           end
           else begin
-            power <= {7'd0, pwr_word[31:0]};
+            power <= pwr_word[31:0];
             state <= PWR_VGA1;   // write 1st byte of 3  
           end
         end
-        // HOST_SETPWR mode returns here for 2nd write
         // initialize processor starts here after setting data in 'power' register
         PWR_VGA1: begin
           VGA_SSn_o <= 1'b0;
@@ -527,14 +496,8 @@ module power #(parameter FILL_BITS = 4)
         PWR_VGA5: begin
           VGA_SSn_o <= 1'b1;
           spi_run <= 1'b0;
-          if(modifier == HOST_SETPWR) begin
-            // host set power, we're writing 2 dacs
-            power[23:16] <= 8'h11;      // change to write dac B input & update both dacs
-            state <= PWR_VGA1;          // Write dac data again
-            modifier <= NORMAL_MODE;    // back to normal mode
-          end
-          else if(modifier == INIT_DACS) begin
-            state <= PWR_INIT1;     // Write next dac init word, PWR_INIT1 procesing resets to IDLE when done
+          if(modifier == INIT_DACS) begin
+            state <= PWR_INIT1;     // Write next dac init word, PWR_INIT1 processing resets to IDLE when done
           end
           else begin
             state <= PWR_IDLE;
@@ -646,11 +609,10 @@ module power #(parameter FILL_BITS = 4)
         end
         PWR_DBM3: begin
           // Ready to send data to both DAC's. Just use this FSM to do it, 
-          // except value is not in input fifo. Must use special host_setpwr
-          // mode. Set next_state to PWR_DAC2 as a flag
-          power <= {16'd0, prod1[15:0]}; 
+          // except value is not in input fifo. Set next_state to PWR_VGA2
+          // and let it run.
+          power <= {8'd0, 8'h17, prod1[15:0]}; 
           state <= PWR_VGA2;        // write 1st byte of 3
-          modifier <= HOST_SETPWR;  // Host set power opcode mode, requires writes to both dacs
           VGA_SSn_o <= 1'b0;
         end
         default: begin

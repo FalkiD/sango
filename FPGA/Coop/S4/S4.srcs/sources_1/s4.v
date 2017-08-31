@@ -406,7 +406,7 @@ wire [31:0]  meas_fifo_dat_o;          // from meas fifo to opc response fifo
 wire         meas_fifo_ren;            // meas fifo read enable
 wire         meas_fifo_mt;             // meas fifo empty flag
 wire         meas_fifo_full;           // meas fifo full flag
-wire [`GLBL_MMC_FILL_LEVEL_BITS-1:0]   meas_fifo_count;
+wire [`PATTERN_FILL_BITS-1:0]   meas_fifo_count;
 
 // Bias enable wire
 wire         bias_en;                 // bias control
@@ -1086,12 +1086,13 @@ end
       .CLK_FREQ                   (`GLBL_CLK_FREQ),
       .SPI_CLK_FREQ               (25000000)
     ) dds_spi_io
-    (                                                      // 
+    (                                                      //
       // infrastructure, etc.
       .clk_i                      (sys_clk),               // 
       .rst_i                      (!sys_rst_n),            // 
   
       .doInit_i                   (hardware_init),         // do an init sequence. 
+      .dds_initd_o                (),                      // not used yet
       .hwdbg_dat_i                (36'd0),                 // hwdbg data input.
       .hwdbg_we_i                 (1'b0),                  // hwdbg we.
       .freqproc_dat_i             (ftw_fifo_dat_i),        // frequency tuning word fifo input(SPI data).
@@ -1110,13 +1111,13 @@ end
       
       // DDS will drive SYN_MUTEn, 1=>RF; 0=>MUTE.
       .dds_synth_mute_n_o         (dds_synth_mute_n),     // mute SYN whilst changing frequency
+      .dds_synth_doInit_o         (dds_synth_doInit),     // Init SYN when DDS init has completed
+      .dds_synth_initing_o        (dds_synth_initing),    // Init SYN when DDS init has completed
 `ifdef XILINX_SIMULATOR
       .dds_synth_stat_i           (syn_synth_mute_n),     // Don't hang waiting for non-existent hardware signal
 `else
       .dds_synth_stat_i           (SYN_STAT),             // ON=SYN PLL is locked
 `endif
-      .dds_synth_doInit_o         (dds_synth_doInit),     // Init SYN when DDS init has completed
-      .dds_synth_initing_o        (dds_synth_initing),    // Init SYN when DDS init has completed
   
       .dbg0_o                     (),             //
       .dbg1_o                     (),             //

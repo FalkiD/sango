@@ -100,7 +100,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 
     input  wire [31:0] meas_fifo_dat_i,           // measurement fifo from pulse opcode
     output reg         meas_fifo_ren_o,           // measurement fifo read enable
-    input  wire [MMC_FILL_LEVEL_BITS-1:0] meas_fifo_cnt_i, // measurements in fifo after pulse/pattern
+    input  wire [PTN_FILL_BITS-1:0] meas_fifo_cnt_i, // measurements in fifo after pulse/pattern
 
     output reg         bias_enable_o,             // bias control
 
