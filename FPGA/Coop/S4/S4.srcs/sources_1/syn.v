@@ -23,8 +23,10 @@
 //
 //
 // ---------------------------------------------------------------------------------
+// 0.00.2  2017-08-31 (RMR) SCLK normally low. Added 10ns betwixt SCLK done & 
+//                          SYN_SSn de-assertion(kind of a hack, works though)
 // 0.00.1  2017-08-02 (JLC) Created.
-//
+// 
 //
 //----------------------------------------------------------------------------------
 
@@ -98,7 +100,7 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
    reg  [4:0]                     syn_init_done_cntr   = 5'b0_0000;
    
    reg                            syn_interOpGap       = 1'b0;
-   reg  [31:0]                    syn_interOpGap_cnt   = 32'd0;  // was 4:0,  5'b0_0000 
+   reg  [4:0]                     syn_interOpGap_cnt   = 5'b0_0000; 
 
    reg                            syn_spi_ss           = 1'b0;
    wire                           syn_spi_ss_s         = (~syn_fifo_empty_w & syn_spi_wtck &
@@ -285,7 +287,7 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
          syn_init_op_cntr         <= 6'b00_0000;
          syn_initd                <= 1'b0;
          syn_interOpGap           <= 1'b0;
-         syn_interOpGap_cnt       <= 32'd0; //5'b0_0000;
+         syn_interOpGap_cnt       <= 5'b0_0000;
          syn_mute_n_o             <= 1'b0;          // Mute until init done
          syn_init_done_cntr       <= 5'b0_0001;
          syn_ssn_onemore          <= 1'b0;
@@ -380,14 +382,10 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
          end  // End of if (syn_init_loading)
 
          if (syn_interOpGap) begin
-            syn_interOpGap_cnt    <= syn_interOpGap_cnt + 32'h0000_0001; //5'b0_0001;
-`ifdef XILINX_SIMULATOR
-            if (syn_interOpGap_cnt == 32'd500) begin
-`else
-            if (syn_interOpGap_cnt == 32'd10000000) begin
-`endif
+            syn_interOpGap_cnt    <= syn_interOpGap_cnt + 5'b0_0001;
+            if (syn_interOpGap_cnt == 5'b1_1111) begin
                syn_interOpGap     <= 1'b0;
-               syn_interOpGap_cnt <= 32'd0; //5'b0_0000;
+               syn_interOpGap_cnt <= 5'b0_0000;
             end
          end
 
