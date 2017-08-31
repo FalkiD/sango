@@ -98,7 +98,7 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
    reg  [4:0]                     syn_init_done_cntr   = 5'b0_0000;
    
    reg                            syn_interOpGap       = 1'b0;
-   reg  [4:0]                     syn_interOpGap_cnt   = 5'b0_0000;
+   reg  [31:0]                    syn_interOpGap_cnt   = 32'd0;  // was 4:0,  5'b0_0000 
 
    reg                            syn_spi_ss           = 1'b0;
    wire                           syn_spi_ss_s         = (~syn_fifo_empty_w & syn_spi_wtck &
@@ -106,7 +106,7 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
 //                                                            (~syn_init_loading | syn_fifo_full_w) &
                                                              ~syn_interOpGap);
    reg                            syn_spi_ss_k         = 1'b0;
-   
+   reg                            syn_ssn_onemore      = 1'b0;
    
    // Generate: syn_spi_sclk   (e.g. SPI_CLK_RATIO == 8)
    //           syn_spi_wtck
@@ -285,15 +285,16 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
          syn_init_op_cntr         <= 6'b00_0000;
          syn_initd                <= 1'b0;
          syn_interOpGap           <= 1'b0;
-         syn_interOpGap_cnt       <= 5'b0_0000;
+         syn_interOpGap_cnt       <= 32'd0; //5'b0_0000;
          syn_mute_n_o             <= 1'b0;          // Mute until init done
-         syn_init_done_cntr       <= 5'b0_0001; 
+         syn_init_done_cntr       <= 5'b0_0001;
+         syn_ssn_onemore          <= 1'b0;
       end
       else begin
          // One-tick signals
-         // One-tick signals
          syn_fifo_rdr             <= 1'b0;
          syn_init_we              <= 1'b0;
+         syn_ssn_onemore          <= 1'b0;
          
          // Everytime signals
          syn_spi_ss               <= ~syn_spi_ss_k & (syn_spi_ss | syn_spi_ss_s);
@@ -363,7 +364,7 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
                // syn_init_op_cntr<= syn_init_op_cntr + 5'b0_0001;
             end
             6'b10_0111: begin
-               syn_init_datr   <= 12'h2_08;
+               syn_init_datr   <= 12'h2_00;         // normally 8, 0 shows reference on pin 2 of device(are we programming it at all?)
                syn_init_we     <= 1'b1;              // 1-tick signal
                // syn_init_op_cntr<= syn_init_op_cntr + 5'b0_0001;
             end
@@ -379,10 +380,14 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
          end  // End of if (syn_init_loading)
 
          if (syn_interOpGap) begin
-            syn_interOpGap_cnt    <= syn_interOpGap_cnt + 5'b0_0001;
-            if (syn_interOpGap_cnt == 5'b1_1111) begin
+            syn_interOpGap_cnt    <= syn_interOpGap_cnt + 32'h0000_0001; //5'b0_0001;
+`ifdef XILINX_SIMULATOR
+            if (syn_interOpGap_cnt == 32'd500) begin
+`else
+            if (syn_interOpGap_cnt == 32'd10000000) begin
+`endif
                syn_interOpGap     <= 1'b0;
-               syn_interOpGap_cnt <= 5'b0_0000;
+               syn_interOpGap_cnt <= 32'd0; //5'b0_0000;
             end
          end
 
@@ -434,6 +439,7 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
             end
             else begin
                syn_spi_state      <= SYN_SPI_STATE_SHF1;
+               syn_ssn_onemore    <= 1'b1;
             end
          end //  End of SYN_SPI_STATE_SHF0: case.
          SYN_SPI_STATE_SHF1: begin
@@ -449,7 +455,7 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
             syn_initing           <= 1'b0;
             syn_init_shfting      <= 1'b0;
             syn_initd             <= 1'b1;
-            syn_mute_n_o          <= 1'b1; // Unmute
+            syn_mute_n_o          <= 1'b1;  // Unmute
          end
          
       end  // End of always @(posedge clk_i)  ... SYN SPI State Machine ...
@@ -460,7 +466,7 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
    assign  syn_fifo_empty_o   = syn_fifo_empty_w;
    assign  syn_spi_mosi_o     = syn_spi_ss ? syn_ops_shftr[15] : 1'b0;
    assign  syn_spi_sclk_o     = syn_spi_ss ? syn_spi_sclk : 1'b0; 
-   assign  syn_spi_ss_n_o     = ~syn_spi_ss;
+   assign  syn_spi_ss_n_o     = ~(syn_spi_ss | syn_ssn_onemore);
    
    assign  dbg0_o             = syn_spi_ss;
    assign  dbg1_o             = syn_ops_shftr[15];
