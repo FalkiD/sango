@@ -63,7 +63,7 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
 
   
    reg  [3:0]                     syn_spi_clk_cnt      = 4'b0;
-   reg                            syn_spi_sclk         = 1'b1;
+   reg                            syn_spi_sclk         = 1'b0;
    reg                            syn_spi_wtck         = 1'b0;                 // 1-tick just prior to falling edge of syn_spi_clk
    reg                            syn_spi_wtckr        = 1'b0;                 // 1-tick just prior to falling edge of syn_spi_clk
    reg                            syn_spi_rtck         = 1'b0;                 // 1-tick just prior to rising  edge of syn_spi_clk
@@ -129,7 +129,7 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
    always @(posedge clk_i) begin
       if (rst_i) begin
          syn_spi_clk_cnt          <= 4'b0000;
-         syn_spi_sclk             <= 1'b1;
+         syn_spi_sclk             <= 1'b0;
          syn_spi_wtck             <= 1'b0;
          syn_spi_wtckr            <= 1'b0;
          syn_spi_rtck             <= 1'b0;
@@ -459,7 +459,7 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
    assign  syn_fifo_full_o    = syn_fifo_full_w;
    assign  syn_fifo_empty_o   = syn_fifo_empty_w;
    assign  syn_spi_mosi_o     = syn_spi_ss ? syn_ops_shftr[15] : 1'b0;
-   assign  syn_spi_sclk_o     = syn_spi_ss ? syn_spi_sclk : 1'b1; 
+   assign  syn_spi_sclk_o     = syn_spi_ss ? syn_spi_sclk : 1'b0; 
    assign  syn_spi_ss_n_o     = ~syn_spi_ss;
    
    assign  dbg0_o             = syn_spi_ss;

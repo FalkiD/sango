@@ -72,6 +72,6 @@
 
 `define SYSCLK_PER_PTN_CLK  6'd10
 
-`define STATUS_RESPONSE_SIZE    16'd22  // 22 bytes defined initially
+`define STATUS_RESPONSE_SIZE    16'd24  // 24 bytes defined initially
 
 `endif

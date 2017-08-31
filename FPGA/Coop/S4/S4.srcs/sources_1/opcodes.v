@@ -107,7 +107,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     // pattern opcodes are saved in pattern RAM.
     output reg                      ptn_wen_o,    // opcode processor saves pattern opcodes to pattern RAM 
     output wire [PTN_FILL_BITS-1:0] ptn_addr_o,   // address 
-    output wire [PTN_WR_WORD-1:0]   ptn_data_o,   // 12 bytes, 3 bytes patClk tick, 9 bytes for opcode and its data   
+    output wire [PTN_WR_WORD-1:0]   ptn_data_o,   // 12 bytes, 3 bytes patclk tick, 9 bytes for opcode and its data   
     input  wire [PTN_RD_WORD-1:0]   ptn_data_i,   // next pattern opcode to run, 0 if nothing to do   
     input  wire [PTN_FILL_BITS-1:0] ptn_index_i,  // address of pattern entry to run(only run it once, address is unique in RAM) 
     output reg                      ptn_run_o,    // run pattern 
@@ -137,7 +137,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     reg          response_ready;     // flag when response ready
     reg  [MMC_FILL_LEVEL_BITS-1:0]  response_length;    // length of response data
     reg  [MMC_FILL_LEVEL_BITS-1:0]  rsp_length;         // length tmp var
-    reg  [7:0]   rsp_data [`STATUS_RESPONSE_SIZE-1:0];  // 22 byte array of response bytes (echo, status)
+    reg  [7:0]   rsp_data [`STATUS_RESPONSE_SIZE-1:0];  // 24 byte array of response bytes (echo, status)
     reg  [MMC_FILL_LEVEL_BITS-1:0]  rsp_index;          // response array index
     localparam GENERAL_ARR  = 2'b00;
     localparam MEAS_FIFO    = 2'b01;
@@ -468,7 +468,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             case(opcode)
             `STATUS:  begin
                 // return system status, 1st 4 bytes are standard, opcode status, last opcode, 2 length bytes.
-                // For status opcode, length = 20 bytes defined so far:
+                // For status opcode, length = 24 bytes defined so far:
                 // opcodes processed, 4 bytes
                 // opcode processor status
                 // opcode processor state
@@ -480,98 +480,108 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 // frequency, 4 bytes
                 // power, 2 bytes, dBm on Q7.8 format
                 // pattern processor status
+                // pattern index(address being run), 2 bytes
                 // SYN_STAT
+                // pad byte for even number
                 if(response_fifo_full_i) begin
                     status_o <= `ERR_RSP_FIFO_FULL;
                     state <= `STATE_BEGIN_RESPONSE;
                 end
                 else begin
                     case(rsp_index)
-                    0:   begin
+                    0: begin
                         rsp_data[rsp_index] <= opcode_counter_o[7:0];   // opcodes processed, 4 bytes
                         rsp_index <= rsp_index + 1; 
                     end
-                    1:   begin
+                    1: begin
                         rsp_data[rsp_index] <= opcode_counter_o[15:8];
                         rsp_index <= rsp_index + 1; 
                     end
-                    2:    begin
+                    2: begin
                         rsp_data[rsp_index] <= opcode_counter_o[23:16];
                         rsp_index <= rsp_index + 1; 
                     end
-                    3:    begin
+                    3: begin
                         rsp_data[rsp_index] <= opcode_counter_o[31:24];
                         rsp_index <= rsp_index + 1; 
                     end
-                    4:    begin
+                    4: begin
                         rsp_data[rsp_index] <= status_o;                // opcode processor status
                         rsp_index <= rsp_index + 1; 
                     end
-                    5:    begin
+                    5: begin
                         rsp_data[rsp_index] <= state;                   // opcode processor state
                         rsp_index <= rsp_index + 1; 
                     end
-                    6:    begin
+                    6: begin
                         rsp_data[rsp_index] <= {1'b0, dbg_opcodes_o[14:8]}; // first opcode executed
                         rsp_index <= rsp_index + 1; 
                     end
-                    7:    begin
+                    7: begin
                         rsp_data[rsp_index] <= dbg_opcodes_o[7:0];          // last opcode executed
                         rsp_index <= rsp_index + 1; 
                     end
-                    8:    begin
+                    8: begin
                         rsp_data[rsp_index] <= dbg_opcodes_o[23:16];        // patadr count, how many patterns have been written
                         rsp_index <= rsp_index + 1; 
                     end
-                    9:    begin
+                    9: begin
                         rsp_data[rsp_index] <= fifo_rd_count_i[7:0];        // opcode fifo count, 2 bytes
                         rsp_index <= rsp_index + 1; 
                     end
-                    10:   begin
+                    10: begin
                         rsp_data[rsp_index] <= {6'd0, fifo_rd_count_i[10:8]};       
                         rsp_index <= rsp_index + 1; 
                     end
-                    11:    begin
+                    11: begin
                         rsp_data[rsp_index] <= response_fifo_count_i[7:0];  // opcode response fifo count, 2 bytes
                         rsp_index <= rsp_index + 1; 
                     end
-                    12:    begin
+                    12: begin
                         rsp_data[rsp_index] <= {6'd0, response_fifo_count_i[10:8]};       
                         rsp_index <= rsp_index + 1; 
                     end
-                    13:    begin
+                    13: begin
                         rsp_data[rsp_index] <= frequency_o[7:0];       // frequency, 4 bytes
                         rsp_index <= rsp_index + 1; 
                     end
-                    14:    begin
+                    14: begin
                         rsp_data[rsp_index] <= frequency_o[12:8];
                         rsp_index <= rsp_index + 1; 
                     end
-                    15:    begin
+                    15: begin
                         rsp_data[rsp_index] <= frequency_o[23:16];
                         rsp_index <= rsp_index + 1; 
                     end
-                    16:    begin
+                    16: begin
                         rsp_data[rsp_index] <= frequency_o[31:24];
                         rsp_index <= rsp_index + 1; 
                     end
-                    17:    begin
+                    17: begin
                         rsp_data[rsp_index] <= dbm_x10_i[7:0];              // power, 2 bytes, dBm x10
                         rsp_index <= rsp_index + 1; 
                     end
-                    18:    begin
+                    18: begin
                         rsp_data[rsp_index] <= {4'd0, dbm_x10_i[11:8]};
                         rsp_index <= rsp_index + 1; 
                     end
-                    19:    begin
+                    19: begin
                         rsp_data[rsp_index] <= ptn_status_i;                // pattern processor status
                         rsp_index <= rsp_index + 1; 
                     end
-                    20:    begin
+                    20: begin
+                        rsp_data[rsp_index] <= ptn_index_i[7:0];            // pattern index(address being run), 2 bytes
+                        rsp_index <= rsp_index + 1; 
+                    end
+                    21: begin
+                        rsp_data[rsp_index] <= ptn_index_i[12:8];
+                        rsp_index <= rsp_index + 1; 
+                    end
+                    22: begin
                         rsp_data[rsp_index] <= {7'd0, syn_stat_i};          // SYN_STAT, 1 if PLL locked
                         rsp_index <= rsp_index + 1; 
                     end
-                    21:    begin
+                    23:    begin
                         rsp_data[rsp_index] <= 8'd0;                        // pad to even # of bytes
                         rsp_index <= rsp_index + 1; 
                         rsp_length <= rsp_index + 2;
