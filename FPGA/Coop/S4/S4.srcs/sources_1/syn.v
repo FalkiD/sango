@@ -366,7 +366,7 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
                // syn_init_op_cntr<= syn_init_op_cntr + 5'b0_0001;
             end
             6'b10_0111: begin
-               syn_init_datr   <= 12'h2_00;         // normally 8, 0 shows reference on pin 2 of device(are we programming it at all?)
+               syn_init_datr   <= 12'h2_08;          // normally 8, 0 shows reference on pin 2 of device
                syn_init_we     <= 1'b1;              // 1-tick signal
                // syn_init_op_cntr<= syn_init_op_cntr + 5'b0_0001;
             end
