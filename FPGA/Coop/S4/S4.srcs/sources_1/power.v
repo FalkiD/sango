@@ -362,9 +362,14 @@ module power #(parameter FILL_BITS = 4)
   localparam PWR_SLOPE3         = 18;
   localparam PWR_INTCPT1        = 19;
   localparam PWR_INTCPT2        = 20;
-//  localparam PWR_DAC2           = 21;
-  localparam PWR_INIT1          = 22;
-  localparam PWR_INIT2          = 23;
+  localparam PWR_INTCPT3        = 21;
+  localparam PWR_INTCPT4        = 22;
+  localparam PWR_INTCPT5        = 23;
+  localparam PWR_INTCPT6        = 24;
+  localparam PWR_INTCPT7        = 25;
+  localparam PWR_INTCPT8        = 26;
+  localparam PWR_INIT1          = 27;
+  localparam PWR_INIT2          = 28;
   
   localparam    DAC_WORD0       = 32'h00380000;     // Disable internal refs, Gain=1
   localparam    DAC_WORD1       = 32'h00300003;     // LDAC pin inactive DAC A & B
@@ -595,19 +600,62 @@ module power #(parameter FILL_BITS = 4)
         PWR_INTCPT2: begin
           // prod1 is slope*FRQ2*2**32, intercept is upper 32 bits of prod1
           interp_mul <= 1'b0;
-          if(frequency_i < FRQ2) begin
-            intercept <= {4'd0, dbmx10_2430[dbm_idx]} - prod1[15:0];
+//          if(frequency_i <= FRQ2) begin
+//            intercept <= {4'd0, dbmx10_2430[dbm_idx]} - prod1[47:32];
+//          end
+//          else if(frequency_i <= FRQ3) begin
+//            intercept <= {4'd0, dbmx10_2450[dbm_idx]} - prod1[47:32];
+//          end
+//          else if(frequency_i <= FRQ4) begin
+//            intercept <= {4'd0, dbmx10_2470[dbm_idx]} - prod1[47:32];
+//          end
+//          else begin
+//            intercept <= {4'd0, dbmx10_2490[dbm_idx]} - prod1[47:3];
+//          end
+          if(frequency_i <= FRQ2) begin
+            state <= PWR_INTCPT3;
           end
-          else if(frequency_i < FRQ3) begin
-            intercept <= {4'd0, dbmx10_2450[dbm_idx]} - prod1[15:0];
+          else if(frequency_i <= FRQ3) begin
+            state <= PWR_INTCPT4;
           end
-          else if(frequency_i < FRQ4) begin
-            intercept <= {4'd0, dbmx10_2470[dbm_idx]} - prod1[15:0];
+          else if(frequency_i <= FRQ4) begin
+            state <= PWR_INTCPT5;
           end
           else begin
-            intercept <= {4'd0, dbmx10_2490[dbm_idx]} - prod1[15:0];
+            state <= PWR_INTCPT6;
           end
-          
+        end
+        PWR_INTCPT3: begin
+          if(slope_is_neg)
+            intercept <= {4'd0, dbmx10_2430[dbm_idx]} + prod1[47:32];
+          else
+            intercept <= {4'd0, dbmx10_2430[dbm_idx]} - prod1[47:32];
+          state <= PWR_INTCPT7;            
+        end
+        PWR_INTCPT4: begin
+          if(slope_is_neg)
+            intercept <= {4'd0, dbmx10_2450[dbm_idx]} + prod1[47:32];
+          else
+            intercept <= {4'd0, dbmx10_2450[dbm_idx]} - prod1[47:32];
+          state <= PWR_INTCPT7;            
+        end
+        PWR_INTCPT5: begin
+          if(slope_is_neg)
+            intercept <= {4'd0, dbmx10_2470[dbm_idx]} + prod1[47:32];
+          else
+            intercept <= {4'd0, dbmx10_2470[dbm_idx]} - prod1[47:32];
+          state <= PWR_INTCPT7;            
+        end
+        PWR_INTCPT6: begin
+          if(slope_is_neg)
+            intercept <= {4'd0, dbmx10_2490[dbm_idx]} + prod1[47:32];
+          else
+            intercept <= {4'd0, dbmx10_2490[dbm_idx]} - prod1[47:32];
+          state <= PWR_INTCPT7;            
+        end
+        PWR_INTCPT7: begin
+          if(prod1[31] == 1'b1)
+            intercept <= intercept + 16'd1;        
           // we have (slope*2**32) & intercept, calculate our dac value
           // dac <= (slope*frequency)/2**32 + intercept;          
           // Load up for next multiply
