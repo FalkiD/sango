@@ -1397,9 +1397,12 @@ signal sd_cmd_oe_l        : std_logic;
 
   -- Related to Card Finite State Machine
 type CARD_STATE_TYPE is (CARD_IDLE, CARD_READY, CARD_IDENT, CARD_STBY,
-                         CARD_TRAN, CARD_DATA, CARD_BTST, CARD_RCV,
-                         CARD_PRG,  CARD_DIS,   CARD_INA, CARD_SLP,
+                         CARD_TRAN, CARD_DATA, CARD_RCV,
+                         CARD_PRG,  CARD_DIS,  CARD_BTST, CARD_SLP, CARD_INA, 
                          CARD_IRQ,  CARD_PRE_IDLE, CARD_PRE_BOOT, CARD_BOOT);
+--                         CARD_TRAN, CARD_DATA, CARD_BTST, CARD_RCV,
+--                         CARD_PRG,  CARD_DIS,   CARD_INA, CARD_SLP,
+--                         CARD_IRQ,  CARD_PRE_IDLE, CARD_PRE_BOOT, CARD_BOOT);
 signal card_state       : CARD_STATE_TYPE;
 signal card_state_reply : CARD_STATE_TYPE; -- For reporting in status
 
