@@ -362,7 +362,7 @@ module power #(parameter FILL_BITS = 4)
   localparam PWR_SLOPE3         = 18;
   localparam PWR_INTCPT1        = 19;
   localparam PWR_INTCPT2        = 20;
-  localparam PWR_DAC2           = 21;
+//  localparam PWR_DAC2           = 21;
   localparam PWR_INIT1          = 22;
   localparam PWR_INIT2          = 23;
   
@@ -568,18 +568,17 @@ module power #(parameter FILL_BITS = 4)
           state <= PWR_WAIT;
         end
         PWR_SLOPE3: begin
-          // prod1 is now slope*256 (Q7.8)
           interp_mul <= 1'b0;
-          slope <= prod1[23:8]; // save product / 256
-          dbmA <= {16'd0, prod1[23:8]};  // slope into dbmA, product / 256
+          slope <= prod1[31:0];     // save product, prod1 = (slope * 2**32)    
+          dbmA <= prod1[31:0];      // slope*2**32 into dbmA
           // F2 into multiplicand
-          if(frequency_i < FRQ2) begin
+          if(frequency_i <= FRQ2) begin
             interp1 <= FRQ2;
           end
-          else if(frequency_i < FRQ3) begin
+          else if(frequency_i <= FRQ3) begin
             interp1 <= FRQ3;            
           end
-          else if(frequency_i < FRQ4) begin
+          else if(frequency_i <= FRQ4) begin
             interp1 <= FRQ4;           
           end
           else begin
@@ -594,7 +593,7 @@ module power #(parameter FILL_BITS = 4)
           state <= PWR_WAIT;
         end
         PWR_INTCPT2: begin
-          // prod1 is slope*FRQ2
+          // prod1 is slope*FRQ2*2**32, intercept is upper 32 bits of prod1
           interp_mul <= 1'b0;
           if(frequency_i < FRQ2) begin
             intercept <= {4'd0, dbmx10_2430[dbm_idx]} - prod1[15:0];
@@ -609,12 +608,11 @@ module power #(parameter FILL_BITS = 4)
             intercept <= {4'd0, dbmx10_2490[dbm_idx]} - prod1[15:0];
           end
           
-          // we have slope & intercept, calculate our dac value
-          // dac <= slope*frequency + intercept;          
+          // we have (slope*2**32) & intercept, calculate our dac value
+          // dac <= (slope*frequency)/2**32 + intercept;          
           // Load up for next multiply
-          dbmA <= {16'd0, slope};
-          interp1 <= frequency_i;
-          
+          dbmA <= slope;
+          interp1 <= frequency_i;        
           state <= PWR_DBM2;
         end
         PWR_DBM2: begin
@@ -624,10 +622,19 @@ module power #(parameter FILL_BITS = 4)
           state <= PWR_WAIT;
         end
         PWR_DBM3: begin
+          interp_mul <= 1'b0;        
+          // re-use interp1 register
+          if(prod1[31] == 1'b1)
+            interp1[15:0] <= prod1[47:32] + intercept + 1;
+          else
+            interp1[15:0] <= prod1[47:32] + intercept;
+          state <= PWR_DBM4;
+        end
+        PWR_DBM4: begin
           // Ready to send data to both DAC's. Just use this FSM to do it, 
           // except value is not in input fifo. Set next_state to PWR_VGA2
           // and let it run.
-          power <= {8'd0, 8'h17, prod1[15:0]}; 
+          power <= {8'd0, 8'h17, interp1[11:0], 4'd0}; 
           state <= PWR_VGA2;        // write 1st byte of 3
           VGA_SSn_o <= 1'b0;
         end
