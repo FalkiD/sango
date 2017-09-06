@@ -523,24 +523,41 @@ module power #(parameter FILL_BITS = 4)
           else
             dbm_idx <= q7dot8x10[19:8] - DBM_OFFSET[19:8]; // (/256.0) - 400, the array index for requested power
           dbmx10_o <= q7dot8x10[19:8];  // present power setting for all top-level modules to access, dBm x10
+          slope_is_neg <= 1'b0;         // clear a flag
           state <= PWR_SLOPE1;
         end
         PWR_SLOPE1: begin
           // interpolate between power tables
-          if(frequency_i < FRQ2) begin
+          if(frequency_i <= FRQ2) begin
           // slope = ((dbmx10_2410[dbm_idx] - dbmx10_2430[dbm_idx]))/(FRQ_DELTA);
-          //   OR (Y2-Y1) * ((1/FRQ_DELTA)*256) / 256
-            dbmA <= {24'd0, dbmx10_2410[dbm_idx] - dbmx10_2430[dbm_idx]};            
+          // Using (slope * 2**32) ==> (1/FRQ_DELTA) * 2**32 = 214.74836 ~= 215
+          // slope * 2**32 ~= 215 * (dbmx10_2410[dbm_idx] - dbmx10_2430[dbm_idx]);
+          //
+          // Then intercept = dbmx10_2430[dbm_idx] - ((slope*2**32)*frq2)/2**32;
+          //
+          // Assuming max delta between freq tables of 2048, 215*2048 = 440,320.
+          // This requires 19 bits, use a 32 bit register.
+            dbmA <= {20'd0, dbmx10_2410[dbm_idx] - dbmx10_2430[dbm_idx]};            
+            if(dbmx10_2410[dbm_idx] < dbmx10_2430[dbm_idx])
+              slope_is_neg <= 1'b1;
           end
-          else if(frequency_i < FRQ3) begin
-            dbmA <= {24'd0, dbmx10_2430[dbm_idx] - dbmx10_2450[dbm_idx]};    
+          else if(frequency_i <= FRQ3) begin
+            dbmA <= {20'd0, dbmx10_2430[dbm_idx] - dbmx10_2450[dbm_idx]};    
+            if(dbmx10_2430[dbm_idx] < dbmx10_2450[dbm_idx])
+              slope_is_neg <= 1'b1;
           end
-          else if(frequency_i < FRQ4) begin
-            dbmA <= {24'd0, dbmx10_2450[dbm_idx] - dbmx10_2470[dbm_idx]};           
+          else if(frequency_i <= FRQ4) begin
+            dbmA <= {20'd0, dbmx10_2450[dbm_idx] - dbmx10_2470[dbm_idx]};           
+            if(dbmx10_2450[dbm_idx] < dbmx10_2470[dbm_idx])
+              slope_is_neg <= 1'b1;
           end
           else begin
-            dbmA <= {24'd0, dbmx10_2470[dbm_idx] - dbmx10_2490[dbm_idx]};           
+            dbmA <= {20'd0, dbmx10_2470[dbm_idx] - dbmx10_2490[dbm_idx]};           
+            if(dbmx10_2470[dbm_idx] < dbmx10_2490[dbm_idx])
+              slope_is_neg <= 1'b1;
           end
+          // Dummy in a non-0 value for testing
+    //dbmA <= {32'd80};                    
           interp1 <= {16'd0, K};
           state <= PWR_SLOPE2;
         end
