@@ -69,8 +69,9 @@ module power #(parameter FILL_BITS = 4)
   output reg  [7:0]     status_o       // 0=busy, SUCCESS when done, or an error code
 );
 
-  localparam DBM_OFFSET = 24'd102400;  // 40.0 dBm * 256 * 10
-  localparam DBM_MAX_OFFSET = 24'd250; // 251 entries per table at 0.1dBm intervals
+  localparam DBM_OFFSET       = 24'd102400;  // 40.0 dBm * 256 * 10
+  localparam DBM_MAX          = 24'd166400;  // 65.0 dBm * 256 * 10
+  localparam DBM_MAX_OFFSET   = 24'd250;     // 251 entries per table at 0.1dBm intervals
   localparam TEN = 16'd10;             // Multiply user power request by 10
   localparam FRQ1 = 32'd2410000000;    // frequency breakpoint 1
   localparam FRQ2 = 32'd2430000000;    // frequency breakpoint 2
@@ -517,11 +518,12 @@ module power #(parameter FILL_BITS = 4)
           state <= PWR_WAIT;
         end
         PWR_DBM1: begin
-          // product is max  65dBm*256*10=166,400 => 0x28a00. Use 12 bits beginning at d8
+          // min is 40dBm*256*10=102,400
+          // max is 65dBm*256*10=166,400 => 0x28a00. Use 12 bits beginning at d8
           multiply <= 1'b0;
-          if(q7dot8x10[19:8] - DBM_OFFSET[19:8] < 0)
+          if(DBM_OFFSET[19:8] >= q7dot8x10[19:8])
             dbm_idx <= 12'd0;
-          else if(q7dot8x10[19:8] - DBM_OFFSET[19:8] > DBM_MAX_OFFSET)
+          else if(q7dot8x10[19:8] >= DBM_MAX[19:8])
             dbm_idx <= DBM_MAX_OFFSET;
           else
             dbm_idx <= q7dot8x10[19:8] - DBM_OFFSET[19:8]; // (/256.0) - 400, the array index for requested power
@@ -540,22 +542,22 @@ module power #(parameter FILL_BITS = 4)
           //
           // Assuming max delta between freq tables of 2048, 215*2048 = 440,320.
           // This requires 19 bits, use a 32 bit register.
-            dbmA <= {20'd0, dbmx10_2410[dbm_idx] - dbmx10_2430[dbm_idx]};            
+            dbmA <= dbmx10_2410[dbm_idx] - dbmx10_2430[dbm_idx];            
             if(dbmx10_2410[dbm_idx] < dbmx10_2430[dbm_idx])
               slope_is_neg <= 1'b1;
           end
           else if(frequency_i <= FRQ3) begin
-            dbmA <= {20'd0, dbmx10_2430[dbm_idx] - dbmx10_2450[dbm_idx]};    
+            dbmA <= dbmx10_2430[dbm_idx] - dbmx10_2450[dbm_idx];    
             if(dbmx10_2430[dbm_idx] < dbmx10_2450[dbm_idx])
               slope_is_neg <= 1'b1;
           end
           else if(frequency_i <= FRQ4) begin
-            dbmA <= {20'd0, dbmx10_2450[dbm_idx] - dbmx10_2470[dbm_idx]};           
+            dbmA <= dbmx10_2450[dbm_idx] - dbmx10_2470[dbm_idx];           
             if(dbmx10_2450[dbm_idx] < dbmx10_2470[dbm_idx])
               slope_is_neg <= 1'b1;
           end
           else begin
-            dbmA <= {20'd0, dbmx10_2470[dbm_idx] - dbmx10_2490[dbm_idx]};           
+            dbmA <= dbmx10_2470[dbm_idx] - dbmx10_2490[dbm_idx];           
             if(dbmx10_2470[dbm_idx] < dbmx10_2490[dbm_idx])
               slope_is_neg <= 1'b1;
           end
@@ -577,17 +579,25 @@ module power #(parameter FILL_BITS = 4)
           // F2 into multiplicand
           if(frequency_i <= FRQ2) begin
             interp1 <= FRQ2;
+            intercept <= {4'd0, dbmx10_2430[100]};  // setup for later step
           end
           else if(frequency_i <= FRQ3) begin
             interp1 <= FRQ3;            
+            intercept <= {4'd0, dbmx10_2450[100]};  // setup for later step
           end
           else if(frequency_i <= FRQ4) begin
             interp1 <= FRQ4;           
+            intercept <= {4'd0, dbmx10_2470[100]};  // setup for later step
           end
           else begin
             interp1 <= FRQ5;           
+            intercept <= {4'd0, dbmx10_2490[100]};  // setup for later step
           end
-          state <= PWR_INTCPT1;        
+          state <= PWR_INTCPT1;
+        
+      // debug
+      dbmx10_o <= dbmx10_2450[dbm_idx];
+                  
         end
         PWR_INTCPT1: begin
           interp_mul <= 1'b1;
@@ -599,29 +609,14 @@ module power #(parameter FILL_BITS = 4)
           // prod1 is slope*FRQ2*2**32, intercept is upper 32 bits of prod1
           // setup to use it in next state
           interp_mul <= 1'b0;
-          if(frequency_i <= FRQ2) begin
-            intercept <= {4'd0, dbmx10_2430[dbm_idx]};
-          end
-          else if(frequency_i <= FRQ3) begin
-            intercept <= {4'd0, dbmx10_2450[dbm_idx]};
-          end
-          else if(frequency_i <= FRQ4) begin
-            intercept <= {4'd0, dbmx10_2470[dbm_idx]};
-          end
-          else begin
-            intercept <= {4'd0, dbmx10_2490[dbm_idx]};
-          end
-          state <= PWR_INTCPT3;
-        end
-        PWR_INTCPT3: begin
           // prod1 still slope*FRQ2*2**32, intercept is upper 32 bits of prod1
           if(slope_is_neg)
             intercept <= intercept + prod1[47:32];
           else
             intercept <= intercept - prod1[47:32];
-          state <= PWR_INTCPT4;            
+          state <= PWR_INTCPT3;
         end
-        PWR_INTCPT4: begin
+        PWR_INTCPT3: begin
           if(prod1[31] == 1'b1)
             intercept <= intercept + 16'd1;        
           // we have (slope*2**32) & intercept, calculate our dac value
@@ -639,18 +634,18 @@ module power #(parameter FILL_BITS = 4)
         end
         PWR_DBM3: begin
           interp_mul <= 1'b0;        
-          // re-use interp1 register
+          // re-use 16 bits of slope register
           if(prod1[31] == 1'b1)
-            interp1[15:0] <= prod1[47:32] + intercept + 1;
+            slope[15:0] <= prod1[47:32] + intercept + 1;
           else
-            interp1[15:0] <= prod1[47:32] + intercept;
+            slope[15:0] <= prod1[47:32] + intercept;
           state <= PWR_DBM4;
         end
         PWR_DBM4: begin
-          // Ready to send data to both DAC's. Just use this FSM to do it, 
+          // Ready to send data to both DAC's. Use this FSM to do it, 
           // except value is not in input fifo. Set next_state to PWR_VGA2
           // and let it run.
-          power <= {8'd0, 8'h17, interp1[11:0], 4'd0}; 
+          power <= {8'd0, 8'h17, slope[11:0], 4'd0}; 
           state <= PWR_VGA2;        // write 1st byte of 3
           VGA_SSn_o <= 1'b0;
         end
