@@ -120,6 +120,16 @@ module power #(parameter FILL_BITS = 4)
   // Entries in 0.1 dBm steps beginning at 40.0dBm
   // 251 total entries covering 400 to 650 (40.0 to 65.0 dBm)
   // **entries are opposite from C, highest index first**
+
+  // power table RAM variables
+  reg             tbl_init = 1'b0;
+  reg             tbl_wen; 
+  reg             tbl_en = 1'b1; 
+  wire [2:0]      tbl_addr; 
+  reg  [11:0]     tbl_data_wr; 
+  wire [11:0]     tbl_data_rd;
+
+
   reg [11:0]      dbmx10_2410 [250:0] = { 
   12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000,
   12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000,
@@ -337,6 +347,23 @@ module power #(parameter FILL_BITS = 4)
     .new_data(spi_done_byte)     // 1=signal, data_out is valid
   );
 
+  // RAM for power tables
+  // Pattern RAM
+  ptn_ram #(
+    .DEPTH(8),
+    .DEPTH_BITS(3),
+    .WIDTH(12)
+  )
+  dbmx10_2450_tbl
+  (
+    .clk            (sys_clk), 
+    .we             (tbl_wen), 
+    .en             (tbl_en), 
+    .addr_i         (tbl_addr), 
+    .data_i         (tbl_data_wr), 
+    .data_o         (tbl_data_rd)
+  );
+
   // Startup power level
   localparam INIT_DBMx10    = 12'd400;  // *10 dBm
  
@@ -368,6 +395,9 @@ module power #(parameter FILL_BITS = 4)
   localparam PWR_INTCPT4        = 22;
   localparam PWR_INIT1          = 23;
   localparam PWR_INIT2          = 24;
+  localparam PWR_TBL_INIT       = 25;
+  
+  localparam PWR_TBL_ENTRIES    = 8;
   
   localparam    DAC_WORD0       = 32'h00380000;     // Disable internal refs, Gain=1
   localparam    DAC_WORD1       = 32'h00300003;     // LDAC pin inactive DAC A & B
@@ -421,8 +451,26 @@ module power #(parameter FILL_BITS = 4)
             init_wordnum <= 3'd0;
             modifier <= INIT_DACS;
           end
+          else if(tbl_init == 1'b0) begin
+            state <= PWR_TBL_INIT;
+            dbm_idx <= 12'd1;
+          end
           else
             status_o <= `SUCCESS;
+        end
+        PWR_TBL_INIT: begin
+          // fill power table RAM with default values
+          if(dbm_idx >= PWR_TBL_ENTRIES) begin
+            tbl_wen <= 1'b0;
+            dbm_idx <= 12'd0;
+            tbl_init <= 1'b1;
+            state <= PWR_IDLE;
+          end
+          else begin
+            tbl_data_wr <= dbm_idx << 8;
+            tbl_wen <= 1'b1;
+            dbm_idx = dbm_idx + 1;
+          end
         end
         PWR_INIT1: begin
           if(init_wordnum < 3'd3) begin
@@ -532,6 +580,10 @@ module power #(parameter FILL_BITS = 4)
           state <= PWR_SLOPE1;
         end
         PWR_SLOPE1: begin
+
+  dbm_idx <= 12'd6;
+
+
           // interpolate between power tables
           if(frequency_i <= FRQ2) begin
           // slope = ((dbmx10_2410[dbm_idx] - dbmx10_2430[dbm_idx]))/(FRQ_DELTA);
@@ -596,7 +648,8 @@ module power #(parameter FILL_BITS = 4)
           state <= PWR_INTCPT1;
         
       // debug
-      dbmx10_o <= dbmx10_2450[dbm_idx];
+      dbmx10_o <= tbl_data_rd;
+      intercept[11:0] <= tbl_data_rd;
                   
         end
         PWR_INTCPT1: begin
@@ -656,5 +709,7 @@ module power #(parameter FILL_BITS = 4)
         endcase
     end
   end
+
+  assign tbl_addr = dbm_idx[2:0];
 
 endmodule
