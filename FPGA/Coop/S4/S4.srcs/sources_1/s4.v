@@ -1399,7 +1399,7 @@ end
   assign dbg_zmonen = ((dbg_enables & BIT_ZMON_EN) == BIT_ZMON_EN);
   assign ZMON_EN = dbg_spi_mode ? dbg_zmonen : pls_zmonen;
   
-  assign dbg_sys_rst_i = dbg_enables & BIT_TEMP_SYS_RST ? 1'b1 : 1'b0;
+  assign dbg_sys_rst_i = 1'b0; //dbg_enables & BIT_TEMP_SYS_RST ? 1'b1 : 1'b0;
 
   // FPGA_RXD/TXD to/from MMC UART RXD/TXD
   assign syscon_rxd = FPGA_RXD;
