@@ -32,7 +32,7 @@
 `define STATE_FETCH                 7'h03
 `define STATE_LENGTH                7'h04
 `define STATE_DATA                  7'h05
-//`define STATE_SAVE_DATA             7'h06
+`define STATE_PTN_DATA              7'h06
 `define STATE_WAIT_DATA             7'h07   // Waiting for more fifo data
 `define STATE_READ_SPACER           7'h08
 `define STATE_FIFO_WRITE            7'h09
@@ -108,9 +108,13 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     output reg                      ptn_wen_o,    // opcode processor saves pattern opcodes to pattern RAM 
     output wire [PTN_FILL_BITS-1:0] ptn_addr_o,   // address 
     output wire [PTN_WR_WORD-1:0]   ptn_data_o,   // 12 bytes, 3 bytes patclk tick, 9 bytes for opcode and its data   
+
+    // pattern entries are run from this fifo when it's not empty
     input  wire [PTN_RD_WORD-1:0]   ptn_data_i,   // next pattern opcode to run, 0 if nothing to do   
-    input  wire [PTN_FILL_BITS-1:0] ptn_index_i,  // address of pattern entry to run(only run it once, address is unique in RAM) 
+    output reg                      ptn_fifo_ren_o, // read enable pattern fifo  
+    input  wire                     ptn_fifo_mt_i,  // pattern fifo empty flag
     output reg                      ptn_run_o,    // run pattern 
+    input  wire [PTN_FILL_BITS-1:0] ptn_index_i,  // index of pattern entry being run (for status only)
     input  wire [7:0]               ptn_status_i, // pattern processor status
 
     output reg  [31:0]   opcode_counter_o,        // count opcodes for status info                     
@@ -145,7 +149,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 
     // Pattern data registers
     reg  [PTN_FILL_BITS-1:0]        ptn_addr;           // pattern address to write
-    reg  [PTN_FILL_BITS-1:0]        ptn_index_done;     // index of pattern opcode just run(only run it once)
     reg  [23:0]                     ptn_clk;            // pattern clock tick to write
     reg  [PTN_WR_WORD-1:0]          ptn_data_reg;       // pattern data written to pattern RAM
     reg  [7:0]                      ptn_latch_count;    // Clocks to latch data into RAM
@@ -185,24 +188,28 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         end
         else if(enable == 1) begin
 
-            // check for pattern data first when running a pattern
-            if(operating_mode == `PTNCMD_RUN  &&
-                (ptn_data_i != `PTNDATA_NONE && ptn_index_i != ptn_index_done)) begin
+            // Check for pattern run request, if true, run pattern as soon
+            // as opcode processor becomes idle
+            if(operating_mode == `PTNCMD_RUN && ptn_run_o == 1'b0) begin
+                // we haven't started it yet
+                if(state == `STATE_IDLE && fifo_rd_count_i == 0) begin
+                    ptn_run_o <= 1'b1; // start pattern
+                end
+            end
+
+            // check for pattern data first when running a pattern,
+            // but make sure we're idle first
+            if(state == `STATE_IDLE && fifo_rd_count_i == 0 && 
+                    !ptn_fifo_mt_i) begin
                 if(ptn_status_i > `SUCCESS) begin
                     // there's a problem, stop the pattern
                     stop_pattern();
                     status_o <= ptn_status_i;
                 end
                 else begin
-                    // execute the next pattern opcode:
-                    // --set opcode, length, and uinttmp registers
-                    // --set state to STATE_DATA, continue.
-                    // this jumps into normal opcode processing
-                    opcode <= ptn_data_i[70:64];
-                    length <= 0;                        // jump into processing uinttmp
-                    uinttmp <= ptn_data_i[63:0];
-                    ptn_index_done <= ptn_index_i;      // only run it once
-                    state <= `STATE_DATA;               // process the parsed opcode
+                    // execute the next pattern opcode from the pattern fifo
+                    ptn_fifo_ren_o <= 1'b1;
+                    state <= `STATE_PTN_DATA;
                 end
             end
             else if((state == `STATE_IDLE && fifo_rd_count_i >= `MIN_OPCODE_SIZE) ||
@@ -218,7 +225,19 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                         state <= `STATE_FETCH_FIRST;
                     end
                 end
-                
+
+                // get next pattern entry from fifo
+                `STATE_PTN_DATA: begin
+                    // --set opcode, length, and uinttmp registers
+                    // --set state to STATE_DATA, continue.
+                    // this jumps into normal opcode processing
+                    opcode <= ptn_data_i[70:64];
+                    length <= 0;                        // jump into processing uinttmp
+                    uinttmp <= ptn_data_i[63:0];
+                    ptn_fifo_ren_o <= 1'b0;
+                    state <= `STATE_DATA;               // process the parsed opcode
+                end
+
                 // Opcode block done, write response fifo: status, pad byte, 
                 // 2 length bytes, then data if any, then assert response_ready
                 `STATE_BEGIN_RESPONSE: begin
@@ -335,8 +354,11 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     length <= {fifo_dat_i[0], length[7:0]};
                     rsp_index <= 16'h0000;                  // index for multi-byte data blocks
                     opcode <= fifo_dat_i[7:1];              // got opcode, start reading data
+                    if(bad_opcode(fifo_dat_i[7:1])) begin   // stop if the opcode is bogus
+                        state <= `STATE_IDLE;
+                    end
                     // length tests
-                    if({fifo_dat_i[0], length[7:0]} > (fifo_rd_count_i-1)) begin
+                    else if({fifo_dat_i[0], length[7:0]} > (fifo_rd_count_i-1)) begin
                         fifo_rd_en_o <= 0;                  // let it fill
                         state <= `STATE_WAIT_DATA;
                     end
@@ -433,9 +455,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     input [15:0] address;    
     begin
         ptn_addr <= address;            // address
-        ptn_index_done <= 0;            // keep track of which we've run(only run it once)
-        ptn_run_o <= 1'b1;              // run pattern
-        operating_mode <= `PTNCMD_RUN;  // Opcode processor mode to run pattern data
+        //ptn_run_o <= 1'b1;              // run pattern
+        operating_mode <= `PTNCMD_RUN;  // Opcode processor mode to run pattern data as soon as opcode processor is idle
     end
     endtask
 
@@ -443,7 +464,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     task stop_pattern;
     begin
         ptn_run_o <= 1'b0;              // stop pattern
-        ptn_index_done <= 0;            // keep track of which we've run(only run each entry once)
+        ptn_fifo_ren_o <= 1'b0;
         operating_mode <= `OPCODE_NORMAL; 
     end
     endtask
@@ -834,7 +855,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         ptn_addr <= 16'h0000;               // pattern address to write
         ptn_clk <= 24'h00_0000;             // pattern clock tick to write
         ptn_run_o <= 1'b0;                  // Stop pattern processor 
-        ptn_index_done <= 0;                // keep track of which we've run(only run it once)
         ptn_count <= 8'h00;                 // total patadr opcodes received(debugging only)
         ptn_wen_o <= 1'b0;
 
@@ -883,6 +903,19 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         ptn_latch_count <= 8'd0;
     end
     endtask
+
+    // test for unrecognized opcode, back to idle state on bad opcode
+    function bad_opcode;
+    input [6:0] opcode;    
+    begin
+        if((opcode > `CALPWR && opcode < `PTN_PATCLK) ||
+           (opcode > `PTN_BRANCH && opcode < `MEAS_ZMSIZE) ||
+           (opcode > `MEAS)) begin 
+            bad_opcode = 1'b1;
+        end
+        else bad_opcode = 1'b0;
+    end
+    endfunction
 
     // Concurrent assignments
     assign response_ready_o     = (response_ready && response_length == response_fifo_count_i);

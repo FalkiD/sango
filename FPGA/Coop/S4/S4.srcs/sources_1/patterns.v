@@ -49,7 +49,9 @@ module patterns #(parameter PTN_DEPTH = 65536,
 
       // pattern processor(this instance) writes next pattern entry for opcode processor to run
       output wire [PTN_BITS-1:0]  ptn_index_o,        // address of pattern entry to run next
-      output wire [RD_WIDTH-1:0]  ptn_data_o,         // Read 9 bytes opcode data from pattern RAM, 0=do nothing
+      output reg  [RD_WIDTH-1:0]  opcptn_data_o,      // Write next pattern entry to fifo for opcode processor(from pattern RAM)
+      output reg                  opcptn_fif_wen_o,   // fifo write enable for next pattern entry
+      input  wire                 opcptn_fif_fl_i,    // opcode processor pattern fifo full
 
       input  wire [PCMD_BITS-1:0] ptn_cmd_i,          // Command/mode, i.e. writing pattern, run pattern, stop, etc
 
@@ -64,7 +66,6 @@ module patterns #(parameter PTN_DEPTH = 65536,
   wire  [RD_WIDTH-1:0]  ptn_data;                   // opcode and data payload into RAM
   reg   [PTN_BITS-1:0]  ptn_addr_rd;                // read address when running patterns
   reg   [5:0]           sys_counter;                // sys clock counter
-  reg   [RD_WIDTH-1:0]  ptn_next_data;
   wire  [RD_WIDTH-1:0]  ptn_data_rd;
   reg   [PTN_BITS-1:0]  init_addr;                  // used during reset to initialize RAM
   wire  [PTN_BITS-1:0]  ptn_addr_wr;                // write address, init RAM or load pattern
@@ -100,11 +101,11 @@ module patterns #(parameter PTN_DEPTH = 65536,
   always @(posedge sys_clk) begin
     if(!sys_rst_n) begin
         status_o <= `SUCCESS;           // pattern processor status
-        ptn_next_data <= 0;             // do nothing
         sys_counter <= 6'd0;
         ptn_addr_rd <= 0;               // read address when running patterns
         ptn_state <= PTN_INIT_RAM;
         init_addr <= 0;
+        opcptn_fif_wen_o <= 1'b0;
     end
     else begin
         if(ptn_state == PTN_INIT_RAM) begin
@@ -127,13 +128,22 @@ module patterns #(parameter PTN_DEPTH = 65536,
                 ptn_state <= PTN_NEXT;
             end
             PTN_NEXT: begin // next opcode
-                ptn_next_data <= ptn_data_rd;
-                sys_counter <= sys_counter + 6'd1;
-                ptn_state <= PTN_OPCODE_GO;    
+                if(opcptn_fif_fl_i) begin
+                    status_o <= `ERR_PTN_FIFO_FULL;
+                    ptn_state <= PTN_STOP;
+                end
+                else if(ptn_data_rd != 72'd0) begin
+                    opcptn_data_o <= ptn_data_rd;
+                    opcptn_fif_wen_o <= 1'b1;
+                    sys_counter <= sys_counter + 6'd1;
+                    ptn_state <= PTN_OPCODE_GO;
+                end
+                else
+                    ptn_state <= PTN_OPCODE_GO;  // don't do anything
             end
             PTN_OPCODE_GO: begin
+                opcptn_fif_wen_o <= 1'b0;
                 sys_counter <= sys_counter + 6'd1;
-                ptn_next_data <= 0;     // clear this so only executes once
                 ptn_state <= PTN_WAIT_TICK;
             end
             PTN_WAIT_TICK: begin
@@ -173,7 +183,6 @@ module patterns #(parameter PTN_DEPTH = 65536,
   assign ptn_addr_wr  = ptn_state == PTN_INIT_RAM ? init_addr : (ptn_data_i[95:72] + ptn_addr_i); 
   assign ptn_tick     = ptn_run_i ? ptn_addr_rd : ptn_addr_wr; 
   assign ptn_data     = ptn_state == PTN_INIT_RAM ? 72'd0 : ptn_data_i[71:0]; 
-  assign ptn_data_o   = ptn_run_i ? ptn_next_data : 0;    // next opcode to run or 0 to do nothing
   assign ptn_index_o  = ptn_tick;                        // unique address of pattern entry to run next
    
 endmodule

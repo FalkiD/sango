@@ -188,6 +188,8 @@
 
 `define PATTERN_DEPTH               8192
 `define PATTERN_FILL_BITS           13
+`define PTN_TO_OPC_COUNT            16
+`define PTN_TO_OPC_BITS             4
 
 // -----------------------------------------------------------------------------
 
@@ -416,11 +418,19 @@ wire                            ptn_wen;         // opcode processor saves patte
 wire [`PATTERN_FILL_BITS-1:0]   ptn_addr;        // address
 wire [23:0]                     ptn_clk;         // patclk, pattern tick, tick=100ns
 wire [`PATTERN_WR_WORD-1:0]     ptn_data;        // 12 bytes, 3 bytes patClk tick, 9 bytes for opcode, length, and data   
-wire [`PATTERN_RD_WORD-1:0]     ptn_next;        // Next pattern opcode to execute, 0 if nothing to do, 9 bytes, opcode and 8 bytes data   
+//wire [`PATTERN_RD_WORD-1:0]     ptn_next;        // Next pattern opcode to execute, 0 if nothing to do, 9 bytes, opcode and 8 bytes data   
 wire                            ptn_run;         // Run pattern processor 
-wire [`PATTERN_FILL_BITS-1:0]   ptn_index;       // address of pattern entry to run(only run it once) 
+wire [`PATTERN_FILL_BITS-1:0]   ptn_index;       // address of pattern entry to run (for status) 
 wire [7:0]                      ptn_status;      // status from pattern processor 
 wire [3:0]                      ptn_cmd;         // Command/mode, i.e. writing pattern, run pattern, stop, etc
+// Fifo from pattern processor to opcode processor (to run pattern)
+wire [`PATTERN_RD_WORD-1:0]     opcptn_fifo_dat_i;  // pattern processor to opcode processor, run next entry
+wire                            opcptn_fifo_wen;    // ptn to opc fifo write enable
+wire [`PATTERN_RD_WORD-1:0]     opcptn_fifo_dat_o;  // opc read from ptn processor fifo
+wire                            opcptn_fifo_ren;    // opc ptn fifo read enable
+wire                            opcptn_fifo_mt;     // pattern to opcode processor fifo empty flag
+wire                            opcptn_fifo_full;   // pattern to opcode processor fifo full flag
+wire [`PATTERN_FILL_BITS-1:0]   opcptn_fifo_count;
 
 // Opcode processing statistics
 wire [31:0]  opc_count;               // count opcodes for status info                     
@@ -772,6 +782,38 @@ end
         .fifo_pf_empty()           
     );
 
+    /////////////////////////////////////////////////////////////////////////////////////
+    // Pattern processor to opcode processor FIFO                       
+    // Instantiate fifo that the pattern processor is using to run each pattern entry
+    /////////////////////////////////////////////////////////////////////////////////////
+    swiss_army_fifo #(
+      .USE_BRAM(1),
+      .WIDTH(`PATTERN_RD_WORD),
+      .DEPTH(`PTN_TO_OPC_COUNT),
+      .FILL_LEVEL_BITS(`PTN_TO_OPC_BITS),
+      .PF_FULL_POINT(`PTN_TO_OPC_BITS-1),
+      .PF_FLAG_POINT(`PTN_TO_OPC_BITS>>1),
+      .PF_EMPTY_POINT(1)
+    ) ptn_to_opc_fifo(
+        .sys_rst_n(sys_rst_n),
+        .sys_clk(sys_clk),
+        .sys_clk_en(opc_fifo_enable),
+        
+        .reset_i(opc_fifo_rst),
+        
+        .fifo_wr_i(opcptn_fifo_wen),
+        .fifo_din(opcptn_fifo_dat_i),
+        
+        .fifo_rd_i(opcptn_fifo_ren),
+        .fifo_dout(opcptn_fifo_dat_o),
+        
+        .fifo_fill_level(opcptn_fifo_count),
+        .fifo_full(opcptn_fifo_full),
+        .fifo_empty(opcptn_fifo_mt),
+        .fifo_pf_full(),
+        .fifo_pf_flag(),
+        .fifo_pf_empty()           
+    );
 
                 
 // ******************************************************************************
@@ -991,7 +1033,9 @@ end
     .ptn_wen_i          (ptn_wen),              // Pattern RAM write enable
 
     .ptn_index_o        (ptn_index),            // index(address) of next pattern entry to be run(run it only once)
-    .ptn_data_o         (ptn_next),             // Next pattern data to execute, 0 if nothing to do
+    .opcptn_data_o      (opcptn_fifo_dat_i),    // Next pattern data to execute, write into fifo
+    .opcptn_fif_wen_o   (opcptn_fifo_wen),      // fifo write enable for next pattern entry
+    .opcptn_fif_fl_i    (opcptn_fifo_full),
 
     .ptn_cmd_i          (ptn_cmd),              // Command/mode, i.e. writing pattern, run pattern, stop, etc
 
@@ -1057,9 +1101,12 @@ end
     .ptn_wen_o                  (ptn_wen),          // opcode processor saves pattern opcodes to pattern RAM 
     .ptn_addr_o                 (ptn_addr),         // address 
     .ptn_data_o                 (ptn_data),         // 12 bytes, 3 bytes patclk tick, 9 bytes for opcode and data   
-    .ptn_data_i                 (ptn_next),         // 9 bytes: opcode and 8 bytes data   
-    .ptn_index_i                (ptn_index),        // address of pattern entry to run next(only run it once, address is unique in RAM)
+    // pattern entries from pattern RAM are read from a fifo to run the pattern
+    .ptn_data_i                 (opcptn_fifo_dat_o),// 9 bytes: opcode and 8 bytes data
+    .ptn_fifo_ren_o             (opcptn_fifo_ren),  // read enable pattern fifo
+    .ptn_fifo_mt_i              (opcptn_fifo_mt),   // pattern fifo empty flag
     .ptn_run_o                  (ptn_run),          // run pattern 
+    .ptn_index_i                (ptn_index),        // index of pattern entry being run (for status only)
     .ptn_status_i               (ptn_status),       // pattern processor status
                                                     
     .opcode_counter_o           (opc_count),        // count opcodes for status info   
