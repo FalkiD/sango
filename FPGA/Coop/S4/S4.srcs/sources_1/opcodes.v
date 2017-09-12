@@ -199,20 +199,20 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 
             // check for pattern data first when running a pattern,
             // but make sure we're idle first
-            if(state == `STATE_IDLE && fifo_rd_count_i == 0 && 
-                    !ptn_fifo_mt_i) begin
-                if(ptn_status_i > `SUCCESS) begin
-                    // there's a problem, stop the pattern
-                    stop_pattern();
-                    status_o <= ptn_status_i;
-                end
-                else begin
-                    // execute the next pattern opcode from the pattern fifo
-                    ptn_fifo_ren_o <= 1'b1;
-                    state <= `STATE_PTN_DATA;
-                end
-            end
-            else if((state == `STATE_IDLE && fifo_rd_count_i >= `MIN_OPCODE_SIZE) ||
+//            if(state == `STATE_IDLE && fifo_rd_count_i == 0 && 
+//                    !ptn_fifo_mt_i) begin
+//                if(ptn_status_i > `SUCCESS) begin
+//                    // there's a problem, stop the pattern
+//                    stop_pattern();
+//                    status_o <= ptn_status_i;
+//                end
+//                else begin
+//                    // execute the next pattern opcode from the pattern fifo
+//                    ptn_fifo_ren_o <= 1'b1;
+//                    state <= `STATE_PTN_DATA;
+//                end
+//            end
+/*            else*/ if((state == `STATE_IDLE && fifo_rd_count_i >= `MIN_OPCODE_SIZE) ||
                      state != `STATE_IDLE) begin
                 // not IDLE or at least one opcode has been written to FIFO
                 case(state)
