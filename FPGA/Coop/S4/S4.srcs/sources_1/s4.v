@@ -430,7 +430,7 @@ wire [`PATTERN_RD_WORD-1:0]     opcptn_fifo_dat_o;  // opc read from ptn process
 wire                            opcptn_fifo_ren;    // opc ptn fifo read enable
 wire                            opcptn_fifo_mt;     // pattern to opcode processor fifo empty flag
 wire                            opcptn_fifo_full;   // pattern to opcode processor fifo full flag
-wire [`PATTERN_FILL_BITS-1:0]   opcptn_fifo_count;
+wire [`PTN_TO_OPC_BITS-1:0]     opcptn_fifo_count;
 
 // Opcode processing statistics
 wire [31:0]  opc_count;               // count opcodes for status info                     
