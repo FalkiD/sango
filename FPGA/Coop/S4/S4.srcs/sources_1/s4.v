@@ -899,13 +899,13 @@ end
     .opc_fif_ren_i      (mmc_fif_ren),          // mmc fifo read enable
     .opc_fif_mt_o       (mmc_fif_mt),           // mmc opcode fifo empty
     .opc_rd_cnt_o       (mmc_fif_cnt),          // mmc opcode fifo fill level 
-    .opc_rd_reset_i     (mmc_inpf_rst),         // Synchronous mmc opcode fifo reset
+    .opc_rd_reset_i     (1'b0), //mmc_inpf_rst),         // Synchronous mmc opcode fifo reset
     //    -- Write to MMC fifo connections
     .opc_rspf_dat_i     (mmc_rspf_dat),         // MMC response fifo
     .opc_rspf_we_i      (mmc_rspf_wen),         // response fifo write line             
     .opc_rspf_mt_o      (mmc_rspf_mt),          // response fifo empty
     .opc_rspf_fl_o      (mmc_rspf_fl),          // response fifo full
-    .opc_rspf_reset_i   (opc_fifo_rst),         // Synchronous mmc response fifo reset
+    .opc_rspf_reset_i   (1'b0), //opc_fifo_rst),         // Synchronous mmc response fifo reset
     .opc_rspf_cnt_o     (mmc_rspf_cnt),         // MMC response fifo fill level
 
     // Debugging, these go from 0300003F down
