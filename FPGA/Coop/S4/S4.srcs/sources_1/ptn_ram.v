@@ -47,8 +47,8 @@ module ptn_ram #(parameter DEPTH=65536,
     if (en) begin
       if (we)
         RAM[addr_i] <= data_i;
-        read_addr <= addr_i;
-      end
+      read_addr <= addr_i;
+    end
   end
 
   assign data_o = RAM[read_addr];

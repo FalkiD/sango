@@ -110,7 +110,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     output wire [PTN_WR_WORD-1:0]   ptn_data_o,   // 12 bytes, 3 bytes patclk tick, 9 bytes for opcode and its data   
 
     // pattern entries are run from this fifo when it's not empty
-    input  wire [PTN_RD_WORD-1:0]   ptn_data_i,   // next pattern opcode to run, 0 if nothing to do   
+    input  wire [PTN_RD_WORD-1:0]   ptn_data_i,   // next pattern opcode to run, 0 if nothing to do
     output reg                      ptn_fifo_ren_o, // read enable pattern fifo  
     input  wire                     ptn_fifo_mt_i,  // pattern fifo empty flag
     output reg                      ptn_run_o,    // run pattern 
@@ -196,7 +196,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     ptn_run_o <= 1'b1; // start pattern
                 end
             end
-
+            
             // check for pattern data first when running a pattern,
             // but make sure we're idle first
 //            if(state == `STATE_IDLE && fifo_rd_count_i == 0 && 
@@ -397,7 +397,11 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                         // Gather opcode data payload, then run it
                         // Most opcodes will use the same code here, (integer args) just different number of bytes.
                         if(!arg_is_bytes[opcode[6:0]]) begin    // Opcode with integer argument
-                            opcodes_integer_arg();              // common opcodes
+                            if(length > 8) begin
+                                status_o <= `ERR_INVALID_LENGTH;
+                                state <= `STATE_BEGIN_RESPONSE;
+                            end
+                            else opcodes_integer_arg();         // common opcodes
                         end
                         else begin  // if(arg_is_bytes[opcode[6:0]]) 
                             opcodes_byte_arg();                 // ECHO, other special opcodes
@@ -437,7 +441,17 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     end
                     else
                         ptn_latch_count = ptn_latch_count - 1;
+                    //state <= `STATE_WR_PTN2;
                 end
+//                `STATE_WR_PTN2: begin
+//                    if(ptn_latch_count == 0) begin
+//                        ptn_clk <= ptn_clk + 1;     // increment tick(offset) 
+//                        ptn_wen_o <= 1'b0;          // end write pulse 
+//                        next_opcode();
+//                    end
+//                    else
+//                        ptn_latch_count = ptn_latch_count - 1;
+//                end
     
                 default:
                 begin
@@ -857,6 +871,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         ptn_run_o <= 1'b0;                  // Stop pattern processor 
         ptn_count <= 8'h00;                 // total patadr opcodes received(debugging only)
         ptn_wen_o <= 1'b0;
+        ptn_fifo_ren_o <= 1'b0;
+        ptn_data_reg <= 0;                
 
         response_ready <= 1'b0;
         response_length <= 16'h0000;

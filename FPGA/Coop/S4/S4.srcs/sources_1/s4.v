@@ -188,8 +188,8 @@
 
 `define PATTERN_DEPTH               8192
 `define PATTERN_FILL_BITS           13
-`define PTN_TO_OPC_COUNT            16
-`define PTN_TO_OPC_BITS             4
+`define PTN_TO_OPC_COUNT            256 //16
+`define PTN_TO_OPC_BITS             8 //4
 
 // -----------------------------------------------------------------------------
 
@@ -430,7 +430,7 @@ wire [`PATTERN_RD_WORD-1:0]     opcptn_fifo_dat_o;  // opc read from ptn process
 wire                            opcptn_fifo_ren;    // opc ptn fifo read enable
 wire                            opcptn_fifo_mt;     // pattern to opcode processor fifo empty flag
 wire                            opcptn_fifo_full;   // pattern to opcode processor fifo full flag
-wire [`PTN_TO_OPC_BITS-1:0]     opcptn_fifo_count;
+wire [`PTN_TO_OPC_BITS:0]       opcptn_fifo_count;
 
 // Opcode processing statistics
 wire [31:0]  opc_count;               // count opcodes for status info                     
@@ -756,10 +756,10 @@ end
     swiss_army_fifo #(
       .USE_BRAM(1),
       .WIDTH(32),
-      .DEPTH(`PATTERN_DEPTH), //GLBL_MMC_FILL_LEVEL),
-      .FILL_LEVEL_BITS(`PATTERN_FILL_BITS), //GLBL_MMC_FILL_LEVEL_BITS),
-      .PF_FULL_POINT(`PATTERN_FILL_BITS-1), //GLBL_MMC_FILL_LEVEL_BITS-1),
-      .PF_FLAG_POINT(`PATTERN_FILL_BITS>>1), //GLBL_MMC_FILL_LEVEL_BITS>>1),
+      .DEPTH(`PATTERN_DEPTH),
+      .FILL_LEVEL_BITS(`PATTERN_FILL_BITS),
+      .PF_FULL_POINT(`PATTERN_FILL_BITS-1),
+      .PF_FLAG_POINT(`PATTERN_FILL_BITS>>1),
       .PF_EMPTY_POINT(1)
     ) results_fifo(
         .sys_rst_n(sys_rst_n),
@@ -790,7 +790,7 @@ end
       .USE_BRAM(1),
       .WIDTH(`PATTERN_RD_WORD),
       .DEPTH(`PTN_TO_OPC_COUNT),
-      .FILL_LEVEL_BITS(`PTN_TO_OPC_BITS),
+      .FILL_LEVEL_BITS(`PTN_TO_OPC_BITS+1),
       .PF_FULL_POINT(`PTN_TO_OPC_BITS-1),
       .PF_FLAG_POINT(`PTN_TO_OPC_BITS>>1),
       .PF_EMPTY_POINT(1)
@@ -915,7 +915,7 @@ end
     .opc_status3_i     ({8'h00, dbg_opcodes}),                  // patadr_count_upper 8 bits____first_opcode__last_opcode in lower 16 bits
     .sys_status4_i     (frequency),                             // system frequency setting in Hertz
     .sys_status5_i     ({15'h0, SYN_STAT, 4'd0, dbm_x10}),      // MS 16 bits=SYN_STAT pin,1=PLL_LOCK, 0=not locked. 16 LSB's=power(dBm x10) setting
-    .sys_status6_i     ({12'd0, opcptn_fifo_count[3:0], 3'd0, ptn_index})    // MSBs: opcptn count, LSBs: 16 lsbs of 1st ptn entry
+    .sys_status6_i     ({opcptn_fifo_dat_o[31:0], 11'd0, opcptn_fifo_count[4:0]}) // LSBs: opcptn count, MSBs: non-0 pattern entry counter
     //.sys_status6_i     ({16'd0, ptn_status, 7'd0, ptn_busy})    // LSB's: PTN_Status__PTN_Busy(running)
     );
 

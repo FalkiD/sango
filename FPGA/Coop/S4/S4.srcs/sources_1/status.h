@@ -57,6 +57,8 @@
 `define ERR_PATTERN_ADDR        8'h21   // past end of RAM
 `define ERR_PATTERN_STATE       8'h22   // unknown state
 `define ERR_RSP_FIFO_FULL       8'h23
+`define ERR_INVALID_LENGTH      8'h24
+`define ERR_WR_PTN_RAM          8'h25
 
 `define ERR_PTN_FIFO_FULL       8'h30   // Pattern processor error, opcode fifo is full
 
