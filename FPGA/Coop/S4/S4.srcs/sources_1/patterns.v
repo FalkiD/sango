@@ -63,16 +63,11 @@ module patterns #(parameter PTN_DEPTH = 65536,
   reg   [3:0]           ptn_state;
 
   // pattern RAM registers
-  //wire  [PTN_BITS-1:0]  ptn_tick;                   // tick is the index into pattern RAM
   wire  [RD_WIDTH-1:0]  ptn_data;                   // opcode and data payload into RAM
   reg   [PTN_BITS-1:0]  ptn_addr;                   // 
-  //reg   [PTN_BITS-1:0]  ptn_addr_wr;                // write address, init RAM or load pattern
   reg   [5:0]           sys_counter;                // sys clock counter
   wire  [RD_WIDTH-1:0]  ptn_data_rd;
-  //reg   [PTN_BITS-1:0]  init_addr;                  // used during reset to initialize RAM
   reg                   ptn_wen;                    // write enable line
-
-  //reg   [PTN_BITS-1:0]  dbg_last_idx;               // debugging  
 
   localparam PTN_IDLE       = 4'd1;
   localparam PTN_LOAD       = 4'd2;
@@ -113,11 +108,8 @@ module patterns #(parameter PTN_DEPTH = 65536,
         sys_counter <= 6'd0;
         ptn_addr <= 0;
         ptn_state <= PTN_INIT_RAM;
-//        ptn_addr_wr <= 0;
         ptn_wen <= 1'b0;
         opcptn_fif_wen_o <= 1'b0;
-        //nonzero_entries_o <= 13'd0;
-        //dbg_last_idx <= 13'h1FFF;
         init_state <= INIT_IDLE;
     end
     else begin
@@ -134,11 +126,11 @@ module patterns #(parameter PTN_DEPTH = 65536,
             end
             INIT2: begin
                 // Read is valid here
-                if(ptn_data_rd != {59'd0, ptn_addr}) begin
-                    status_o <= `ERR_WR_PTN_RAM;
-                    ptn_state <= PTN_IDLE;
-                end
-                else if(ptn_addr < PTN_DEPTH - 1) begin
+//                if(ptn_data_rd != {59'd0, ptn_addr}) begin
+//                    status_o <= `ERR_WR_PTN_RAM;
+//                    ptn_state <= PTN_IDLE;
+//                end
+                if(ptn_addr < PTN_DEPTH - 1) begin
                     ptn_addr = ptn_addr + 1;
                     init_state <= INIT1;
                 end
@@ -153,11 +145,11 @@ module patterns #(parameter PTN_DEPTH = 65536,
         end
         else if(ptn_run_i) begin
             ptn_wen <= 1'b0;
-    // Never seeing any non-0 data, read 256 bytes of pattern data out into response fifo
-
             case(ptn_state)
             PTN_IDLE: begin
-                ptn_addr <= 0;
+                ptn_addr <= ptn_addr_i;      // init read index, absolute RAM index
+                sys_counter <= 6'd0;
+                status_o <= 8'h00;              // busy           
                 ptn_state <= PTN_SPACER;
             end
             PTN_SPACER: begin

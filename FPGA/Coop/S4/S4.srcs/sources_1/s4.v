@@ -915,7 +915,7 @@ end
     .opc_status3_i     ({8'h00, dbg_opcodes}),                  // patadr_count_upper 8 bits____first_opcode__last_opcode in lower 16 bits
     .sys_status4_i     (frequency),                             // system frequency setting in Hertz
     .sys_status5_i     ({15'h0, SYN_STAT, 4'd0, dbm_x10}),      // MS 16 bits=SYN_STAT pin,1=PLL_LOCK, 0=not locked. 16 LSB's=power(dBm x10) setting
-    .sys_status6_i     ({opcptn_fifo_dat_o[31:0], 11'd0, opcptn_fifo_count[4:0]}) // LSBs: opcptn count, MSBs: non-0 pattern entry counter
+    .sys_status6_i     ({opcptn_fifo_dat_o[15:0], 11'd0, opcptn_fifo_count[4:0]}) // LSBs: opcptn count, MSBs: non-0 pattern entry counter
     //.sys_status6_i     ({16'd0, ptn_status, 7'd0, ptn_busy})    // LSB's: PTN_Status__PTN_Busy(running)
     );
 
