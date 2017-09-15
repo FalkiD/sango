@@ -198,7 +198,8 @@ module patterns #(parameter PTN_DEPTH = 65536,
                     sys_counter <= sys_counter + 6'd1;
             end
             PTN_STOP: begin
-                // Just do nothing
+                // Just do nothing, opcode processor will turn OFF ptn_run_i,
+                // code below will reset ptn_state
             end
             default: begin
                 status_o <= `ERR_INVALID_STATE;
@@ -209,7 +210,8 @@ module patterns #(parameter PTN_DEPTH = 65536,
         else begin
             // not initializing RAM or running a pattern, use opcode processor inputs
             ptn_wen <= ptn_wen_i;
-            ptn_addr <= ptn_data_i[95:72] + ptn_addr_i;
+            ptn_addr <= ptn_data_i[95:72] + ptn_addr_i;            
+            ptn_state <= PTN_IDLE;          // make sure pattern FSM is reset in case it just ran
         end
     end
   end
