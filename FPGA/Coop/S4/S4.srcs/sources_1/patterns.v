@@ -197,17 +197,6 @@ module patterns #(parameter PTN_DEPTH = 65536,
                 else
                     sys_counter <= sys_counter + 6'd1;
             end
-//            PTN_NEXT: begin
-//                opcptn_fif_wen_o <= 1'b0;
-//                if(ptn_addr < PTN_DEPTH - 1) begin
-//                    ptn_addr = ptn_addr + 1;
-//                    ptn_state <= PTN_SPACER;
-//                end
-//                else begin
-//                    ptn_addr <= 0;
-//                    ptn_state <= PTN_STOP;         
-//                end                       
-//            end
             PTN_STOP: begin
                 // Just do nothing
             end
@@ -215,91 +204,7 @@ module patterns #(parameter PTN_DEPTH = 65536,
                 status_o <= `ERR_INVALID_STATE;
                 ptn_state <= PTN_IDLE;
             end
-            endcase
-        
-//            // don't do anything unless SUCCESS or BUSY
-//            if(ptn_addr_rd < PTN_DEPTH-1 && status_o <= `SUCCESS) begin
-//                case(ptn_state)
-//                PTN_IDLE: begin
-//                    ptn_addr_rd <= ptn_addr_i;      // init read index, absolute RAM index
-//                    sys_counter <= 6'd0;
-//                    ptn_state <= PTN_RD_RAM;
-//                    status_o <= 8'h00;              // busy           
-//                end
-//                PTN_RD_RAM: begin
-//                    ptn_state <= PTN_NEXT;
-////    // debugging, fill fifo w/address
-////      if(!opcptn_fif_fl_i) begin
-////          opcptn_data_o <= {8'd2, 56'd0, 8'd222};
-////          opcptn_fif_wen_o <= 1'b1;
-////          ptn_state <= PTN_NEXT;
-////      end
-//                end
-//                PTN_NEXT: begin // next opcode
-////      opcptn_fif_wen_o <= 1'b0;
-////      ptn_state <= PTN_IDLE;      
-
-//                    if(dbg_last_idx != ptn_tick &&
-//                       ptn_data_rd != 72'h00_0000_0000_0000_0000) begin
-//                        nonzero_entries_o <= nonzero_entries_o + 13'd1;
-//                        dbg_last_idx <= ptn_tick;
-//                    end
-
-//                    if(!opcptn_fif_fl_i) begin
-//                        opcptn_data_o <= ptn_data_rd;
-//                        opcptn_fif_wen_o <= 1'b1;
-//                    end
-//                    sys_counter <= sys_counter + 6'd1;
-//                    ptn_state <= PTN_OPCODE_GO;
-
-////                    if(opcptn_fif_fl_i) begin
-////                        status_o <= `ERR_PTN_FIFO_FULL;
-////                        ptn_state <= PTN_IDLE;
-////                    end
-////                    else begin //if(ptn_data_rd != 72'h00_0000_0000_0000_0000) begin
-////                        opcptn_data_o <= ptn_data_rd;
-////                        opcptn_fif_wen_o <= 1'b1;
-////                        sys_counter <= sys_counter + 6'd1;
-////                        ptn_state <= PTN_OPCODE_GO;
-////                    end
-////                    else
-////                        ptn_state <= PTN_OPCODE_GO;  // don't do anything
-//                end
-//                PTN_OPCODE_GO: begin
-//                    opcptn_fif_wen_o <= 1'b0;
-//                    sys_counter <= sys_counter + 6'd1;
-//                    ptn_state <= PTN_WAIT_TICK;
-//                end
-//                PTN_WAIT_TICK: begin
-//                    if(sys_counter >= `SYSCLK_PER_PTN_CLK) begin
-//                        sys_counter <= 6'd0;
-//                        if(ptn_addr_rd < PTN_DEPTH-1) begin
-//                            ptn_addr_rd <= ptn_addr_rd + 1;
-//                            ptn_state <= PTN_RD_RAM;
-//                        end
-//                        else begin
-//                            status_o <= `ERR_PATTERN_ADDR;
-//                            ptn_state <= PTN_IDLE;
-//                        end
-//                    end
-//                    else
-//                        sys_counter <= sys_counter + 6'd1;
-//                end
-//                default: begin
-//                    status_o <= `ERR_PATTERN_ADDR;
-//                    ptn_state <= PTN_IDLE;
-//                end
-//                endcase
-//            end
-//            else begin
-//                status_o <= `ERR_PATTERN_ADDR;
-//                ptn_state <= PTN_IDLE;
-//            end
-//        end
-//        else begin
-//            ptn_state <= PTN_IDLE;
-//            if(status_o == 8'h00)
-//                status_o <= `SUCCESS;
+            endcase        
         end
         else begin
             // not initializing RAM or running a pattern, use opcode processor inputs
