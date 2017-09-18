@@ -212,8 +212,8 @@ module patterns #(parameter PTN_DEPTH = 65536,
             ptn_wen <= ptn_wen_i;
             ptn_addr <= ptn_data_i[95:72] + ptn_addr_i;            
             ptn_state <= PTN_IDLE;          // make sure pattern FSM is reset in case it just ran
-            if(status_o == 8'h00)
-                status_o <= `SUCCESS;           
+//            if(status_o == 8'h00)
+//                status_o <= `SUCCESS;           
         end
     end
   end
