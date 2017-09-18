@@ -439,6 +439,7 @@ wire [6:0]   opc_state;               // For debugging
     
 // Debugging
 wire [23:0]  dbg_opcodes;
+wire [31:0]  dbg_ptndata;
 wire         dbg_opc_rfgate;          // Driven by RF_GATE bit of sys_mode, MODE opcode, for debugging
 
 // SPI debugging connections for w 03000040 command
@@ -915,7 +916,7 @@ end
     .opc_status3_i     ({8'h00, dbg_opcodes}),                  // patadr_count_upper 8 bits____first_opcode__last_opcode in lower 16 bits
     .sys_status4_i     (frequency),                             // system frequency setting in Hertz
     .sys_status5_i     ({15'h0, SYN_STAT, 4'd0, dbm_x10}),      // MS 16 bits=SYN_STAT pin,1=PLL_LOCK, 0=not locked. 16 LSB's=power(dBm x10) setting
-    .sys_status6_i     ({opcptn_fifo_dat_o[15:0], 11'd0, opcptn_fifo_count[4:0]}) // LSBs: opcptn count, MSBs: non-0 pattern entry counter
+    .sys_status6_i     (dbg_ptndata)                            // Last pattern data read when running pattern    LSBs: opcptn count, MSBs: non-0 pattern entry counter
     //.sys_status6_i     ({16'd0, ptn_status, 7'd0, ptn_busy})    // LSB's: PTN_Status__PTN_Busy(running)
     );
 
@@ -1116,6 +1117,7 @@ end
     .status_o                   (opc_status),         // NULL opcode terminates, done=0, or error code
     .state_o                    (opc_state),          // For debugger display
     .dbg_opcodes_o              (dbg_opcodes),        // first ocode__last_opcode
+    .dbg2_o                     (dbg_ptndata),        // last pattern data read while running pattern
     
     // STATUS command
     .syn_stat_i                 (SYN_STAT),           // SYN STAT pin, 1=PLL locked

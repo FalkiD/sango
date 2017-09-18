@@ -123,6 +123,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     
     // Debugging
     output reg  [23:0]   dbg_opcodes_o,           // patadr count in 8 MSB's, 1st opcode in 8 MID's, last opcode in 8 LSB's
+    output reg  [31:0]   dbg2_o,                  // debugging patterns
 
     // STATUS command
     input  wire          syn_stat_i,              // SYN STAT pin, 1=PLL locked
@@ -185,6 +186,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     always @( posedge sys_clk) begin
         if(!sys_rst_n) begin
             reset_opcode_processor();
+            dbg2_o <= 32'hbaadf00d;
         end
         else if(enable == 1) begin
 
@@ -196,6 +198,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     ptn_run_o <= 1'b1; // start pattern
                 end
             end
+            
+            dbg2_o <= {31'd0, ptn_fifo_mt_i}; 
             
             // check for pattern data first when running a pattern,
             // but make sure we're idle first
