@@ -242,7 +242,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     // --set opcode, length, and uinttmp registers
                     // --set state to STATE_DATA, continue.
                     // this jumps into normal opcode processing
-                    dbg2_o <= ptn_data_i[31:0];
+                    dbg2_o <= {ptn_data_i[71:64], ptn_data_i[23:0]};
                     opcode <= ptn_data_i[70:64];
                     length <= 0;                        // jump into processing uinttmp
                     uinttmp <= ptn_data_i[63:0];
