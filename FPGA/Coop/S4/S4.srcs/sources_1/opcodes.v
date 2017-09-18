@@ -32,7 +32,7 @@
 `define STATE_FETCH                 7'h03
 `define STATE_LENGTH                7'h04
 `define STATE_DATA                  7'h05
-`define STATE_PTN_DATA              7'h06
+`define STATE_PTN_DATA1             7'h06
 `define STATE_WAIT_DATA             7'h07   // Waiting for more fifo data
 `define STATE_READ_SPACER           7'h08
 `define STATE_FIFO_WRITE            7'h09
@@ -42,7 +42,7 @@
 `define STATE_RSP_OPCODE            7'h0f
 `define STATE_WRITE_RESPONSE        7'h10
 `define STATE_WR_PTN                7'h11
-//`define STATE_WR_PTN2               7'h12
+`define STATE_PTN_DATA2             7'h12
 `define STATE_WMD                   7'h13
 `define STATE_RD_MEAS1              7'h14
 `define STATE_RD_MEAS2              7'h15
@@ -199,7 +199,11 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 end
             end
             
-            dbg2_o <= {31'd0, ptn_fifo_mt_i}; 
+            if(state == `STATE_IDLE && !ptn_fifo_mt_i) begin
+                // execute the next pattern opcode from the pattern fifo
+                ptn_fifo_ren_o <= 1'b1;
+                state <= `STATE_PTN_DATA1;            
+            end 
             
             // check for pattern data first when running a pattern,
             // but make sure we're idle first
@@ -213,7 +217,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 //                else begin
 //                    // execute the next pattern opcode from the pattern fifo
 //                    ptn_fifo_ren_o <= 1'b1;
-//                    state <= `STATE_PTN_DATA;
+//                    state <= `STATE_PTN_DATA1;
 //                end
 //            end
 /*            else*/ if((state == `STATE_IDLE && fifo_rd_count_i >= `MIN_OPCODE_SIZE) ||
@@ -231,10 +235,14 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 end
 
                 // get next pattern entry from fifo
-                `STATE_PTN_DATA: begin
+                `STATE_PTN_DATA1: begin
+                    state <= `STATE_PTN_DATA2;
+                end
+                `STATE_PTN_DATA2: begin
                     // --set opcode, length, and uinttmp registers
                     // --set state to STATE_DATA, continue.
                     // this jumps into normal opcode processing
+                    dbg2_o <= ptn_data_i[31:0];
                     opcode <= ptn_data_i[70:64];
                     length <= 0;                        // jump into processing uinttmp
                     uinttmp <= ptn_data_i[63:0];
