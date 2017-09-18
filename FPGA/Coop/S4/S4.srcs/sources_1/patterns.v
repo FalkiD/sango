@@ -170,7 +170,6 @@ module patterns #(parameter PTN_DEPTH = 65536,
                     sys_counter <= sys_counter + 6'd1;
                     ptn_state <= PTN_OPCODE_GO;
                 end
-//                ptn_state <= PTN_NEXT;
                 else begin
                     sys_counter <= sys_counter + 6'd1;
                     ptn_state <= PTN_OPCODE_GO;  // don't do anything
@@ -210,10 +209,10 @@ module patterns #(parameter PTN_DEPTH = 65536,
         else begin
             // not initializing RAM or running a pattern, use opcode processor inputs
             ptn_wen <= ptn_wen_i;
-            ptn_addr <= ptn_data_i[95:72] + ptn_addr_i;            
+            ptn_addr <= ptn_data_i[95:72] + ptn_addr_i;
+            if(status_o == 8'h00)
+                status_o <= `SUCCESS;           
             ptn_state <= PTN_IDLE;          // make sure pattern FSM is reset in case it just ran
-//            if(status_o == 8'h00)
-//                status_o <= `SUCCESS;           
         end
     end
   end
