@@ -24,14 +24,14 @@
 00000000
 00000000
 00000000
-00000008 ; pulse no meas
+00000008 ; pulse with meas
 0000000A ; 0x5 << 1
 00000001
 00000014 ; width, 100ns ticks, 2us
 00000000 
 00000000
-00000000 ; meas flag
-00000000 ; meas offset=0
+00000001 ; meas flag
+00000002 ; meas offset=200ns, 2 ticks
 00000000
 00000000
 00000004 ; patclk, 200 ticks out(20us)
@@ -40,14 +40,14 @@
 00000000
 00000000
 00000000
-00000008 ; pulse no meas
+00000008 ; pulse with meas
 0000000A ; 0x5 << 1
 00000001
 00000014 ; width, 100ns ticks, 2us
 00000000 
 00000000
-00000000 ; meas flag
-00000000 ; meas offset=0
+00000001 ; meas flag
+00000002 ; meas offset=2 ticks
 00000000
 00000000
 00000004 ; patclk, 260 ticks out(26us)

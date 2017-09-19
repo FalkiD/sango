@@ -62,7 +62,7 @@ u 1.5 ms r 4000000 8; --Read response data from host adapter RAM
 --u 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
 --u 3.5 ms r 4000000 1A; --Read 22+4 bytes of response data from host adapter RAM  
 
--- load pattern is done, now run it & read response, then execute normal opcode
+-- load pattern is done, now run it & read response
 u 2.0 ms w 4000000 04 44 01 00 00 01 00 00 00 00 00 00; --Run pattern at 0x100 
 u 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
 u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
@@ -72,7 +72,20 @@ u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
 u 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
 u 1.5 ms r 4000000 8; --Read response data from host adapter RAM  
 -- read status registers to get pattern processing status
-u 4.0 ms r 3000038 8; -- read response
+u 4.0 ms r 3000038 8; -- read debug registers
+
+-- read measurement results, 2-byte arg is how many results to read.
+-- each result is 8 bytes, 16 bits each: FWDQ, FWDI, REFLQ, REFLI
+u 2.0 ms w 4000000 02 64 01 00 00 00 00 00 00 00 00 00; --Read 1 set of results 
+u 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+u 2.0 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+-- read opcode processor response
+u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+u 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+u 1.5 ms r 4000000 10; --Read response data from host adapter RAM  
+-- read status registers to get pattern processing status
+u 4.0 ms r 3000038 8; -- read debug registers
 
 -- execute a CALPWR opcode normally
 --u 2.0 ms w 4000000 04 1c 00 80 17 00 00 00 00 00 00 00; --CALPWR 0x800 
