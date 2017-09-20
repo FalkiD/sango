@@ -156,6 +156,7 @@ module patterns #(parameter PTN_DEPTH = 65536,
                 ptn_state <= PTN_SPACER;
             end
             PTN_SPACER: begin                   // takes one clock to set address for read
+                sys_counter <= sys_counter + 6'd1;
                 ptn_state <= PTN_RD_RAM;            
             end            
             PTN_RD_RAM: begin
@@ -181,7 +182,7 @@ module patterns #(parameter PTN_DEPTH = 65536,
                 ptn_state <= PTN_WAIT_TICK;
             end
             PTN_WAIT_TICK: begin
-                if(sys_counter >= `SYSCLK_PER_PTN_CLK) begin
+                if(sys_counter >= `SYSCLK_PER_PTN_CLK-1) begin
                     sys_counter <= 6'd0;
                     if(ptn_addr < PTN_DEPTH-1) begin
                         ptn_addr <= ptn_addr + 1;
