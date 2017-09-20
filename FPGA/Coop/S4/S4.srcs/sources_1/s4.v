@@ -454,15 +454,15 @@ wire [2:0]   dbg_spi_device;       // 1=VGA, 2=SYN, 3=DDS, 4=ZMON
 wire [15:0]  dbg_enables; // = 1'b0;          // toggle various enables/wires
 
 // DDS/SYN lines
-wire         addds_sclk;    //rmr_DDS_SCLK;
-wire         addds_mosi;    //rmr_DDS_MOSI;
-wire         addds_miso = 1'bZ; //rmr_DDS_MISO = 1'b0;
-wire         addds_ssn;     //rmr_DDS_SSn;
-wire         addds_iorst;   //rmr_DDS_IORST;
-wire         addds_ioup;    //rmr_DDS_IOUP;
-wire         addds_sync;    //rmr_DDS_SYNC;
-wire         addds_ps0;     //rmr_DDS_PS0;
-wire         addds_ps1;     //rmr_DDS_PS1;
+wire         addds_sclk;
+wire         addds_mosi;
+wire         addds_miso = 1'bZ;
+wire         addds_ssn;
+wire         addds_iorst;
+wire         addds_ioup;
+wire         addds_sync;
+wire         addds_ps0;
+wire         addds_ps1;
 // LTC6946 SYN wires
 wire         synth_ssn;
 wire         synth_sclk;
@@ -1149,15 +1149,15 @@ end
       .freqproc_we_i              (ftw_fifo_wen),          // frequency tuning word fifo we.
       .dds_fifo_full_o            (ftw_fifo_full),         // ftw fifo full.
       .dds_fifo_empty_o           (ftw_fifo_mt),           // ftw fifo empty.
-      .dds_spi_sclk_o             (addds_sclk), //rmr_DDS_SCLK),          // 
-      .dds_spi_mosi_o             (addds_mosi), //rmr_DDS_MOSI),          //
-      .dds_spi_miso_i             (addds_miso), //rmr_DDS_MISO),          // 
-      .dds_spi_ss_n_o             (addds_ssn),  //rmr_DDS_SSn),           // 
-      .dds_spi_iorst_o            (addds_iorst), //rmr_DDS_IORST),         // 
-      .dds_spi_ioup_o             (addds_ioup), //rmr_DDS_IOUP),          // 
-      .dds_spi_sync_o             (addds_sync), //rmr_DDS_SYNC),          // 
-      .dds_spi_ps0_o              (addds_ps0),  //rmr_DDS_PS0),           // 
-      .dds_spi_ps1_o              (addds_ps1),  //rmr_DDS_PS1),           // 
+      .dds_spi_sclk_o             (addds_sclk),            // 
+      .dds_spi_mosi_o             (addds_mosi),            //
+      .dds_spi_miso_i             (addds_miso),            // 
+      .dds_spi_ss_n_o             (addds_ssn),             // 
+      .dds_spi_iorst_o            (addds_iorst),           // 
+      .dds_spi_ioup_o             (addds_ioup),            // 
+      .dds_spi_sync_o             (addds_sync),            // 
+      .dds_spi_ps0_o              (addds_ps0),             // 
+      .dds_spi_ps1_o              (addds_ps1),             // 
       
       // DDS will drive SYN_MUTEn, 1=>RF; 0=>MUTE.
       .dds_synth_mute_n_o         (dds_synth_mute_n),     // mute SYN whilst changing frequency
@@ -1305,7 +1305,7 @@ end
   // Concurrent assignments
   /////////////////////////////////
 
-  // Flag when pulse processor is busy. Opcode processor has to wait for done to return measurements
+  // Flag when pulse processor is busy.
   assign pulse_busy   = (pls_status == 8'h00) ? 1'b1 : 1'b0;
   assign ptn_busy     = (ptn_status == 8'h00) ? 1'b1 : 1'b0;
   
@@ -1388,9 +1388,9 @@ end
   assign SYN_SCLK = (dbg_spi_mode && dbg_spi_device == SPI_SYN) ? SPI_SCLK : synth_sclk;
   assign SYN_MOSI = (dbg_spi_mode && dbg_spi_device == SPI_SYN) ? SPI_MOSI : synth_mosi;
 
-  assign DDS_SSn  = (dbg_spi_mode && dbg_spi_device == SPI_DDS) ? SPI_SSn  : addds_ssn; //rmr_DDS_SSn;
-  assign DDS_SCLK = (dbg_spi_mode && dbg_spi_device == SPI_DDS) ? SPI_SCLK : addds_sclk; //rmr_DDS_SCLK;
-  assign DDS_MOSI = (dbg_spi_mode && dbg_spi_device == SPI_DDS) ? SPI_MOSI : addds_mosi; //rmr_DDS_MOSI;
+  assign DDS_SSn  = (dbg_spi_mode && dbg_spi_device == SPI_DDS) ? SPI_SSn  : addds_ssn;
+  assign DDS_SCLK = (dbg_spi_mode && dbg_spi_device == SPI_DDS) ? SPI_SCLK : addds_sclk;
+  assign DDS_MOSI = (dbg_spi_mode && dbg_spi_device == SPI_DDS) ? SPI_MOSI : addds_mosi;
 
   // VGA SPI mux, connect to debug SPI or power processor
   wire dbg_vgavsw;
@@ -1427,23 +1427,23 @@ end
   
   wire dbg_ddsiorst;
   assign dbg_ddsiorst = ((dbg_enables & BIT_DDS_IORST) == BIT_DDS_IORST); 
-  assign DDS_IORST = dbg_spi_mode ? dbg_ddsiorst : addds_iorst; //rmr_DDS_IORST;
+  assign DDS_IORST = dbg_spi_mode ? dbg_ddsiorst : addds_iorst;
   
   wire dbg_ddsioup;
   assign dbg_ddsioup = ((dbg_enables & BIT_DDS_IOUP) == BIT_DDS_IOUP);
-  assign DDS_IOUP = dbg_spi_mode ? dbg_ddsioup : addds_ioup; //rmr_DDS_IOUP;
+  assign DDS_IOUP = dbg_spi_mode ? dbg_ddsioup : addds_ioup;
   
   wire dbg_ddssync;
   assign dbg_ddssync = ((dbg_enables & BIT_DDS_SYNC) == BIT_DDS_SYNC);
-  assign DDS_SYNC = dbg_spi_mode ? dbg_ddssync : addds_sync; //rmr_DDS_SYNC;
+  assign DDS_SYNC = dbg_spi_mode ? dbg_ddssync : addds_sync;
   
   wire dbg_ddsps0;
   assign dbg_ddsps0 = ((dbg_enables & BIT_DDS_PS0) == BIT_DDS_PS0);
-  assign DDS_PS0 = dbg_spi_mode ? dbg_ddsps0 : addds_ps0; //rmr_DDS_PS0;
+  assign DDS_PS0 = dbg_spi_mode ? dbg_ddsps0 : addds_ps0;
    
   wire dbg_ddsps1;
   assign dbg_ddsps1 = ((dbg_enables & BIT_DDS_PS1) == BIT_DDS_PS1);
-  assign DDS_PS1 = dbg_spi_mode ? dbg_ddsps1 : addds_ps1; //rmr_DDS_PS1;
+  assign DDS_PS1 = dbg_spi_mode ? dbg_ddsps1 : addds_ps1;
    
   wire dbg_zmonen;
   assign dbg_zmonen = ((dbg_enables & BIT_ZMON_EN) == BIT_ZMON_EN);
