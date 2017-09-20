@@ -121,184 +121,17 @@ module power #(parameter FILL_BITS = 4)
   // 251 total entries covering 400 to 650 (40.0 to 65.0 dBm)
   // **entries are opposite from C, highest index first**
 
-  // power table RAM variables
+  // power table initialized flag
   reg             tbl_init = 1'b0;
-  reg             tbl_wen; 
-  reg             tbl_en = 1'b1; 
-  wire [2:0]      tbl_addr; 
-  reg  [11:0]     tbl_data_wr; 
-  wire [11:0]     tbl_data_rd;
 
-
-  reg [11:0]      dbmx10_2410 [250:0] = { 
-  12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000,
-  12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000,
-  12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000,
-  12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000,  // 61.9dBm rhs
-  12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000,
-  12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000,
-  12'h000, 12'h000, 12'h000, 12'h013, 12'h026, 12'h039, 12'h04c, 12'h05f,  // 60.0dBm third from left
-  12'h072, 12'h085, 12'h098, 12'h0ab, 12'h0be, 12'h0d1, 12'h0e4, 12'h0f7,
-  12'h10a, 12'h11d, 12'h130, 12'h143, 12'h156, 12'h169, 12'h17c, 12'h18f,
-  12'h1a2, 12'h1b5, 12'h1c8, 12'h1db, 12'h1ee, 12'h201, 12'h214, 12'h227,
-  12'h23a, 12'h24d, 12'h260, 12'h273, 12'h286, 12'h299, 12'h2ac, 12'h2bf,
-  12'h2d2, 12'h2e5, 12'h2f8, 12'h30b, 12'h31e, 12'h331, 12'h344, 12'h357,
-  12'h36a, 12'h37d, 12'h390, 12'h3a3, 12'h3b6, 12'h3c9, 12'h3dc, 12'h3ef,
-  12'h402, 12'h415, 12'h428, 12'h43b, 12'h44e, 12'h461, 12'h474, 12'h487,
-  12'h49a, 12'h4ad, 12'h4c0, 12'h4d3, 12'h4e6, 12'h4f9, 12'h50c, 12'h51f,
-  12'h532, 12'h545, 12'h558, 12'h56b, 12'h57e, 12'h591, 12'h5a4, 12'h5b7,
-  12'h5ca, 12'h5dd, 12'h5f0, 12'h603, 12'h616, 12'h629, 12'h63c, 12'h64f,
-  12'h662, 12'h675, 12'h688, 12'h69b, 12'h6ae, 12'h6c1, 12'h6d4, 12'h6e7,
-  12'h6fa, 12'h70d, 12'h720, 12'h733, 12'h746, 12'h759, 12'h76c, 12'h77f,
-  12'h792, 12'h7a5, 12'h7b8, 12'h7cb, 12'h7de, 12'h7f1, 12'h804, 12'h817,
-  12'h82a, 12'h83d, 12'h850, 12'h863, 12'h876, 12'h889, 12'h89c, 12'h8af,
-  12'h8c2, 12'h8d5, 12'h8e8, 12'h8fb, 12'h90e, 12'h921, 12'h934, 12'h947,
-  12'h95a, 12'h96d, 12'h980, 12'h993, 12'h9a6, 12'h9b9, 12'h9cc, 12'h9df,
-  12'h9f2, 12'ha05, 12'ha18, 12'ha2b, 12'ha3e, 12'ha51, 12'ha64, 12'ha77,
-  12'ha8a, 12'ha9d, 12'hab0, 12'hac3, 12'had6, 12'hae9, 12'hafc, 12'hb0f,
-  12'hb22, 12'hb35, 12'hb48, 12'h5b5, 12'hb6e, 12'hb81, 12'hb94, 12'hba7,
-  12'hbba, 12'hbcd, 12'hbe0, 12'hbf3, 12'hc06, 12'hc19, 12'hc2c, 12'hc3f,
-  12'hc52, 12'hc65, 12'hc78, 12'hc8b, 12'hc9e, 12'hcb1, 12'hcc4, 12'hcd7,
-  12'hcea, 12'hcfd, 12'hd10, 12'hd23, 12'h160, 12'hd36, 12'hd49, 12'hd5c,
-  12'hd6f, 12'hd82, 12'hd95, 12'hda8, 12'hdbb, 12'hdce, 12'hde1, 12'hdf4,
-  12'he07, 12'he1a, 12'he2d, 12'he40, 12'he53, 12'he66, 12'he79, 12'he8c,
-  12'he9f, 12'heb2, 12'hfff };
-
-  reg [11:0]      dbmx10_2430 [250:0] = { 
-  12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000,
-  12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000,
-  12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000,
-  12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000,  // 61.9dBm rhs
-  12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000,
-  12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000,
-  12'h000, 12'h000, 12'h000, 12'h013, 12'h026, 12'h039, 12'h04c, 12'h05f,  // 60.0dBm third from left
-  12'h072, 12'h085, 12'h098, 12'h0ab, 12'h0be, 12'h0d1, 12'h0e4, 12'h0f7,
-  12'h10a, 12'h11d, 12'h130, 12'h143, 12'h156, 12'h169, 12'h17c, 12'h18f,
-  12'h1a2, 12'h1b5, 12'h1c8, 12'h1db, 12'h1ee, 12'h201, 12'h214, 12'h227,
-  12'h23a, 12'h24d, 12'h260, 12'h273, 12'h286, 12'h299, 12'h2ac, 12'h2bf,
-  12'h2d2, 12'h2e5, 12'h2f8, 12'h30b, 12'h31e, 12'h331, 12'h344, 12'h357,
-  12'h36a, 12'h37d, 12'h390, 12'h3a3, 12'h3b6, 12'h3c9, 12'h3dc, 12'h3ef,
-  12'h402, 12'h415, 12'h428, 12'h43b, 12'h44e, 12'h461, 12'h474, 12'h487,
-  12'h49a, 12'h4ad, 12'h4c0, 12'h4d3, 12'h4e6, 12'h4f9, 12'h50c, 12'h51f,
-  12'h532, 12'h545, 12'h558, 12'h56b, 12'h57e, 12'h591, 12'h5a4, 12'h5b7,
-  12'h5ca, 12'h5dd, 12'h5f0, 12'h603, 12'h616, 12'h629, 12'h63c, 12'h64f,
-  12'h662, 12'h675, 12'h688, 12'h69b, 12'h6ae, 12'h6c1, 12'h6d4, 12'h6e7,
-  12'h6fa, 12'h70d, 12'h720, 12'h733, 12'h746, 12'h759, 12'h76c, 12'h77f,
-  12'h792, 12'h7a5, 12'h7b8, 12'h7cb, 12'h7de, 12'h7f1, 12'h804, 12'h817,
-  12'h82a, 12'h83d, 12'h850, 12'h863, 12'h876, 12'h889, 12'h89c, 12'h8af,
-  12'h8c2, 12'h8d5, 12'h8e8, 12'h8fb, 12'h90e, 12'h921, 12'h934, 12'h947,
-  12'h95a, 12'h96d, 12'h980, 12'h993, 12'h9a6, 12'h9b9, 12'h9cc, 12'h9df,
-  12'h9f2, 12'ha05, 12'ha18, 12'ha2b, 12'ha3e, 12'ha51, 12'ha64, 12'ha77,
-  12'ha8a, 12'ha9d, 12'hab0, 12'hac3, 12'had6, 12'hae9, 12'hafc, 12'hb0f,
-  12'hb22, 12'hb35, 12'hb48, 12'h5b5, 12'hb6e, 12'hb81, 12'hb94, 12'hba7,
-  12'hbba, 12'hbcd, 12'hbe0, 12'hbf3, 12'hc06, 12'hc19, 12'hc2c, 12'hc3f,
-  12'hc52, 12'hc65, 12'hc78, 12'hc8b, 12'hc9e, 12'hcb1, 12'hcc4, 12'hcd7,
-  12'hcea, 12'hcfd, 12'hd10, 12'hd23, 12'h160, 12'hd36, 12'hd49, 12'hd5c,
-  12'hd6f, 12'hd82, 12'hd95, 12'hda8, 12'hdbb, 12'hdce, 12'hde1, 12'hdf4,
-  12'he07, 12'he1a, 12'he2d, 12'he40, 12'he53, 12'he66, 12'he79, 12'he8c,
-  12'he9f, 12'heb2, 12'hfff };
-
-  reg [11:0]      dbmx10_2450 [250:0] = { 
-  12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000,
-  12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000,
-  12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000,
-  12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000,  // 61.9dBm rhs
-  12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000,
-  12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000,
-  12'h000, 12'h000, 12'h000, 12'h013, 12'h026, 12'h039, 12'h04c, 12'h05f,  // 60.0dBm third from left
-  12'h072, 12'h085, 12'h098, 12'h0ab, 12'h0be, 12'h0d1, 12'h0e4, 12'h0f7,
-  12'h10a, 12'h11d, 12'h130, 12'h143, 12'h156, 12'h169, 12'h17c, 12'h18f,
-  12'h1a2, 12'h1b5, 12'h1c8, 12'h1db, 12'h1ee, 12'h201, 12'h214, 12'h227,
-  12'h23a, 12'h24d, 12'h260, 12'h273, 12'h286, 12'h299, 12'h2ac, 12'h2bf,
-  12'h2d2, 12'h2e5, 12'h2f8, 12'h30b, 12'h31e, 12'h331, 12'h344, 12'h357,
-  12'h36a, 12'h37d, 12'h390, 12'h3a3, 12'h3b6, 12'h3c9, 12'h3dc, 12'h3ef,
-  12'h402, 12'h415, 12'h428, 12'h43b, 12'h44e, 12'h461, 12'h474, 12'h487,
-  12'h49a, 12'h4ad, 12'h4c0, 12'h4d3, 12'h4e6, 12'h4f9, 12'h50c, 12'h51f,
-  12'h532, 12'h545, 12'h558, 12'h56b, 12'h57e, 12'h591, 12'h5a4, 12'h5b7,
-  12'h5ca, 12'h5dd, 12'h5f0, 12'h603, 12'h616, 12'h629, 12'h63c, 12'h64f,
-  12'h662, 12'h675, 12'h688, 12'h69b, 12'h6ae, 12'h6c1, 12'h6d4, 12'h6e7,
-  12'h6fa, 12'h70d, 12'h720, 12'h733, 12'h746, 12'h759, 12'h76c, 12'h77f,
-  12'h792, 12'h7a5, 12'h7b8, 12'h7cb, 12'h7de, 12'h7f1, 12'h804, 12'h817,
-  12'h82a, 12'h83d, 12'h850, 12'h863, 12'h876, 12'h889, 12'h89c, 12'h8af,
-  12'h8c2, 12'h8d5, 12'h8e8, 12'h8fb, 12'h90e, 12'h921, 12'h934, 12'h947,
-  12'h95a, 12'h96d, 12'h980, 12'h993, 12'h9a6, 12'h9b9, 12'h9cc, 12'h9df,
-  12'h9f2, 12'ha05, 12'ha18, 12'ha2b, 12'ha3e, 12'ha51, 12'ha64, 12'ha77,
-  12'ha8a, 12'ha9d, 12'hab0, 12'hac3, 12'had6, 12'hae9, 12'hafc, 12'hb0f,
-  12'hb22, 12'hb35, 12'hb48, 12'h5b5, 12'hb6e, 12'hb81, 12'hb94, 12'hba7,
-  12'hbba, 12'hbcd, 12'hbe0, 12'hbf3, 12'hc06, 12'hc19, 12'hc2c, 12'hc3f,
-  12'hc52, 12'hc65, 12'hc78, 12'hc8b, 12'hc9e, 12'hcb1, 12'hcc4, 12'hcd7,
-  12'hcea, 12'hcfd, 12'hd10, 12'hd23, 12'h160, 12'hd36, 12'hd49, 12'hd5c,
-  12'hd6f, 12'hd82, 12'hd95, 12'hda8, 12'hdbb, 12'hdce, 12'hde1, 12'hdf4,
-  12'he07, 12'he1a, 12'he2d, 12'he40, 12'he53, 12'he66, 12'he79, 12'he8c,
-  12'he9f, 12'heb2, 12'hfff };
-
-  reg [11:0]      dbmx10_2470 [250:0] = { 
-  12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000,
-  12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000,
-  12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000,
-  12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000,  // 61.9dBm rhs
-  12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000,
-  12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000,
-  12'h000, 12'h000, 12'h000, 12'h013, 12'h026, 12'h039, 12'h04c, 12'h05f,  // 60.0dBm third from left
-  12'h072, 12'h085, 12'h098, 12'h0ab, 12'h0be, 12'h0d1, 12'h0e4, 12'h0f7,
-  12'h10a, 12'h11d, 12'h130, 12'h143, 12'h156, 12'h169, 12'h17c, 12'h18f,
-  12'h1a2, 12'h1b5, 12'h1c8, 12'h1db, 12'h1ee, 12'h201, 12'h214, 12'h227,
-  12'h23a, 12'h24d, 12'h260, 12'h273, 12'h286, 12'h299, 12'h2ac, 12'h2bf,
-  12'h2d2, 12'h2e5, 12'h2f8, 12'h30b, 12'h31e, 12'h331, 12'h344, 12'h357,
-  12'h36a, 12'h37d, 12'h390, 12'h3a3, 12'h3b6, 12'h3c9, 12'h3dc, 12'h3ef,
-  12'h402, 12'h415, 12'h428, 12'h43b, 12'h44e, 12'h461, 12'h474, 12'h487,
-  12'h49a, 12'h4ad, 12'h4c0, 12'h4d3, 12'h4e6, 12'h4f9, 12'h50c, 12'h51f,
-  12'h532, 12'h545, 12'h558, 12'h56b, 12'h57e, 12'h591, 12'h5a4, 12'h5b7,
-  12'h5ca, 12'h5dd, 12'h5f0, 12'h603, 12'h616, 12'h629, 12'h63c, 12'h64f,
-  12'h662, 12'h675, 12'h688, 12'h69b, 12'h6ae, 12'h6c1, 12'h6d4, 12'h6e7,
-  12'h6fa, 12'h70d, 12'h720, 12'h733, 12'h746, 12'h759, 12'h76c, 12'h77f,
-  12'h792, 12'h7a5, 12'h7b8, 12'h7cb, 12'h7de, 12'h7f1, 12'h804, 12'h817,
-  12'h82a, 12'h83d, 12'h850, 12'h863, 12'h876, 12'h889, 12'h89c, 12'h8af,
-  12'h8c2, 12'h8d5, 12'h8e8, 12'h8fb, 12'h90e, 12'h921, 12'h934, 12'h947,
-  12'h95a, 12'h96d, 12'h980, 12'h993, 12'h9a6, 12'h9b9, 12'h9cc, 12'h9df,
-  12'h9f2, 12'ha05, 12'ha18, 12'ha2b, 12'ha3e, 12'ha51, 12'ha64, 12'ha77,
-  12'ha8a, 12'ha9d, 12'hab0, 12'hac3, 12'had6, 12'hae9, 12'hafc, 12'hb0f,
-  12'hb22, 12'hb35, 12'hb48, 12'h5b5, 12'hb6e, 12'hb81, 12'hb94, 12'hba7,
-  12'hbba, 12'hbcd, 12'hbe0, 12'hbf3, 12'hc06, 12'hc19, 12'hc2c, 12'hc3f,
-  12'hc52, 12'hc65, 12'hc78, 12'hc8b, 12'hc9e, 12'hcb1, 12'hcc4, 12'hcd7,
-  12'hcea, 12'hcfd, 12'hd10, 12'hd23, 12'h160, 12'hd36, 12'hd49, 12'hd5c,
-  12'hd6f, 12'hd82, 12'hd95, 12'hda8, 12'hdbb, 12'hdce, 12'hde1, 12'hdf4,
-  12'he07, 12'he1a, 12'he2d, 12'he40, 12'he53, 12'he66, 12'he79, 12'he8c,
-  12'he9f, 12'heb2, 12'hfff };
-
-  reg [11:0]      dbmx10_2490 [250:0] = { 
-  12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000,
-  12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000,
-  12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000,
-  12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000,  // 61.9dBm rhs
-  12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000,
-  12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000, 12'h000,
-  12'h000, 12'h000, 12'h000, 12'h013, 12'h026, 12'h039, 12'h04c, 12'h05f,  // 60.0dBm third from left
-  12'h072, 12'h085, 12'h098, 12'h0ab, 12'h0be, 12'h0d1, 12'h0e4, 12'h0f7,
-  12'h10a, 12'h11d, 12'h130, 12'h143, 12'h156, 12'h169, 12'h17c, 12'h18f,
-  12'h1a2, 12'h1b5, 12'h1c8, 12'h1db, 12'h1ee, 12'h201, 12'h214, 12'h227,
-  12'h23a, 12'h24d, 12'h260, 12'h273, 12'h286, 12'h299, 12'h2ac, 12'h2bf,
-  12'h2d2, 12'h2e5, 12'h2f8, 12'h30b, 12'h31e, 12'h331, 12'h344, 12'h357,
-  12'h36a, 12'h37d, 12'h390, 12'h3a3, 12'h3b6, 12'h3c9, 12'h3dc, 12'h3ef,
-  12'h402, 12'h415, 12'h428, 12'h43b, 12'h44e, 12'h461, 12'h474, 12'h487,
-  12'h49a, 12'h4ad, 12'h4c0, 12'h4d3, 12'h4e6, 12'h4f9, 12'h50c, 12'h51f,
-  12'h532, 12'h545, 12'h558, 12'h56b, 12'h57e, 12'h591, 12'h5a4, 12'h5b7,
-  12'h5ca, 12'h5dd, 12'h5f0, 12'h603, 12'h616, 12'h629, 12'h63c, 12'h64f,
-  12'h662, 12'h675, 12'h688, 12'h69b, 12'h6ae, 12'h6c1, 12'h6d4, 12'h6e7,
-  12'h6fa, 12'h70d, 12'h720, 12'h733, 12'h746, 12'h759, 12'h76c, 12'h77f,
-  12'h792, 12'h7a5, 12'h7b8, 12'h7cb, 12'h7de, 12'h7f1, 12'h804, 12'h817,
-  12'h82a, 12'h83d, 12'h850, 12'h863, 12'h876, 12'h889, 12'h89c, 12'h8af,
-  12'h8c2, 12'h8d5, 12'h8e8, 12'h8fb, 12'h90e, 12'h921, 12'h934, 12'h947,
-  12'h95a, 12'h96d, 12'h980, 12'h993, 12'h9a6, 12'h9b9, 12'h9cc, 12'h9df,
-  12'h9f2, 12'ha05, 12'ha18, 12'ha2b, 12'ha3e, 12'ha51, 12'ha64, 12'ha77,
-  12'ha8a, 12'ha9d, 12'hab0, 12'hac3, 12'had6, 12'hae9, 12'hafc, 12'hb0f,
-  12'hb22, 12'hb35, 12'hb48, 12'h5b5, 12'hb6e, 12'hb81, 12'hb94, 12'hba7,
-  12'hbba, 12'hbcd, 12'hbe0, 12'hbf3, 12'hc06, 12'hc19, 12'hc2c, 12'hc3f,
-  12'hc52, 12'hc65, 12'hc78, 12'hc8b, 12'hc9e, 12'hcb1, 12'hcc4, 12'hcd7,
-  12'hcea, 12'hcfd, 12'hd10, 12'hd23, 12'h160, 12'hd36, 12'hd49, 12'hd5c,
-  12'hd6f, 12'hd82, 12'hd95, 12'hda8, 12'hdbb, 12'hdce, 12'hde1, 12'hdf4,
-  12'he07, 12'he1a, 12'he2d, 12'he40, 12'he53, 12'he66, 12'he79, 12'he8c,
-  12'he9f, 12'heb2, 12'hfff };
+  // power tables, initialized to linear values, written
+  // at startup by MCU to calibrated values
+  localparam TOP_INDEX = 12'd250;
+  reg [11:0]      dbmx10_2410 [0:250];
+  reg [11:0]      dbmx10_2430 [0:250];
+  reg [11:0]      dbmx10_2450 [0:250];
+  reg [11:0]      dbmx10_2470 [0:250];
+  reg [11:0]      dbmx10_2490 [0:250];
 
   // Xilinx multiplier to perform 16 bit multiplication, output is 32 bits
   ftw_mult dbm_multiplier (
@@ -345,23 +178,6 @@ module power #(parameter FILL_BITS = 4)
     .data_out(spi_read),
     .busy(spi_busy),
     .new_data(spi_done_byte)     // 1=signal, data_out is valid
-  );
-
-  // RAM for power tables
-  // Pattern RAM
-  ptn_ram #(
-    .DEPTH(8),
-    .DEPTH_BITS(3),
-    .WIDTH(12)
-  )
-  dbmx10_2450_tbl
-  (
-    .clk            (sys_clk), 
-    .we             (tbl_wen), 
-    .en             (tbl_en), 
-    .addr_i         (tbl_addr), 
-    .data_i         (tbl_data_wr), 
-    .data_o         (tbl_data_rd)
   );
 
   // Startup power level
@@ -451,25 +267,30 @@ module power #(parameter FILL_BITS = 4)
             init_wordnum <= 3'd0;
             modifier <= INIT_DACS;
           end
-          else if(tbl_init == 1'b0) begin
-            state <= PWR_TBL_INIT;
-            dbm_idx <= 12'd1;
-          end
           else
             status_o <= `SUCCESS;
         end
         PWR_TBL_INIT: begin
           // fill power table RAM with default values
-          if(dbm_idx >= PWR_TBL_ENTRIES) begin
-            tbl_wen <= 1'b0;
-            dbm_idx <= 12'd0;
+          // this will follow after PWR_INIT1 after sys_rst
+          if(dbm_idx == 0) begin
+            dbmx10_2410[0] <= 12'hfff;
+            dbmx10_2430[0] <= 12'hfff;
+            dbmx10_2450[0] <= 12'hfff;
+            dbmx10_2470[0] <= 12'hfff;
+            dbmx10_2490[0] <= 12'hfff;
             tbl_init <= 1'b1;
+            power <= 32'h00000000;
             state <= PWR_IDLE;
           end
-          else begin
-            tbl_data_wr <= dbm_idx << 8;
-            tbl_wen <= 1'b1;
-            dbm_idx = dbm_idx + 1;
+          else begin          
+              dbmx10_2410[dbm_idx] <= power[11:0];
+              dbmx10_2430[dbm_idx] <= power[11:0];
+              dbmx10_2450[dbm_idx] <= power[11:0];
+              dbmx10_2470[dbm_idx] <= power[11:0];
+              dbmx10_2490[dbm_idx] <= power[11:0];
+              dbm_idx <= dbm_idx - 1;
+              power[11:0] <= power[11:0] + 11'h010;
           end
         end
         PWR_INIT1: begin
@@ -491,8 +312,14 @@ module power #(parameter FILL_BITS = 4)
             state <= PWR_VGA1;        // Begin SPI write to VGA DAC
           end
           else begin
-            state <= PWR_IDLE;
-            init_wordnum <= 3'd0;
+            //state <= PWR_IDLE;
+            init_wordnum <= 3'd0;            
+            // Follow INIT_DACS with init power table
+            //else if(tbl_init == 1'b0) begin
+            state <= PWR_TBL_INIT;
+            dbm_idx <= TOP_INDEX;
+            power[11:0] <= 12'd0; 
+            //end
           end  
         end
         PWR_SPCR: begin
@@ -580,10 +407,6 @@ module power #(parameter FILL_BITS = 4)
           state <= PWR_SLOPE1;
         end
         PWR_SLOPE1: begin
-
-  dbm_idx <= 12'd6;
-
-
           // interpolate between power tables
           if(frequency_i <= FRQ2) begin
           // slope = ((dbmx10_2410[dbm_idx] - dbmx10_2430[dbm_idx]))/(FRQ_DELTA);
@@ -631,26 +454,21 @@ module power #(parameter FILL_BITS = 4)
           // F2 into multiplicand
           if(frequency_i <= FRQ2) begin
             interp1 <= FRQ2;
-            intercept <= {4'd0, dbmx10_2430[100]};  // setup for later step
+            intercept <= {4'd0, dbmx10_2430[dbm_idx]};  // setup for later step
           end
           else if(frequency_i <= FRQ3) begin
             interp1 <= FRQ3;            
-            intercept <= {4'd0, dbmx10_2450[100]};  // setup for later step
+            intercept <= {4'd0, dbmx10_2450[dbm_idx]};  // setup for later step
           end
           else if(frequency_i <= FRQ4) begin
             interp1 <= FRQ4;           
-            intercept <= {4'd0, dbmx10_2470[100]};  // setup for later step
+            intercept <= {4'd0, dbmx10_2470[dbm_idx]};  // setup for later step
           end
           else begin
             interp1 <= FRQ5;           
-            intercept <= {4'd0, dbmx10_2490[100]};  // setup for later step
+            intercept <= {4'd0, dbmx10_2490[dbm_idx]};  // setup for later step
           end
           state <= PWR_INTCPT1;
-        
-      // debug
-      dbmx10_o <= tbl_data_rd;
-      intercept[11:0] <= tbl_data_rd;
-                  
         end
         PWR_INTCPT1: begin
           interp_mul <= 1'b1;
@@ -709,7 +527,5 @@ module power #(parameter FILL_BITS = 4)
         endcase
     end
   end
-
-  assign tbl_addr = dbm_idx[2:0];
 
 endmodule
