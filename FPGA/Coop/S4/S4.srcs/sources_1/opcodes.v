@@ -155,7 +155,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     reg  [PTN_WR_WORD-1:0]          ptn_data_reg;       // pattern data written to pattern RAM
     reg  [7:0]                      ptn_latch_count;    // Clocks to latch data into RAM
     reg  [7:0]                      ptn_count;
-    reg  [7:0]                      saved_opc_byte;     // Save opcode byte in case of write to pattern RAM
 
     reg  [31:0]  trig_conf;          // trigger configuration, from trig_conf opcode
     reg  [15:0]  sync_conf;          // sync configuration, from sync_conf opcode
@@ -343,7 +342,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     state <= `STATE_LENGTH;   // Part 1 of length, get length msb & get opcode next
                 end
                 `STATE_LENGTH: begin
-                    saved_opc_byte <= fifo_dat_i[6:0];      // Save opcode byte in case of write to pattern RAM
                     length <= {fifo_dat_i[0], length[7:0]};
                     rsp_index <= 16'h0000;                  // index for multi-byte data blocks
                     opcode <= fifo_dat_i[7:1];              // got opcode, start reading data
@@ -614,7 +612,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             `FREQ: begin
                 if(operating_mode == `PTNCMD_LOAD) begin // Write pattern mode
                     // 12 bytes, 3 bytes patClk tick, 1 byte opcode, 8 bytes for left-justified opcode data
-                    ptn_data_reg <= {ptn_clk, 1'b0, saved_opc_byte[7:1], uinttmp};
+                    ptn_data_reg <= {ptn_clk, 1'b0, opcode, uinttmp};
                     ptn_wen_o <= 1'b1;  // Write the entry 
                     state <= `STATE_WR_PTN;
                 end
@@ -628,7 +626,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             `POWER: begin
                 if(operating_mode == `PTNCMD_LOAD) begin // Write pattern mode
                     // 12 bytes, 3 bytes patClk tick, 1 byte opcode, 8 bytes of opcode data
-                    ptn_data_reg <= {ptn_clk, 1'b0, saved_opc_byte[7:1], uinttmp};
+                    ptn_data_reg <= {ptn_clk, 1'b0, opcode, uinttmp};
                     ptn_wen_o <= 1'b1;  // Write the entry 
                     state <= `STATE_WR_PTN;
                 end
@@ -642,7 +640,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             `CALPWR: begin  // power processor handles both user power requests and power cal commands
                 if(operating_mode == `PTNCMD_LOAD) begin // Write pattern mode
                     // 12 bytes, 3 bytes patClk tick, 1 byte opcode, 8 bytes of opcode data
-                    ptn_data_reg <= {ptn_clk, 1'b0, saved_opc_byte[7:1], uinttmp};
+                    ptn_data_reg <= {ptn_clk, 1'b0, opcode, uinttmp};
                     ptn_wen_o <= 1'b1;  // Write the entry 
                     state <= `STATE_WR_PTN;
                 end
@@ -656,7 +654,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             `PULSE: begin
                 if(operating_mode == `PTNCMD_LOAD) begin // Write pattern mode
                     // 12 bytes, 3 bytes patClk tick, 1 byte opcode, 8 bytes of opcode data
-                    ptn_data_reg <= {ptn_clk, 1'b0, saved_opc_byte[7:1], uinttmp};
+                    ptn_data_reg <= {ptn_clk, 1'b0, opcode, uinttmp};
                     ptn_wen_o <= 1'b1;  // Write the entry 
                     state <= `STATE_WR_PTN;
                 end
@@ -669,7 +667,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             `BIAS: begin
                 if(operating_mode == `PTNCMD_LOAD) begin // Write pattern mode
                     // 12 bytes, 3 bytes patClk tick, 1 byte opcode, 8 bytes of opcode data
-                    ptn_data_reg <= {ptn_clk, 1'b0, saved_opc_byte[7:1], uinttmp};
+                    ptn_data_reg <= {ptn_clk, 1'b0, opcode, uinttmp};
                     ptn_wen_o <= 1'b1;  // Write the entry 
                     state <= `STATE_WR_PTN;
                 end
@@ -681,7 +679,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             `MODE: begin
                 if(operating_mode == `PTNCMD_LOAD) begin // Write pattern mode
                     // 12 bytes, 3 bytes patClk tick, 1 byte opcode, 8 bytes of opcode data
-                    ptn_data_reg <= {ptn_clk, 1'b0, saved_opc_byte[7:1], uinttmp};
+                    ptn_data_reg <= {ptn_clk, 1'b0, opcode, uinttmp};
                     ptn_wen_o <= 1'b1;  // Write the entry 
                     state <= `STATE_WR_PTN;
                 end
@@ -719,7 +717,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     if(operating_mode == `PTNCMD_LOAD) begin  // Write pattern mode, end of pattern
                     // save opcode in pattern RAM
                         // 12 bytes, 3 bytes patclk tick, 1 byte opcode, 8 bytes for opcode data (uinttmp)
-                        ptn_data_reg <= {ptn_clk, 1'b0, saved_opc_byte[7:1], uinttmp};
+                        ptn_data_reg <= {ptn_clk, 1'b0, opcode, uinttmp};
                         ptn_wen_o <= 1'b1; 
                         state <= `STATE_WR_PTN;
                         operating_mode <= `OPCODE_NORMAL;     // Done writing pattern
@@ -728,6 +726,17 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                         stop_pattern();
                         next_opcode(); 
                     end
+                end
+                `PTN_BRANCH: begin                   // end of pattern writing or running
+                    if(operating_mode == `PTNCMD_LOAD) begin  // Write pattern mode, end of pattern
+                    // save opcode in pattern RAM
+                        // 12 bytes, 3 bytes patclk tick, 1 byte opcode, 8 bytes for opcode data (uinttmp)
+                        ptn_data_reg <= {ptn_clk, 1'b0, opcode, uinttmp};
+                        ptn_wen_o <= 1'b1; 
+                        state <= `STATE_WR_PTN;
+                    end
+                    else
+                        next_opcode();                     
                 end
                 `PTN_RUN: begin
                     start_pattern(uinttmp[31:16]);
