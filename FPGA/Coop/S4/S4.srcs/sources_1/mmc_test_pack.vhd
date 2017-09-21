@@ -42,7 +42,6 @@ package mmc_test_pack is
     HOST_RAM_ADR_BITS   : natural; -- Determines amount of BRAM in MMC host
     MMC_FIFO_DEPTH      : integer;
     MMC_FILL_LEVEL_BITS : integer; -- Should be at least int(floor(log2(FIFO_DEPTH))+1.0)
-    RSP_FILL_LEVEL_BITS : integer; 
     MMC_RAM_ADR_BITS    : integer
   );
   port (
@@ -692,7 +691,6 @@ use work.async_syscon_pack.all;
     HOST_RAM_ADR_BITS   : natural := 14; -- Determines amount of BRAM in MMC host
     MMC_FIFO_DEPTH      : integer := 2048;
     MMC_FILL_LEVEL_BITS : integer := 14; -- Should be at least int(floor(log2(FIFO_DEPTH))+1.0)
-    RSP_FILL_LEVEL_BITS : integer := 10; 
     MMC_RAM_ADR_BITS    : integer := 14  -- 16 Kilobytes
   );
   port (

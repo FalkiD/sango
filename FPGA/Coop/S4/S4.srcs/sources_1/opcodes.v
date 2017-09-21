@@ -58,7 +58,6 @@
     Normal to wait for next byte.
 */
 module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
-                 parameter RSP_FILL_LEVEL_BITS = 10,
                  parameter PTN_FILL_BITS = 16,
                  parameter PTN_WR_WORD = 96,
                  parameter PTN_RD_WORD = 72,

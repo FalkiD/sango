@@ -183,13 +183,12 @@
 //`define CLKFB_FACTOR_MCU 9.800         //  "       "        "      "
 `define GLBL_MMC_FILL_LEVEL         2048
 `define GLBL_MMC_FILL_LEVEL_BITS    11
-`define GLBL_RSP_FILL_LEVEL_BITS    10
 `define PWR_FIFO_FILL_BITS          4
 
 `define PATTERN_DEPTH               8192
 `define PATTERN_FILL_BITS           13
-`define PTN_TO_OPC_COUNT            256 //16
-`define PTN_TO_OPC_BITS             8 //4
+`define PTN_TO_OPC_COUNT            16
+`define PTN_TO_OPC_BITS             4
 
 // -----------------------------------------------------------------------------
 
@@ -518,78 +517,78 @@ assign  mmcm_pwrdn_i  = 1'b0;
 //
 //
 
-////  <JLC_TEMP_NO_MMCM>
-//`ifndef JLC_TEMP_NO_MMCM
-//MMCME2_BASE #(
-//  .BANDWIDTH("OPTIMIZED"), // Jitter programming (OPTIMIZED, HIGH, LOW)
-//  .CLKFBOUT_MULT_F(`CLKFB_FACTOR_MCU),  // Multiply value for all CLKOUT (2.000-64.000)   = Fpfd/Fclkin1  <JLC_TEMP_CLK>
-//  .CLKFBOUT_PHASE(0.000),  // Phase offset in degrees of CLKFB (-360.000-360.000).
-//  .CLKIN1_PERIOD(9.800),  // Input clock period in ns to ps resolution (i.e. 33.333 is 30 MHz).           <JLC_TEMP_CLK>
-//  // CLKOUT0_DIVIDE - CLKOUT6_DIVIDE: Divide amount for each CLKOUT (1-128)
-//  .CLKOUT0_DIVIDE_F(10),   // 1000MHz / 10.0 = 100MHz  Divide amount for CLKOUT0 (1.000-128.000).
-//  .CLKOUT1_DIVIDE(5),      // 1000MHz /  5.0 = 200MHz
-//  .CLKOUT2_DIVIDE(20),     // 1000MHz / 20.0 =  50MHz
-//  .CLKOUT3_DIVIDE(1),
-//  .CLKOUT4_DIVIDE(1),
-//  .CLKOUT5_DIVIDE(1),
-//  .CLKOUT6_DIVIDE(1),
-//  // CLKOUT0_DUTY_CYCLE - CLKOUT6_DUTY_CYCLE: Duty cycle for each CLKOUT (0.01-0.99).
-//  .CLKOUT0_DUTY_CYCLE(0.50),
-//  .CLKOUT1_DUTY_CYCLE(0.50),
-//  .CLKOUT2_DUTY_CYCLE(0.50),
-//  .CLKOUT3_DUTY_CYCLE(0.50),
-//  .CLKOUT4_DUTY_CYCLE(0.50),
-//  .CLKOUT5_DUTY_CYCLE(0.50),
-//  .CLKOUT6_DUTY_CYCLE(0.50),
-//  // CLKOUT0_PHASE - CLKOUT6_PHASE: Phase offset for each CLKOUT (-360.000-360.000).
-//  .CLKOUT0_PHASE(0.000),
-//  .CLKOUT1_PHASE(0.000),
-//  .CLKOUT2_PHASE(0.000),
-//  .CLKOUT3_PHASE(0.000),
-//  .CLKOUT4_PHASE(0.000),
-//  .CLKOUT5_PHASE(0.000),
-//  .CLKOUT6_PHASE(0.000),
-//  .CLKOUT4_CASCADE("FALSE"), // Cascade CLKOUT4 counter with CLKOUT6 (FALSE, TRUE)
-//  .DIVCLK_DIVIDE(1),         // Master division value (1-106):   Fpfd = CLKIN1/DIVCLK_DIVIDE.
-//  .REF_JITTER1(0.010),       // Reference input jitter in UI (0.000-0.999).
-//  .STARTUP_WAIT("FALSE")     // Delays DONE until MMCM is locked (FALSE, TRUE)
-//)
-//MMCME2_BASE_inst (
-//  // Clock Outputs: 1-bit (each) output: User configurable clock outputs
-//  .CLKOUT0(clk100prebufg), // 1-bit output: CLKOUT0
-//  .CLKOUT0B(), // 1-bit output: Inverted CLKOUT0
-//  .CLKOUT1(clk200prebufg), // 1-bit output: CLKOUT1
-//  .CLKOUT1B(), // 1-bit output: Inverted CLKOUT1
-//  .CLKOUT2(clk050prebufg), // 1-bit output: CLKOUT2
-//  .CLKOUT2B(), // 1-bit output: Inverted CLKOUT2
-//  .CLKOUT3(), // 1-bit output: CLKOUT3
-//  .CLKOUT3B(), // 1-bit output: Inverted CLKOUT3
-//  .CLKOUT4(), // 1-bit output: CLKOUT4
-//  .CLKOUT5(), // 1-bit output: CLKOUT5
-//  .CLKOUT6(), // 1-bit output: CLKOUT6
-//  // Feedback Clocks: 1-bit (each) output: Clock feedback ports
-//  .CLKFBOUT(clkfbprebufg), // 1-bit output: Feedback clock
-//  .CLKFBOUTB(), // 1-bit output: Inverted CLKFBOUT
-//  // Status Ports: 1-bit (each) output: MMCM status ports
-//  .LOCKED(mmcm_locked_o), // 1-bit output: LOCK
-//  // Clock Inputs: 1-bit (each) input: Clock input
-//  .CLKIN1(clkin), // 1-bit input: Clock
-//  // Control Ports: 1-bit (each) input: MMCM control ports
-//  .PWRDWN(mmcm_pwrdn_i), // 1-bit input: Power-down
-//  .RST(mmcm_rst_i), // 1-bit input: Reset
-//  // Feedback Clocks: 1-bit (each) input: Clock feedback ports
-//  .CLKFBIN(clkfb) // 1-bit input: Feedback clock
-//);
-//// End of MMCME2_BASE_inst instantiation
+//  <JLC_TEMP_NO_MMCM>
+`ifndef JLC_TEMP_NO_MMCM
+MMCME2_BASE #(
+  .BANDWIDTH("OPTIMIZED"), // Jitter programming (OPTIMIZED, HIGH, LOW)
+  .CLKFBOUT_MULT_F(`CLKFB_FACTOR_MCU),  // Multiply value for all CLKOUT (2.000-64.000)   = Fpfd/Fclkin1  <JLC_TEMP_CLK>
+  .CLKFBOUT_PHASE(0.000),  // Phase offset in degrees of CLKFB (-360.000-360.000).
+  .CLKIN1_PERIOD(9.800),  // Input clock period in ns to ps resolution (i.e. 33.333 is 30 MHz).           <JLC_TEMP_CLK>
+  // CLKOUT0_DIVIDE - CLKOUT6_DIVIDE: Divide amount for each CLKOUT (1-128)
+  .CLKOUT0_DIVIDE_F(10),   // 1000MHz / 10.0 = 100MHz  Divide amount for CLKOUT0 (1.000-128.000).
+  .CLKOUT1_DIVIDE(5),      // 1000MHz /  5.0 = 200MHz
+  .CLKOUT2_DIVIDE(20),     // 1000MHz / 20.0 =  50MHz
+  .CLKOUT3_DIVIDE(1),
+  .CLKOUT4_DIVIDE(1),
+  .CLKOUT5_DIVIDE(1),
+  .CLKOUT6_DIVIDE(1),
+  // CLKOUT0_DUTY_CYCLE - CLKOUT6_DUTY_CYCLE: Duty cycle for each CLKOUT (0.01-0.99).
+  .CLKOUT0_DUTY_CYCLE(0.50),
+  .CLKOUT1_DUTY_CYCLE(0.50),
+  .CLKOUT2_DUTY_CYCLE(0.50),
+  .CLKOUT3_DUTY_CYCLE(0.50),
+  .CLKOUT4_DUTY_CYCLE(0.50),
+  .CLKOUT5_DUTY_CYCLE(0.50),
+  .CLKOUT6_DUTY_CYCLE(0.50),
+  // CLKOUT0_PHASE - CLKOUT6_PHASE: Phase offset for each CLKOUT (-360.000-360.000).
+  .CLKOUT0_PHASE(0.000),
+  .CLKOUT1_PHASE(0.000),
+  .CLKOUT2_PHASE(0.000),
+  .CLKOUT3_PHASE(0.000),
+  .CLKOUT4_PHASE(0.000),
+  .CLKOUT5_PHASE(0.000),
+  .CLKOUT6_PHASE(0.000),
+  .CLKOUT4_CASCADE("FALSE"), // Cascade CLKOUT4 counter with CLKOUT6 (FALSE, TRUE)
+  .DIVCLK_DIVIDE(1),         // Master division value (1-106):   Fpfd = CLKIN1/DIVCLK_DIVIDE.
+  .REF_JITTER1(0.010),       // Reference input jitter in UI (0.000-0.999).
+  .STARTUP_WAIT("FALSE")     // Delays DONE until MMCM is locked (FALSE, TRUE)
+)
+MMCME2_BASE_inst (
+  // Clock Outputs: 1-bit (each) output: User configurable clock outputs
+  .CLKOUT0(clk100prebufg), // 1-bit output: CLKOUT0
+  .CLKOUT0B(), // 1-bit output: Inverted CLKOUT0
+  .CLKOUT1(clk200prebufg), // 1-bit output: CLKOUT1
+  .CLKOUT1B(), // 1-bit output: Inverted CLKOUT1
+  .CLKOUT2(clk050prebufg), // 1-bit output: CLKOUT2
+  .CLKOUT2B(), // 1-bit output: Inverted CLKOUT2
+  .CLKOUT3(), // 1-bit output: CLKOUT3
+  .CLKOUT3B(), // 1-bit output: Inverted CLKOUT3
+  .CLKOUT4(), // 1-bit output: CLKOUT4
+  .CLKOUT5(), // 1-bit output: CLKOUT5
+  .CLKOUT6(), // 1-bit output: CLKOUT6
+  // Feedback Clocks: 1-bit (each) output: Clock feedback ports
+  .CLKFBOUT(clkfbprebufg), // 1-bit output: Feedback clock
+  .CLKFBOUTB(), // 1-bit output: Inverted CLKFBOUT
+  // Status Ports: 1-bit (each) output: MMCM status ports
+  .LOCKED(mmcm_locked_o), // 1-bit output: LOCK
+  // Clock Inputs: 1-bit (each) input: Clock input
+  .CLKIN1(clkin), // 1-bit input: Clock
+  // Control Ports: 1-bit (each) input: MMCM control ports
+  .PWRDWN(mmcm_pwrdn_i), // 1-bit input: Power-down
+  .RST(mmcm_rst_i), // 1-bit input: Reset
+  // Feedback Clocks: 1-bit (each) input: Clock feedback ports
+  .CLKFBIN(clkfb) // 1-bit input: Feedback clock
+);
+// End of MMCME2_BASE_inst instantiation
 
-//  BUFG BUFG_clkfb  (.I(clkfbprebufg),  .O(clkfb));
-//  BUFG BUFG_clk100 (.I(clk100prebufg), .O(clk100));
-//  BUFG BUFG_clk200 (.I(clk200prebufg), .O(clk200));
-//  BUFG BUFG_clk050 (.I(clk050prebufg), .O(clk050));
-//  assign sys_clk   = clk100;
-//`else
+  BUFG BUFG_clkfb  (.I(clkfbprebufg),  .O(clkfb));
+  BUFG BUFG_clk100 (.I(clk100prebufg), .O(clk100));
+  BUFG BUFG_clk200 (.I(clk200prebufg), .O(clk200));
+  BUFG BUFG_clk050 (.I(clk050prebufg), .O(clk050));
+  assign sys_clk   = clk100;
+`else
   assign sys_clk   = clkin;
-//`endif
+`endif
 
 `ifndef USE_FPGA_MCLK
   IBUFGDS IBUFGDS_clkin  (.I(FPGA_CLK), .IB(FPGA_CLKn), .O(clk_diff_rcvd));
@@ -830,7 +829,6 @@ end
     .HOST_RAM_ADR_BITS    (14), // Determines amount of BRAM in MMC host
     .MMC_FIFO_DEPTH       (`GLBL_MMC_FILL_LEVEL), // (2048),
     .MMC_FILL_LEVEL_BITS  (`GLBL_MMC_FILL_LEVEL_BITS),    // (16),
-    .RSP_FILL_LEVEL_BITS  (`GLBL_RSP_FILL_LEVEL_BITS),    // (10),
     .MMC_RAM_ADR_BITS     (9)      // 512 bytes, 1st sector (17)
   ) mmc_tester_0 (
 
@@ -1053,7 +1051,6 @@ end
 
   opcodes #(
      .MMC_FILL_LEVEL_BITS(`GLBL_MMC_FILL_LEVEL_BITS),
-     .RSP_FILL_LEVEL_BITS(`GLBL_RSP_FILL_LEVEL_BITS),
      .PTN_FILL_BITS(`PATTERN_FILL_BITS),
      .PTN_WR_WORD(`PATTERN_WR_WORD),
      .PTN_RD_WORD(`PATTERN_RD_WORD)
