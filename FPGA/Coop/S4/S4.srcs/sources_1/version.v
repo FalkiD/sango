@@ -37,7 +37,8 @@
 // Revision 1.00.C  08/04/2017 JLC DDS SPI Init & Re-Freq AD9954 & dds.v (esp. sclk-data) cleanup.
 // Revision 1.00.D  08/04/2017 JLC SYN SPI Init for LTC6946.
 // Revision 1.00.E  08/04/2017 JLC SYN SPI Init for LTC6946 resequenced to wait for DDS init.
-// Revision 1.00.F  09/20/2017 RMR Patterns run. Power interpolation working w/0 slope.
+// Revision 1.00.F  09/21/2017 RMR Patterns run, STATUS returns VERSION.
+//
 //------------------------------------------------------------------------------
 
 `define VERSION 16'h1_00_F     // V.vv.r FPGA development revision

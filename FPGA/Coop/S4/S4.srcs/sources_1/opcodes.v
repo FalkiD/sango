@@ -143,7 +143,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     reg          response_ready;     // flag when response ready
     reg  [MMC_FILL_LEVEL_BITS-1:0]  response_length;    // length of response data
     reg  [MMC_FILL_LEVEL_BITS-1:0]  rsp_length;         // length tmp var
-    reg  [7:0]   rsp_data [`STATUS_RESPONSE_SIZE-1:0];  // 26 byte array of response bytes (status)
+    reg  [7:0]   rsp_data [`STATUS_RESPONSE_SIZE-1:0];  // 26 byte array of response bytes for status
     reg  [MMC_FILL_LEVEL_BITS-1:0]  rsp_index;          // response array index
     localparam GENERAL_ARR  = 2'b00;
     localparam MEAS_FIFO    = 2'b01;
@@ -479,8 +479,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             case(opcode)
             `STATUS:  begin
                 // return system status, 1st 4 bytes are standard, opcode status, last opcode, 2 length bytes.
-                // For status opcode, length = 26 bytes defined so far:
-                // FPGA version, 16'h1_00_F, V.vv.r, 2 bytes
+                // For status opcode, length = 26 bytes defined so far(9/21/2017):
+                // VERSION V.vv.r, 2 bytes
                 // opcodes processed, 4 bytes
                 // opcode processor status
                 // opcode processor state
@@ -601,7 +601,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                         rsp_data[rsp_index] <= {7'd0, syn_stat_i};          // SYN_STAT, 1 if PLL locked
                         rsp_index <= rsp_index + 1; 
                     end
-                    25: begin
+                    25:    begin
                         rsp_data[rsp_index] <= 8'd0;                        // pad to even # of bytes
                         rsp_index <= rsp_index + 1; 
                         rsp_length <= rsp_index + 2;
@@ -896,7 +896,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     function bad_opcode;
     input [6:0] opcode;    
     begin
-        if((opcode > `CLZMON && opcode < `PTN_PATCLK) ||
+        if((opcode > `CALPWR && opcode < `PTN_PATCLK) ||
            (opcode > `PTN_BRANCH && opcode < `MEAS_ZMSIZE) ||
            (opcode > `MEAS)) begin 
             bad_opcode = 1'b1;

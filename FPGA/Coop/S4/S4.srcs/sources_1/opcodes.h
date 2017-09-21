@@ -18,8 +18,6 @@
 `define ECHO			    7'h0C
 `define RESET               7'h0D
 `define CALPWR              7'h0E
-`define CPWTBL              7'h0F
-`define CLZMON              7'h10
 // Change bad_opcode() task in opcodes.v when adding/changing opcode list
 
 // Patterns, 0x20 based
