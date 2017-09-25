@@ -130,6 +130,9 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     input  wire [11:0]   dbm_x10_i                // dBm x10, system power level    
     );
 
+    // opcodes with integer arguments have 8 bytes or less of data
+    localparam INT_ARG_BYTES = 8;
+
     reg  [3:0]   operating_mode = `OPCODE_NORMAL; // 0=normal, process & run opcodes, other cmds for pattern load/run
     reg  [6:0]   state = `STATE_IDLE;             // Use as flag in hardware to indicate first starting up
     reg  [6:0]   next_state = `STATE_IDLE;
@@ -349,8 +352,16 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     end
                     // length tests
                     else if({fifo_dat_i[0], length[7:0]} > (fifo_rd_count_i-1)) begin
-                        fifo_rd_en_o <= 0;                  // let it fill
-                        state <= `STATE_WAIT_DATA;
+                        // need more data, wait for it if valid request
+                        if(!arg_is_bytes[opcode[6:0]] &&        // Opcode with integer argument
+                           length > INT_ARG_BYTES) begin        // ...none have more than 8 bytes of data
+                                status_o <= `ERR_INVALID_LENGTH;
+                                state <= `STATE_BEGIN_RESPONSE;
+                        end
+                        else begin
+                            fifo_rd_en_o <= 0;                  // let it fill
+                            state <= `STATE_WAIT_DATA;
+                        end
                     end
                     else begin
                         if({fifo_dat_i[0], length[7:0]} == 0) begin
@@ -398,7 +409,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                         // Gather opcode data payload, then run it
                         // Most opcodes will use the same code here, (integer args) just different number of bytes.
                         if(!arg_is_bytes[opcode[6:0]]) begin    // Opcode with integer argument
-                            if(length > 8) begin
+                            if(length > INT_ARG_BYTES) begin
                                 status_o <= `ERR_INVALID_LENGTH;
                                 state <= `STATE_BEGIN_RESPONSE;
                             end

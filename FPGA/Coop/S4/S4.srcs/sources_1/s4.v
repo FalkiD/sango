@@ -183,12 +183,15 @@
 //`define CLKFB_FACTOR_MCU 9.800         //  "       "        "      "
 `define GLBL_MMC_FILL_LEVEL         2048
 `define GLBL_MMC_FILL_LEVEL_BITS    11
-`define PWR_FIFO_FILL_BITS          4
+//`define PWR_FIFO_FILL_BITS          4
 
 `define PATTERN_DEPTH               8192
 `define PATTERN_FILL_BITS           13
 `define PTN_TO_OPC_COUNT            16
 `define PTN_TO_OPC_BITS             4
+
+`define PROCESSOR_FIFO_DEPTH        8
+`define PROCESSOR_FIFO_FILL_BITS    3
 
 // -----------------------------------------------------------------------------
 
@@ -361,7 +364,7 @@ wire [31:0]  frq_fifo_dat_o;          // to frequency processor
 wire         frq_fifo_ren;            // frequency fifo read enable
 wire         frq_fifo_mt;             // frequency fifo empty flag
 wire         frq_fifo_full;           // frequency fifo full flag
-wire [5:0]   frq_fifo_count;
+wire [`PROCESSOR_FIFO_FILL_BITS-1:0]   frq_fifo_count;
 wire [7:0]   frq_status;              // frequency processor status
 // DDS processor wires
 wire [31:0]  ftw_fifo_dat_i; // = 32'h0000_0000;          // frequency tuning word fifo input(SPI data) from frequency processor.
@@ -380,7 +383,7 @@ wire         pwr_fifo_ren;            // power fifo read enable
 wire         pwr_fifo_mt;             // power fifo empty flag
 wire         pwr_fifo_full;           // power fifo full flag
 wire [7:0]   pwr_status;              // power processor status
-wire [`PWR_FIFO_FILL_BITS-1:0]   pwr_fifo_count;
+wire [`PROCESSOR_FIFO_FILL_BITS-1:0]   pwr_fifo_count;
 // power processor outputs, mux'd to main outputs
 wire         pwr_mosi;
 wire         pwr_sclk;
@@ -395,7 +398,7 @@ wire         pls_fifo_ren;            // pulse fifo read enable
 wire         pls_fifo_mt;             // pulse fifo empty flag
 wire         pls_fifo_full;           // pulse fifo full flag
 wire [7:0]   pls_status;              // pulse processor status
-wire [`PWR_FIFO_FILL_BITS-1:0]   pls_fifo_count;
+wire [`PROCESSOR_FIFO_FILL_BITS-1:0]   pls_fifo_count;
 wire         pls_zmonen;              // from pulse processor to ZMON_EN
 wire         pls_rfgate;              // from pulse processor to RF_GATE
 wire         pls_rfgate2;             // from pulse processor to RF_GATE2
@@ -652,10 +655,10 @@ end
   swiss_army_fifo #(
     .USE_BRAM(1),
     .WIDTH(32),
-    .DEPTH(64),
-    .FILL_LEVEL_BITS(6),
-    .PF_FULL_POINT(63),
-    .PF_FLAG_POINT(32),
+    .DEPTH(`PROCESSOR_FIFO_DEPTH),
+    .FILL_LEVEL_BITS(`PROCESSOR_FIFO_FILL_BITS),
+    .PF_FULL_POINT(7),
+    .PF_FLAG_POINT(4),
     .PF_EMPTY_POINT(1)
   ) freq_fifo(
     .sys_rst_n(sys_rst_n),
@@ -689,10 +692,10 @@ end
     swiss_army_fifo #(
       .USE_BRAM(1),
       .WIDTH(39),
-      .DEPTH(16),
-      .FILL_LEVEL_BITS(`PWR_FIFO_FILL_BITS),
-      .PF_FULL_POINT(15),
-      .PF_FLAG_POINT(8),
+      .DEPTH(`PROCESSOR_FIFO_DEPTH),
+      .FILL_LEVEL_BITS(`PROCESSOR_FIFO_FILL_BITS),
+      .PF_FULL_POINT(7),
+      .PF_FLAG_POINT(4),
       .PF_EMPTY_POINT(1)
     ) pwr_fifo(
       .sys_rst_n(sys_rst_n),
@@ -723,10 +726,10 @@ end
     swiss_army_fifo #(
       .USE_BRAM(1),
       .WIDTH(64),
-      .DEPTH(16),
-      .FILL_LEVEL_BITS(`PWR_FIFO_FILL_BITS),
-      .PF_FULL_POINT(`PWR_FIFO_FILL_BITS-1),
-      .PF_FLAG_POINT(`PWR_FIFO_FILL_BITS>>1),
+      .DEPTH(`PROCESSOR_FIFO_DEPTH),
+      .FILL_LEVEL_BITS(`PROCESSOR_FIFO_FILL_BITS),
+      .PF_FULL_POINT(7),
+      .PF_FLAG_POINT(4),
       .PF_EMPTY_POINT(1)
     ) pulse_fifo(
         .sys_rst_n(sys_rst_n),
@@ -947,7 +950,7 @@ end
   // Input:requested power in dBm or a cal value in fifo
   // Output:Programs DAC7563 chip on VGA SPI
   power #(
-    .FILL_BITS(`PWR_FIFO_FILL_BITS)
+    .FILL_BITS(`PROCESSOR_FIFO_FILL_BITS)
   )
   pwr_processor 
   (
@@ -979,7 +982,7 @@ end
   // Input:pulse data in fifo
   // Output:Programs RFGATE and does ZMON measurements
   pulse #(
-    .FILL_BITS(`PWR_FIFO_FILL_BITS)
+    .FILL_BITS(`PROCESSOR_FIFO_FILL_BITS)
   )
   pls_processor 
   (
