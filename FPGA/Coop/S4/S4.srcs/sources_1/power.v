@@ -43,7 +43,12 @@ module power #(parameter FILL_BITS = 4)
     
   input  wire           power_en,
   
-  input  wire           doInit_i,   // Initialize DAC's after reset
+  input  wire           doInit_i,       // Initialize DAC's after reset
+
+  // during calibration, frequency_i indicates which table to update  
+  input  wire           doCalibrate_i,  // Update power table from CALPTBL opcode
+  input  wire  [11:0]   caldata_i,      // 12-bits cal data
+  input  wire  [11:0]   calidx_i,       // index of cal data
 
   // Power opcode(s) are in input fifo
   // Power opcode byte 0 is channel#, (only 1 channel for S4)
@@ -163,7 +168,7 @@ module power #(parameter FILL_BITS = 4)
   wire        spi_busy;         // 'each byte' busy
   wire        spi_done_byte;    // 1=done with a byte, data is valid
   spi #(
-    .CLK_DIV(3),
+    .CLK_DIV(2),                // use 25MHz, DAC max is 50MHz
     .CPHA(1)
   ) 
   vga_spi 
@@ -212,9 +217,8 @@ module power #(parameter FILL_BITS = 4)
   localparam PWR_INIT1          = 23;
   localparam PWR_INIT2          = 24;
   localparam PWR_TBL_INIT       = 25;
-  
-  localparam PWR_TBL_ENTRIES    = 8;
-  
+  localparam PWR_TBL_CAL        = 26;
+
   localparam    DAC_WORD0       = 32'h00380000;     // Disable internal refs, Gain=1
   localparam    DAC_WORD1       = 32'h00300003;     // LDAC pin inactive DAC A & B
   localparam    DACAB_FS        = 32'h0017FFF0;     // DAC AB input, write both. full scale is minimum power
@@ -246,6 +250,27 @@ module power #(parameter FILL_BITS = 4)
       slope_is_neg <= 1'b0;
     end
     else if(power_en == 1) begin
+
+      // calibrate is special case, overwrite teh values in the
+      // cal table from he opcode processor
+      if(doCalibrate_i) begin
+        if(frequency_i == FRQ1) begin
+            dbmx10_2410[calidx_i] <= caldata_i;
+        end
+        else if(frequency_i == FRQ2) begin
+            dbmx10_2430[calidx_i] <= caldata_i;
+        end
+        else if(frequency_i == FRQ3) begin
+            dbmx10_2450[calidx_i] <= caldata_i;
+        end
+        else if(frequency_i == FRQ4) begin
+            dbmx10_2470[calidx_i] <= caldata_i;
+        end
+        else begin
+            dbmx10_2490[calidx_i] <= caldata_i;
+        end
+      end
+    
       case(state)
         PWR_WAIT: begin
           if(latency_counter == 0)
@@ -279,18 +304,16 @@ module power #(parameter FILL_BITS = 4)
             dbmx10_2450[0] <= 12'hfff;
             dbmx10_2470[0] <= 12'hfff;
             dbmx10_2490[0] <= 12'hfff;
-            tbl_init <= 1'b1;
-            power <= 32'h00000000;
             state <= PWR_IDLE;
           end
-          else begin          
-              dbmx10_2410[dbm_idx] <= power[11:0];
-              dbmx10_2430[dbm_idx] <= power[11:0];
-              dbmx10_2450[dbm_idx] <= power[11:0];
-              dbmx10_2470[dbm_idx] <= power[11:0];
-              dbmx10_2490[dbm_idx] <= power[11:0];
-              dbm_idx <= dbm_idx - 1;
-              power[11:0] <= power[11:0] + 11'h010;
+          else begin
+            dbmx10_2410[dbm_idx] <= power[11:0];
+            dbmx10_2430[dbm_idx] <= power[11:0];
+            dbmx10_2450[dbm_idx] <= power[11:0];
+            dbmx10_2470[dbm_idx] <= power[11:0];
+            dbmx10_2490[dbm_idx] <= power[11:0];
+            dbm_idx <= dbm_idx - 1;
+            power[11:0] <= power[11:0] + 11'h010;
           end
         end
         PWR_INIT1: begin

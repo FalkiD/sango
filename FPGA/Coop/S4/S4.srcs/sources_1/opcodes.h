@@ -18,6 +18,8 @@
 `define ECHO			    7'h0C
 `define RESET               7'h0D
 `define CALPWR              7'h0E
+`define CALPTBL             7'h0F
+`define CALZMON             7'h10
 // Change bad_opcode() task in opcodes.v when adding/changing opcode list
 
 // Patterns, 0x20 based
@@ -75,6 +77,8 @@
 `define PTNDATA_NONE        72'd0
 
 `define SYSCLK_PER_PTN_CLK  6'd10
+
+`define PWR_TBL_ENTRIES       251
 
 `define STATUS_RESPONSE_SIZE    16'd26  // 26 bytes defined initially
 

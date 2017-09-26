@@ -389,6 +389,10 @@ wire         pwr_mosi;
 wire         pwr_sclk;
 wire         pwr_ssn;       
 wire         pwr_vsw;       
+// power processor calibration wires
+wire [11:0]  pwr_caldata;
+wire [11:0]  pwr_calidx;
+wire         pwr_calibrate;
 
 // Pulse processor & fifo wires
 wire [63:0]  pls_fifo_dat_i;          // to pulse fifo from opc
@@ -925,7 +929,9 @@ end
   // Frequency processor instance. 
   // Input:requested frequency in MHz in fifo
   // Output:Programs DDS chip on DDS SPI
-  freq_s4 freq_processor
+  freq_s4 #( 
+    .FILL_BITS(`PROCESSOR_FIFO_FILL_BITS)
+  ) freq_processor
   (
     .sys_clk            (sys_clk),
     .sys_rst_n          (sys_rst_n),
@@ -961,6 +967,10 @@ end
 
     .doInit_i           (hardware_init),         // Initialize DAC's
 
+    .doCalibrate_i      (pwr_calibrate),         // Update power table from CALPTBL opcode
+    .caldata_i          (pwr_caldata),           // 12-bits cal data entry
+    .calidx_i           (pwr_calidx),            // index of cal data
+
     .pwr_fifo_i         (pwr_fifo_dat_o),       // power processor fifo input
     .pwr_fifo_ren_o     (pwr_fifo_ren),         // power processor fifo read line
     .pwr_fifo_mt_i      (pwr_fifo_mt),          // power fifo empty flag
@@ -971,7 +981,7 @@ end
     .VGA_SSn_o          (pwr_ssn),       
     .VGA_VSW_o          (pwr_vsw),              // Gain mode control
 
-    .frequency_i        (frequency),            // current system frequency
+    .frequency_i        (frequency),            // current system frequency, or calibration frequency
     
     .dbmx10_o           (dbm_x10),              // present power setting for all top-level modules to access
 
@@ -1089,6 +1099,9 @@ end
                                                     
     .power_o                    (pwr_fifo_dat_i),   // to fifo, power & opcode in upper 7 bits
     .pwr_wr_en_o                (pwr_fifo_wen),     // power fifo write enable
+    .pwr_caldata_o              (pwr_caldata),      // data written into power table
+    .pwr_calidx_o               (pwr_calidx),       // index of cal table entry
+    .pwr_calibrate_o            (pwr_calibrate),    // doing power calibration, frequency will choose which power table
                                                     
     .pulse_o                    (pls_fifo_dat_i),   // to fifo, pulse opcode
     .pulse_wr_en_o              (pls_fifo_wen),     // pulse fifo write enable

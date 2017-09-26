@@ -94,6 +94,10 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 
     output reg  [38:0] power_o,                   // to fifo, power output in dBm
     output reg         pwr_wr_en_o,               // power fifo write enable
+    // power calibration outputs
+    output wire [11:0] pwr_caldata_o,             // data written into power table
+    output reg  [11:0] pwr_calidx_o,              // index into power table
+    output reg         pwr_calibrate_o,           // doing power calibration, frequency will choose which power table
 
     output reg  [63:0] pulse_o,                   // to fifo, pulse opcode
     output reg         pulse_wr_en_o,             // pulse fifo write enable
@@ -133,6 +137,11 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     // opcodes with integer arguments have 8 bytes or less of data
     localparam INT_ARG_BYTES = 8;
 
+    // PowerCal modes when opcode is CALPTBL and state = STATE_WRITE_DATA
+    localparam PWRCAL1  = 4'd1;
+    localparam PWRCAL2  = 4'd2;
+    localparam PWRCAL3  = 4'd3;
+
     reg  [3:0]   operating_mode = `OPCODE_NORMAL; // 0=normal, process & run opcodes, other cmds for pattern load/run
     reg  [6:0]   state = `STATE_IDLE;             // Use as flag in hardware to indicate first starting up
     reg  [6:0]   next_state = `STATE_IDLE;
@@ -168,6 +177,9 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     wire         pwr_busy;
     wire         frq_busy;
 
+    reg  [3:0]   pwrcal_mode;
+    reg  [11:0]  pwr_caldata;        // put together 12-bit word to write into power table
+
     reg  [15:0]  version = `VERSION;
 
     // flag for each opcode, argument data is a block of bytes(1) or an integer(0)
@@ -181,11 +193,11 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
      1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 
      1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 
      1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b1, 1'b0, 1'b0, 1'b0, 
-     1'b0, 1'b0, 1'b0, 1'b1, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0};    
+     1'b1, 1'b0, 1'b0, 1'b1, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0};    
 //   0..., DBG_READREG, DBG_MBWSPI, DBG_MSYNSPI, DBG_RSYNSPI, DBG_DDSSPI, DBG_FLASHSPI, DBG_IQDATA, DBG_IQSPI, DBG_IQCTRL, DBG_OPCTRL, DBG_LEVELSPI, DBG_ATTENSPI
 //   0..., MEAS_ZMCTL, MEAS_ZMSIZE
 //   0,0,0,0,0,0,0,0,0,0,0,0, PTN_DATA, PTN_PATCTL, PTN_PATADR, PTN_PATCLK
-//   0, 0, 0, ECHO, PAINTFCFG, SYNCCONF, TRIGCONF, LENGTH, MODE, BIAS, PULSE, PHASE, POWER, FREQ, STATUS, TERMINATOR
+//   CALZMON, CALPTBL, CALPWR, RESET, ECHO, PAINTFCFG, SYNCCONF, TRIGCONF, LENGTH, MODE, BIAS, PULSE, PHASE, POWER, FREQ, STATUS, TERMINATOR
 
     always @( posedge sys_clk) begin
         if(!sys_rst_n) begin
@@ -353,7 +365,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     // length tests
                     else if({fifo_dat_i[0], length[7:0]} > (fifo_rd_count_i-1)) begin
                         // need more data, wait for it if valid request
-                        if(!arg_is_bytes[opcode[6:0]] &&        // Opcode with integer argument
+                        if(!arg_is_bytes[fifo_dat_i[7:1]] &&    // Opcode with integer argument
                            length > INT_ARG_BYTES) begin        // ...none have more than 8 bytes of data
                                 status_o <= `ERR_INVALID_LENGTH;
                                 state <= `STATE_BEGIN_RESPONSE;
@@ -798,14 +810,44 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 
     task opcodes_byte_arg;
     begin
-        // argument data is a block of bytes, save it
+        if(response_fifo_full_i) begin
+            status_o <= `ERR_RSP_FIFO_FULL;
+            state <= `STATE_BEGIN_RESPONSE;
+        end
+        // argument data is a block of bytes, save the data as needed
         case(opcode)
-        `ECHO: begin
-            if(response_fifo_full_i) begin
-                status_o <= `ERR_RSP_FIFO_FULL;
-                state <= `STATE_BEGIN_RESPONSE;
+        // For power cal;, write the frequency opcode to set frequency, then
+        // write cal data block to update the frequency table.
+        // pwr_calidx_o is reset at beginning of each opcode
+        `CALPTBL: begin
+            case(pwrcal_mode)
+            PWRCAL1: begin
+                pwr_calibrate_o <= 1'b0;
+                pwr_caldata <= fifo_dat_i;                          // 8 lsb's
+                pwrcal_mode <= PWRCAL2;
             end
-            else if(!fifo_rd_empty_i) begin
+            PWRCAL2: begin
+                pwr_caldata <= {fifo_dat_i[3:0], pwr_caldata[7:0]}; // 4 msb's
+                pwr_calibrate_o <= 1'b1;
+                pwrcal_mode <= PWRCAL3;
+            end
+            PWRCAL3: begin
+                pwr_calibrate_o <= 1'b0;                
+                pwr_caldata <= fifo_dat_i;                          // 8 lsb's
+                if(pwr_calidx_o < `PWR_TBL_ENTRIES) begin        
+                    pwr_calidx_o <= pwr_calidx_o + 1;
+                    pwrcal_mode <= PWRCAL2;
+                end
+                else begin
+                    pwrcal_mode <= PWRCAL1;
+                    state <= `STATE_BEGIN_RESPONSE;
+                    status_o <= `SUCCESS;
+                end
+            end
+            endcase
+        end
+        `ECHO: begin
+            if(!fifo_rd_empty_i) begin
                 rsp_data[rsp_index] <= ~fifo_dat_i; // complement the data for echo test 
 //                    if(length == 2) begin               // 1-based counter. Turn OFF FIFO early
 //                        length <= length - 1;
@@ -859,6 +901,11 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         ptn_fifo_ren_o <= 1'b0;
         ptn_data_reg <= 0;                
 
+        pwr_caldata <= 12'd0;
+        pwr_calidx_o <= 12'd0;
+        pwr_calibrate_o <= 1'b0;
+        pwrcal_mode <= PWRCAL1;
+
         response_ready <= 1'b0;
         response_length <= 16'h0000;
         rsp_index <= 16'h0000;
@@ -887,6 +934,10 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         pulse_wr_en_o <= 1'b0;
         init_response();
         ptn_latch_count <= 8'd0;
+
+        pwr_calibrate_o <= 1'b0;
+        pwr_calidx_o <= 12'd0;
+        pwrcal_mode <= PWRCAL1;
     end
     endtask
 
@@ -915,7 +966,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     function bad_opcode;
     input [6:0] opcode;    
     begin
-        if((opcode > `CALPWR && opcode < `PTN_PATCLK) ||
+        if((opcode > `CALZMON && opcode < `PTN_PATCLK) ||
            (opcode > `PTN_BRANCH && opcode < `MEAS_ZMSIZE) ||
            (opcode > `MEAS)) begin 
             bad_opcode = 1'b1;
@@ -930,5 +981,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     assign state_o              = state; // For debugger
     assign ptn_data_o           = ptn_data_reg;    
     assign ptn_addr_o           = ptn_addr;
+    assign pwr_caldata_o        = pwr_caldata;
 
 endmodule
