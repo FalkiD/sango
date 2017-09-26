@@ -307,11 +307,21 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 end
                 `STATE_RD_MEAS1: begin
                     uinttmp <= {32'd0, meas_fifo_dat_i};
-                    response_wr_en_o <= 1'b0;               // don't write extra response byte after meas word
+                    response_wr_en_o <= 1'b0;           // don't write extra response byte after meas word
                     meas_fifo_ren_o <= 1'b0;
                     state <= `STATE_RD_MEAS2;
                 end
-                `STATE_RD_MEAS2: begin
+                `STATE_RD_MEAS2: begin                  
+                    if(uinttmp[29] == 1'b1)             // sign extend bipolar value
+                        uinttmp <= {uinttmp[63:32], 2'b11, uinttmp[29:0]};
+                    state <= `STATE_RD_MEAS3;
+                end 
+                `STATE_RD_MEAS3: begin
+                    if(uinttmp[13] == 1'b1)             // sign extend bipolar value
+                        uinttmp <= {uinttmp[63:16], 2'b11, uinttmp[13:0]};
+                    state <= `STATE_RD_MEAS4;
+                end 
+                `STATE_RD_MEAS4: begin
                     rsp_length <= rsp_length - 1;
                     rsp_index <= rsp_index + 1;
 
@@ -846,28 +856,33 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             end
             endcase
         end
-        `ECHO: begin
-            if(!fifo_rd_empty_i) begin
-                rsp_data[rsp_index] <= ~fifo_dat_i; // complement the data for echo test 
-//                    if(length == 2) begin               // 1-based counter. Turn OFF FIFO early
-//                        length <= length - 1;
-//                        fifo_rd_en_o <= 0;                   // turn off reading
-//                        rsp_length <= rsp_index + 1;    // 0-based index
-//                    end
-                if(length == 1) begin
-                    fifo_rd_en_o <= 0;              // turn off reading
-                    status_o <= `SUCCESS;
-                    rsp_length <= rsp_index + 1;    // 0-based index
-                    // this might belong in a task such as next_opcode...
-                    if(mode_o[31] == 1'b0)
-                        opcode_counter_o <= opcode_counter_o + 32'd1;
-                    state <= `STATE_BEGIN_RESPONSE;
-                end
-                else begin
-                    length <= length - 1;
-                    rsp_index <= rsp_index + 1;
-                end
-            end
+//        `ECHO: begin
+//            if(!fifo_rd_empty_i) begin
+//                rsp_data[rsp_index] <= ~fifo_dat_i; // complement the data for echo test 
+////                    if(length == 2) begin               // 1-based counter. Turn OFF FIFO early
+////                        length <= length - 1;
+////                        fifo_rd_en_o <= 0;                   // turn off reading
+////                        rsp_length <= rsp_index + 1;    // 0-based index
+////                    end
+//                if(length == 1) begin
+//                    fifo_rd_en_o <= 0;              // turn off reading
+//                    status_o <= `SUCCESS;
+//                    rsp_length <= rsp_index + 1;    // 0-based index
+//                    // this might belong in a task such as next_opcode...
+//                    if(mode_o[31] == 1'b0)
+//                        opcode_counter_o <= opcode_counter_o + 32'd1;
+//                    state <= `STATE_BEGIN_RESPONSE;
+//                end
+//                else begin
+//                    length <= length - 1;
+//                    rsp_index <= rsp_index + 1;
+//                end
+//            end
+//        end
+        default: begin
+            status_o <= `ERR_INVALID_OPCODE;
+            rsp_length <= 0;
+            state <= `STATE_BEGIN_RESPONSE;
         end
         endcase
     end

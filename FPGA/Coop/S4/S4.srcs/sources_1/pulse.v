@@ -133,12 +133,16 @@ module pulse #(parameter FILL_BITS = 4)
                     astate <= ASckOn;
                 end
             ADone: begin
-                adc_fifo_dat_o <= {adcf_dat[15:2], 2'b0, adcf_dat[31:18], 2'b0};
+                //adc_fifo_dat_o <= {adcf_dat[15:2], 2'b0, adcf_dat[31:18], 2'b0};
+                // use 'normal' justification
+                adc_fifo_dat_o <= {2'b0, adcf_dat[15:2], 2'b0, adcf_dat[31:18]};
                 adc_fifo_wen_o <= 1'b1;                // write ADCF data
                 astate <= ADone2;
             end
             ADone2: begin
-                adc_fifo_dat_o <= {adcr_dat[15:2], 2'b0, adcr_dat[31:18], 2'b0};
+                //adc_fifo_dat_o <= {adcr_dat[15:2], 2'b0, adcr_dat[31:18], 2'b0};
+                // use 'normal' justification
+                adc_fifo_dat_o <= {2'b0, adcr_dat[15:2], 2'b0, adcr_dat[31:18]};
                 adc_fifo_wen_o <= 1'b1;                // write ADCR data
                 astate <= AIdle;
             end
