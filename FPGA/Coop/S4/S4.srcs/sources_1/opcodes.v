@@ -844,13 +844,14 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             PWRCAL3: begin
                 pwr_calibrate_o <= 1'b0;                
                 pwr_caldata <= fifo_dat_i;                          // 8 lsb's
-                if(pwr_calidx_o < `PWR_TBL_ENTRIES) begin        
-                    pwr_calidx_o <= pwr_calidx_o + 1;
+                pwr_calidx_o <= pwr_calidx_o + 1;
+                if(pwr_calidx_o < 10) begin //`PWR_TBL_ENTRIES) begin        
                     pwrcal_mode <= PWRCAL2;
                 end
                 else begin
                     pwrcal_mode <= PWRCAL1;
                     state <= `STATE_BEGIN_RESPONSE;
+                    rsp_length <= 0;
                     status_o <= `SUCCESS;
                 end
             end
