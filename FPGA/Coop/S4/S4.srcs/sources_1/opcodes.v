@@ -206,8 +206,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         end
         else if(enable == 1) begin
 
-            if(meas_fifo_cnt_i > 0)
-                dbg2_o <= {ptn_data_i[71:64], 11'd0, meas_fifo_cnt_i};
+      dbg2_o <= {ptn_data_i[71:64], 11'd0, meas_fifo_cnt_i};
 
             // Check for pattern run request, if true, run pattern as soon
             // as opcode processor becomes idle
@@ -247,7 +246,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     // --set opcode, length, and uinttmp registers
                     // --set state to STATE_DATA, continue.
                     // this jumps into normal opcode processing
-                    dbg2_o <= {ptn_data_i[71:64], 11'd0, meas_fifo_cnt_i};
+                    //dbg2_o <= {ptn_data_i[71:64], 11'd0, meas_fifo_cnt_i};
                     opcode <= ptn_data_i[70:64];
                     length <= 0;                        // jump into processing uinttmp
                     uinttmp <= ptn_data_i[63:0];
