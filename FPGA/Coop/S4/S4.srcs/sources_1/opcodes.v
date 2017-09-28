@@ -183,21 +183,21 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     reg  [15:0]  version = `VERSION;
 
     // flag for each opcode, argument data is a block of bytes(1) or an integer(0)
-    // Xilinx Verilog is MS data 1st, LS data last. Opcode 0 will be last entry
-    // So far only PTN_DATA and ECHO use a block of bytes as arg data
-    reg arg_is_bytes [127:0] = 
-    {1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0,
-     1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0,
-     1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 
-     1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 
-     1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 
-     1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 
-     1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b1, 1'b0, 1'b0, 1'b0, 
-     1'b1, 1'b0, 1'b0, 1'b1, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0};    
-//   0..., DBG_READREG, DBG_MBWSPI, DBG_MSYNSPI, DBG_RSYNSPI, DBG_DDSSPI, DBG_FLASHSPI, DBG_IQDATA, DBG_IQSPI, DBG_IQCTRL, DBG_OPCTRL, DBG_LEVELSPI, DBG_ATTENSPI
-//   0..., MEAS_ZMCTL, MEAS_ZMSIZE
-//   0,0,0,0,0,0,0,0,0,0,0,0, PTN_DATA, PTN_PATCTL, PTN_PATADR, PTN_PATCLK
-//   CALZMON, CALPTBL, CALPWR, RESET, ECHO, PAINTFCFG, SYNCCONF, TRIGCONF, LENGTH, MODE, BIAS, PULSE, PHASE, POWER, FREQ, STATUS, TERMINATOR
+    // This type of initialization doesn't synthesize (useless)
+    // Only 1 opcode used so far has byte arg, don't use table for now
+    // **No good, reversed order of index 28-Sep-2017   reg arg_is_bytes [0:127] = 
+//    {1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0,
+//     1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0,
+//     1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 
+//     1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 
+//     1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 
+//     1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 
+//     1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b1, 1'b0, 1'b0, 1'b0, 
+//     1'b1, 1'b0, 1'b0, 1'b1, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0};    
+////   0..., DBG_READREG, DBG_MBWSPI, DBG_MSYNSPI, DBG_RSYNSPI, DBG_DDSSPI, DBG_FLASHSPI, DBG_IQDATA, DBG_IQSPI, DBG_IQCTRL, DBG_OPCTRL, DBG_LEVELSPI, DBG_ATTENSPI
+////   0..., MEAS_ZMCTL, MEAS_ZMSIZE
+////   0,0,0,0,0,0,0,0,0,0,0,0, PTN_DATA, PTN_PATCTL, PTN_PATADR, PTN_PATCLK
+////   CALZMON, CALPTBL, CALPWR, RESET, ECHO, PAINTFCFG, SYNCCONF, TRIGCONF, LENGTH, MODE, BIAS, PULSE, PHASE, POWER, FREQ, STATUS, TERMINATOR
 
     always @( posedge sys_clk) begin
         if(!sys_rst_n) begin
@@ -206,7 +206,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         end
         else if(enable == 1) begin
 
-      dbg2_o <= {ptn_data_i[71:64], 11'd0, meas_fifo_cnt_i};
+      //dbg2_o <= {ptn_data_i[71:64], 11'd0, meas_fifo_cnt_i};
 
             // Check for pattern run request, if true, run pattern as soon
             // as opcode processor becomes idle
@@ -374,10 +374,11 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     // length tests
                     else if({fifo_dat_i[0], length[7:0]} > (fifo_rd_count_i-1)) begin
                         // need more data, wait for it if valid request
-                        if(!arg_is_bytes[fifo_dat_i[7:1]] &&    // Opcode with integer argument
-                           length > INT_ARG_BYTES) begin        // ...none have more than 8 bytes of data
-                                status_o <= `ERR_INVALID_LENGTH;
-                                state <= `STATE_BEGIN_RESPONSE;
+                        if(fifo_dat_i[7:1] != `CALPTBL && length > INT_ARG_BYTES) begin
+                           // Opcode with integer argument
+                           // ...none have more than 8 bytes of data
+                            status_o <= `ERR_INVALID_LENGTH;
+                            state <= `STATE_BEGIN_RESPONSE;
                         end
                         else begin
                             fifo_rd_en_o <= 0;                  // let it fill
@@ -392,8 +393,14 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     end
                 end
                 `STATE_WAIT_DATA: begin // Wait for asynch FIFO to receive all our data
+
+      dbg2_o <= {5'd0, fifo_rd_count_i, 6'd0, length};
+
                     if(fifo_rd_count_i >= length) begin
                         fifo_rd_en_o <= 1;                  // start reading again
+
+      dbg2_o <= {5'd0, fifo_rd_count_i, 6'd0, length};
+
                         state <= `STATE_READ_SPACER;
                     end
                 end
@@ -429,16 +436,12 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                         blk_rsp_done <= 1'b0;   // flag, response is required
                         // Gather opcode data payload, then run it
                         // Most opcodes will use the same code here, (integer args) just different number of bytes.
-                        if(!arg_is_bytes[opcode[6:0]]) begin    // Opcode with integer argument
-                            if(length > INT_ARG_BYTES) begin
-                                status_o <= `ERR_INVALID_LENGTH;
-                                state <= `STATE_BEGIN_RESPONSE;
-                            end
-                            else opcodes_integer_arg();         // common opcodes
+                        if(opcode == `CALPTBL) begin            // Opcode with 502 bytes as arg
+                            opcodes_byte_arg();                 // CALPTBL, other special opcodes                        
                         end
-                        else begin  // if(arg_is_bytes[opcode[6:0]]) 
-                            opcodes_byte_arg();                 // ECHO, other special opcodes
-                        end
+                        else begin                              // Opcode with integer argument
+                            opcodes_integer_arg();              // common opcodes
+                        end 
                     end
                 end
                 `STATE_FIFO_WRITE:
@@ -779,6 +782,16 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 end
                 endcase
             end
+            `MEAS_ZMSIZE: begin
+                status_o <= `ERR_OPC_NOT_SUPPORTED;
+                rsp_length <= 0;
+                state <= `STATE_BEGIN_RESPONSE;
+            end
+            `MEAS_ZMCTL: begin
+                status_o <= `ERR_OPC_NOT_SUPPORTED;
+                rsp_length <= 0;
+                state <= `STATE_BEGIN_RESPONSE;
+            end            
             `MEAS:  begin
                 // return measurements, 1st 4 bytes are standard, opcode status, last opcode, 2 length bytes.
                 // argument is how many measurements to return.
@@ -798,6 +811,11 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                         rsp_length <= {uinttmp[12:0], 3'b000};  // requested measurements times 8 bytes per
                 end
                 rsp_source <= MEAS_FIFO;
+                state <= `STATE_BEGIN_RESPONSE;
+            end
+            `CALZMON: begin
+                status_o <= `ERR_OPC_NOT_SUPPORTED;
+                rsp_length <= 0;
                 state <= `STATE_BEGIN_RESPONSE;
             end
             default: begin
@@ -844,7 +862,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 pwr_calibrate_o <= 1'b0;                
                 pwr_caldata <= fifo_dat_i;                          // 8 lsb's
                 pwr_calidx_o <= pwr_calidx_o + 1;
-                if(pwr_calidx_o < 10) begin //`PWR_TBL_ENTRIES) begin        
+                if(pwr_calidx_o < `PWR_TBL_ENTRIES) begin        
                     pwrcal_mode <= PWRCAL2;
                 end
                 else begin

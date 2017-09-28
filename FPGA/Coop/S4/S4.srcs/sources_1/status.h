@@ -32,7 +32,7 @@
 `define ERR_UNKNOWN_SPI_STATE   8'h08
 `define ERR_SPI_NO_DATA         8'h09
 `define ERR_FREQ_CONVERGE       8'h0a
-`define ERR_COMMON3_BADDIV      8'h0b
+`define ERR_OPC_NOT_SUPPORTED   8'h0b
 `define ERR_LOWNOISE5_BADDIV    8'h0c
 `define ERR_LOWNOISE6_BADDIV    8'h0d
 `define ERR_LOWNOISE8_BADDIV    8'h0e
