@@ -138,9 +138,10 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     localparam INT_ARG_BYTES = 8;
 
     // PowerCal modes when opcode is CALPTBL and state = STATE_WRITE_DATA
-    localparam PWRCAL1  = 4'd1;
-    localparam PWRCAL2  = 4'd2;
-    localparam PWRCAL3  = 4'd3;
+    localparam PWRCAL1          = 4'd1;
+    localparam PWRCAL2          = 4'd2;
+    localparam PWRCAL_SPACER    = 4'd3;
+    localparam PWRCAL3          = 4'd4;
 
     reg  [3:0]   operating_mode = `OPCODE_NORMAL; // 0=normal, process & run opcodes, other cmds for pattern load/run
     reg  [6:0]   state = `STATE_IDLE;             // Use as flag in hardware to indicate first starting up
@@ -181,23 +182,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     reg  [11:0]  pwr_caldata;        // put together 12-bit word to write into power table
 
     reg  [15:0]  version = `VERSION;
-
-    // flag for each opcode, argument data is a block of bytes(1) or an integer(0)
-    // This type of initialization doesn't synthesize (useless)
-    // Only 1 opcode used so far has byte arg, don't use table for now
-    // **No good, reversed order of index 28-Sep-2017   reg arg_is_bytes [0:127] = 
-//    {1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0,
-//     1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0,
-//     1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 
-//     1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 
-//     1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 
-//     1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 
-//     1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b1, 1'b0, 1'b0, 1'b0, 
-//     1'b1, 1'b0, 1'b0, 1'b1, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0};    
-////   0..., DBG_READREG, DBG_MBWSPI, DBG_MSYNSPI, DBG_RSYNSPI, DBG_DDSSPI, DBG_FLASHSPI, DBG_IQDATA, DBG_IQSPI, DBG_IQCTRL, DBG_OPCTRL, DBG_LEVELSPI, DBG_ATTENSPI
-////   0..., MEAS_ZMCTL, MEAS_ZMSIZE
-////   0,0,0,0,0,0,0,0,0,0,0,0, PTN_DATA, PTN_PATCTL, PTN_PATADR, PTN_PATCLK
-////   CALZMON, CALPTBL, CALPWR, RESET, ECHO, PAINTFCFG, SYNCCONF, TRIGCONF, LENGTH, MODE, BIAS, PULSE, PHASE, POWER, FREQ, STATUS, TERMINATOR
 
     always @( posedge sys_clk) begin
         if(!sys_rst_n) begin
@@ -850,7 +834,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             case(pwrcal_mode)
             PWRCAL1: begin
                 pwr_calibrate_o <= 1'b0;
-                pwr_caldata <= fifo_dat_i;                          // 8 lsb's
+                pwr_caldata <= {4'd0, fifo_dat_i};                  // 8 lsb's
                 pwrcal_mode <= PWRCAL2;
             end
             PWRCAL2: begin
@@ -858,21 +842,31 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 pwr_calibrate_o <= 1'b1;
                 pwrcal_mode <= PWRCAL3;
             end
+//            PWRCAL_SPACER: begin
+//                pwrcal_mode <= PWRCAL3;
+//            end
             PWRCAL3: begin
                 pwr_calibrate_o <= 1'b0;                
-                pwr_caldata <= fifo_dat_i;                          // 8 lsb's
+                pwr_caldata <= {4'd0, fifo_dat_i};                  // 8 lsb's
                 pwr_calidx_o <= pwr_calidx_o + 1;
                 if(pwr_calidx_o < `PWR_TBL_ENTRIES) begin        
                     pwrcal_mode <= PWRCAL2;
                 end
                 else begin
                     pwrcal_mode <= PWRCAL1;
-                    state <= `STATE_BEGIN_RESPONSE;
-                    rsp_length <= 0;
+//                    state <= `STATE_BEGIN_RESPONSE;
+//                    rsp_length <= 0;
                     status_o <= `SUCCESS;
+                    next_opcode();
                 end
             end
             endcase
+
+            if(length > 0)
+                length <= length - 1;
+
+      dbg2_o[31:16] <= {length[7:0], pwr_calidx_o[7:0]};
+
         end
 //        `ECHO: begin
 //            if(!fifo_rd_empty_i) begin
