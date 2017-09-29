@@ -837,10 +837,10 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 
     task opcodes_byte_arg;
     begin
-        if(response_fifo_full_i) begin
-            status_o <= `ERR_RSP_FIFO_FULL;
-            state <= `STATE_BEGIN_RESPONSE;
-        end
+//        if(response_fifo_full_i) begin
+//            status_o <= `ERR_RSP_FIFO_FULL;
+//            state <= `STATE_BEGIN_RESPONSE;
+//        end
         // argument data is a block of bytes, save the data as needed
         case(opcode)
         // For power cal;, write the frequency opcode to set frequency, then
