@@ -851,46 +851,21 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 pwr_calidx_o <= pwr_calidx_o + 1;
                 if(pwr_calidx_o < `PWR_TBL_ENTRIES) begin        
                     pwrcal_mode <= PWRCAL2;
+      //dbg2_o[31:16] <= {4'd0, pwr_caldata};
                 end
                 else begin
                     pwrcal_mode <= PWRCAL1;
 //                    state <= `STATE_BEGIN_RESPONSE;
 //                    rsp_length <= 0;
-                    status_o <= `SUCCESS;
+                    if(status_o == 0)
+                        status_o <= `SUCCESS;
                     next_opcode();
                 end
             end
             endcase
-
             if(length > 0)
                 length <= length - 1;
-
-      dbg2_o[31:16] <= {length[7:0], pwr_calidx_o[7:0]};
-
         end
-//        `ECHO: begin
-//            if(!fifo_rd_empty_i) begin
-//                rsp_data[rsp_index] <= ~fifo_dat_i; // complement the data for echo test 
-////                    if(length == 2) begin               // 1-based counter. Turn OFF FIFO early
-////                        length <= length - 1;
-////                        fifo_rd_en_o <= 0;                   // turn off reading
-////                        rsp_length <= rsp_index + 1;    // 0-based index
-////                    end
-//                if(length == 1) begin
-//                    fifo_rd_en_o <= 0;              // turn off reading
-//                    status_o <= `SUCCESS;
-//                    rsp_length <= rsp_index + 1;    // 0-based index
-//                    // this might belong in a task such as next_opcode...
-//                    if(mode_o[31] == 1'b0)
-//                        opcode_counter_o <= opcode_counter_o + 32'd1;
-//                    state <= `STATE_BEGIN_RESPONSE;
-//                end
-//                else begin
-//                    length <= length - 1;
-//                    rsp_index <= rsp_index + 1;
-//                end
-//            end
-//        end
         default: begin
             status_o <= `ERR_INVALID_OPCODE;
             rsp_length <= 0;
