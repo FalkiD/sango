@@ -435,7 +435,20 @@ module power #(parameter FILL_BITS = 4)
         end
         PWR_SLOPE1: begin
           // interpolate between power tables
-          if(frequency_i <= FRQ2) begin
+          
+          // 02-Oct-2017 Bypass interpolation to ship 1st article.
+          // interp functions but math isn't correct yet.
+
+          // jump to state <= PWR_VGA2; once power variable is set
+
+          // interpolate between power tables
+          if(frequency_i <= FRQ1) begin
+              // 02-Oct set power & bypass interpolation
+              power <= {8'd0, 8'h17, dbmx10_2410[dbm_idx], 4'd0};
+              state <= PWR_VGA2;        // write 1st byte of 3
+              VGA_SSn_o <= 1'b0;          
+          end
+          else if(frequency_i <= FRQ2) begin
           // slope = ((dbmx10_2410[dbm_idx] - dbmx10_2430[dbm_idx]))/(FRQ_DELTA);
           // Using (slope * 2**32) ==> (1/FRQ_DELTA) * 2**32 = 214.74836 ~= 215
           // slope * 2**32 ~= 215 * (dbmx10_2410[dbm_idx] - dbmx10_2430[dbm_idx]);
@@ -444,27 +457,41 @@ module power #(parameter FILL_BITS = 4)
           //
           // Assuming max delta between freq tables of 2048, 215*2048 = 440,320.
           // This requires 19 bits, use a 32 bit register.
-            dbmA <= dbmx10_2410[dbm_idx] - dbmx10_2430[dbm_idx];            
-            if(dbmx10_2410[dbm_idx] < dbmx10_2430[dbm_idx])
-              slope_is_neg <= 1'b1;
+//            dbmA <= dbmx10_2410[dbm_idx] - dbmx10_2430[dbm_idx];            
+//            if(dbmx10_2410[dbm_idx] < dbmx10_2430[dbm_idx])
+//              slope_is_neg <= 1'b1;
+            // 02-Oct set power & bypass interpolation
+            power <= {8'd0, 8'h17, dbmx10_2430[dbm_idx], 4'd0};
+            state <= PWR_VGA2;        // write 1st byte of 3
+            VGA_SSn_o <= 1'b0;          
           end
           else if(frequency_i <= FRQ3) begin
-            dbmA <= dbmx10_2430[dbm_idx] - dbmx10_2450[dbm_idx];    
-            if(dbmx10_2430[dbm_idx] < dbmx10_2450[dbm_idx])
-              slope_is_neg <= 1'b1;
+//            dbmA <= dbmx10_2430[dbm_idx] - dbmx10_2450[dbm_idx];    
+//            if(dbmx10_2430[dbm_idx] < dbmx10_2450[dbm_idx])
+//              slope_is_neg <= 1'b1;
+              // 02-Oct set power & bypass interpolation
+            power <= {8'd0, 8'h17, dbmx10_2450[dbm_idx], 4'd0};
+            state <= PWR_VGA2;        // write 1st byte of 3
+            VGA_SSn_o <= 1'b0;          
           end
           else if(frequency_i <= FRQ4) begin
-            dbmA <= dbmx10_2450[dbm_idx] - dbmx10_2470[dbm_idx];           
-            if(dbmx10_2450[dbm_idx] < dbmx10_2470[dbm_idx])
-              slope_is_neg <= 1'b1;
+//            dbmA <= dbmx10_2450[dbm_idx] - dbmx10_2470[dbm_idx];           
+//            if(dbmx10_2450[dbm_idx] < dbmx10_2470[dbm_idx])
+//              slope_is_neg <= 1'b1;
+              // 02-Oct set power & bypass interpolation
+            power <= {8'd0, 8'h17, dbmx10_2470[dbm_idx], 4'd0};
+            state <= PWR_VGA2;        // write 1st byte of 3
+            VGA_SSn_o <= 1'b0;          
           end
           else begin
-            dbmA <= dbmx10_2470[dbm_idx] - dbmx10_2490[dbm_idx];           
-            if(dbmx10_2470[dbm_idx] < dbmx10_2490[dbm_idx])
-              slope_is_neg <= 1'b1;
+//            dbmA <= dbmx10_2470[dbm_idx] - dbmx10_2490[dbm_idx];           
+//            if(dbmx10_2470[dbm_idx] < dbmx10_2490[dbm_idx])
+//              slope_is_neg <= 1'b1;
+            // 02-Oct set power & bypass interpolation
+            power <= {8'd0, 8'h17, dbmx10_2490[dbm_idx], 4'd0};
+            state <= PWR_VGA2;        // write 1st byte of 3
+            VGA_SSn_o <= 1'b0;          
           end
-          // Dummy in a non-0 value for testing
-    //dbmA <= {32'd80};                    
           interp1 <= {16'd0, K};
           state <= PWR_SLOPE2;
         end
