@@ -255,9 +255,6 @@ module power #(parameter FILL_BITS = 4)
       // cal table from he opcode processor
       if(doCalibrate_i) begin
       
-    if(calidx_i < `PWR_TBL_ENTRIES)
-        dbmx10_o <= caldata_i;
-      
         if(frequency_i == FRQ1) begin
             dbmx10_2410[calidx_i] <= caldata_i;
         end

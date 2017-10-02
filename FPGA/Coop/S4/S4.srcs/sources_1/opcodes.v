@@ -193,6 +193,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 
       //dbg2_o <= {ptn_data_i[71:64], 11'd0, meas_fifo_cnt_i};
       dbg2_o <= {12'd0, pwrcal_mode, bytes_processed[15:0]};
+      // 02-Oct bytes_processed added for debugging, may use to read 1 sector at a time.
+      // value is incorrect though, double-counts twice. 512 byte sector comes to 0x202??
 
             // Check for pattern run request, if true, run pattern as soon
             // as opcode processor becomes idle
@@ -210,10 +212,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 state <= `STATE_PTN_DATA1;            
             end
 
-            // 02-Oct process the last byte in 512 byte sector (bytes_processed[8:0]==1ff) 
-            /*else*/ if((state == `STATE_IDLE && 
-                            (fifo_rd_count_i >= `MIN_OPCODE_SIZE /*|| bytes_processed[8:0] == 9'h1ff*/)) ||
-                            state != `STATE_IDLE) begin
+            if((state == `STATE_IDLE && fifo_rd_count_i >= `MIN_OPCODE_SIZE) ||
+                    state != `STATE_IDLE) begin
                 // not IDLE or at least one opcode has been written to FIFO
                 case(state)
                 `STATE_IDLE: begin
@@ -344,7 +344,9 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 // ****        reads NOW. If we don't we read one extra byte &
                 // ****        leave an extra byte in the input FIFO
                 `STATE_FETCH: begin
+                    // Added 02-Oct-2017 for debugging, count is 2 high though??
                     bytes_processed <= bytes_processed + 32'h0000_0001;
+                    
                     shift <= 8'h00;
                     uinttmp <= 64'h0000_0000_0000_0000;
                     length <= {1'b0, fifo_dat_i};
@@ -399,7 +401,11 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 `STATE_DATA: begin
                     if(dbg_opcodes_o[14:8] == 7'b0000000)
                         dbg_opcodes_o[14:8] <= opcode;
+                        
+                    // 02-Oct bytes_processed added for debugging, may use to read 1 sector at a time.
+                    // value is incorrect though, double-counts twice. 512 byte sector comes to 0x202??
                     bytes_processed <= bytes_processed + 32'h0000_0001;
+
                     // Look for special opcodes, RESET & NULL Terminator
                     // On NULL, check for response data available. If measurement data is in the fifo
                     // send it. Make sure the pulse & pattern processors are idle(done) first.
@@ -827,18 +833,15 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 
     task opcodes_byte_arg;
     begin
-//        if(response_fifo_full_i) begin
-//            status_o <= `ERR_RSP_FIFO_FULL;
-//            state <= `STATE_BEGIN_RESPONSE;
-//        end
         // argument data is a block of bytes, save the data as needed
         case(opcode)
         // For power cal;, write the frequency opcode to set frequency, then
         // write cal data block to update the frequency table.
-        // pwr_calidx_o is reset at beginning of each opcode
+        // pwr_calidx_o is reset at beginning of each CALPTBL opcode
         `CALPTBL: begin
             case(pwrcal_mode)
             PWRCAL1: begin
+                pwr_calidx_o <= 12'd0;                              // reset
                 pwr_calibrate_o <= 1'b0;
                 pwr_caldata <= {4'd0, fifo_dat_i};                  // 8 lsb's
                 pwrcal_mode <= PWRCAL2;
@@ -848,23 +851,15 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 pwr_calibrate_o <= 1'b1;
                 pwrcal_mode <= PWRCAL3;
             end
-//            PWRCAL_SPACER: begin
-//                pwrcal_mode <= PWRCAL3;
-//            end
             PWRCAL3: begin
                 pwr_calibrate_o <= 1'b0;                
                 pwr_caldata <= {4'd0, fifo_dat_i};                  // 8 lsb's
                 pwr_calidx_o <= pwr_calidx_o + 1;
                 if(pwr_calidx_o < `PWR_TBL_ENTRIES) begin        
                     pwrcal_mode <= PWRCAL2;
-      //dbg2_o[31:16] <= {4'd0, pwr_caldata};
                 end
                 else begin
                     pwrcal_mode <= PWRCAL1;
-//                    state <= `STATE_BEGIN_RESPONSE;
-//                    rsp_length <= 0;
-                    if(status_o == 0)
-                        status_o <= `SUCCESS;
                     next_opcode();
                 end
             end
@@ -946,7 +941,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         ptn_latch_count <= 8'd0;
 
         pwr_calibrate_o <= 1'b0;
-        pwr_calidx_o <= 12'd0;
         pwrcal_mode <= PWRCAL1;
     end
     endtask
