@@ -150,6 +150,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     reg          blk_rsp_done;       // flag, 1 sent response for block, 0=response not sent yet
     reg  [6:0]   opcode = 0;         // Opcode being processed
     reg  [9:0]   length = 0;         // bytes of opcode data to read
+    reg  [31:0]  bytes_processed;    // count opcode fifo bytes processed
     reg  [63:0]  uinttmp;            // temp for opcode data, up to 8 bytes
     reg          len_upr = 0;        // Persist upper bit of length
     reg          response_ready;     // flag when response ready
@@ -191,6 +192,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         else if(enable == 1) begin
 
       //dbg2_o <= {ptn_data_i[71:64], 11'd0, meas_fifo_cnt_i};
+      dbg2_o <= {12'd0, pwrcal_mode, bytes_processed[15:0]};
 
             // Check for pattern run request, if true, run pattern as soon
             // as opcode processor becomes idle
@@ -208,8 +210,10 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 state <= `STATE_PTN_DATA1;            
             end
 
-            /*else*/ if((state == `STATE_IDLE && fifo_rd_count_i >= `MIN_OPCODE_SIZE) ||
-                     state != `STATE_IDLE) begin
+            // 02-Oct process the last byte in 512 byte sector (bytes_processed[8:0]==1ff) 
+            /*else*/ if((state == `STATE_IDLE && 
+                            (fifo_rd_count_i >= `MIN_OPCODE_SIZE /*|| bytes_processed[8:0] == 9'h1ff*/)) ||
+                            state != `STATE_IDLE) begin
                 // not IDLE or at least one opcode has been written to FIFO
                 case(state)
                 `STATE_IDLE: begin
@@ -340,6 +344,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 // ****        reads NOW. If we don't we read one extra byte &
                 // ****        leave an extra byte in the input FIFO
                 `STATE_FETCH: begin
+                    bytes_processed <= bytes_processed + 32'h0000_0001;
                     shift <= 8'h00;
                     uinttmp <= 64'h0000_0000_0000_0000;
                     length <= {1'b0, fifo_dat_i};
@@ -378,12 +383,12 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 end
                 `STATE_WAIT_DATA: begin // Wait for asynch FIFO to receive all our data
 
-      dbg2_o <= {5'd0, fifo_rd_count_i, 6'd0, length};
+      //dbg2_o <= {5'd0, fifo_rd_count_i, 6'd0, length};
 
                     if(fifo_rd_count_i >= length) begin
                         fifo_rd_en_o <= 1;                  // start reading again
 
-      dbg2_o <= {5'd0, fifo_rd_count_i, 6'd0, length};
+      //dbg2_o <= {5'd0, fifo_rd_count_i, 6'd0, length};
 
                         state <= `STATE_READ_SPACER;
                     end
@@ -394,6 +399,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 `STATE_DATA: begin
                     if(dbg_opcodes_o[14:8] == 7'b0000000)
                         dbg_opcodes_o[14:8] <= opcode;
+                    bytes_processed <= bytes_processed + 32'h0000_0001;
                     // Look for special opcodes, RESET & NULL Terminator
                     // On NULL, check for response data available. If measurement data is in the fifo
                     // send it. Make sure the pulse & pattern processors are idle(done) first.
@@ -863,8 +869,9 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 end
             end
             endcase
-            if(length > 0)
-                length <= length - 1;
+            if(length == 2)             // Turn OFF with 2 clocks left. 1=last read, 0=begin write fifo
+                fifo_rd_en_o <= 0;      // pause opcode fifo reads
+            length <= length - 1;
         end
         default: begin
             status_o <= `ERR_INVALID_OPCODE;
@@ -881,6 +888,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         dbg_opcodes_o <= 24'h00_0000;   
         len_upr <= 0;
         length <= 9'b000000000;
+        bytes_processed <= 32'h0000_0000;
         fifo_rd_en_o <= 1'b0;  // Added by John Clayton
         frq_wr_en_o <= 1'b0;
         pwr_wr_en_o <= 1'b0;
