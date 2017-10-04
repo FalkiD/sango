@@ -126,7 +126,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     output wire [6:0]    state_o,                 // For debugger display
     
     // Debugging
-    output reg  [23:0]   dbg_opcodes_o,           // patadr count in 8 MSB's, 1st opcode in 8 MID's, last opcode in 8 LSB's
+    output reg  [31:0]   dbg_opcodes_o,           // Upr16[OpcMode(8)__patadr_count(8)]____Lwr16[first_opcode__last_opcode]
     output reg  [31:0]   dbg2_o,                  // debugging patterns
 
     // STATUS command
@@ -142,6 +142,15 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     localparam PWRCAL2          = 4'd2;
     localparam PWRCAL_SPACER    = 4'd3;
     localparam PWRCAL3          = 4'd4;
+
+    // trigger bit definitions
+    localparam TRIG_ARM         = 8'h80;    // Arm trigger
+    localparam TRIG_ABORT       = 8'h40;    // Abort triggering
+    localparam TRIG_NOW         = 8'h20;    // Send pattern now
+    localparam TRIG_CONTINUOUS  = 8'h10;    // Continuous mode, every N ms, N was user-programmed
+    localparam TRIG_SOURCE      = 8'h04;    // This box is trigger source
+    localparam TRIG_EXTERN      = 8'h02;    // This box is trigger slave
+    localparam TRIG_ENABLE      = 8'h01;    // Enable triggering
 
     reg  [3:0]   operating_mode = `OPCODE_NORMAL; // 0=normal, process & run opcodes, other cmds for pattern load/run
     reg  [6:0]   state = `STATE_IDLE;             // Use as flag in hardware to indicate first starting up
@@ -170,6 +179,9 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     reg  [7:0]                      ptn_count;
 
     reg  [31:0]  trig_conf;          // trigger configuration, from trig_conf opcode
+    localparam TICKS_PER_MS   = 18'd100000;
+    reg  [8:0]   trig_ms;            // continuous trigger millisecond counter
+    reg  [17:0]  trig_counter = 18'd0; // 100,000 ticks per millisecond, 18 bits
     reg  [15:0]  sync_conf;          // sync configuration, from sync_conf opcode
     
     // handle opcode integer argument data in a common way
@@ -191,20 +203,20 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         end
         else if(enable == 1) begin
 
-      //dbg2_o <= {ptn_data_i[71:64], 11'd0, meas_fifo_cnt_i};
-      dbg2_o <= {12'd0, pwrcal_mode, bytes_processed[15:0]};
-      // 02-Oct bytes_processed added for debugging, may use to read 1 sector at a time.
-      // value is incorrect though, double-counts twice. 512 byte sector comes to 0x202??
+            dbg2_o <= {ptn_data_i[71:64], 11'd0, meas_fifo_cnt_i};
+            //dbg2_o <= {12'd0, pwrcal_mode, bytes_processed[15:0]};
+            // 02-Oct bytes_processed added for debugging, may use to read 1 sector at a time.
+            // value is incorrect though, double-counts twice. 512 byte sector comes to 0x202??
+            dbg_opcodes_o[27:24] <= operating_mode;   // operating_mode to debugger
 
             // Check for pattern run request, if true, run pattern as soon
             // as opcode processor becomes idle
             if(operating_mode == `PTNCMD_RUN && ptn_run_o == 1'b0) begin
                 // we haven't started it yet
                 if(state == `STATE_IDLE && fifo_rd_count_i == 0) begin
-                    ptn_run_o <= 1'b1; // start pattern
+                    ptn_run_o <= 1'b1; // start pattern processor
                 end
             end
-            
             if(state == `STATE_IDLE && !ptn_fifo_mt_i) begin
                 // execute the next pattern opcode from the pattern fifo
                 //  ** need this?init_response();    // begin_opcodes() has not been executed
@@ -212,6 +224,23 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 state <= `STATE_PTN_DATA1;            
             end
 
+            // Handle triggering options, continuous mode mostly
+            if(trig_conf[11] == 1'b1 && trig_conf[0] == 1'b1) begin
+                if(trig_ms >= trig_conf[23:16]) begin
+                    // run pattern, reset counters
+                    start_pattern(ptn_addr);
+                    trig_ms <= 9'd0;
+                    trig_counter <= 18'd0;
+                end
+                if(trig_counter >= TICKS_PER_MS) begin
+                    trig_ms <= trig_ms + 9'd1;
+                    trig_counter <= 18'd0;                    
+                end
+                else
+                    trig_counter <= trig_counter + 18'd1;
+            end
+
+            // Process opcodes from MMC fifo
             if((state == `STATE_IDLE && fifo_rd_count_i >= `MIN_OPCODE_SIZE) ||
                     state != `STATE_IDLE) begin
                 // not IDLE or at least one opcode has been written to FIFO
@@ -720,6 +749,19 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             end
             `TRIGCONF: begin
                 trig_conf <= uinttmp[31:0];
+                // Trigger bits are in 2nd byte:
+                //TRIG_ARM         = 8'h80;    // Arm trigger
+                //TRIG_ABORT       = 8'h40;    // Abort triggering
+                //TRIG_NOW         = 8'h20;    // Run pattern now
+                //TRIG_CONTINUOUS  = 8'h10;    // Continuous mode, every N ms, N was user-programmed
+                //TRIG_SOURCE      = 8'h04;    // This box is trigger source
+                //TRIG_EXTERN      = 8'h02;    // This box is trigger slave
+                //TRIG_ENABLE      = 8'h01;    // Enable triggering
+                //
+                // For trigger now, MCU already send pat_ctl[ADDR] which starts pattern                     
+                if(uinttmp[11] == 1'b1 && uinttmp[8] == 1'b1)
+                    trig_ms <= 9'd0;        // reset continuous trigger ms counter
+                    trig_counter <= 18'd0;  // reset continuous trigger tick counter
                 next_opcode();
             end
             `SYNCCONF: begin
@@ -769,6 +811,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                         next_opcode();                     
                 end
                 `PTN_RUN: begin
+                    ptn_addr <= uinttmp[31:16]; // save for ccontinuous trigger mode
                     start_pattern(uinttmp[31:16]);
                     next_opcode(); 
                 end
@@ -880,7 +923,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     task reset_opcode_processor;
     begin
         opcode <= 0;
-        dbg_opcodes_o <= 24'h00_0000;   
+        dbg_opcodes_o <= 32'h0000_0000;   
         len_upr <= 0;
         length <= 9'b000000000;
         bytes_processed <= 32'h0000_0000;
