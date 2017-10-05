@@ -52,10 +52,10 @@ u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
 u 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
 u 1.5 ms r 4000000 8; --Read response data from host adapter RAM  
 
--- load pattern is done, run using trigger every 5ms
+-- load pattern is done, run using trigger every 10ms
 -- trigconf opcode is 0x09,
 -- bits 0x95 for arm, continuous, source, enable
-u 2.0 ms w 4000000 04 12 01 95 0A 00 00 00 00 00 00 00; --Continuous triogger, 10ms 
+u 2.0 ms w 4000000 04 12 01 95 0A 00 00 00 00 00 00 00; --Continuous trigger, 10ms 
 u 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
 u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
 u 0.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)

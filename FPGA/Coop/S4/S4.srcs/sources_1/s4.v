@@ -481,6 +481,9 @@ wire         dds_synth_mute_n;      // DDS processor muting SYN
 wire         dds_synth_doInit;      // Init SYN when DDS init has completed
 wire         dds_synth_initing;     // SYN initializing
 
+// ADC delay betwixt RF_GATE & TRIG_OUT in 10 ns ticks
+reg  [31:0]  adc_dly = 5000;        // default is 50us in 10ns ticks
+
 //------------------------------------------------------------------------
 // Start of logic
 
@@ -1016,11 +1019,13 @@ end
     .adc_sclk_o         (ADC_SCLK),             // ZMON SCK
     .adcf_sdo_i         (ADCF_SDO),             // FWD SDO
     .adcr_sdo_i         (ADCR_SDO),             // REFL SDO
-    .adctrig_i          (ADCTRIG),              // Host read request
 
     // output ZMON ADC data fifo
     .adc_fifo_dat_o     (meas_fifo_dat_i),      // 32 bits of FWD REFL ADC data written to output fifo
     .adc_fifo_wen_o     (meas_fifo_wen),        // ADC results fifo write enable
+
+    .adc_dly_i          (adc_dly),              // delay between RF_GATE and TRIG_OUT in 10 ns increments(ticks)
+    .trig_out_o         (TRIG_OUT),             // TRIG_OUT
 
     .status_o           (pls_status)            // 0=busy, SUCCESS when done, or an error code
   );

@@ -47,10 +47,12 @@ module pulse #(parameter FILL_BITS = 4)
     output wire         adc_sclk_o,         // ZMON SCK
     input  wire         adcf_sdo_i,         // FWD SDO
     input  wire         adcr_sdo_i,         // REFL SDO
-    input  wire         adctrig_i,          // Host read request
 
-    output reg [31:0]   adc_fifo_dat_o,     // 32 bits of FWD REFL ADC data written to output fifo
+    output reg  [31:0]  adc_fifo_dat_o,     // 32 bits of FWD REFL ADC data written to output fifo
     output reg          adc_fifo_wen_o,     // ADC results fifo write enable
+
+    input  wire [31:0]  adc_dly_i,          // delay between RF_GATE and TRIG_OUT in 10 ns increments
+    output wire         trig_out_o,         // drive TRIG_OUT
 
     output reg  [7:0]   status_o            // Pulse status, 0=Busy, SUCCESS when done, or an error code
     );
@@ -76,6 +78,7 @@ module pulse #(parameter FILL_BITS = 4)
     reg             zmon_en;
     reg             conv;
     reg             adc_sclk;
+    reg             trig_out;
 
     // connect external wires
     assign rf_gate_o = dbg_rf_gate_i ? 1'b1 : rf_gate;
@@ -83,12 +86,10 @@ module pulse #(parameter FILL_BITS = 4)
     assign zmon_en_o = zmon_en;
     assign adc_sclk_o = adc_sclk;
     assign conv_o = conv;
+    assign trig_out_o = trig_out;
 
     // ZMON ADC variables, processing
-    wire read_zmon;
-    assign read_zmon = conv; //adctrig_i | conv; 
-
-   // LTC1407A ADC state machine
+    // LTC1407A ADC state machine
     localparam AIdle = 3'd0, ASckOn = 3'd1, ASckOnWait = 3'd2, ASckOff = 3'd3, ADone = 3'd4, ADone2 = 3'd5, SckOnStretch = 3'd2;
     reg [2:0]       astate = AIdle;
     reg [31:0]      adcf_dat = 32'b0;
@@ -106,7 +107,7 @@ module pulse #(parameter FILL_BITS = 4)
             case (astate)
             AIdle: begin
                 adc_fifo_wen_o <= 0;
-                if (read_zmon) begin
+                if (conv) begin
                     acount <= 6'd34;
                     astate <= ASckOn;
                 end
@@ -254,5 +255,46 @@ module pulse #(parameter FILL_BITS = 4)
             endcase
         end
     end    
+
+    // trig_out logic
+    reg  [31:0]     trig_out_delay;
+    reg  [7:0]      trig_out_width;    
+    reg             rf_gaten;
+    reg             run_trigger;
+    always @(posedge sys_clk) begin
+        if(!sys_rst_n) begin
+            trig_out <= 1'b0;
+            trig_out_delay <= 32'h0000_0000;
+            trig_out_width <= 8'h00;
+            rf_gaten <= 1'b0;
+            run_trigger <= 1'b0;
+        end
+        else begin
+            rf_gaten <= rf_gate;
+            if(rf_gate && !rf_gaten) begin
+                trig_out_delay <= adc_dly_i;
+                run_trigger <= 1'b1;
+            end
+            
+            if(run_trigger) begin
+                if(trig_out) begin
+                    if(trig_out_width == 8'h00) begin
+                        trig_out <= 1'b0;
+                        run_trigger <= 1'b0;
+                    end
+                    else
+                        trig_out_width <= trig_out_width - 8'h01;
+                end
+                else begin                
+                    if(trig_out_delay == 32'h0000_0000) begin
+                        trig_out <= 1'b1;
+                        trig_out_width <= 8'd10;    // use 100us trigger pulse                
+                    end
+                    else              
+                        trig_out_delay <= trig_out_delay - 32'h0000_0001;
+                end
+            end 
+        end
+    end
 
 endmodule
