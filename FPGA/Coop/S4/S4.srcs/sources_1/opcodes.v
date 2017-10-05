@@ -225,7 +225,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             end
 
             // Handle triggering options, continuous mode mostly
-            if(trig_conf[11] == 1'b1 && trig_conf[0] == 1'b1) begin
+            if(trig_conf[12] == 1'b1 && trig_conf[0] == 1'b1) begin
                 if(trig_ms >= trig_conf[23:16]) begin
                     // run pattern, reset counters
                     start_pattern(ptn_addr);
@@ -287,7 +287,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     state <= `STATE_RSP_OPCODE;
                 end
                 `STATE_RSP_OPCODE: begin  // opcode responding to
-                    response_o <= {1'b0, opcode};
+                    response_o <= dbg_opcodes_o[7:0];
                     state <= `STATE_WRITE_LENGTH1;
                 end
                 `STATE_WRITE_LENGTH1: begin  // LS byte of data length
@@ -295,7 +295,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     state <= `STATE_WRITE_LENGTH2;
                 end
                 `STATE_WRITE_LENGTH2: begin      // MS byte of status always 0 for now
-                    response_o <= 8'h6c;         // (rsp_length>>8) & 8'hff;
+                    response_o <= {5'd0, rsp_length[10:8]}; //8'h6c;         // (rsp_length>>8) & 8'hff;
                     state <= `STATE_WRITE_RESPONSE;
                 end
                 `STATE_WRITE_RESPONSE: begin
@@ -759,7 +759,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 //TRIG_ENABLE      = 8'h01;    // Enable triggering
                 //
                 // For trigger now, MCU already send pat_ctl[ADDR] which starts pattern                     
-                if(uinttmp[11] == 1'b1 && uinttmp[8] == 1'b1)
+                if(uinttmp[12] == 1'b1 && uinttmp[8] == 1'b1)
                     trig_ms <= 9'd0;        // reset continuous trigger ms counter
                     trig_counter <= 18'd0;  // reset continuous trigger tick counter
                 next_opcode();
