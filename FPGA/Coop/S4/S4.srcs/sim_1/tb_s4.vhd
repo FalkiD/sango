@@ -103,10 +103,10 @@ port (
   ADC_SCLK      : out std_logic;             --  R1    O
   ADCF_SDO      : in  std_logic;             --  N1    I
   ADCR_SDO      : in  std_logic;             --  P1    I
-  ADCTRIG       : in  std_logic;              --  T12   I        CPU ZMon Req
+  ADCTRIG       : out std_logic;             --  T12   I        Trigger MCU ADC's
 
-  FPGA_TXD2     : out std_logic;            --  R11   O        HW DBG UART
-  FPGA_RXD2     : in  std_logic             --  R10   I        HW DBG UART
+  FPGA_TXD2     : out std_logic;             --  R11   O        HW DBG UART
+  FPGA_RXD2     : in  std_logic              --  R10   I        HW DBG UART
 );
 end component;
 

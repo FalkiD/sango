@@ -265,7 +265,7 @@ module s4
   output             ADC_SCLK,           //  R1    O
   input              ADCF_SDO,           //  N1    I
   input              ADCR_SDO,           //  P1    I
-  input              ADCTRIG,            //  T12   I        CPU ZMon Req
+  output             ADCTRIG,            //  T12   I        Trigger MCU ADC's for PA current measurement
 
   output             FPGA_TXD2,          //  R11   O        HW DBG UART
   input              FPGA_RXD2           //  R10   I        HW DBG UART
@@ -481,8 +481,9 @@ wire         dds_synth_mute_n;      // DDS processor muting SYN
 wire         dds_synth_doInit;      // Init SYN when DDS init has completed
 wire         dds_synth_initing;     // SYN initializing
 
-// ADC delay betwixt RF_GATE & TRIG_OUT in 10 ns ticks
+// ADC delay betwixt RF_GATE & TRIG_OUT/ADCTRIG in 10 ns ticks
 reg  [31:0]  adc_dly = 5000;        // default is 50us in 10ns ticks
+wire         trig_source;           // true if we're the trigger source
 
 //------------------------------------------------------------------------
 // Start of logic
@@ -1025,7 +1026,7 @@ end
     .adc_fifo_wen_o     (meas_fifo_wen),        // ADC results fifo write enable
 
     .adc_dly_i          (adc_dly),              // delay between RF_GATE and TRIG_OUT in 10 ns increments(ticks)
-    .trig_out_o         (TRIG_OUT),             // TRIG_OUT
+    .trig_out_o         (ADCTRIG),              // ADCTRIG/TRIG_OUT
 
     .status_o           (pls_status)            // 0=busy, SUCCESS when done, or an error code
   );
@@ -1116,6 +1117,8 @@ end
     .meas_fifo_cnt_i            (meas_fifo_count),  // measurements in fifo after pulse/pattern
                                                     
     .bias_enable_o              (bias_en),          // bias control
+
+    .trig_source_o              (trig_source),      // 1 if we're trigger source, else 0
 
     // pattern opcodes are saved in pattern RAM.
     .ptn_wen_o                  (ptn_wen),          // opcode processor saves pattern opcodes to pattern RAM 
@@ -1477,6 +1480,8 @@ end
   assign dbg_opc_rfgate = ((sys_mode[15:0] & BIT_RF_GATE) == BIT_RF_GATE);
  
   assign ACTIVE_LEDn = RF_GATE ? count2[24]: count2[26];
+
+  assign TRIG_OUT = trig_source ? ADCTRIG : 1'b0;
  
   // 22-Jun have to scope MMC signals
   assign FPGA_MCU4 = DDS_MOSI; //CONV; //MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.

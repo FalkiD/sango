@@ -108,6 +108,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 
     output reg         bias_enable_o,             // bias control
 
+    output wire        trig_source_o,             // 1 if we're trigger source(d10 of trig_conf set), else 0
+
     // pattern opcodes are saved in pattern RAM.
     output reg                      ptn_wen_o,    // opcode processor saves pattern opcodes to pattern RAM 
     output wire [PTN_FILL_BITS-1:0] ptn_addr_o,   // address 
@@ -1029,5 +1031,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     assign ptn_data_o           = ptn_data_reg;    
     assign ptn_addr_o           = ptn_addr;
     assign pwr_caldata_o        = pwr_caldata;
+    assign trig_source_o        = trig_conf[10];    // 1 if we're trigger source, else 0
 
 endmodule
