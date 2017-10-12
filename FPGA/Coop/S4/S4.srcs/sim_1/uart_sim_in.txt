@@ -66,6 +66,22 @@ u 1.5 ms r 4000000 8; --Read response data from host adapter RAM
 -- read status registers to get pattern processing status
 u 4.0 ms r 3000038 8; -- read debug registers
 
+d 10 ms ; -- Delay to see 50us ADCDLY
+
+u 2.0 ms w 4000000 04 18 c4 09 00 00 00 00 00 00 00 00; --CONFIG, ADCDLY=25us(0x9c4) 
+u 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+u 0.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+-- read opcode processor response
+u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+u 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+u 1.5 ms r 4000000 8; --Read response data from host adapter RAM  
+-- read status registers to get pattern processing status
+u 4.0 ms r 3000038 8; -- read debug registers
+
+
+
+
 -- load pattern is done, execute STATUS opcode to read system status
 --u 2.0 ms w 4000000 02 02 00 00 00 00 00 00 00 00 00 00; --STATUS opcode 
 --u 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 

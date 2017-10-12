@@ -109,6 +109,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     output reg         bias_enable_o,             // bias control
 
     output wire        trig_source_o,             // 1 if we're trigger source(d10 of trig_conf set), else 0
+    output wire [31:0] adc_dly_o,                 // adcdly in 10ns ticks
 
     // pattern opcodes are saved in pattern RAM.
     output reg                      ptn_wen_o,    // opcode processor saves pattern opcodes to pattern RAM 
@@ -184,6 +185,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     localparam TICKS_PER_MS   = 18'd100000;
     reg  [8:0]   trig_ms;            // continuous trigger millisecond counter
     reg  [17:0]  trig_counter = 18'd0; // 100,000 ticks per millisecond, 18 bits
+    reg  [31:0]  adc_dly = 5000;     // default is 50us in 10ns ticks
+
     reg  [15:0]  sync_conf;          // sync configuration, from sync_conf opcode
     
     // handle opcode integer argument data in a common way
@@ -536,6 +539,10 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         // saved into pattern RAM if operating_mode is PTNCMD_LOAD.
         if(length == 0) begin   // got all the data, write to correct fifo based on opcode, or execute opcode
             case(opcode)
+            `CONFIG: begin
+                adc_dly <= {16'd0, uinttmp[15:0]};
+                next_opcode();   
+            end
             `STATUS:  begin
                 // return system status, 1st 4 bytes are standard, opcode status, last opcode, 2 length bytes.
                 // For status opcode, length = 26 bytes defined so far(9/21/2017):
@@ -965,6 +972,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         mode_o <= 32'h0000_0000;
         bias_enable_o <= 1'b0;
         fifo_rst_o <= 1'b0;
+        
+        adc_dly <= 5000;     // default is 50us in 10ns ticks
     end
     endtask
 
@@ -1032,5 +1041,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     assign ptn_addr_o           = ptn_addr;
     assign pwr_caldata_o        = pwr_caldata;
     assign trig_source_o        = trig_conf[10];    // 1 if we're trigger source, else 0
+    assign adc_dly_o            = adc_dly;
 
 endmodule

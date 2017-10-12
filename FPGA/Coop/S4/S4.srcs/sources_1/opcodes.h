@@ -15,7 +15,7 @@
 `define TRIGCONF		    7'h09
 `define SYNCCONF		    7'h0A
 `define PAINTFCFG		    7'h0B
-`define ECHO			    7'h0C
+`define CONFIG			    7'h0C
 `define RESET               7'h0D
 `define CALPWR              7'h0E
 `define CALPTBL             7'h0F

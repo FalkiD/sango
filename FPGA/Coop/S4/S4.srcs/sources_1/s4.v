@@ -482,7 +482,7 @@ wire         dds_synth_doInit;      // Init SYN when DDS init has completed
 wire         dds_synth_initing;     // SYN initializing
 
 // ADC delay betwixt RF_GATE & TRIG_OUT/ADCTRIG in 10 ns ticks
-reg  [31:0]  adc_dly = 5000;        // default is 50us in 10ns ticks
+wire [31:0]  adc_dly;               // default is 50us in 10ns ticks, set from opcode processor
 wire         trig_source;           // true if we're the trigger source
 
 //------------------------------------------------------------------------
@@ -1119,6 +1119,7 @@ end
     .bias_enable_o              (bias_en),          // bias control
 
     .trig_source_o              (trig_source),      // 1 if we're trigger source, else 0
+    .adc_dly_o                  (adc_dly),          // adcdly in 10ns ticks
 
     // pattern opcodes are saved in pattern RAM.
     .ptn_wen_o                  (ptn_wen),          // opcode processor saves pattern opcodes to pattern RAM 
