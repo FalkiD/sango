@@ -1,0 +1,335 @@
+﻿<UserControl x:Class="RFenergyUI.Views.TestView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:sys="clr-namespace:System;assembly=mscorlib"
+             xmlns:local="clr-namespace:RFenergyUI.Views"
+             xmlns:cnvtr="clr-namespace:Converters"
+             mc:Ignorable="d" 
+             d:DesignHeight="300" d:DesignWidth="300"
+             LayoutUpdated="TestView_LayoutUpdated">
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Resources/TextBlockStyle.xaml" />
+                <ResourceDictionary Source="../Resources/TextBoxStyle.xaml" />
+                <ResourceDictionary Source="../Resources/CheckBoxStyle.xaml" />
+                <ResourceDictionary Source="../Resources/NumericResources.xaml" />
+                <ResourceDictionary Source="../Resources/ScrollViewerStyle.xaml" />
+                <ResourceDictionary Source="../Resources/ButtonStyle.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <cnvtr:DoubleToTextConverter x:Key="doubleConverter"/>
+            <cnvtr:HexTextConverter x:Key="hexConverter"/>
+            <cnvtr:IntTextConverter x:Key="intConverter"/>
+            <cnvtr:ChannelConverter x:Key="channelConverter"/>
+            <cnvtr:PowerConverter x:Key="powerConverter"/>
+            <cnvtr:FrequencyConverter x:Key="frequencyConverter"/>
+            <cnvtr:BoolToVisibilityConverter x:Key="visibilityConverter"/>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid x:Name="Testing">
+        <Grid.ColumnDefinitions>
+            <!--Top two rows have ItemsControl's that span all rows/cols.
+            Bottom 8 rows utilize these columns-->
+            <ColumnDefinition Width="*"/>   <!--Title-->
+            <ColumnDefinition Width="*"/>   <!--(Start) Value-->
+            <ColumnDefinition Width="*"/>   <!--Stepsize-->     
+            <ColumnDefinition Width="*"/>   <!--End Value-->    
+            <ColumnDefinition Width="*"/>   <!--MsPerStep-->
+            <ColumnDefinition Width="*"/>   <!--Start/Stop button-->
+            <!--MsPerStep-->
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>  <!--Connect Buttons-->
+            <RowDefinition Height="Auto"/>  <!--List of channels (not used, moved DAC's to Debug panel-->
+            <RowDefinition Height="*" MaxHeight="160"/>     <!--Must set ItemsControl size correctly, ItemsControl for PaView's, spans all columns-->
+            <RowDefinition Height="Auto"/>  <!--Header 'Value'-->
+            <RowDefinition Height="Auto"/>  <!--Frequency-->
+            <RowDefinition Height="Auto"/>  <!--Power-->
+            <RowDefinition Height="Auto"/>  <!--Power in dB-->
+            <RowDefinition Height="Auto"/>  <!--Coupler-->
+            <RowDefinition Height="Auto"/>  <!--Phase-->
+            <RowDefinition Height="Auto"/>  <!--Header for PWM row, 'DutyCycle'-->
+            <RowDefinition Height="Auto"/>  <!--PWM-->
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto" MinHeight="14"/>
+            <RowDefinition Height="Auto" MinHeight="14"/>
+        </Grid.RowDefinitions>
+
+        <!--1st row is Connect/Disconnect/Clear buttons-->
+        <Button Grid.Column="0" 
+                Content="Connect" 
+                Command="{Binding CmdConnect}"
+                Style="{StaticResource ButtonKeyNormal}"/>
+        <Button Grid.Column="1" 
+                Content="Disconnect" 
+                Command="{Binding CmdDisconnect}"
+                Style="{StaticResource ButtonKeyNormal}"/>
+        <Button Grid.Column="2" 
+                Content="Clear Fault" 
+                Command="{Binding CmdClrFault}"
+                Style="{StaticResource ButtonKeyNormal}"/>
+        <Button Grid.Column="3" 
+                Content="Info" 
+                Command="{Binding CmdInfo}"
+                Style="{StaticResource ButtonKeyNormal}"/>
+        <CheckBox Grid.Column="4" Grid.ColumnSpan="2"
+                Content="Monitor PA's"
+                Style="{StaticResource CheckBoxH4}"
+                IsChecked="{Binding LoopReadings}"/>
+
+        <!--Can't seem to get HeaderedItemsControl border to show?
+        BorderThickness="10"
+        BorderBrush="Black"
+        Background="LightGray"-->
+        <!--Use Vertical ItemsControl to show any number of ChannelViews in a scrolling list-->      
+        <HeaderedItemsControl Grid.Row="2" Grid.ColumnSpan="5"
+                      ItemsSource="{Binding Path=PaVms}"
+                      HorizontalAlignment="Center">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <VirtualizingStackPanel Orientation="Vertical"/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.Template>
+                <ControlTemplate TargetType="HeaderedItemsControl">
+                    <!--<Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{Binding BorderThickness}">-->
+                        <Grid>
+                            <!--Use first row of Grid for header-->
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>    <!--Must set ItemsControl size correctly, need better technique, set to required height only-->
+                        </Grid.RowDefinitions>
+                            <local:PaHdrView/>
+                            <ScrollViewer Grid.Row="1"
+                                      HorizontalScrollBarVisibility="Hidden"
+                                      VerticalScrollBarVisibility="Auto"
+                                      Style="{StaticResource MetroScrollViewer}">
+                                <ItemsPresenter/>
+                            </ScrollViewer>
+                    </Grid>
+                    <!--</Border>-->
+                </ControlTemplate>
+            </ItemsControl.Template>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <local:PaView/>    <!--PaView for each channel, was ChannelView at first-->
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </HeaderedItemsControl>
+
+        <!--Header line for Frequency, Power, Phase, PWM controls-->
+        <TextBlock Grid.Row="3" Grid.Column="1" 
+                   Text="(Start) Value"
+                   Style="{StaticResource LabelH4}"/>
+        <TextBlock Grid.Row="3" Grid.Column="2" 
+                   Text="Step Size"
+                   Style="{StaticResource LabelH4}"/>
+        <TextBlock Grid.Row="3" Grid.Column="3" 
+                   Text="End Value"
+                   Style="{StaticResource LabelH4}"/>
+        <TextBlock Grid.Row="3" Grid.Column="4" 
+                   Text="ms/Step"
+                   Style="{StaticResource LabelH4}"/>
+        <TextBlock Grid.Row="3" Grid.Column="5" 
+                   Text="Start/Stop Sweep"
+                   Style="{StaticResource LabelH4}"/>
+
+        <!--Frequency controls-->
+        <TextBlock Grid.Row="4" Text="Frequency(MHz):" HorizontalAlignment="Right"
+                    Style="{StaticResource LabelH4}"/>
+        <TextBox Grid.Row="4" Grid.Column="1"
+                Text="{Binding Frequency, Converter={StaticResource frequencyConverter}}"
+                Style="{StaticResource TextBoxH4}">
+            <TextBox.InputBindings>
+                <KeyBinding Gesture="Enter" 
+                    Command="{Binding CmdFrequency}"
+                    CommandParameter="{Binding RelativeSource={RelativeSource FindAncestor,AncestorType={x:Type TextBox}},Path=Text}" />
+                <KeyBinding Key="Down" Command="{Binding CmdFrqArrow}" CommandParameter="down"/>
+                <KeyBinding Key="Up" Command="{Binding CmdFrqArrow}" CommandParameter="up"/>
+            </TextBox.InputBindings>
+        </TextBox>
+        <TextBox Grid.Row="4" Grid.Column="2"
+                Text="{Binding FreqStepSize, Converter={StaticResource frequencyConverter}}"
+                Style="{StaticResource TextBoxH4}">
+        </TextBox>
+        <TextBox Grid.Row="4" Grid.Column="3"
+                Text="{Binding FreqTop, Converter={StaticResource frequencyConverter}}"
+                Style="{StaticResource TextBoxH4}">
+        </TextBox>
+        <TextBox Grid.Row="4" Grid.Column="4"
+                Text="{Binding MsPerStep, Converter={StaticResource frequencyConverter}}"
+                Style="{StaticResource TextBoxH4}">
+        </TextBox>
+        <Button Grid.Row="4" Grid.Column="5" 
+                Content="{Binding FrqSweepBtnTxt}" 
+                Command="{Binding CmdFrqSweep}"
+                Focusable="True"
+                Style="{StaticResource ButtonKeyNormal}"/>
+
+        <!--Power controls-->
+        <TextBlock Grid.Row="5" Text="Power(dBm):" HorizontalAlignment="Right"
+                    Style="{StaticResource LabelH4}"/>
+        <TextBox Grid.Row="5" Grid.Column="1"
+                    Text="{Binding Power, Converter={StaticResource powerConverter}}"
+                    Style="{StaticResource TextBoxH4}">
+            <TextBox.InputBindings>
+                <KeyBinding Gesture="Enter" 
+                    Command="{Binding CmdPower}"
+                    CommandParameter="{Binding RelativeSource={RelativeSource FindAncestor,AncestorType={x:Type TextBox}},Path=Text}" />
+                <KeyBinding Key="Down" Command="{Binding CmdPwrArrow}" CommandParameter="down"/>
+                <KeyBinding Key="Up" Command="{Binding CmdPwrArrow}" CommandParameter="up"/>
+            </TextBox.InputBindings>
+        </TextBox>
+        <TextBox Grid.Row="5" Grid.Column="2"
+                Text="{Binding PowerStepSize, Converter={StaticResource powerConverter}}"
+                Style="{StaticResource TextBoxH4}">
+        </TextBox>
+        <TextBox Grid.Row="5" Grid.Column="3"
+                Text="{Binding PowerTop, Converter={StaticResource powerConverter}}"
+                Style="{StaticResource TextBoxH4}">
+        </TextBox>
+        <Button Grid.Row="5" Grid.Column="5" 
+                Content="{Binding PwrSweepBtnTxt}" 
+                Command="{Binding CmdPwrSweep}"
+                Focusable="True"
+                Style="{StaticResource ButtonKeyNormal}"/>
+
+        <!--Set Power in dB--><!--
+        <TextBlock Grid.Row="6" Text="Power in dB:" HorizontalAlignment="Right"
+                   Style="{StaticResource LabelH4}"/>
+        <TextBox Grid.Row="6" Grid.Column="1"
+                 Text="{Binding PwrInDb, StringFormat=N3}"
+                 Style="{StaticResource TextBoxH4}">
+            <TextBox.InputBindings>
+                <KeyBinding Gesture="Enter" 
+                    Command="{Binding CmdPwrInDb}"
+                    CommandParameter="{Binding RelativeSource={RelativeSource FindAncestor,AncestorType={x:Type TextBox}},Path=Text}" />
+            </TextBox.InputBindings>
+        </TextBox>-->
+
+        <!--Read coupler power controls-->
+        <TextBlock Grid.Row="6" Text="Coupler:" HorizontalAlignment="Right"
+                   Style="{StaticResource LabelH4}"/>
+        <TextBox Grid.Row="6" Grid.Column="1"
+                 Text="{Binding CouplerFwd, Converter={StaticResource powerConverter}}"
+                 IsReadOnly="True"
+                 Style="{StaticResource TextBoxH4}"/>
+        <TextBox Grid.Row="6" Grid.Column="2"
+                 Text="{Binding CouplerRefl, Converter={StaticResource powerConverter}}"
+                 IsReadOnly="True"
+                 Style="{StaticResource TextBoxH4}"/>
+        <Button Grid.Row="6" Grid.Column="3" 
+                Content="Strobe Coupler" 
+                Command="{Binding CmdCouplerMeasure}"
+                Style="{StaticResource ButtonKeyNormal}"/>
+        
+        <!--Phase controls-->
+        <TextBlock Grid.Row="7" Text="Phase(degrees):" 
+                   HorizontalAlignment="Right"
+                   Visibility="{Binding PhaseVisible, Converter={StaticResource visibilityConverter}}"
+                   Style="{StaticResource LabelH4}"/>
+        <TextBox Grid.Row="7" Grid.Column="1"
+                 Text="{Binding Phase, Converter={StaticResource powerConverter}}"
+                 Visibility="{Binding PhaseVisible, Converter={StaticResource visibilityConverter}}"
+                 Style="{StaticResource TextBoxH4}">
+            <TextBox.InputBindings>
+                <!--Fix Phase Command to pass the control(like freq/power/etc)-->
+                <KeyBinding Key="Enter" Command="{Binding CmdPhase}"/>
+                <KeyBinding Key="Down" Command="{Binding CmdPhsArrow}" CommandParameter="down"/>
+                <KeyBinding Key="Up" Command="{Binding CmdPhsArrow}" CommandParameter="up"/>
+            </TextBox.InputBindings>
+        </TextBox>
+
+        <!--PWM controls-->
+        <TextBlock Grid.Row="8" Grid.Column="1" 
+                   Text="DutyCycle(%)"
+                   Style="{StaticResource LabelH4}"/>
+        <TextBlock Grid.Row="8" Grid.Column="2" 
+                   Text="Rate(Hz)"
+                   Style="{StaticResource LabelH4}"/>
+        <TextBlock Grid.Row="8" Grid.Column="3" 
+                   Text="External"
+                   Style="{StaticResource LabelH4}"/>
+
+        <TextBlock Grid.Row="9" Text="PWM:" HorizontalAlignment="Right"
+                   Style="{StaticResource LabelH4}"/>
+        <TextBox Grid.Row="9" Grid.Column="1"
+                 Name="DutyCycle"
+                 Text="{Binding DutyCycle, Converter={StaticResource intConverter}}"
+                 Style="{StaticResource TextBoxH4}">
+            <TextBox.InputBindings>
+                <KeyBinding Gesture="Enter" 
+                    Command="{Binding CmdDutyCycle}"
+                    CommandParameter="{Binding RelativeSource={RelativeSource FindAncestor,AncestorType={x:Type TextBox}},Path=Text}" />
+                <KeyBinding Key="Down" Command="{Binding CmdPwmDutyArrow}" CommandParameter="down"/>
+                <KeyBinding Key="Up" Command="{Binding CmdPwmDutyArrow}" CommandParameter="up"/>
+            </TextBox.InputBindings>
+        </TextBox>
+        <TextBox Grid.Row="9" Grid.Column="2"
+                 Text="{Binding PwmRate, Converter={StaticResource intConverter}}"
+                 Style="{StaticResource TextBoxH4}">
+            <TextBox.InputBindings>
+                <KeyBinding Gesture="Enter" 
+                    Command="{Binding CmdPwmRate}"
+                    CommandParameter="{Binding RelativeSource={RelativeSource FindAncestor,AncestorType={x:Type TextBox}},Path=Text}" />
+                <KeyBinding Key="Down" Command="{Binding CmdPwmTArrow}" CommandParameter="down"/>
+                <KeyBinding Key="Up" Command="{Binding CmdPwmTArrow}" CommandParameter="up"/>
+            </TextBox.InputBindings>
+        </TextBox>
+        <CheckBox Grid.Row="9" Grid.Column="3"
+                    Content="External"
+                    Style="{StaticResource CheckBoxH4}"
+                    IsChecked="{Binding ExternalPwm}"/>
+
+        <CheckBox Grid.Row="10"
+                  Grid.Column="1"
+                  Content="DemoMode"
+                  Style="{StaticResource CheckBoxH4}"
+                  IsChecked="{Binding DemoMode}"/>
+        <CheckBox Grid.Row="10" 
+                  Grid.Column="2"
+                  Content="HiresFrq"
+                  Style="{StaticResource CheckBoxH4}"
+                  IsChecked="{Binding HiresMode}"/>
+
+        <CheckBox Grid.Row="11" 
+                  MinHeight="16"
+                  Grid.Column="1"
+                  Grid.ColumnSpan="2"
+                  VerticalAlignment="Center"
+                  Content="DutyCycleComp"
+                  Style="{StaticResource CheckBoxH4}"
+                  IsChecked="{Binding DutyCycleCompensation}"/>
+
+        <TextBlock Grid.Row="12" 
+                   Text="Compensation:" 
+                   HorizontalAlignment="Right"
+                   VerticalAlignment="Center"
+                   Style="{StaticResource LabelH4}"/>
+        <RadioButton Grid.Row="12" Grid.Column="1"
+                     MinHeight="16"
+                     GroupName="Compensation"
+                     Content="Ambient"
+                     VerticalAlignment="Center"
+                     IsChecked="{Binding AmbientCompensation}"/>
+        <RadioButton Grid.Row="12" Grid.Column="2"
+                     MinHeight="16"
+                     GroupName="Compensation"
+                     Content="OpenLoop"
+                     VerticalAlignment="Center"
+                     IsChecked="{Binding OpenLoopCompensation}"/>
+        <RadioButton Grid.Row="12" Grid.Column="3"
+                     MinHeight="16"
+                     GroupName="Compensation"
+                     Content="PowerLeveling"
+                     VerticalAlignment="Center"
+                     IsChecked="{Binding PowerLevelCompensation}"/>
+
+    </Grid>
+</UserControl>

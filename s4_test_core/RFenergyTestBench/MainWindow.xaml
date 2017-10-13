@@ -1,0 +1,174 @@
+﻿<Window x:Class="RFenergyUI.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Ampleon RF Energy Test Bench" MinHeight="500" Width="900"
+        xmlns:converters="clr-namespace:Converters"
+        xmlns:sys="clr-namespace:System;assembly=mscorlib"
+        xmlns:local="clr-namespace:RFenergyUI.Views"
+        Loaded="Window_Loaded" Closing="Window_Closing">
+    
+    <Window.Resources>
+        <ResourceDictionary>
+            <converters:BoolToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Resources/DefaultColorThemes.xaml" />
+                <ResourceDictionary Source="Resources/NumericResources.xaml" />
+                <ResourceDictionary Source="Resources/TextBlockStyle.xaml" />
+                <ResourceDictionary Source="Resources/TextBoxStyle.xaml" />
+                <ResourceDictionary Source="Resources/CheckBoxStyle.xaml" />
+                <ResourceDictionary Source="Resources/ButtonStyle.xaml" />
+                <ResourceDictionary Source="Resources/ImageResources.xaml" />
+                <ResourceDictionary Source="Resources/ScrollViewerStyle.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid>
+        <!--Menu, Center area, Log Window, StatusBar-->
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="4*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <Grid.Background>
+            <ImageBrush ImageSource="{StaticResource MainBackground}" Opacity="0.1" Stretch="Uniform" />
+        </Grid.Background>
+
+        <!--Top line, menu-->
+        <Menu Grid.ColumnSpan="2"  Width="Auto" Height="20" Background="#FFA9D1F4">
+            <MenuItem Header="_File">
+                <MenuItem x:Name="About" Header="About" HorizontalAlignment="Left" Width="140" Click="About_Click"/>
+                <MenuItem x:Name="AppExit" Header="Exit" HorizontalAlignment="Left" Width="140" Click="AppExit_Click"/>
+            </MenuItem>
+        </Menu>
+
+        <!--Place a horizontal grid in the center row, 
+            tree in the left to pick RFE devices
+            operations on the right in a Tab control,
+            i.e. Debug, Calibrate, Test tabs-->
+        <Grid Grid.Row="1" Name="CenterStrip">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="5"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!--Left panel of center strip, pick RFE device-->
+            <Grid Name="LeftTree">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Text="RFE System:"
+                           Background="Cyan"
+                           Style="{StaticResource LabelTitleH3}"/>
+
+                <!--Use ListView to show any number of RFE Systems in a scrolling list-->
+                <ListBox Grid.Row="1"
+                         Background="Transparent"
+                         ItemsSource="{Binding Path=RfModules}"
+                         HorizontalContentAlignment="Center"
+                         PreviewMouseLeftButtonDown="ListBox_PreviewMouseLeftButtonDown"
+                         SelectedItem="{Binding SelectedSystem}"
+                         SelectionChanged="ListBox_SelectionChanged">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <VirtualizingStackPanel Orientation="Vertical"/>
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <Image Stretch="Fill" Source="{Binding SystemIcon}"
+                                       Opacity="0.7"/>
+                                <TextBlock Text="{Binding SystemName}"
+                                           Style="{StaticResource LabelSysList}">
+                                    <TextBlock.Effect>
+                                        <DropShadowEffect ShadowDepth="0"
+                                                          Color="Blue"
+                                                          BlurRadius="10"/>
+                                    </TextBlock.Effect>
+                                </TextBlock>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+
+            <GridSplitter Grid.Column="1"
+                      Width="5"
+                      VerticalAlignment="Stretch">
+            </GridSplitter>
+
+            <!--Right column, TabControl for different operations-->
+            <Grid Name="RightPanel" 
+                  Grid.Row="1" Grid.Column="2">
+
+                <!-- Tab Control for action panels -->
+                <TabControl Background="Transparent">
+
+                    <TabItem Header="Operation">
+                        <local:TestView/>
+                    </TabItem>
+
+                    <TabItem Header="Calibration">
+                        <Grid Name="Calibration">
+                            <local:CalView/>
+                        </Grid>
+                    </TabItem>
+
+                    <TabItem Header="Debugging" Visibility="{Binding ShowDebugTab, 
+                                            Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <local:RfeDebugView/>
+                    </TabItem>
+
+                </TabControl>
+            </Grid>
+        </Grid>
+
+        <GridSplitter Grid.Row="2"
+                      Height="5"
+                      HorizontalAlignment="Stretch">
+        </GridSplitter>
+
+        <!--Text="{Binding LogText}"-->
+        <Grid Row="3" Name="Log">
+            <local:LogBox x:Name="LogControl" 
+                     Background="Transparent"
+                     ItemsSource="{Binding Path=LogData}"
+                     VerticalContentAlignment="Center"
+                     SelectedIndex="{Binding LogSelectedIndex}">
+                <local:LogBox.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <VirtualizingStackPanel Orientation="Vertical"/>
+                    </ItemsPanelTemplate>
+                </local:LogBox.ItemsPanel>
+                <local:LogBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding}"
+                                   Margin="0, 0, 0, 0"
+                                   Style="{StaticResource LabelH4}">
+                            <!--<TextBlock.Effect>
+                                <DropShadowEffect ShadowDepth="0"
+                                                        Color="Blue"
+                                                        BlurRadius="10"/>
+                            </TextBlock.Effect>-->
+                        </TextBlock>
+                    </DataTemplate>
+                </local:LogBox.ItemTemplate>
+            </local:LogBox>
+        </Grid>
+
+        <!--<Grid Row="4" Name="StatusBar">
+            <TextBox Name="StatusWindow" 
+                    Style="{StaticResource TextBoxH4}" 
+                    Text="{Binding LogText}"
+                    IsReadOnly="True"
+                    />
+        </Grid>-->
+
+    </Grid>
+</Window>

@@ -1,0 +1,58 @@
+﻿<Window x:Class="RFenergyUI.Views.AboutView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:RFenergyUI.Views"
+        mc:Ignorable="d"
+        Title="RF Energy Test Bench" Width="800" Height="300"
+        ResizeMode="NoResize" WindowStyle="None"  
+        WindowStartupLocation="CenterScreen" 
+        Background="AliceBlue" 
+        BorderThickness="5" 
+        BorderBrush="AntiqueWhite">
+    <!--Title="RF Energy Test Bench" Height="280" Width="400"-->
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Resources/TextBlockStyle.xaml" />
+                <ResourceDictionary Source="../Resources/TextBoxStyle.xaml" />
+                <ResourceDictionary Source="../Resources/NumericResources.xaml" />
+                <ResourceDictionary Source="../Resources/ButtonStyle.xaml" />
+                <ResourceDictionary Source="../Resources/ImageResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Image Grid.ColumnSpan="2" 
+               Margin="{StaticResource MarginBigControl}"
+               Source="{StaticResource MainBackground}" Opacity="0.8" Stretch="Uniform" />
+                   
+        <TextBlock Grid.Row="1" Grid.ColumnSpan="2"
+                   Text="RF Energy Test Bench" HorizontalAlignment="Center"
+                   Style="{StaticResource LabelCenterH2}"/>
+        <TextBlock Grid.Row="2" Grid.ColumnSpan="2"
+                   Text="Copyright 2017, all rights reserved." HorizontalAlignment="Center"
+                   Style="{StaticResource LabelCenterH3}"/>
+
+        <TextBlock Grid.Row="3"
+                   Text="Version:" HorizontalAlignment="Right"
+                   Style="{StaticResource LabelCenterH3}"/>
+        <TextBlock Grid.Row="3" Grid.Column="1"
+                   Text="{Binding Version}" HorizontalAlignment="Left"
+                   Style="{StaticResource LabelCenterH3}"/>
+    </Grid>
+</Window>

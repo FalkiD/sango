@@ -1,0 +1,256 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+	<ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="DefaultColorThemes.xaml" />
+		<ResourceDictionary Source="NumericResources.xaml" />
+	</ResourceDictionary.MergedDictionaries>
+
+	<Style TargetType="{x:Type Button}">
+	</Style>
+
+	<Style x:Key="ButtonStandard" TargetType="{x:Type Button}">
+		<Setter Property="Background"
+				Value="{StaticResource MagplaneBlueBrush}" />
+		<Setter Property="Foreground"
+				Value="{StaticResource DialogBrush}" />
+        <Setter Property="FontSize"
+                Value="14" />
+		<Setter Property="BorderBrush"
+				Value="{StaticResource BrushTransparent}" />
+		<Setter Property="Focusable" Value="False" />
+		<Setter Property="Margin"
+				Value="{StaticResource MarginNormalControl }" />
+		<Setter Property="Focusable" Value="False" />
+	</Style>
+
+	<!-- A big/normal button style -->
+	<Style x:Key="ButtonKeyNormal"
+		   BasedOn="{StaticResource ButtonStandard}"
+		   TargetType="{x:Type Button}">
+
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="{x:Type Button}">
+					<Border x:Name="border"
+							Background="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Button}}, Path=Background}"
+							HorizontalAlignment="Stretch"
+							VerticalAlignment="Stretch"
+							BorderThickness="1"
+							BorderBrush="{StaticResource BrushTransparent}">
+						<TextBlock Text="{TemplateBinding Content}"
+								   Foreground="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Button}}, Path=Foreground}"
+								   FontSize="{TemplateBinding FontSize}"
+								   FontWeight="{TemplateBinding FontWeight}"
+								   TextWrapping="Wrap"
+								   TextAlignment="Center"
+								   HorizontalAlignment="Center"
+								   VerticalAlignment="Center" />
+					</Border>
+
+					<ControlTemplate.Triggers>
+						<!--<Trigger Property="IsMouseOver"
+								 Value="True">
+							<Setter Property="Background"
+									TargetName="border"
+									Value="{StaticResource StrongBrush}" />
+						</Trigger>-->
+
+						<Trigger Property="IsPressed"
+								 Value="true">
+							<Setter Property="Opacity"
+									Value="0.6" />
+							<Setter Property="BorderBrush"
+									TargetName="border"
+									Value="{StaticResource StrongBrush}" />
+                        
+						</Trigger>
+                        <Trigger Property="IsEnabled"
+                                  Value="False">
+                            <Setter Property="Background"
+                                    Value="{StaticResource MagplaneGrayBrush}" />
+                        </Trigger>
+					</ControlTemplate.Triggers>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+
+
+	<Style x:Key="ButtonInvisibleContainer"
+		   TargetType="{x:Type Button}" >
+		<Setter Property="Background"
+				Value="{StaticResource BrushTransparent}" />
+		<Setter Property="Foreground"
+				Value="{StaticResource BrushTransparent}" />
+		<Setter Property="FontSize"
+				Value="14" />
+		<Setter Property="BorderBrush"
+				Value="{StaticResource BrushTransparent}" />
+		<Setter Property="Focusable"
+				Value="False" />
+	</Style>
+	
+	<Style x:Key="ButtonEStop"
+		   BasedOn="{StaticResource ButtonInvisibleContainer}"
+		   TargetType="{x:Type Button}" >
+		<Setter Property="HorizontalAlignment" Value="Stretch" />
+		<Setter Property="HorizontalContentAlignment" Value="Stretch" />
+		<Setter Property="VerticalAlignment" Value="Stretch" />
+		<Setter Property="VerticalContentAlignment" Value="Stretch" />
+	</Style>
+
+	<!-- A big/normal button style -->
+	<Style x:Key="ButtonKeyLarge"
+		   BasedOn="{StaticResource ButtonKeyNormal}"
+		   TargetType="{x:Type Button}">
+		<Setter Property="Background"
+				Value="{StaticResource MagplaneBlueBrush}" />
+		<Setter Property="Height"
+				Value="80" />
+		<Setter Property="Width"
+				Value="100" />
+	</Style>
+
+
+	<!-- A wide big button style -->
+	<Style x:Key="ButtonKeyWide"
+		   BasedOn="{StaticResource ButtonKeyLarge}"
+		   TargetType="{x:Type Button}">
+		<Setter Property="Width"
+				Value="200" />
+	</Style>
+	
+	<!-- A wide big button style -->
+	<Style x:Key="ButtonKeyFilenames"
+		   BasedOn="{StaticResource ButtonKeyLarge}"
+		   TargetType="{x:Type Button}">
+		<Setter Property="Width"
+				Value="700" />
+	</Style>
+	
+	<!--A button style initially used for keypad number 0-9 buttons-->
+	<Style x:Key="ButtonKeyConfirm"
+		   BasedOn="{StaticResource ButtonKeyLarge}"
+		   TargetType="{x:Type Button}">
+		<Setter Property="Background"
+				Value="{StaticResource AcceptBrush}" />
+	</Style>
+
+	<!--A button style initially used for keypad number 0-9 buttons-->
+	<Style x:Key="ButtonKeyCancel"
+		   BasedOn="{StaticResource ButtonKeyLarge}"
+		   TargetType="{x:Type Button}">
+		<Setter Property="Background"
+				Value="{StaticResource ValidationBrush}" />
+	</Style>
+
+	<Style x:Key="ButtonMarlett"
+		   BasedOn="{StaticResource ButtonKeyNormal}"
+		   TargetType="{x:Type Button}">
+
+		<Setter Property="FontFamily"
+				Value="Marlett" />
+		<Setter Property="FontSize"
+				Value="48" />
+
+		<Setter Property="BorderBrush"
+				Value="{StaticResource BrushTransparent}" />
+		<Setter Property="Background"
+				Value="{StaticResource BrushTransparent}" />
+		<Setter Property="Foreground"
+				Value="{StaticResource AccentBrush}" />
+	</Style>
+
+    <Style x:Key="ButtonClose"
+		   BasedOn="{StaticResource ButtonMarlett}"
+		   TargetType="{x:Type Button}" >
+
+        <Setter Property="Content"
+				Value="r" />
+        <Setter Property="Foreground"
+				Value="{StaticResource ValidationBrush}" />
+        <Setter Property="Background"
+				Value="{StaticResource BrushTransparent}" />
+        <Setter Property="VerticalAlignment"
+				Value="Top" />
+    </Style>
+
+    <Style x:Key="ButtonBackspace"
+		   BasedOn="{StaticResource ButtonMarlett}"
+		   TargetType="{x:Type Button}">
+
+        <Setter Property="Background"
+				Value="{StaticResource ButtonBackground}" />
+        <Setter Property="Foreground"
+				Value="{StaticResource DialogBrush}" />
+        <Setter Property="Content"
+				Value="3" />
+        <Setter Property="Height"
+				Value="50" />
+    </Style>
+
+    <Style x:Key="ButtonKeyNumeric"
+		   BasedOn="{StaticResource ButtonKeyLarge}"
+		   TargetType="{x:Type Button}">
+        
+        <Setter Property="Background"
+				Value="{StaticResource ButtonNumericBackground}" />
+		<Setter Property="FontSize" Value="48" />
+    </Style>
+
+    <Style x:Key="ButtonStatusBar"
+		   TargetType="{x:Type Button}">
+
+        <Setter Property="Background"
+				Value="{StaticResource AccentBrush}" />
+        <Setter Property="Foreground"
+				Value="{StaticResource DialogBrush}" />
+        <Setter Property="HorizontalContentAlignment"
+				Value="Center" />
+        <Setter Property="Padding"
+                Value="5" />
+
+    </Style>
+
+    <!-- styling support for ButtonIcon -->
+    <Style x:Key="ButtonIconOuterCircle" TargetType="Ellipse" >
+        <Setter Property="Width"				Value="46" />
+        <Setter Property="Height"				Value="46" />
+        <Setter Property="Fill"					Value="{StaticResource BrushTransparent}" />
+        <Setter Property="Stroke"				Value="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Foreground}" />
+        <Setter Property="StrokeThickness"		Value="3" />
+        <Setter Property="Opacity"				Value="0.5" />
+        <Setter Property="VerticalAlignment"	Value="Center" />
+        <Setter Property="HorizontalAlignment"	Value="Center" />
+    </Style>
+
+    <Style x:Key="ButtonIconInner" TargetType="Rectangle" >
+        <Setter Property="Width"	Value="30" />
+        <Setter Property="Height"	Value="30" />
+        <Setter Property="VerticalAlignment"	Value="Center" />
+        <Setter Property="HorizontalAlignment"	Value="Center" />
+    </Style>
+
+    <Style x:Key="ButtonIcon" BasedOn="{StaticResource ButtonStandard}" TargetType="{x:Type Button}" >
+        <Setter Property="Background"	Value="Transparent"/>
+        <Setter Property="Foreground"	Value="{StaticResource MagplaneBlueBrush}" />
+        <Setter Property="MinWidth"		Value="46"/>
+        <Setter Property="MinHeight"	Value="46"/>
+        <Setter Property="Template" >
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Button}">
+                    <Grid Background="Transparent" >
+                        <Ellipse x:Name="circle" Style="{StaticResource ButtonIconOuterCircle}" />
+                        <ContentPresenter />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True" >
+                            <Setter Property="Opacity" TargetName="circle" Value="1" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</ResourceDictionary>

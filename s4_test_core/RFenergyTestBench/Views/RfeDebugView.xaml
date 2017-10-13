@@ -1,0 +1,207 @@
+﻿<UserControl x:Class="RFenergyUI.Views.RfeDebugView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:sys="clr-namespace:System;assembly=mscorlib"
+             xmlns:local="clr-namespace:RFenergyUI.Views"
+             xmlns:cnvtr="clr-namespace:Converters"
+             mc:Ignorable="d" 
+             d:DesignHeight="300" d:DesignWidth="300">
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Resources/TextBlockStyle.xaml" />
+                <ResourceDictionary Source="../Resources/TextBoxStyle.xaml" />
+                <ResourceDictionary Source="../Resources/CheckBoxStyle.xaml" />
+                <ResourceDictionary Source="../Resources/NumericResources.xaml" />
+                <ResourceDictionary Source="../Resources/ScrollViewerStyle.xaml" />
+                <ResourceDictionary Source="../Resources/ButtonStyle.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <cnvtr:DoubleToTextConverter x:Key="doubleConverter"/>
+            <cnvtr:HexTextConverter x:Key="hexConverter"/>
+            <cnvtr:IntTextConverter x:Key="intConverter"/>
+            <cnvtr:ChannelConverter x:Key="channelConverter"/>
+            <cnvtr:PowerConverter x:Key="powerConverter"/>
+            <cnvtr:FrequencyConverter x:Key="frequencyConverter"/>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid Name="Debugging">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.ColumnSpan="4" 
+                    Text="Separate HEX bytes with a space OR a comma" 
+                    HorizontalAlignment="Center"
+                    Style="{StaticResource LabelH4}"/>
+
+        <TextBlock Grid.Row="1" Text="Write Cmd:" HorizontalAlignment="Right"
+                    Style="{StaticResource LabelH4}"/>
+        <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
+                    Style="{StaticResource TextBoxH4}" 
+                    Text="{Binding CmdData, UpdateSourceTrigger=PropertyChanged}">
+            <TextBox.InputBindings>
+                <KeyBinding Key="Enter" Command="{Binding CmdExecute}"/>
+            </TextBox.InputBindings>
+        </TextBox>
+
+        <TextBlock Grid.Row="2" Grid.ColumnSpan="4"    
+                    HorizontalAlignment="Center"
+                    Text="#NAME to show as binary (NAME shows string data)" 
+                    Style="{StaticResource LabelH4}"/>
+
+        <TextBlock Grid.Row="3" Text="Get Tag:" HorizontalAlignment="Right"
+                    Style="{StaticResource LabelH4}"/>
+        <TextBox Grid.Row="3" Grid.Column="1" Style="{StaticResource TextBoxH4}" 
+                    Text="{Binding GetTag, UpdateSourceTrigger=PropertyChanged}">
+            <TextBox.InputBindings>
+                <KeyBinding Key="Enter" Command="{Binding CmdGetTag}"/>
+            </TextBox.InputBindings>
+        </TextBox>
+
+        <TextBlock Grid.Row="4" Grid.ColumnSpan="4"    
+                    HorizontalAlignment="Center"
+                    Text="String or #XX XX XX XX for binary data" 
+                    Style="{StaticResource LabelH4}"/>
+
+        <TextBlock Grid.Row="5" Text="Set Tag:" HorizontalAlignment="Right"
+                    Style="{StaticResource LabelH4}"/>
+        <TextBox Grid.Row="5" Grid.Column="1" Style="{StaticResource TextBoxH4}" 
+                    Text="{Binding SetTag, UpdateSourceTrigger=PropertyChanged}"/>
+        <TextBox Grid.Row="5" Grid.Column="2" Style="{StaticResource TextBoxH4}" 
+                    Text="{Binding TagData, UpdateSourceTrigger=PropertyChanged}">
+            <TextBox.InputBindings>
+                <KeyBinding Key="Enter" Command="{Binding CmdSetTag}"/>
+            </TextBox.InputBindings>
+        </TextBox>
+
+        <TextBlock Grid.Row="6" Text="Read EEPROM:" HorizontalAlignment="Right"
+                    Style="{StaticResource LabelH4}"/>
+        <TextBox Grid.Row="6" Grid.Column="1" Style="{StaticResource TextBoxH4}" 
+                    Text="{Binding ReadEEPROM, UpdateSourceTrigger=PropertyChanged}">
+            <TextBox.InputBindings>
+                <KeyBinding Key="Enter" Command="{Binding CmdReadEEPROM}"/>
+            </TextBox.InputBindings>
+        </TextBox>
+        <Button Grid.Row="6" Grid.Column="2" 
+                Content="Dump EEPROM to file" 
+                Command="{Binding CmdEEPROMtoFile}"
+                Style="{StaticResource ButtonKeyNormal}"/>
+
+        <TextBlock Grid.Row="7" Text="Write EEPROM:" HorizontalAlignment="Right"
+                    Style="{StaticResource LabelH4}"/>
+        <TextBox Grid.Row="7" Grid.Column="1" Style="{StaticResource TextBoxH4}" 
+                    Text="{Binding WriteEEPROM, UpdateSourceTrigger=PropertyChanged}">
+            <TextBox.InputBindings>
+                <KeyBinding Key="Enter" Command="{Binding CmdWriteEEPROM}"/>
+            </TextBox.InputBindings>
+        </TextBox>
+        <Button Grid.Row="7" Grid.Column="2" 
+                Content="File to EEPROM" 
+                Command="{Binding CmdFileToEEPROM}"
+                Style="{StaticResource ButtonKeyNormal}"/>
+
+        <TextBlock Grid.Row="8" Text="Read I2C:" HorizontalAlignment="Right"
+                    Style="{StaticResource LabelH4}"/>
+        <TextBox Grid.Row="8" Grid.Column="1" Style="{StaticResource TextBoxH4}" 
+                    Text="{Binding ReadI2C, UpdateSourceTrigger=PropertyChanged}">
+            <TextBox.InputBindings>
+                <KeyBinding Key="Enter" Command="{Binding CmdReadI2C}"/>
+            </TextBox.InputBindings>
+        </TextBox>
+
+        <TextBlock Grid.Row="9" Text="Write I2C:" HorizontalAlignment="Right"
+                    Style="{StaticResource LabelH4}"/>
+        <TextBox Grid.Row="9" Grid.Column="1" Style="{StaticResource TextBoxH4}" 
+                    Text="{Binding WriteI2C, UpdateSourceTrigger=PropertyChanged}">
+            <TextBox.InputBindings>
+                <KeyBinding Key="Enter" Command="{Binding CmdWriteI2C}"/>
+            </TextBox.InputBindings>
+        </TextBox>
+
+        <TextBlock Grid.Row="10" Text="Write/Read SPI:" HorizontalAlignment="Right"
+                    Style="{StaticResource LabelH4}"/>
+        <TextBox Grid.Row="10" Grid.Column="1" Style="{StaticResource TextBoxH4}" 
+                    Text="{Binding WrRdSPI, UpdateSourceTrigger=PropertyChanged}">
+            <TextBox.InputBindings>
+                <KeyBinding Key="Enter" Command="{Binding CmdWrRdSPI}"/>
+            </TextBox.InputBindings>
+        </TextBox>
+        <Button Grid.Row="10 " Grid.Column="2"
+                Content="Read DAC's" 
+                Command="{Binding CmdRead}"
+                Style="{StaticResource ButtonKeyNormal}"/>
+
+        
+        <!--Set Power in dB-->
+        <TextBlock Grid.Row="11" Text="Power in dB:" HorizontalAlignment="Right"
+                   Style="{StaticResource LabelH4}"/>
+        <TextBox Grid.Row="11" Grid.Column="1"
+                 Text="{Binding PwrInDb, StringFormat=N3}"
+                 Style="{StaticResource TextBoxH4}">
+            <TextBox.InputBindings>
+                <KeyBinding Gesture="Enter" 
+                    Command="{Binding CmdPwrInDb}"
+                    CommandParameter="{Binding RelativeSource={RelativeSource FindAncestor,AncestorType={x:Type TextBox}},Path=Text}" />
+            </TextBox.InputBindings>
+        </TextBox>
+
+        
+        <!--Use Vertical ItemsControl to show any number of ChannelViews in a scrolling list-->
+        <HeaderedItemsControl Grid.Row="12" Grid.ColumnSpan="4"
+                              HorizontalAlignment="Center"
+                              ItemsSource="{Binding Path=ChannelVms}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <VirtualizingStackPanel Orientation="Vertical"/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.Template>
+                <ControlTemplate TargetType="HeaderedItemsControl">
+                    <Grid>
+                        <!--Use first row of Grid for header-->
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>   <!--Must set ItemsControl size correctly, need better technique, set to required height only-->
+                        </Grid.RowDefinitions>
+                        <local:ChnlHdrView/>
+                        <ScrollViewer Grid.Row="1"
+                                      HorizontalScrollBarVisibility="Hidden"
+                                      VerticalScrollBarVisibility="Auto"
+                                      Style="{StaticResource MetroScrollViewer}">
+                            <ItemsPresenter/>
+                        </ScrollViewer>
+                    </Grid>
+                    <!--</Border>-->
+                </ControlTemplate>
+            </ItemsControl.Template>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <local:ChannelView/> <!--ChannelView for each channel-->
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </HeaderedItemsControl>
+
+    </Grid>
+</UserControl>

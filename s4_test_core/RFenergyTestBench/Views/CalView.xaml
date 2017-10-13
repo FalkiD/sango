@@ -1,0 +1,247 @@
+﻿<UserControl x:Class="RFenergyUI.Views.CalView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:sys="clr-namespace:System;assembly=mscorlib"
+             xmlns:local="clr-namespace:RFenergyUI.Views"
+             xmlns:cnvtr="clr-namespace:Converters"
+             mc:Ignorable="d" 
+             d:DesignHeight="300" d:DesignWidth="300">
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Resources/TextBlockStyle.xaml" />
+                <ResourceDictionary Source="../Resources/TextBoxStyle.xaml" />
+                <ResourceDictionary Source="../Resources/CheckBoxStyle.xaml" />
+                <ResourceDictionary Source="../Resources/NumericResources.xaml" />
+                <ResourceDictionary Source="../Resources/ButtonStyle.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <cnvtr:DoubleToTextConverter x:Key="doubleConverter"/>
+            <cnvtr:HexTextConverter x:Key="hexConverter"/>
+            <cnvtr:IntTextConverter x:Key="intConverter"/>
+            <cnvtr:ChannelConverter x:Key="channelConverter"/>
+            <cnvtr:PowerConverter x:Key="powerConverter"/>
+            <cnvtr:PowerCalConverter x:Key="powerCalConverter"/>
+            <cnvtr:FrequencyConverter x:Key="frequencyConverter"/>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid Name="Calibration">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Button Grid.Column="1" 
+                Content="Init LadyBug" 
+                Command="{Binding CmdInit}"
+                Style="{StaticResource ButtonKeyNormal}"/>
+        <Button Grid.Column="2" 
+                Content="ReadCw" 
+                Command="{Binding CmdReadCw}"
+                Style="{StaticResource ButtonKeyNormal}"/>
+        <Button Grid.Column="3" 
+                Content="RdPulsed" 
+                Command="{Binding CmdReadPulsed}"
+                Style="{StaticResource ButtonKeyNormal}"/>
+
+        <!--Need this button to take focus so Start/Stop/Stepsize properties get updated-->
+        <Button Grid.Row="1" Grid.Column="0" 
+                Content="{Binding PwrCalBtnTxt}" 
+                Command="{Binding CmdPwrCal}"
+                Focusable="True"
+                Style="{StaticResource ButtonKeyNormal}"/>
+        <CheckBox Grid.Row="1" Grid.Column="1"
+                  Grid.ColumnSpan="2"
+                  Content="Update power table"
+                  Style="{StaticResource CheckBoxH4}"
+                  IsChecked="{Binding UpdatePowerTable}"/>
+        <CheckBox Grid.Row="1" Grid.Column="2"
+                  Grid.ColumnSpan="2"
+                  Content="Persist Cal to PC2 tag"
+                  Style="{StaticResource CheckBoxH4}"
+                  IsChecked="{Binding PersistCalData}"/>
+        <CheckBox Grid.Row="1" Grid.Column="3"
+                  Grid.ColumnSpan="2"
+                  Content="Skip Collect Data(re-use)"
+                  Style="{StaticResource CheckBoxH4}"
+                  IsChecked="{Binding SkipCollectData}"/>
+
+        <TextBlock Grid.Row="2" Text="Offsets:" HorizontalAlignment="Right"
+                    Style="{StaticResource LabelH4}"/>
+        <TextBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2"
+                    Style="{StaticResource TextBoxH4}" 
+                    Text="{Binding Offsets, Converter={StaticResource doubleConverter}}">
+            <TextBox.InputBindings>
+                <KeyBinding Gesture="Enter" 
+                    Command="{Binding CmdOffsets}"
+                    CommandParameter="{Binding RelativeSource={RelativeSource FindAncestor,AncestorType={x:Type TextBox}},Path=Text}" />
+            </TextBox.InputBindings>
+        </TextBox>
+
+        <TextBlock Grid.Row="3" Text="Frequency(mHz):" HorizontalAlignment="Right"
+                    Style="{StaticResource LabelH4}"/>
+        <TextBox Grid.Row="3" Grid.Column="1"
+                Text="{Binding Frequency, Converter={StaticResource frequencyConverter}}"
+                        Style="{StaticResource TextBoxH4}">
+            <TextBox.InputBindings>
+                <KeyBinding Gesture="Enter" 
+                    Command="{Binding CmdFreq}"
+                    CommandParameter="{Binding RelativeSource={RelativeSource FindAncestor,AncestorType={x:Type TextBox}},Path=Text}" />
+            </TextBox.InputBindings>
+        </TextBox>
+
+        <TextBlock Grid.Row="4" Text="Averages:" HorizontalAlignment="Right"
+                    Style="{StaticResource LabelH4}"/>
+        <TextBox Grid.Row="4" Grid.Column="1" Style="{StaticResource TextBoxH4}" 
+                    Text="{Binding Averages}">
+            <TextBox.InputBindings>
+                <KeyBinding Gesture="Enter" 
+                    Command="{Binding CmdAverages}"
+                    CommandParameter="{Binding RelativeSource={RelativeSource FindAncestor,AncestorType={x:Type TextBox}},Path=Text}" />
+            </TextBox.InputBindings>
+        </TextBox>
+
+        <TextBlock Grid.Row="5" Text="External Trigger:" HorizontalAlignment="Right"
+                    Style="{StaticResource LabelH4}"/>
+        <CheckBox Grid.Row="5" Grid.Column="1"
+                  Style="{StaticResource CheckBoxH4}"
+                  IsChecked="{Binding ExternalTrigger}"/>
+
+        <TextBlock Grid.Row="6" Text="Step Size(dB):" HorizontalAlignment="Right"
+                    Style="{StaticResource LabelH4}"/>
+        <TextBox Grid.Row="6" Grid.Column="1"
+                Text="{Binding PowerStepSize, Converter={StaticResource doubleConverter}}"
+                Style="{StaticResource TextBoxH4}">
+        </TextBox>
+        <TextBlock Grid.Row="7" Text="Start(dB):" HorizontalAlignment="Right"
+                    Style="{StaticResource LabelH4}"/>
+        <TextBox Grid.Row="7" Grid.Column="1"
+                Text="{Binding PowerStart, Converter={StaticResource powerCalConverter}}"
+                Style="{StaticResource TextBoxH4}">
+        </TextBox>
+        <TextBlock Grid.Row="7" Grid.Column="2" 
+                   Text="Start dBm:" HorizontalAlignment="Right"
+                   Style="{StaticResource LabelH4}"/>
+        <TextBox Grid.Row="7" Grid.Column="3"
+                Text="{Binding TargetStart, Converter={StaticResource powerCalConverter}}"
+                Style="{StaticResource TextBoxH4}">
+        </TextBox>
+        <TextBlock Grid.Row="8" Text="Stop(dB):" HorizontalAlignment="Right"
+                    Style="{StaticResource LabelH4}"/>
+        <TextBox Grid.Row="8" Grid.Column="1"
+                Text="{Binding PowerStop, Converter={StaticResource powerCalConverter}}"
+                Style="{StaticResource TextBoxH4}">
+        </TextBox>
+
+        <TextBlock Grid.Row="9" Text="Compression Limit(dB):" HorizontalAlignment="Right"
+                    Style="{StaticResource LabelH4}"/>
+        <TextBox Grid.Row="9" Grid.Column="1"
+                Text="{Binding Compression, Converter={StaticResource powerConverter}}"
+                Style="{StaticResource TextBoxH4}">
+        </TextBox>
+
+        <Button Grid.Row="10" Grid.Column="0" 
+                Content="Coupler Offsets" 
+                Command="{Binding CmdCouplerOffsets}"
+                Style="{StaticResource ButtonKeyNormal}"/>
+        <TextBlock Grid.Row="10" Grid.Column="1"
+                   Text="Coupler Offsets(Fwd/Ref):" HorizontalAlignment="Right"
+                   Style="{StaticResource LabelH4}"/>
+        <TextBlock Grid.Row="10" Grid.Column="2"
+                   Text="{Binding CouplerFwdOffset}" HorizontalAlignment="Right"
+                   Style="{StaticResource LabelH4}"/>
+        <TextBlock Grid.Row="10" Grid.Column="3"
+                   Text="{Binding CouplerReflOffset}" HorizontalAlignment="Right"
+                   Style="{StaticResource LabelH4}"/>
+        <CheckBox Grid.Row="10" Grid.Column="4"
+                  Content="Write FOF/ROF tags"
+                  Style="{StaticResource CheckBoxH4}"
+                  IsChecked="{Binding WriteFofRofTags}"/>
+
+        <!--Don't use temp sweep yet...
+        <TextBlock Grid.Row="11" Grid.Column="1"
+                   Text="Meas Period(ms)" HorizontalAlignment="Center"
+                   Style="{StaticResource LabelH4}"/>
+        <TextBlock Grid.Row="11" Grid.Column="2"
+                   Text="Total Time(ms)" HorizontalAlignment="Center"
+                   Style="{StaticResource LabelH4}"/>
+
+        <Button Grid.Row="12" Grid.Column="0" 
+                Content="{Binding TempCoeffBtnTxt}" 
+                Command="{Binding CmdTempCoefficient}"
+                Focusable="True"
+                Style="{StaticResource ButtonKeyNormal}"/>
+        <TextBox Grid.Row="12" Grid.Column="1"
+                   Text="{Binding TempMeasPeriod}" HorizontalAlignment="Center"
+                   Style="{StaticResource TextBoxH4}"/>
+        <TextBox Grid.Row="12" Grid.Column="2"
+                   Text="{Binding TempMeasTime}" HorizontalAlignment="Center"
+                   Style="{StaticResource TextBoxH4}"/>-->
+
+        <Button Grid.Row="11" 
+                Content="WriteCouplerCal" 
+                Command="{Binding CmdMtrCal}"
+                Focusable="True"
+                Style="{StaticResource ButtonKeyNormal}"/>
+        <TextBlock Grid.Row="11" Grid.Column="1" 
+                   Text="Meter Breakpoint(adc count):" HorizontalAlignment="Right"
+                   Style="{StaticResource LabelH4}"/>
+        <TextBox Grid.Row="11" Grid.Column="2"
+                Text="{Binding MeterBreakpoint, Converter={StaticResource intConverter}}"
+                Style="{StaticResource TextBoxH4}">
+        </TextBox>
+        <CheckBox Grid.Row="11" Grid.Column="3"
+                  Content="Write MTR tag"
+                  Style="{StaticResource CheckBoxH4}"
+                  IsChecked="{Binding WriteMtrTag}"/>
+
+        <TextBlock Grid.Row="12" Text="LowSlope:" HorizontalAlignment="Right"
+                    Style="{StaticResource LabelH4}"/>
+        <TextBox Grid.Row="12" Grid.Column="1"
+                Text="{Binding LowSlope, Converter={StaticResource doubleConverter}}"
+                Style="{StaticResource TextBoxH4}">
+        </TextBox>
+        <TextBlock Grid.Row="12" Grid.Column="2" Text="LowIntercept:" HorizontalAlignment="Right"
+                    Style="{StaticResource LabelH4}"/>
+        <TextBox Grid.Row="12" Grid.Column="3"
+                Text="{Binding LowIntercept, Converter={StaticResource doubleConverter}}"
+                Style="{StaticResource TextBoxH4}">
+        </TextBox>
+        
+        <TextBlock Grid.Row="13" Text="HighSlope:" HorizontalAlignment="Right"
+                    Style="{StaticResource LabelH4}"/>
+        <TextBox Grid.Row="13" Grid.Column="1"
+                Text="{Binding HighSlope, Converter={StaticResource doubleConverter}}"
+                Style="{StaticResource TextBoxH4}">
+        </TextBox>
+        <TextBlock Grid.Row="13" Grid.Column="2" Text="HighIntercept:" HorizontalAlignment="Right"
+                    Style="{StaticResource LabelH4}"/>
+        <TextBox Grid.Row="13" Grid.Column="3"
+                Text="{Binding HighIntercept, Converter={StaticResource doubleConverter}}"
+                Style="{StaticResource TextBoxH4}">
+        </TextBox>
+
+    </Grid>
+</UserControl>
