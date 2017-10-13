@@ -108,15 +108,58 @@ namespace RFenergyUI.ViewModels
             //CmdTempComp = ReactiveCommand.CreateAsyncObservable(x => CmdTempCompRun(x));
             //CmdTempComp.Subscribe(result => MainViewModel.MsgAppendLine(result));
 
-            PaVms = new ObservableCollection<PaViewModel>();
+            //PaVms = new ObservableCollection<PaViewModel>();
+            //for (int channel = 1; channel < HW_CHANNELS + 1; ++channel)
+            //{
+            //    PaVms.Add(new PaViewModel
+            //    {
+            //        Channel = channel,
+            //        ShowChannel = true
+            //    });
+            //}
+            ChannelVms = new ObservableCollection<ChannelViewModel>();
             for (int channel = 1; channel < HW_CHANNELS + 1; ++channel)
             {
-                PaVms.Add(new PaViewModel
+                ChannelVms.Add(new ChannelViewModel
                 {
-                    Channel = channel,
-                    ShowChannel = true
-                });
+                    Number = channel,
+                    IsSelected = true,
+                    PhaseDacVm = new DacViewModel
+                    {
+                        Title = "Phase/S4_1A",
+                        WhichDac = Dac.ePhaseTrim,
+                        Channel = channel,
+                        ShowChannel = true
+                    },
+                    GainDacVm = new DacViewModel
+                    {
+                        Title = "Gain/S4_1B",
+                        WhichDac = Dac.eGainTrim,
+                        Channel = channel,
+                        ShowChannel = false
+                    },
+                    Bias1DacVm = new DacViewModel
+                    {
+                        Title = "Bias1/S4_2A",
+                        WhichDac = Dac.eBias1,
+                        Channel = channel,
+                        ShowChannel = false
+                    },
+                    Bias2DacVm = new DacViewModel
+                    {
+                        Title = "Bias2/S4_2B",
+                        WhichDac = Dac.eBias2,
+                        Channel = channel,
+                        ShowChannel = false
+                    },
+                    PaVm = new PaViewModel
+                    {
+                        Channel = channel,
+                        ShowChannel = true
+                    }
+            });
             }
+
 
             //MainViewModel.IDbg.SetDbHandler += UpdateLastProgrammedDb;
 
@@ -135,12 +178,19 @@ namespace RFenergyUI.ViewModels
             set { this.RaiseAndSetIfChanged(ref _phaseVisible, value); }
         }
 
-        ObservableCollection<PaViewModel> _paVms;
-        public ObservableCollection<PaViewModel> PaVms
+        ObservableCollection<ChannelViewModel> _channelVms;
+        public ObservableCollection<ChannelViewModel> ChannelVms
         {
-            get { return _paVms; }
-            set { this.RaiseAndSetIfChanged(ref _paVms, value); }
+            get { return _channelVms; }
+            set { this.RaiseAndSetIfChanged(ref _channelVms, value); }
         }
+
+        //ObservableCollection<PaViewModel> _paVms;
+        //public ObservableCollection<PaViewModel> PaVms
+        //{
+        //    get { return _paVms; }
+        //    set { this.RaiseAndSetIfChanged(ref _paVms, value); }
+        //}
 
         //double _pwrInDb;
         //public double PwrInDb
@@ -1085,13 +1135,17 @@ namespace RFenergyUI.ViewModels
             else
             {
                 // back on UI thread, update ViewModels with _results
-                for (int channel = 1; channel <= HW_CHANNELS; ++channel)
-                {
-                    PaVms[channel - 1].Current = _results[channel - 1].Current;
-                    PaVms[channel - 1].Voltage = _results[channel - 1].Voltage;
-                    PaVms[channel - 1].Temperature = _results[channel - 1].Temperature;
-                    PaVms[channel - 1].IDrv = _results[channel - 1].IDrv;
-                }
+                //for (int channel = 1; channel <= HW_CHANNELS; ++channel)
+                //{
+                //    PaVms[channel - 1].Current = _results[channel - 1].Current;
+                //    PaVms[channel - 1].Voltage = _results[channel - 1].Voltage;
+                //    PaVms[channel - 1].Temperature = _results[channel - 1].Temperature;
+                //    PaVms[channel - 1].IDrv = _results[channel - 1].IDrv;
+                //}
+
+                MainViewModel.MsgAppendLine("******* Fix TestViewModel.DoReadings() ********");
+
+
                 CouplerFwd = _results[0].Forward;
                 CouplerRefl = _results[0].Reflected;
                 if(MainViewModel.CalPanel != null)

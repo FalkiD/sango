@@ -30,9 +30,12 @@
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
 
         <local:DacView DataContext="{Binding Path=PhaseDacVm}" />
+        <local:PaView Grid.Column="1"
+                      DataContext="{Binding Path=PaVm}" />
 
         <local:DacView Grid.Row="1"
                        DataContext="{Binding Path=GainDacVm}" />

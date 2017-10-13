@@ -45,7 +45,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>  <!--Connect Buttons-->
             <RowDefinition Height="Auto"/>  <!--List of channels (not used, moved DAC's to Debug panel-->
-            <RowDefinition Height="*" MaxHeight="160"/>     <!--Must set ItemsControl size correctly, ItemsControl for PaView's, spans all columns-->
+            <RowDefinition Height="*" MaxHeight="240"/>     <!--Must set ItemsControl size correctly, ItemsControl for ChannelView's, spans all columns-->
             <RowDefinition Height="Auto"/>  <!--Header 'Value'-->
             <RowDefinition Height="Auto"/>  <!--Frequency-->
             <RowDefinition Height="Auto"/>  <!--Power-->
@@ -81,13 +81,54 @@
                 Style="{StaticResource CheckBoxH4}"
                 IsChecked="{Binding LoopReadings}"/>
 
+        <!--Use Horizontal ItemsControl to show any number of channels in a scrolling list--><!--
+        <ItemsControl Grid.Row="1" Grid.ColumnSpan="4"
+                      ItemsSource="{Binding Path=ChannelVms}"
+                      HorizontalAlignment="Center">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <VirtualizingStackPanel Orientation="Horizontal"/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.Template>
+                <ControlTemplate TargetType="ItemsControl">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                                  VerticalScrollBarVisibility="Hidden">
+                            <ItemsPresenter/>
+                        </ScrollViewer>
+                        <Button Grid.Column="1"
+                                Content="Read DAC's" 
+                                Command="{Binding CmdRead}"
+                                Style="{StaticResource ButtonKeyNormal}"/>
+                        <CheckBox Grid.Column="2"
+                                  Content="Monitor PA's"
+                                  Style="{StaticResource CheckBoxH4}"
+                                  IsChecked="{Binding LoopReadings}"/>
+                    </Grid>
+                </ControlTemplate>
+            </ItemsControl.Template>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <CheckBox Content="{Binding Path=Number, Converter={StaticResource channelConverter}}"
+                              Style="{StaticResource CheckBoxH4}"
+                              IsChecked="{Binding Path=IsSelected}"/>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>-->
+
         <!--Can't seem to get HeaderedItemsControl border to show?
         BorderThickness="10"
         BorderBrush="Black"
         Background="LightGray"-->
         <!--Use Vertical ItemsControl to show any number of ChannelViews in a scrolling list-->      
         <HeaderedItemsControl Grid.Row="2" Grid.ColumnSpan="5"
-                      ItemsSource="{Binding Path=PaVms}"
+                      ItemsSource="{Binding Path=ChannelVms}"
                       HorizontalAlignment="Center">
             <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
@@ -105,7 +146,7 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>    <!--Must set ItemsControl size correctly, need better technique, set to required height only-->
                         </Grid.RowDefinitions>
-                            <local:PaHdrView/>
+                            <local:ChnlHdrView/>    <!--13-Oct was PaHdrView-->
                             <ScrollViewer Grid.Row="1"
                                       HorizontalScrollBarVisibility="Hidden"
                                       VerticalScrollBarVisibility="Auto"
@@ -118,7 +159,7 @@
             </ItemsControl.Template>
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <local:PaView/>    <!--PaView for each channel, was ChannelView at first-->
+                    <local:ChannelView/>    <!--Back to ChannelView... PaView for each channel, was ChannelView at first-->
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </HeaderedItemsControl>

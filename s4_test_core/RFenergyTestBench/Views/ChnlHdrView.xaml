@@ -20,21 +20,37 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto"/>
-            <ColumnDefinition Width="Auto"/>
-            <ColumnDefinition Width="Auto"/>
-            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
         <TextBlock Text="Channel"
-                   Style="{StaticResource LabelH4}"/>
+                   Style="{StaticResource LabelCenterH4}"/>
         <TextBlock Grid.Column="1" 
                    Text="Which Dac"
-                   Style="{StaticResource LabelH4}"/>
+                   Style="{StaticResource LabelCenterH4}"/>
         <TextBlock Grid.Column="2" 
                    Text="Dac Voltage"
-                   Style="{StaticResource LabelH4}"/>
+                   Style="{StaticResource LabelCenterH4}"/>
         <TextBlock Grid.Column="3" 
                    Text="Dac Hex"
-                   Style="{StaticResource LabelH4}"/>
+                   Style="{StaticResource LabelCenterH4}"/>
+        <TextBlock Grid.Column="4" 
+                   Text="PA Temp"
+                   Style="{StaticResource LabelCenterH4}"/>
+        <TextBlock Grid.Column="5" 
+                   Text="PA Volts"
+                   Style="{StaticResource LabelCenterH4}"/>
+        <TextBlock Grid.Column="6" 
+                   Text="PA Amps"
+                   Style="{StaticResource LabelCenterH4}"/>
+        <TextBlock Grid.Column="7" 
+                   Text="IDrv(ma)"
+                   Style="{StaticResource LabelCenterH4}"/>
     </Grid>
 </UserControl>
