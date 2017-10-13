@@ -25,6 +25,9 @@ namespace S4TestModule
 
         // Private fields
 
+        // Wow, takes > 1 second to get I2C response back??
+        const int S4_TIMEOUT = 2000;    // ms, socket timeout
+
         // S4 default ip address
         IPAddress           _s4Address   = new IPAddress(new byte[] { 192, 168, 10, 3 });
         IPAddress           _myAddress   = new IPAddress(new byte[] { 192, 168, 10, 10 });
@@ -33,7 +36,7 @@ namespace S4TestModule
         IPEndPoint          _endPoint;
         string              _response;
         Socket              _socket = null;
-        int                 _timeoutMs = 2000;  // default timeout waiting for response/prompt
+        int                 _timeoutMs = S4_TIMEOUT;  // default timeout waiting for response/prompt
 
         string logFile { get; set; }
 
@@ -293,12 +296,18 @@ namespace S4TestModule
             byte[] recBuff = new byte[1024];
             response = "";
             int bytesReceived = 0;
-            int newBytes;
+            int newBytes = 0;
             DateTime now = DateTime.Now;
             //bool timeout = false;
+            _socket.ReceiveTimeout = 100;   // Make this more responsive/granular
             while (!response.EndsWith(">"))
             {
-                newBytes = socket.Receive(recBuff);
+                try { newBytes = socket.Receive(recBuff); }
+                catch(SocketException ex)
+                {
+                    if (ex.SocketErrorCode != SocketError.TimedOut)
+                        throw;
+                }
                 bytesReceived += newBytes;
                 if (newBytes > 0)
                 {
@@ -370,8 +379,8 @@ namespace S4TestModule
             // We have the IP Address, attempt to create a TCP socket and read initial data from the S4
             _endPoint = new IPEndPoint(_s4Address, 23);
             _socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            _socket.ReceiveTimeout = 2000;
-            _socket.SendTimeout = 2000;
+            _socket.ReceiveTimeout = S4_TIMEOUT;
+            _socket.SendTimeout = S4_TIMEOUT;
             _socket.Connect(_endPoint);
             _connectionStatus = _socket.Connected ? ConnectionStatus.Connected : ConnectionStatus.Disconnected;
             WaitForPrompt();

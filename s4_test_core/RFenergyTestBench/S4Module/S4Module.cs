@@ -420,14 +420,14 @@ namespace S4TestModule
             string cmd = string.Format("freq\n");
             string rsp = "";
             int status = RunCmd(cmd, ref rsp);
-            if (rsp.StartsWith("\r>"))
-                rsp = rsp.Substring(2);
-            if (rsp.StartsWith(">"))
-                rsp = rsp.Substring(1);
-            if (rsp.StartsWith(">"))
-                rsp = rsp.Substring(1);
             if (status == 0)
             {
+                if (rsp.StartsWith("\r>"))
+                    rsp = rsp.Substring(2);
+                if (rsp.StartsWith(">"))
+                    rsp = rsp.Substring(1);
+                if (rsp.StartsWith(">"))
+                    rsp = rsp.Substring(1);
                 string[] args = rsp.Split(new char[] { ' ', '\n' });
                 hertz = Convert.ToDouble(args[0]);
             }
@@ -449,6 +449,12 @@ namespace S4TestModule
             int status = RunCmd(cmd, ref rsp);
             if (status == 0)
             {
+                if (rsp.StartsWith("\r>"))
+                    rsp = rsp.Substring(2);
+                if (rsp.StartsWith(">"))
+                    rsp = rsp.Substring(1);
+                if (rsp.StartsWith(">"))
+                    rsp = rsp.Substring(1);
                 string[] args = rsp.Split(new char[] { ' ', '\n' });
                 dbm = Convert.ToDouble(args[0]);
             }
@@ -493,6 +499,7 @@ namespace S4TestModule
             int status = GetFrequency(ref value);
             settings.Frequency = value;
 
+            System.Threading.Thread.Sleep(150); // not too fast
             status |= GetPower(ref value);
             settings.Power = value;
 

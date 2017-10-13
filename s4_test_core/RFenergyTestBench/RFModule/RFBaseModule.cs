@@ -86,7 +86,6 @@ namespace RFModule
             CalibrationOn = false;
             this.logFile = logFile;
             Results = new List<string>();
-            ShowMessage?.Invoke("Testing");
             return status;
         }
 

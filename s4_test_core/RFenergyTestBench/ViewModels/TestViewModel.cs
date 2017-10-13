@@ -1228,11 +1228,14 @@ namespace RFenergyUI.ViewModels
 
                 //// Read the DAC's too
                 if (MainViewModel.DebugPanel != null)
+                {
+                    System.Threading.Thread.Sleep(150); // not too fast
                     MainViewModel.DebugPanel.CmdRead.Execute(null);
+                }
 
-                _initializing = true;
-                await CmdInfoRun();   // Update DemoMode, HiresMode
-                _initializing = false;
+                //_initializing = true;
+                //await CmdInfoRun();   // Update DemoMode, HiresMode
+                //_initializing = false;
             }
         }
         // Backgroud thread...
