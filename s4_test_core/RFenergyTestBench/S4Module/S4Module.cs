@@ -302,7 +302,7 @@ namespace S4TestModule
                         //    tmp[0] = 0xc0;
                         //    tmp[1] = (byte)(0x58 | ((channel-1)<<1));
                         //    tmp[2] = 0x90 | ();
-                        cmd = string.Format("iw drv 0xc0 0x{0} 0x{1} 0x{2}",
+                        cmd = string.Format("iw drv 0xc0 0x{0:x2} 0x{1:x2} 0x{2:x2}",
                                                 data[0], data[1], data[2]);
                     }
                     else                // pa
@@ -313,7 +313,7 @@ namespace S4TestModule
                         //                            channel == 1 ? "" : "pa",
                         //                            tmp[0], tmp[1],
                         //                            data[0], data[1]);
-                        cmd = string.Format("iw pa 0xc2 0x79 0x{0} 0x{1}",
+                        cmd = string.Format("iw pa 0xc2 0x79 0x{0:x2} 0x{1:x2}",
                                                 data[0], data[1]);
                     }
                     string rsp = "";

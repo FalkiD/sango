@@ -632,6 +632,27 @@ namespace RFenergyUI.ViewModels
 
         // props
 
+        bool _m2only;
+        public bool M2Only
+        {
+            get { return _m2only; }
+            set { this.RaiseAndSetIfChanged(ref _m2only, value); }
+        }
+
+        bool _s4only;
+        public bool S4Only
+        {
+            get { return _s4only; }
+            set { this.RaiseAndSetIfChanged(ref _s4only, value); }
+        }
+
+        bool _x7only;
+        public bool X7Only
+        {
+            get { return _x7only; }
+            set { this.RaiseAndSetIfChanged(ref _x7only, value); }
+        }
+
         ObservableCollection<ChannelViewModel> _channelVms;
         public ObservableCollection<ChannelViewModel> ChannelVms
         {

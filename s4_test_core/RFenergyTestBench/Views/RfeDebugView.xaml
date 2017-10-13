@@ -25,6 +25,7 @@
             <cnvtr:ChannelConverter x:Key="channelConverter"/>
             <cnvtr:PowerConverter x:Key="powerConverter"/>
             <cnvtr:FrequencyConverter x:Key="frequencyConverter"/>
+            <cnvtr:BoolToVisibilityConverter x:Key="visibilityConverter"/>
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -97,9 +98,13 @@
         </TextBox>
 
         <TextBlock Grid.Row="6" Text="Read EEPROM:" HorizontalAlignment="Right"
-                    Style="{StaticResource LabelH4}"/>
+                    Style="{StaticResource LabelH4}"
+                    Visibility="{Binding M2Only, 
+                                 Converter={StaticResource visibilityConverter}}"/>
         <TextBox Grid.Row="6" Grid.Column="1" Style="{StaticResource TextBoxH4}" 
-                    Text="{Binding ReadEEPROM, UpdateSourceTrigger=PropertyChanged}">
+                    Text="{Binding ReadEEPROM, UpdateSourceTrigger=PropertyChanged}"
+                    Visibility="{Binding M2Only, 
+                                 Converter={StaticResource visibilityConverter}}">
             <TextBox.InputBindings>
                 <KeyBinding Key="Enter" Command="{Binding CmdReadEEPROM}"/>
             </TextBox.InputBindings>
@@ -107,12 +112,18 @@
         <Button Grid.Row="6" Grid.Column="2" 
                 Content="Dump EEPROM to file" 
                 Command="{Binding CmdEEPROMtoFile}"
-                Style="{StaticResource ButtonKeyNormal}"/>
+                Style="{StaticResource ButtonKeyNormal}"
+                Visibility="{Binding M2Only, 
+                             Converter={StaticResource visibilityConverter}}"/>
 
         <TextBlock Grid.Row="7" Text="Write EEPROM:" HorizontalAlignment="Right"
-                    Style="{StaticResource LabelH4}"/>
+                    Style="{StaticResource LabelH4}"                   
+                    Visibility="{Binding M2Only, 
+                                 Converter={StaticResource visibilityConverter}}"/>
         <TextBox Grid.Row="7" Grid.Column="1" Style="{StaticResource TextBoxH4}" 
-                    Text="{Binding WriteEEPROM, UpdateSourceTrigger=PropertyChanged}">
+                    Text="{Binding WriteEEPROM, UpdateSourceTrigger=PropertyChanged}"
+                    Visibility="{Binding M2Only, 
+                                 Converter={StaticResource visibilityConverter}}">
             <TextBox.InputBindings>
                 <KeyBinding Key="Enter" Command="{Binding CmdWriteEEPROM}"/>
             </TextBox.InputBindings>
@@ -120,7 +131,9 @@
         <Button Grid.Row="7" Grid.Column="2" 
                 Content="File to EEPROM" 
                 Command="{Binding CmdFileToEEPROM}"
-                Style="{StaticResource ButtonKeyNormal}"/>
+                Style="{StaticResource ButtonKeyNormal}"
+                Visibility="{Binding M2Only, 
+                             Converter={StaticResource visibilityConverter}}"/>
 
         <TextBlock Grid.Row="8" Text="Read I2C:" HorizontalAlignment="Right"
                     Style="{StaticResource LabelH4}"/>
@@ -156,10 +169,14 @@
         
         <!--Set Power in dB-->
         <TextBlock Grid.Row="11" Text="Power in dB:" HorizontalAlignment="Right"
-                   Style="{StaticResource LabelH4}"/>
+                   Style="{StaticResource LabelH4}"
+                   Visibility="{Binding M2Only, 
+                                Converter={StaticResource visibilityConverter}}"/>
         <TextBox Grid.Row="11" Grid.Column="1"
                  Text="{Binding PwrInDb, StringFormat=N3}"
-                 Style="{StaticResource TextBoxH4}">
+                 Style="{StaticResource TextBoxH4}"
+                 Visibility="{Binding M2Only, 
+                              Converter={StaticResource visibilityConverter}}">
             <TextBox.InputBindings>
                 <KeyBinding Gesture="Enter" 
                     Command="{Binding CmdPwrInDb}"

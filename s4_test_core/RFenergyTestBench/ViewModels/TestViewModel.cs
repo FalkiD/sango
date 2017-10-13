@@ -164,19 +164,19 @@ namespace RFenergyUI.ViewModels
             {
                 default:
                 case InstrumentInfo.InstrumentType.M2:
-                    M2Only = true;
-                    S4Only = false;
-                    X7Only = false;
+                    M2Only = MainViewModel.TestPanel.M2Only = true;
+                    S4Only = MainViewModel.TestPanel.S4Only = false;
+                    X7Only = MainViewModel.TestPanel.X7Only = false;
                     break;
                 case InstrumentInfo.InstrumentType.S4:
-                    M2Only = false;
-                    S4Only = true;
-                    X7Only = false;
+                    M2Only = MainViewModel.TestPanel.M2Only = false;
+                    S4Only = MainViewModel.TestPanel.S4Only = true;
+                    X7Only = MainViewModel.TestPanel.X7Only = false;
                     break;
                 case InstrumentInfo.InstrumentType.X7:
-                    M2Only = false;
-                    S4Only = false;
-                    X7Only = true;
+                    M2Only = MainViewModel.TestPanel.M2Only = false;
+                    S4Only = MainViewModel.TestPanel.S4Only = false;
+                    X7Only = MainViewModel.TestPanel.X7Only = true;
                     break;
             }
 
