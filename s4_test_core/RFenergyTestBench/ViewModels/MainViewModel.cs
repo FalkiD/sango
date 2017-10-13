@@ -66,7 +66,7 @@ namespace RFenergyUI.ViewModels
             LogData = new ObservableCollection<string>();
             string packUri = "pack://application:,,,/RfenergyUi;component/Resources/Images/m2icon.png";
             var image = new ImageSourceConverter().ConvertFromString(packUri) as ImageSource;
-            RfModules.Add(new SysList { SystemName = "M2", SystemIcon = image });
+            RfModules.Add(new SysList { SystemName = "M2A", SystemIcon = image });
             packUri = "pack://application:,,,/RfenergyUi;component/Resources/Images/s4icon.png";
             image = new ImageSourceConverter().ConvertFromString(packUri) as ImageSource;
             RfModules.Add(new SysList { SystemName = "S4", SystemIcon = image });
@@ -107,7 +107,7 @@ namespace RFenergyUI.ViewModels
                     return;
 
                 this.Close();
-                if (SelectedSystem.SystemName == "M2")
+                if (SelectedSystem.SystemName == "M2A")
                 {
                     M2Module mod;
                     mod = new M2Module();

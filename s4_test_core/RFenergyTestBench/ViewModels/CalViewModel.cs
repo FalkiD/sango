@@ -169,7 +169,8 @@ namespace RFenergyUI.ViewModels
             try
             {
                 fout = OpenCalFile("RfePowerCal.txt");
-                WriteCalDataHeader(fout, " M2A RF Energy Source Calibration");
+                string hdr = string.Format(" {0} RF Energy Source Calibration", MainViewModel.SelectedSystemName);
+                WriteCalDataHeader(fout, hdr);
             }
             catch (Exception fileEx)
             {
