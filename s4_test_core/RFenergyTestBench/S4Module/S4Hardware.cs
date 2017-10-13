@@ -33,6 +33,7 @@ namespace S4TestModule
         IPEndPoint          _endPoint;
         string              _response;
         Socket              _socket = null;
+        int                 _timeoutMs = 2000;  // default timeout waiting for response/prompt
 
         string logFile { get; set; }
 
@@ -50,31 +51,34 @@ namespace S4TestModule
             {
                 mcuExecuteTimeout = 500;    // half a second for now...
                 this.logFile = logFile;
-                Connect();
+                Connect();                  // sets _connectionStatus
                 if (_connectionStatus == ConnectionStatus.Connected)
                 {
                     S4Module.WriteMessage("Sango S4 plasma ignition source connected.");
-                    string[] lines = _response.Split(new char[] { '\n' });
-                    foreach(string line in lines)
+                    if(_response != null && _response.Length > 0)
                     {
-                        string next = line;
-                        if (next.Length == 0)
-                            continue;
-                        if (next.EndsWith("\r"))
-                            next = next.Substring(0, next.Length - 1);
-                        S4Module.WriteMessage(next);
+                        string[] lines = _response.Split(new char[] { '\n' });
+                        foreach (string line in lines)
+                        {
+                            string next = line;
+                            if (next.Length == 0)
+                                continue;
+                            if (next.EndsWith("\r"))
+                                next = next.Substring(0, next.Length - 1);
+                            S4Module.WriteMessage(next);
+                        }
                     }
                     return 0;
                 }
                 else
                 {
-                    S4Module.WriteMessage("**Error opening S4 socket");
+                    S4Module.WriteMessage("** Error opening S4 socket **");
                     return 100;
                 }
             }
             catch (Exception ex)
             {
-                S4Module.WriteMessage(string.Format("Error opening S4 socket:{0}", ex.Message));
+                S4Module.WriteMessage(string.Format("Exception opening S4 socket:{0}", ex.Message));
                 return 100;
             }
         }
@@ -292,7 +296,7 @@ namespace S4TestModule
             int newBytes;
             DateTime now = DateTime.Now;
             //bool timeout = false;
-            while (!response.EndsWith(">>>"))
+            while (!response.EndsWith(">"))
             {
                 newBytes = socket.Receive(recBuff);
                 bytesReceived += newBytes;
@@ -302,10 +306,10 @@ namespace S4TestModule
                     response += next;
                 }
 
-                if(DateTime.Now.Subtract(now).TotalMilliseconds > 2000)
+                if(DateTime.Now.Subtract(now).TotalMilliseconds > _timeoutMs)
                 {
                 //    timeout = true;
-                    response += "\r\n**Timeout waiting for S4 prompt(>>>)**";
+                    response += "\r\n**Timeout waiting for S4 prompt(>)**";
                     break;
                 }
             }
@@ -369,12 +373,8 @@ namespace S4TestModule
             _socket.ReceiveTimeout = 2000;
             _socket.SendTimeout = 2000;
             _socket.Connect(_endPoint);
-            // Read initial status from the S4
-            int status = ExecuteCommand("version", ref _response);
-            if (status == 0)
-                _connectionStatus = ConnectionStatus.Connected;
-            else
-                _connectionStatus = ConnectionStatus.Disconnected;
+            _connectionStatus = _socket.Connected ? ConnectionStatus.Connected : ConnectionStatus.Disconnected;
+            WaitForPrompt();
         }
 
         /// <summary>Disconnects and terminates the status thread</summary>
@@ -396,6 +396,28 @@ namespace S4TestModule
                 }
                 _socket.Close();
             }
+        }
+
+        /// <summary>
+        /// Wait for S4 prompt, can be ">", ">>", or ">>>" 
+        /// depending on login mode
+        /// </summary>
+        /// <returns>bytes read</returns>
+        public bool WaitForPrompt()
+        {
+            System.Threading.Thread.Sleep(100);
+            int bytes = Receive(_socket, ref _response);
+            //string more = "";
+            //int saved = _timeoutMs;
+            //_timeoutMs = 100;
+            //int extra = Receive(_socket, ref more);
+            //if (extra > 0)
+            //    _response += more;
+            //extra = Receive(_socket, ref more);
+            //if (extra > 0)
+            //    _response += more;
+            //_timeoutMs = saved;
+            return bytes > 0 ? true : false;
         }
 
         /// <summary>Provides text description of the class</summary>

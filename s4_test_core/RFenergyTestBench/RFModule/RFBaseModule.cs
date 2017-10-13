@@ -18,12 +18,14 @@ namespace RFModule
             remove  { ShowMessage = null;  }
         }
 
+        public virtual string HardwareInfo(ref bool demoMode, ref bool hiresMode)
+        {
+            throw new NotImplementedException();
+        }
+
         public virtual string FirmwareVersion
         {
-            get
-            {
-                throw new NotImplementedException();
-            }
+            get { throw new NotImplementedException(); }
         }
 
         public virtual string FPGAversion

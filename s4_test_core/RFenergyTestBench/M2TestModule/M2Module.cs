@@ -55,6 +55,40 @@ namespace M2TestModule
             get { return InstrumentInfo.InstrumentType.M2; }
         }
 
+        public override string HardwareInfo(ref bool demoMode, ref bool hiresMode)
+        {
+            string result = "";
+            int status;
+            string value = "";
+            if ((status = GetTag("SN", ref value)) == 0)
+                result += ("SN=" + value + ",");
+            if ((status = GetTag("MD", ref value)) == 0)
+                result += ("Model=" + value + ",");
+
+            byte[] cmd = new byte[1];
+            cmd[0] = M2Cmd.VERSION;
+            byte[] rsp = null;
+            status = RunCmd(cmd, ref rsp);
+            if (status == 0)
+                result += string.Format("Firmware version:{0}.{1}", rsp[1], rsp[0]);
+            else result = string.Format(" Read device info failed:{0}", ErrorDescription(status));
+
+            if ((status = GetTag("DM", ref value)) == 0 && value == "ON")
+                demoMode = true;
+            else demoMode = false;
+
+            cmd[0] = M2Cmd.ENABLE_RD;
+            status = RunCmd(cmd, ref rsp);
+            if (status == 0 && (rsp[0] & 0x80) != 0)
+                hiresMode = true;
+            else hiresMode = false;
+
+            cmd[0] = M2Cmd.CLR_STATUS;
+            status = RunCmd(cmd, ref rsp);
+            status = RunCmd(cmd, ref rsp);
+            return result;
+        }
+
         public override int PaChannels
         {
             get { return 4; }

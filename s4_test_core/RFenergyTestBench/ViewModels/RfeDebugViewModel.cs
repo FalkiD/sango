@@ -132,18 +132,26 @@ namespace RFenergyUI.ViewModels
                                     int value = (data[2] | ((data[1] & 0xf) << 8)) & 0xfff;
                                     ChannelVms[channel - 1].PhaseDacVm.DacValue = value * TestViewModel.VOLTS_PER_LSB;
                                     ChannelVms[channel - 1].PhaseDacVm.DacBits = (ushort)value;
+                                    MainViewModel.TestPanel.ChannelVms[channel - 1].PhaseDacVm.DacValue = ChannelVms[channel - 1].PhaseDacVm.DacValue;
+                                    MainViewModel.TestPanel.ChannelVms[channel - 1].PhaseDacVm.DacBits = (ushort)value;
 
                                     value = (data[8] | ((data[7] & 0xf) << 8)) & 0xfff;
                                     ChannelVms[channel - 1].GainDacVm.DacValue = value * TestViewModel.VOLTS_PER_LSB;
                                     ChannelVms[channel - 1].GainDacVm.DacBits = (ushort)value;
+                                    MainViewModel.TestPanel.ChannelVms[channel - 1].GainDacVm.DacValue = ChannelVms[channel - 1].GainDacVm.DacValue;
+                                    MainViewModel.TestPanel.ChannelVms[channel - 1].GainDacVm.DacBits = (ushort)value;
 
                                     value = (data[14] | ((data[13] & 0xf) << 8)) & 0xfff;
                                     ChannelVms[channel - 1].Bias1DacVm.DacValue = value * TestViewModel.VOLTS_PER_LSB;
                                     ChannelVms[channel - 1].Bias1DacVm.DacBits = (ushort)value;
+                                    MainViewModel.TestPanel.ChannelVms[channel - 1].Bias1DacVm.DacValue = ChannelVms[channel - 1].Bias1DacVm.DacValue;
+                                    MainViewModel.TestPanel.ChannelVms[channel - 1].Bias1DacVm.DacBits = (ushort)value;
 
                                     value = (data[20] | ((data[19] & 0xf) << 8)) & 0xfff;
                                     ChannelVms[channel - 1].Bias2DacVm.DacValue = value * TestViewModel.VOLTS_PER_LSB;
                                     ChannelVms[channel - 1].Bias2DacVm.DacBits = (ushort)value;
+                                    MainViewModel.TestPanel.ChannelVms[channel - 1].Bias2DacVm.DacValue = ChannelVms[channel - 1].Bias2DacVm.DacValue;
+                                    MainViewModel.TestPanel.ChannelVms[channel - 1].Bias2DacVm.DacBits = (ushort)value;
                                     results.Add(string.Format(" Channel {0} ReadDAC Ok", channel));
                                 }
                                 else results.Add(string.Format(" Channel {0} ReadDAC failed to read 0x18 bytes, read:{1}", channel, data.Length));

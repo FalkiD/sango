@@ -74,6 +74,35 @@ namespace S4TestModule
             }
         }
 
+        public override string HardwareInfo(ref bool demoMode, ref bool hiresMode)
+        {
+            string result = "";
+            int status;
+            string value = "";
+            //if ((status = GetTag("SN", ref value)) == 0)
+            //    result += ("SN=" + value + ",");
+            //if ((status = GetTag("MD", ref value)) == 0)
+            //    result += ("Model=" + value + ",");
+
+            status = RunCmd("status\n", ref result);
+            if (status == 0)
+                result += value;
+            else result = string.Format(" Read device info failed:{0}", ErrorDescription(status));
+
+            //if ((status = GetTag("DM", ref value)) == 0 && value == "ON")
+            //    demoMode = true;
+            //else demoMode = false;
+            demoMode = hiresMode = false;
+
+            //cmd[0] = M2Cmd.ENABLE_RD;
+            //status = RunCmd(cmd, ref rsp);
+            //if (status == 0 && (rsp[0] & 0x80) != 0)
+            //    hiresMode = true;
+            //else hiresMode = false;
+
+            return result;
+        }
+
         /// <summary>
         /// Set Tag string data
         /// </summary>
@@ -391,6 +420,12 @@ namespace S4TestModule
             string cmd = string.Format("freq\n");
             string rsp = "";
             int status = RunCmd(cmd, ref rsp);
+            if (rsp.StartsWith("\r>"))
+                rsp = rsp.Substring(2);
+            if (rsp.StartsWith(">"))
+                rsp = rsp.Substring(1);
+            if (rsp.StartsWith(">"))
+                rsp = rsp.Substring(1);
             if (status == 0)
             {
                 string[] args = rsp.Split(new char[] { ' ', '\n' });

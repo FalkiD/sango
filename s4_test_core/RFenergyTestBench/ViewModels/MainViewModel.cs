@@ -153,15 +153,23 @@ namespace RFenergyUI.ViewModels
                 IDbg.Close();
         }
 
+        // Must get onto UI thread, drivers call this thing
         void ShowMessage(string msg)
         {
-            AppendLine(msg);
+            MainView.Dispatcher.BeginInvoke((Action)(() =>
+            {
+                AppendLine(msg);
+            }));
         }
 
+        // Must get onto UI thread, drivers call this thing
         public void AppendLines(List<string> results)
         {
-            foreach (var line in results)
-                AppendLine(line);
+            MainView.Dispatcher.BeginInvoke((Action)(() =>
+            {
+                foreach (var line in results)
+                    AppendLine(line);
+            }));
         }
 
         public static string Timestamp

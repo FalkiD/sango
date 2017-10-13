@@ -120,6 +120,12 @@ namespace Interfaces
         string Status { get; }
 
         /// <summary>
+        /// Return general info about hardware,
+        /// Serial number, Model number, Firmware revision, etc
+        /// </summary>
+        string HardwareInfo(ref bool demoMode, ref bool hiresMode);
+
+        /// <summary>
         /// Calibration flag
         /// </summary>
         bool CalibrationOn { get; set; }

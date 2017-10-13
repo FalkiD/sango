@@ -589,34 +589,9 @@ namespace RFenergyUI.ViewModels
             {
                 if (MainViewModel.ICmd != null)
                 {
-                    int status;
-                    string value = "";
-                    if ((status = MainViewModel.IDbg.GetTag("SN", ref value)) == 0)
-                        result += ("SN=" + value + ",");
-                    if ((status = MainViewModel.IDbg.GetTag("MD", ref value)) == 0)
-                        result += ("Model=" + value + ",");
-
-                    byte[] cmd = new byte[1];
-                    cmd[0] = M2Cmd.VERSION;
-                    byte[] rsp = null;
-                    status = MainViewModel.ICmd.RunCmd(cmd, ref rsp);
-                    if (status == 0)
-                        result += string.Format("Firmware version:{0}.{1}", rsp[1], rsp[0]);
-                    else result = string.Format(" Read device info failed:{0}", MainViewModel.IErr.ErrorDescription(status));
-
-                    if ((status = MainViewModel.IDbg.GetTag("DM", ref value)) == 0 && value == "ON")
-                        DemoMode = true;
-                    else DemoMode = false;
-
-                    cmd[0] = M2Cmd.ENABLE_RD;
-                    status = MainViewModel.ICmd.RunCmd(cmd, ref rsp);
-                    if (status == 0 && (rsp[0] & 0x80) != 0)
-                        HiresMode = true;
-                    else HiresMode = false;
-
-                    cmd[0] = M2Cmd.CLR_STATUS;
-                    status = MainViewModel.ICmd.RunCmd(cmd, ref rsp);
-                    status = MainViewModel.ICmd.RunCmd(cmd, ref rsp);
+                    bool demoMode, hiresMode;
+                    demoMode = hiresMode = false;
+                    result = MainViewModel.ICmd.HardwareInfo(ref demoMode, ref hiresMode);
                 }
                 else result = "ICmd interface is null, can't execute anything";
             }
@@ -1202,6 +1177,11 @@ namespace RFenergyUI.ViewModels
             _monitorBusy = false;
         }
 
+        /// <summary>
+        /// MonitorPa background func to read hardware values
+        /// on a timer
+        /// </summary>
+        /// <returns></returns>
         MonitorPa ReadData()
         {
             MonitorPa results = new MonitorPa();
@@ -1223,37 +1203,37 @@ namespace RFenergyUI.ViewModels
             return results;
         }
 
+
+
         /// <summary>
-        /// Start a background task to read everything from the hardware
+        /// Start a background task to read everything from the hardware,
+        /// done at startup to fill-in all the controls
         /// </summary>
         async void LoadValuesFromHardware()
         {
-            return;
+            RfSettings settings = await Task.Run(() => ReadInitialSettings());
+            if (settings.ErrorMessage.Length > 0)
+                MainViewModel.MsgAppendLine(settings.ErrorMessage);
+            else
+            {
+                // back on UI thread, update ViewModel with settings
+                Frequency = settings.Frequency;
+                MainViewModel.CalPanel.Frequency = settings.Frequency;
+                Power = settings.Power;
+                Phase = settings.Phase;
+                DutyCycle = (ushort)settings.PwmDutyCycle;
+                PwmRate = settings.PwmRateHz;
+                AdcDelayUs = settings.AdcDelayUs;
+                MainViewModel.DebugPanel.PwrInDb = settings.PwrInDb;
 
+                //// Read the DAC's too
+                if (MainViewModel.DebugPanel != null)
+                    MainViewModel.DebugPanel.CmdRead.Execute(null);
 
-            //RfSettings settings = await Task.Run(() => ReadInitialSettings());
-            //if (settings.ErrorMessage.Length > 0)
-            //    MainViewModel.MsgAppendLine(settings.ErrorMessage);
-            //else
-            //{
-            //    // back on UI thread, update ViewModel with settings
-            //    Frequency = settings.Frequency;
-            //    MainViewModel.CalPanel.Frequency = settings.Frequency;
-            //    Power = settings.Power;
-            //    Phase = settings.Phase;
-            //    DutyCycle = (ushort)settings.PwmDutyCycle;
-            //    PwmRate = settings.PwmRateHz;
-            //    AdcDelayUs = settings.AdcDelayUs;
-            //    MainViewModel.DebugPanel.PwrInDb = settings.PwrInDb;
-
-            //    //// Read the DAC's too
-            //    if (MainViewModel.DebugPanel != null)
-            //        MainViewModel.DebugPanel.CmdRead.Execute(null);
-
-            //    _initializing = true;
-            //    await CmdInfoRun();   // Update DemoMode, HiresMode
-            //    _initializing = false;
-            //}
+                _initializing = true;
+                await CmdInfoRun();   // Update DemoMode, HiresMode
+                _initializing = false;
+            }
         }
         // Backgroud thread...
         RfSettings ReadInitialSettings()
@@ -1261,6 +1241,7 @@ namespace RFenergyUI.ViewModels
             RfSettings settings = new RfSettings();
             try
             {
+                System.Threading.Thread.Sleep(200); // wait a bit
                 int status = MainViewModel.ICmd.GetState(ref settings);
                 if(status != 0)
                     settings.ErrorMessage = string.Format(" Read initial values failed:{0}", MainViewModel.IErr.ErrorDescription(status));
