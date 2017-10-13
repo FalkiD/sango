@@ -16,35 +16,35 @@
                 <ResourceDictionary Source="../Resources/TextBoxStyle.xaml" />
             </ResourceDictionary.MergedDictionaries>
             <cnvtr:DoubleToTextConverter x:Key="doubleConverter"/>
-            <cnvtr:IntTextConverter x:Key="integerConverter"/>
+            <!--<cnvtr:IntTextConverter x:Key="integerConverter"/>-->
         </ResourceDictionary>
     </UserControl.Resources>
 
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition MinWidth="80" Width="*"/>
+            <!--<ColumnDefinition MinWidth="80" Width="*"/>-->
             <ColumnDefinition MinWidth="80" Width="*"/>
             <ColumnDefinition MinWidth="80" Width="*"/>
             <ColumnDefinition MinWidth="80" Width="*"/>
             <ColumnDefinition MinWidth="80" Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <TextBox Text="{Binding Channel, Converter={StaticResource integerConverter}}"
+        <!--<TextBox Text="{Binding Channel, Converter={StaticResource integerConverter}}"
                  IsReadOnly="True"
-                 Style="{StaticResource TextBoxH4}"/>
-        <TextBox Grid.Column="1"
+                 Style="{StaticResource TextBoxH4}"/>-->
+        <TextBox Grid.Column="0"
                  Text="{Binding Temperature, Converter={StaticResource doubleConverter}}"
                  IsReadOnly="True"
                  Style="{StaticResource TextBoxH4}"/>
-        <TextBox Grid.Column="2"
+        <TextBox Grid.Column="1"
                  Text="{Binding Voltage, Converter={StaticResource doubleConverter}}"
                  IsReadOnly="True"
                  Style="{StaticResource TextBoxH4}"/>
-        <TextBox Grid.Column="3"
+        <TextBox Grid.Column="2"
                  Text="{Binding Current, Converter={StaticResource doubleConverter}}"
                  IsReadOnly="True"
                  Style="{StaticResource TextBoxH4}"/>
-        <TextBox Grid.Column="4"
+        <TextBox Grid.Column="3"
                  Text="{Binding IDrv, Converter={StaticResource doubleConverter}}"
                  IsReadOnly="True"
                  Style="{StaticResource TextBoxH4}"/>

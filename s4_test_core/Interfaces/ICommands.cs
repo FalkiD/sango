@@ -169,5 +169,11 @@ namespace Interfaces
         /// 2=closed loop control using coupler</param>
         /// <returns></returns>
         int TemperatureCompensation(int mode);
+
+        /// <summary>
+        /// Type of instrument, can be third party Meter, 
+        /// Source, or Ampleon S4, X7, M2
+        /// </summary>
+        InstrumentInfo.InstrumentType HwType { get; }
     }
 }

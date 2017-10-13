@@ -7,7 +7,6 @@
  * If the delegate is null the messages still go into the log file.
  */
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Diagnostics;
 using System.Text;
@@ -60,6 +59,11 @@ namespace S4TestModule
             {
                 throw new NotImplementedException();
             }
+        }
+
+        public override InstrumentInfo.InstrumentType HwType
+        {
+            get { return InstrumentInfo.InstrumentType.S4; }
         }
 
         public override string Status

@@ -289,5 +289,13 @@ namespace RFModule
             get { return 0.001; }
             set { double tmp = value; }
         }
+
+        /// <summary>
+        /// Type of instrument
+        /// </summary>
+        public virtual InstrumentInfo.InstrumentType HwType
+        {
+            get { return InstrumentInfo.InstrumentType.General; }
+        }
     }
 }

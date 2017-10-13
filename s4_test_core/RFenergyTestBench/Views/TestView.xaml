@@ -256,19 +256,27 @@
 
         <!--Read coupler power controls-->
         <TextBlock Grid.Row="6" Text="Coupler:" HorizontalAlignment="Right"
-                   Style="{StaticResource LabelH4}"/>
+                   Style="{StaticResource LabelH4}"
+                   Visibility="{Binding M2Only, 
+                                Converter={StaticResource visibilityConverter}}"/>
         <TextBox Grid.Row="6" Grid.Column="1"
                  Text="{Binding CouplerFwd, Converter={StaticResource powerConverter}}"
                  IsReadOnly="True"
-                 Style="{StaticResource TextBoxH4}"/>
+                 Style="{StaticResource TextBoxH4}"
+                 Visibility="{Binding M2Only, 
+                              Converter={StaticResource visibilityConverter}}"/>
         <TextBox Grid.Row="6" Grid.Column="2"
                  Text="{Binding CouplerRefl, Converter={StaticResource powerConverter}}"
                  IsReadOnly="True"
-                 Style="{StaticResource TextBoxH4}"/>
+                 Style="{StaticResource TextBoxH4}"
+                 Visibility="{Binding M2Only, 
+                              Converter={StaticResource visibilityConverter}}"/>
         <Button Grid.Row="6" Grid.Column="3" 
                 Content="Strobe Coupler" 
                 Command="{Binding CmdCouplerMeasure}"
-                Style="{StaticResource ButtonKeyNormal}"/>
+                Style="{StaticResource ButtonKeyNormal}"
+                Visibility="{Binding M2Only, 
+                            Converter={StaticResource visibilityConverter}}"/>
         
         <!--Phase controls-->
         <TextBlock Grid.Row="7" Text="Phase(degrees):" 
@@ -290,20 +298,30 @@
         <!--PWM controls-->
         <TextBlock Grid.Row="8" Grid.Column="1" 
                    Text="DutyCycle(%)"
-                   Style="{StaticResource LabelH4}"/>
+                   Style="{StaticResource LabelH4}"
+                   Visibility="{Binding M2Only, 
+                                Converter={StaticResource visibilityConverter}}"/>
         <TextBlock Grid.Row="8" Grid.Column="2" 
                    Text="Rate(Hz)"
-                   Style="{StaticResource LabelH4}"/>
+                   Style="{StaticResource LabelH4}"
+                   Visibility="{Binding M2Only, 
+                                Converter={StaticResource visibilityConverter}}"/>
         <TextBlock Grid.Row="8" Grid.Column="3" 
                    Text="External"
-                   Style="{StaticResource LabelH4}"/>
+                   Style="{StaticResource LabelH4}"
+                   Visibility="{Binding M2Only, 
+                                Converter={StaticResource visibilityConverter}}"/>
 
         <TextBlock Grid.Row="9" Text="PWM:" HorizontalAlignment="Right"
-                   Style="{StaticResource LabelH4}"/>
+                   Style="{StaticResource LabelH4}"
+                   Visibility="{Binding M2Only, 
+                                Converter={StaticResource visibilityConverter}}"/>
         <TextBox Grid.Row="9" Grid.Column="1"
                  Name="DutyCycle"
                  Text="{Binding DutyCycle, Converter={StaticResource intConverter}}"
-                 Style="{StaticResource TextBoxH4}">
+                 Style="{StaticResource TextBoxH4}"
+                 Visibility="{Binding M2Only, 
+                              Converter={StaticResource visibilityConverter}}">
             <TextBox.InputBindings>
                 <KeyBinding Gesture="Enter" 
                     Command="{Binding CmdDutyCycle}"
@@ -314,7 +332,9 @@
         </TextBox>
         <TextBox Grid.Row="9" Grid.Column="2"
                  Text="{Binding PwmRate, Converter={StaticResource intConverter}}"
-                 Style="{StaticResource TextBoxH4}">
+                 Style="{StaticResource TextBoxH4}"
+                 Visibility="{Binding M2Only, 
+                              Converter={StaticResource visibilityConverter}}">
             <TextBox.InputBindings>
                 <KeyBinding Gesture="Enter" 
                     Command="{Binding CmdPwmRate}"
@@ -326,7 +346,9 @@
         <CheckBox Grid.Row="9" Grid.Column="3"
                     Content="External"
                     Style="{StaticResource CheckBoxH4}"
-                    IsChecked="{Binding ExternalPwm}"/>
+                    IsChecked="{Binding ExternalPwm}"
+                    Visibility="{Binding M2Only, 
+                                 Converter={StaticResource visibilityConverter}}"/>
 
         <CheckBox Grid.Row="10"
                   Grid.Column="1"
@@ -337,7 +359,9 @@
                   Grid.Column="2"
                   Content="HiresFrq"
                   Style="{StaticResource CheckBoxH4}"
-                  IsChecked="{Binding HiresMode}"/>
+                  IsChecked="{Binding HiresMode}"
+                  Visibility="{Binding M2Only, 
+                               Converter={StaticResource visibilityConverter}}"/>
 
         <CheckBox Grid.Row="11" 
                   MinHeight="16"
@@ -346,31 +370,41 @@
                   VerticalAlignment="Center"
                   Content="DutyCycleComp"
                   Style="{StaticResource CheckBoxH4}"
-                  IsChecked="{Binding DutyCycleCompensation}"/>
+                  IsChecked="{Binding DutyCycleCompensation}"
+                  Visibility="{Binding M2Only, 
+                               Converter={StaticResource visibilityConverter}}"/>
 
         <TextBlock Grid.Row="12" 
                    Text="Compensation:" 
                    HorizontalAlignment="Right"
                    VerticalAlignment="Center"
-                   Style="{StaticResource LabelH4}"/>
+                   Style="{StaticResource LabelH4}"
+                   Visibility="{Binding M2Only, 
+                                Converter={StaticResource visibilityConverter}}"/>
         <RadioButton Grid.Row="12" Grid.Column="1"
                      MinHeight="16"
                      GroupName="Compensation"
                      Content="Ambient"
                      VerticalAlignment="Center"
-                     IsChecked="{Binding AmbientCompensation}"/>
+                     IsChecked="{Binding AmbientCompensation}"
+                     Visibility="{Binding M2Only, 
+                                  Converter={StaticResource visibilityConverter}}"/>
         <RadioButton Grid.Row="12" Grid.Column="2"
                      MinHeight="16"
                      GroupName="Compensation"
                      Content="OpenLoop"
                      VerticalAlignment="Center"
-                     IsChecked="{Binding OpenLoopCompensation}"/>
+                     IsChecked="{Binding OpenLoopCompensation}"
+                     Visibility="{Binding M2Only, 
+                                  Converter={StaticResource visibilityConverter}}"/>
         <RadioButton Grid.Row="12" Grid.Column="3"
                      MinHeight="16"
                      GroupName="Compensation"
                      Content="PowerLeveling"
                      VerticalAlignment="Center"
-                     IsChecked="{Binding PowerLevelCompensation}"/>
+                     IsChecked="{Binding PowerLevelCompensation}"
+                     Visibility="{Binding M2Only, 
+                                  Converter={StaticResource visibilityConverter}}"/>
 
     </Grid>
 </UserControl>

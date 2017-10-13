@@ -50,6 +50,11 @@ namespace M2TestModule
             return status;
         }
 
+        public override InstrumentInfo.InstrumentType HwType
+        {
+            get { return InstrumentInfo.InstrumentType.M2; }
+        }
+
         public override int PaChannels
         {
             get { return 4; }

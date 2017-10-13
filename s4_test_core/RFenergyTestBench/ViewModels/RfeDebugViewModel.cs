@@ -54,7 +54,7 @@ namespace RFenergyUI.ViewModels
             CmdPwrInDb.Subscribe(result => MainViewModel.MsgAppendLine(result));
 
             ChannelVms = new ObservableCollection<ChannelViewModel>();
-            for (int channel = 1; channel < TestViewModel.HW_CHANNELS + 1; ++channel)
+            for (int channel = 1; channel < MainViewModel.ICmd.PaChannels + 1; ++channel)
             {
                 ChannelVms.Add(new ChannelViewModel
                 {

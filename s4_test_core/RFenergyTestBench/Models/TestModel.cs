@@ -14,7 +14,6 @@ namespace RFenergyUI.Models
     public class TestModel
     {
         const double VOLTS_PER_LSB = 3.3 / 4095.0;
-        const int HW_CHANNELS = 4;
 
         const int EEPROM_SIZE = 3072;   // M2 LPC11U68
         const int BLOCK_SIZE = 16; 

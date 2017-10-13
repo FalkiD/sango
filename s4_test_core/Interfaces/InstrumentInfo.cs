@@ -8,7 +8,10 @@ namespace Interfaces
             Source,
             Meter,
             Analyzer,
-            General
+            General,
+            S4,
+            M2,
+            X7
         };
 
         public enum Interface

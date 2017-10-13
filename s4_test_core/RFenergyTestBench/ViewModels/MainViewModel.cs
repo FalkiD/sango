@@ -79,7 +79,7 @@ namespace RFenergyUI.ViewModels
 
             ShowDebugTab = ConfigurationManager.AppSettings["mode"] == "factory" ? true : false;
 
-            SelectedSystem = RfModules[0];
+            SelectedSystem = RfModules[1];
         }
 
         // Properties

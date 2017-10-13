@@ -22,7 +22,6 @@ namespace RFenergyUI.ViewModels
     public class TestViewModel : ReactiveObject
     {
         public const double VOLTS_PER_LSB = 0.001; // MCP4728, gain=2, 1mv LSB
-        public const int HW_CHANNELS = 4;
 
         const string STR_START_SWEEP = "Start Sweep";
         const string STR_STOP_SWEEP = "Stop sweep";
@@ -38,7 +37,7 @@ namespace RFenergyUI.ViewModels
             _monitorBusy = false;
             _m2view = view;
             _model = new TestModel(this);
-            _results = new MonitorPa[HW_CHANNELS];
+            //_results = new MonitorPa[HW_CHANNELS];
             _initializing = false;
 
             MainViewModel.TestPanel = this;
@@ -118,7 +117,7 @@ namespace RFenergyUI.ViewModels
             //    });
             //}
             ChannelVms = new ObservableCollection<ChannelViewModel>();
-            for (int channel = 1; channel < HW_CHANNELS + 1; ++channel)
+            for (int channel = 1; channel < MainViewModel.ICmd.PaChannels + 1; ++channel)
             {
                 ChannelVms.Add(new ChannelViewModel
                 {
@@ -160,6 +159,26 @@ namespace RFenergyUI.ViewModels
             });
             }
 
+            // setup Visibility flags based on hardware type
+            switch(MainViewModel.ICmd.HwType)
+            {
+                default:
+                case InstrumentInfo.InstrumentType.M2:
+                    M2Only = true;
+                    S4Only = false;
+                    X7Only = false;
+                    break;
+                case InstrumentInfo.InstrumentType.S4:
+                    M2Only = false;
+                    S4Only = true;
+                    X7Only = false;
+                    break;
+                case InstrumentInfo.InstrumentType.X7:
+                    M2Only = false;
+                    S4Only = false;
+                    X7Only = true;
+                    break;
+            }
 
             //MainViewModel.IDbg.SetDbHandler += UpdateLastProgrammedDb;
 
@@ -290,6 +309,27 @@ namespace RFenergyUI.ViewModels
                 }
                 this.RaiseAndSetIfChanged(ref _demo, value);
             }
+        }
+
+        bool _m2only;
+        public bool M2Only
+        {
+            get { return _m2only; }
+            set { this.RaiseAndSetIfChanged(ref _m2only, value); }
+        }
+
+        bool _s4only;
+        public bool S4Only
+        {
+            get { return _s4only; }
+            set { this.RaiseAndSetIfChanged(ref _s4only, value); }
+        }
+
+        bool _x7only;
+        public bool X7Only
+        {
+            get { return _x7only; }
+            set { this.RaiseAndSetIfChanged(ref _x7only, value); }
         }
 
         double _power;
@@ -1129,6 +1169,9 @@ namespace RFenergyUI.ViewModels
         MonitorPa[] _results;
         async void DoReadings()
         {
+            if(_results == null)
+                _results = new MonitorPa[MainViewModel.ICmd.PaChannels];
+
             MonitorPa results = await Task.Run(() => ReadData());
             if (results.ErrorMessage.Length > 0)
                 MainViewModel.MsgAppendLine(results.ErrorMessage);
