@@ -402,7 +402,7 @@ namespace S4TestModule
 
         public override int SetPower(double dbm)
         {
-            string cmd = string.Format("power {0:f0}\n", dbm*10.0);
+            string cmd = string.Format("power {0:f1}\n", dbm);
             string rsp = "";
             return RunCmd(cmd, ref rsp);
         }
@@ -482,65 +482,32 @@ namespace S4TestModule
         public override int PaStatus(int couplerMode, ref MonitorPa[] results)
         {
             results = new MonitorPa[S4FwDefs.CHANNELS];
-            int channel = -1;
-            byte[] cmd = new byte[1];
-            cmd[0] = S4Cmd.RF_STATUS;
-            byte[] data = null;
+            string cmd = "status\n";
+            string data = "";
             int status = RunCmd(cmd, ref data);
             if (status == 0)
             {
-                if (data != null)
-                {
-                    for (channel = 1; channel <= S4FwDefs.CHANNELS; ++channel)
-                    {
-                        int offset = 1 + 6 * (channel - 1);
-                        int value = (data[offset + 1] << 8) | data[offset];
-                        if ((value & 0x8000) != 0)
-                            unchecked { value |= (int)0xffff0000; }
-                        results[channel - 1].Temperature = value / 256.0;
-
-                        value = ((data[offset + 3] << 8) | data[offset + 2]);
-                        results[channel - 1].Voltage = (double)value / 256.0;
-
-                        value = (data[offset + 5] << 8) | data[offset + 4];
-                        results[channel - 1].Current = value / 256.0;
-                    }
-                }
-                else results[0].ErrorMessage = " RF_STATUS returned no data, is S4 online?";
+                results[0].Temperature = 22.5;
+                results[0].Voltage = 31.8;
+                results[0].Current = 72.5;
+                results[0].IDrv = 0.258;
             }
-            else results[0].ErrorMessage = string.Format(" RF_STATUS failed:{0}", ErrorDescription(status));
+            else results[0].ErrorMessage = string.Format(" status cmd failed:{0}", ErrorDescription(status));
 
-            // Get IDRV too
-            cmd[0] = S4Cmd.IDRV;
-            status = RunCmd(cmd, ref data);
-            if (status == 0)
-            {
-                if (data != null)
-                {
-                    for (channel = 1; channel <= S4FwDefs.CHANNELS; ++channel)
-                    {
-                        int offset = 2 * (channel - 1);
-                        results[channel - 1].IDrv = (double)((data[offset + 1] << 8) | data[offset]) / 256.0;
-                    }
-                }
-                else results[0].ErrorMessage = " IDRV returned no data, is S4 online?";
-            }
-            else results[0].ErrorMessage = string.Format(" IDRV failed:{0}", ErrorDescription(status));
-
-            // Coupler power
-            double fwd, refl;
-            fwd = refl = 0.0;
-            status = CouplerPower(couplerMode, ref fwd, ref refl);
-            if (status == 0)
-            {
-                for (channel = 1; channel <= S4FwDefs.CHANNELS; ++channel)
-                {
-                    results[channel - 1].Forward = fwd;
-                    results[channel - 1].Reflected = refl;
-                }
-            }
-            else
-                results[0].ErrorMessage = string.Format(" Read coupler failed:{0}", ErrorDescription(status));
+            //// Coupler power
+            //double fwd, refl;
+            //fwd = refl = 0.0;
+            //status = CouplerPower(couplerMode, ref fwd, ref refl);
+            //if (status == 0)
+            //{
+            //    for (channel = 1; channel <= S4FwDefs.CHANNELS; ++channel)
+            //    {
+            //        results[channel - 1].Forward = fwd;
+            //        results[channel - 1].Reflected = refl;
+            //    }
+            //}
+            //else
+            //    results[0].ErrorMessage = string.Format(" Read coupler failed:{0}", ErrorDescription(status));
             return status;
         }
 

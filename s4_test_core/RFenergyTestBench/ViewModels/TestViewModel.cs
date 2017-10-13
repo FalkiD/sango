@@ -37,7 +37,6 @@ namespace RFenergyUI.ViewModels
             _monitorBusy = false;
             _m2view = view;
             _model = new TestModel(this);
-            //_results = new MonitorPa[HW_CHANNELS];
             _initializing = false;
 
             MainViewModel.TestPanel = this;
@@ -1166,6 +1165,10 @@ namespace RFenergyUI.ViewModels
             }
         }
 
+        /// <summary>
+        /// Monitor PA's on a timer. Read data on a background thread,
+        /// update ViewModel's on return.
+        /// </summary>
         MonitorPa[] _results;
         async void DoReadings()
         {
@@ -1178,17 +1181,13 @@ namespace RFenergyUI.ViewModels
             else
             {
                 // back on UI thread, update ViewModels with _results
-                //for (int channel = 1; channel <= HW_CHANNELS; ++channel)
-                //{
-                //    PaVms[channel - 1].Current = _results[channel - 1].Current;
-                //    PaVms[channel - 1].Voltage = _results[channel - 1].Voltage;
-                //    PaVms[channel - 1].Temperature = _results[channel - 1].Temperature;
-                //    PaVms[channel - 1].IDrv = _results[channel - 1].IDrv;
-                //}
-
-                MainViewModel.MsgAppendLine("******* Fix TestViewModel.DoReadings() ********");
-
-
+                for (int channel = 1; channel <= MainViewModel.ICmd.PaChannels; ++channel)
+                {
+                    ChannelVms[channel - 1].PaVm.Current = _results[channel - 1].Current;
+                    ChannelVms[channel - 1].PaVm.Voltage = _results[channel - 1].Voltage;
+                    ChannelVms[channel - 1].PaVm.Temperature = _results[channel - 1].Temperature;
+                    ChannelVms[channel - 1].PaVm.IDrv = _results[channel - 1].IDrv;
+                }
                 CouplerFwd = _results[0].Forward;
                 CouplerRefl = _results[0].Reflected;
                 if(MainViewModel.CalPanel != null)
