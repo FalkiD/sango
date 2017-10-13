@@ -1,2 +1,0 @@
-Make sure that VS[2:0]==3'b111 && M[2:0]==3'b011, or DONE will not go high.
-(i.e. Depopulate R116, R117, R118.)
