@@ -481,9 +481,12 @@ wire         dds_synth_mute_n;      // DDS processor muting SYN
 wire         dds_synth_doInit;      // Init SYN when DDS init has completed
 wire         dds_synth_initing;     // SYN initializing
 
-// ADC delay betwixt RF_GATE & TRIG_OUT/ADCTRIG in 10 ns ticks
+// Don't need this delay...ADC delay betwixt RF_GATE & TRIG_OUT/ADCTRIG in 10 ns ticks
 wire [31:0]  adc_dly;               // default is 50us in 10ns ticks, set from opcode processor
-wire         trig_source;           // true if we're the trigger source
+wire [31:0]  trig_config;           // true if we're the trigger source
+wire         adctrig;               // trigger on pattern start by default, or pulse
+wire         pls_adctrig;           // trigger on start of pulse opcode
+wire         ptn_adctrig;           // default: trigger at start of pattern
 
 //------------------------------------------------------------------------
 // Start of logic
@@ -1026,7 +1029,7 @@ end
     .adc_fifo_wen_o     (meas_fifo_wen),        // ADC results fifo write enable
 
     .adc_dly_i          (adc_dly),              // delay between RF_GATE and TRIG_OUT in 10 ns increments(ticks)
-    .trig_out_o         (ADCTRIG),              // ADCTRIG/TRIG_OUT
+    .trig_out_o         (pls_adctrig),          // 10us pulse at start of PULSE opcode(RF_GATE)
 
     .status_o           (pls_status)            // 0=busy, SUCCESS when done, or an error code
   );
@@ -1057,6 +1060,8 @@ end
     .opcptn_fif_fl_i    (opcptn_fifo_full),
 
     .ptn_cmd_i          (ptn_cmd),              // Command/mode, i.e. writing pattern, run pattern, stop, etc
+
+    .trig_out_o         (ptn_adctrig),          // 10us pulse at start of pattern
 
     .status_o           (ptn_status)            // 0=busy, SUCCESS when done, or an error code
   );
@@ -1118,7 +1123,7 @@ end
                                                     
     .bias_enable_o              (bias_en),          // bias control
 
-    .trig_source_o              (trig_source),      // 1 if we're trigger source, else 0
+    .trig_conf_o                (trig_config),      // triger config word
     .adc_dly_o                  (adc_dly),          // adcdly in 10ns ticks
 
     // pattern opcodes are saved in pattern RAM.
@@ -1482,7 +1487,8 @@ end
  
   assign ACTIVE_LEDn = RF_GATE ? count2[24]: count2[26];
 
-  assign TRIG_OUT = trig_source ? ADCTRIG : 1'b0;
+  assign ADCTRIG = trig_config[11] ? pls_adctrig : ptn_adctrig; 
+  assign TRIG_OUT = trig_config[10] ? ADCTRIG : 1'b0;
  
   // 22-Jun have to scope MMC signals
   assign FPGA_MCU4 = DDS_MOSI; //CONV; //MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.

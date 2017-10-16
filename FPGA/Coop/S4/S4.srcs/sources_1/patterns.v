@@ -55,6 +55,8 @@ module patterns #(parameter PTN_DEPTH = 65536,
       
       input  wire [PCMD_BITS-1:0] ptn_cmd_i,          // Command/mode, i.e. writing pattern, run pattern, stop, etc
 
+      output wire                 trig_out_o,         // generate trigger at start of pattern
+
       output reg  [7:0]           status_o            // pattern processor status
   );
     
@@ -218,7 +220,51 @@ module patterns #(parameter PTN_DEPTH = 65536,
     end
   end
 
+  // trigger at start of pattern
+  reg             trig_out;
+  // trig_out logic
+  //reg  [31:0]     trig_out_delay;
+  reg  [9:0]      trig_out_width;     // room for 1024, 1000 10ns ticks => 10us    
+  reg             ptn_runn;
+  reg             run_trigger;
+  always @(posedge sys_clk) begin
+      if(!sys_rst_n) begin
+          trig_out <= 1'b0;
+          //trig_out_delay <= 32'h0000_0000;
+          trig_out_width <= 10'd0;
+          ptn_runn <= 1'b0;
+          run_trigger <= 1'b0;
+      end
+      else begin
+          ptn_runn <= ptn_run_i;
+          if(ptn_run_i && !ptn_runn) begin
+              //trig_out_delay <= adc_dly_i;
+              run_trigger <= 1'b1;
+          end
+            
+          if(run_trigger) begin
+              if(trig_out) begin
+                  if(trig_out_width == 10'h00) begin
+                      trig_out <= 1'b0;
+                      run_trigger <= 1'b0;
+                  end
+                  else
+                      trig_out_width <= trig_out_width - 10'd1;
+              end
+              else begin                
+                  //if(trig_out_delay == 32'h0000_0000) begin
+                  trig_out <= 1'b1;
+                  trig_out_width <= 10'd1000;    // use 10us trigger pulse                
+                  //end
+                  //else              
+                  //    trig_out_delay <= trig_out_delay - 32'h0000_0001;
+              end
+          end 
+      end
+  end
+
   assign ptn_data     = ptn_state == PTN_INIT_RAM ? 72'd0 : ptn_data_i[71:0]; 
   assign ptn_index_o  = ptn_addr;    // address of pattern entry in use for status/debug
-   
+  assign trig_out_o   = trig_out;
+  
 endmodule
