@@ -462,6 +462,20 @@ namespace S4TestModule
             return status;
         }
 
+        public override int SetCalPower(double dbm)
+        {
+            // Convert dB into dac value & send it
+            // dB is relative to dac 0x80(128) (from M2 anyway)
+            // S4 uses attenuation control, so 4095-value gets sent to dac
+            double value = dbm / 20.0;
+            value = Math.Pow(10.0, value);
+            value = value * 128.0 + 0.5;
+            ushort vmag = (ushort)(4095 - (int)value);
+            string cmd = string.Format("fw 0xf 0x{0:2x} 0x{1:2x} 0x17 0\n", (vmag&0xf)<<4, (vmag&0xff0)>>4);
+            string rsp = "";
+            return RunCmd(cmd, ref rsp);
+        }
+
         public override int LastProgrammedDb(ref double db)
         {
             return GetPower(ref db);

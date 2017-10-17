@@ -450,6 +450,17 @@ namespace M2TestModule
             return status;
         }
 
+        public override int SetCalPower(double dbm)
+        {
+            byte[] cmd = new byte[3];
+            cmd[0] = M2Cmd.PWRCAL;
+            int q7dot8 = (int)(dbm * 256.0);
+            cmd[1] = (byte)(q7dot8 & 0xff);
+            cmd[2] = (byte)((q7dot8 >> 8) & 0xff);
+            byte[] rspreset = null;
+            return RunCmd(cmd, ref rspreset);
+        }
+
         public override int LastProgrammedDb(ref double db)
         {
             byte[] cmd = new byte[1];

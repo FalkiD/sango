@@ -191,6 +191,11 @@ namespace RFModule
             throw new NotImplementedException();
         }
 
+        public virtual int SetCalPower(double dbm)
+        {
+            throw new NotImplementedException();
+        }
+
         public virtual int LastProgrammedDb(ref double db)
         {
             throw new NotImplementedException();

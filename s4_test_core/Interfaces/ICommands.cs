@@ -77,6 +77,12 @@ namespace Interfaces
         int GetPower(ref double dbm);
 
         /// <summary>
+        /// Set cal power using calpwr command/opcode
+        /// </summary>
+        /// <param name="dbm"></param>
+        /// <returns></returns>
+        int SetCalPower(double dbm);
+        /// <summary>
         /// Read last programmed power level in dB, a value
         /// referenced to a low-level power that's 
         /// hardware-specific.

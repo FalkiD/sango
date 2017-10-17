@@ -1235,13 +1235,7 @@ namespace RFenergyUI.ViewModels
         /// <returns>0 on success, else error code</returns>
         public int SetCalPower(double value)
         {
-            byte[] cmd = new byte[3];
-            cmd[0] = M2Cmd.PWRCAL;
-            int q7dot8 = (int)(value * 256.0);
-            cmd[1] = (byte)(q7dot8 & 0xff);
-            cmd[2] = (byte)((q7dot8 >> 8) & 0xff);
-            byte[] rspreset = null;
-            int status = MainViewModel.ICmd.RunCmd(cmd, ref rspreset);
+            int status = MainViewModel.ICmd.SetCalPower(value);
             if (status == 0)
                 MainViewModel.DebugPanel.PwrInDb = value;
             return status;
