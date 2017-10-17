@@ -212,7 +212,7 @@ namespace RFenergyUI.ViewModels
                         break;
                     }
 
-                    double externalPwr = ReadExternal();
+                    double externalPwr = ReadExternal(dBmTarget);
                     if (externalPwr > MAX_POWER)
                         MAX_POWER = externalPwr;
                     if (externalPwr > MAX_DBMOUT)
@@ -332,7 +332,7 @@ namespace RFenergyUI.ViewModels
                             }
                             status = SetCalPower(nextValue);
                             System.Threading.Thread.Sleep(250);
-                            externalPwr = ReadExternal();
+                            externalPwr = ReadExternal(dBmTarget);
                         } while (PwrCalRunning &&
                                     nextValue < PowerStop &&
                                     ++iterations < MAX_ITERATIONS);
@@ -651,7 +651,7 @@ namespace RFenergyUI.ViewModels
             {
                 if (MainViewModel.IMeter != null)
                 {
-                    Power = ReadExternal();
+                    Power = ReadExternal(40.0);
                     result = string.Format("LadyBug ReadCw:{0:f2} dBm", Power);
                 }
                 else result = "MainViewModel.IMeter interface is null, can't execute anything";
@@ -671,7 +671,7 @@ namespace RFenergyUI.ViewModels
             {
                 if (MainViewModel.IMeter != null)
                 {
-                    Power = ReadExternal();
+                    Power = ReadExternal(40.0);
                     result = string.Format("LadyBug ReadPulsed:{0:f2} dBm", Power);
                 }
                 else result = "MainViewModel.IMeter interface is null, can't execute anything";
@@ -1019,7 +1019,7 @@ namespace RFenergyUI.ViewModels
                     for (int k = 0; k < count && TempCoeffRunning; ++k)
                     {
                         int t = Temperature();
-                        double dbm = ReadExternal();
+                        double dbm = ReadExternal(40.0);
                         string line = string.Format("{0},{1},{2},{3:f2}", MainViewModel.Timestamp, k, t, dbm);
                         ftmp.WriteLine(line);
                         wrk.ReportProgress(0, line);
@@ -1141,10 +1141,17 @@ namespace RFenergyUI.ViewModels
             return false;
         }
 
-        double ReadExternal()
+        /// <summary>
+        /// Argument only used when no hardware as dummy value
+        /// </summary>
+        /// <param name="dBmTarget"></param>
+        /// <returns></returns>
+        double ReadExternal(double dBmTarget)
         {
             try
             {
+                //System.Threading.Thread.Sleep(50);
+                //return dBmTarget - 0.01;
                 if (MainViewModel.TestPanel.DutyCycle == 100)
                     return MainViewModel.IMeter.ReadCw(false);
                 else
@@ -1220,11 +1227,7 @@ namespace RFenergyUI.ViewModels
 
         int SetDutyCycleCompensation(bool value)
         {
-            byte[] cmd = new byte[2];
-            cmd[0] = M2Cmd.COMP_DC;
-            cmd[1] = (byte)(value ? 1 : 0);
-            byte[] rspreset = null;
-            return MainViewModel.ICmd.RunCmd(cmd, ref rspreset);
+            return MainViewModel.ICmd.DutyCycleCompensation(value); ;
         }
 
         /// <summary>
@@ -1235,6 +1238,8 @@ namespace RFenergyUI.ViewModels
         /// <returns>0 on success, else error code</returns>
         public int SetCalPower(double value)
         {
+            if (MainViewModel.ICmd.HwType == InstrumentInfo.InstrumentType.S4)
+                System.Threading.Thread.Sleep(80);
             int status = MainViewModel.ICmd.SetCalPower(value);
             if (status == 0)
                 MainViewModel.DebugPanel.PwrInDb = value;

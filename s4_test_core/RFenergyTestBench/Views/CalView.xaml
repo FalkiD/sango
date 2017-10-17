@@ -79,7 +79,7 @@
                   IsChecked="{Binding UpdatePowerTable}"/>
         <CheckBox Grid.Row="1" Grid.Column="2"
                   Grid.ColumnSpan="2"
-                  Content="Persist Cal to PC2 tag"
+                  Content="Persist Cal to PCn tag"
                   Style="{StaticResource CheckBoxH4}"
                   IsChecked="{Binding PersistCalData}"/>
         <CheckBox Grid.Row="1" Grid.Column="3"

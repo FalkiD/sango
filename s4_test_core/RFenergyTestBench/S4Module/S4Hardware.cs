@@ -144,7 +144,7 @@ namespace S4TestModule
             bool status = WriteCommand(command);
             if (status)
             {
-                System.Threading.Thread.Sleep(100);
+                System.Threading.Thread.Sleep(150);
                 return ReadResponse(ref response) > 0 ? 0 : 100;
             }
             else return 100;

@@ -471,7 +471,7 @@ namespace S4TestModule
             value = Math.Pow(10.0, value);
             value = value * 128.0 + 0.5;
             ushort vmag = (ushort)(4095 - (int)value);
-            string cmd = string.Format("fw 0xf 0x{0:2x} 0x{1:2x} 0x17 0\n", (vmag&0xf)<<4, (vmag&0xff0)>>4);
+            string cmd = string.Format("fw 0xe 0x{0:x} 0x{1:x} 0x17 0\n", (vmag&0xf)<<4, (vmag&0xff0)>>4);
             string rsp = "";
             return RunCmd(cmd, ref rsp);
         }
@@ -613,11 +613,8 @@ namespace S4TestModule
 
         public override int DutyCycleCompensation(bool enable)
         {
-            byte[] cmd = new byte[2];
-            cmd[0] = S4Cmd.COMP_DC;
-            cmd[1] = (byte)(enable ? 1 : 0);
-            byte[] rsp = null;
-            return RunCmd(cmd, ref rsp);
+            Debug.WriteLine("*Duty cycle compensation not needed on S4*");
+            return 0;
         }
 
         public override int TemperatureCompensation(int mode)
