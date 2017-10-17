@@ -79,7 +79,8 @@ namespace RFenergyUI.ViewModels
 
             ShowDebugTab = ConfigurationManager.AppSettings["mode"] == "factory" ? true : false;
 
-            SelectedSystem = RfModules[1];
+            // Fix this so it's automatic, etc
+            SelectedSystem = RfModules[1];  // pick startup hw, sets # of channels, needs to be variable
         }
 
         // Properties
