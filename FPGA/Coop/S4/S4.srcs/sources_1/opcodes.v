@@ -106,6 +106,16 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     output reg         meas_fifo_ren_o,           // measurement fifo read enable
     input  wire [PTN_FILL_BITS-1:0] meas_fifo_cnt_i, // measurements in fifo after pulse/pattern
 
+    output reg  [31:0] zm_fi_gain_o,              // zmon fwd "I" ADC gain, Q15.16 float
+    output reg  [15:0] zm_fi_offset_o,            // zmon fwd "I" ADC offset, signed int
+    output reg  [31:0] zm_fq_gain_o,              // zmon fwd "Q" ADC gain, Q15.16 float
+    output reg  [15:0] zm_fq_offset_o,            // zmon fwd "Q" ADC offset, signed int
+
+    output reg  [31:0] zm_ri_gain_o,              // zmon refl "I" ADC gain, Q15.16 float
+    output reg  [15:0] zm_ri_offset_o,            // zmon refl "I" ADC offset, signed int
+    output reg  [31:0] zm_rq_gain_o,              // zmon refl "Q" ADC gain, Q15.16 float
+    output reg  [15:0] zm_rq_offset_o,            // zmon refl "Q" ADC offset, signed int
+
     output reg         bias_enable_o,             // bias control
 
     output wire [31:0] trig_conf_o,               // trig_configuration word
@@ -399,7 +409,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     // length tests
                     else if({fifo_dat_i[0], length[7:0]} > (fifo_rd_count_i-1)) begin
                         // need more data, wait for it if valid request
-                        if(fifo_dat_i[7:1] != `CALPTBL && length > INT_ARG_BYTES) begin
+                        if((fifo_dat_i[7:1] != `CALPTBL && fifo_dat_i[7:1] != `CALZMON)
+                                 && length > INT_ARG_BYTES) begin
                            // Opcode with integer argument
                            // ...none have more than 8 bytes of data
                             status_o <= `ERR_INVALID_LENGTH;
@@ -466,7 +477,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                         blk_rsp_done <= 1'b0;   // flag, response is required
                         // Gather opcode data payload, then run it
                         // Most opcodes will use the same code here, (integer args) just different number of bytes.
-                        if(opcode == `CALPTBL) begin            // Opcode with 502 bytes as arg
+                        if(opcode == `CALPTBL || opcode == `CALZMON) begin
+                            // CALPTBL has 502 bytes as arg, CALZMON has 24 bytes
                             opcodes_byte_arg();                 // CALPTBL, other special opcodes                        
                         end
                         else begin                              // Opcode with integer argument
@@ -842,28 +854,33 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             end            
             `MEAS:  begin
                 // return measurements, 1st 4 bytes are standard, opcode status, last opcode, 2 length bytes.
-                // argument is how many measurements to return.
-                // each measurement is 8 bytes, 16 bits FWDQ (14 bits really),
-                // 16/14 bits FWDI, 16/14 bits REFLQ, 16/14 bits REFLI
+                // args: byte 0 is mode, 1=dBm, 2=calibrated ADC, 3=raw ADC
+                // byte 1: unused
+                // byte 2: LSB, # of measurements requested
+                // byte 3: MSB, # of measurements requested
+                // each measurement is 8 bytes:
+                // 16 bits FWDI, 16 bits FWDQ, 16 bits REFLI, 16 bits REFLQ
+                // (I is real component, Q is imaginary component)
                 //
-                // Each measurement requested is 8 bytes
+                // Mode 1, each entry returns 4 bytes, 2 Q7.8 unsigned ints, FwdPower, ReflectedPower
+                // Mode 2 & 3, each entry returns 8 bytes, 4 16-bit signed ints: 
+                //      16 bits FWDI, 16 bits FWDQ, 16 bits REFLI, 16 bits REFLQ
                 //
                 // if more data available than can be sent at once, cut down the length
                 if( ({1'd0, meas_fifo_cnt_i, 2'b00}) > ((1 << MMC_FILL_LEVEL_BITS)-8))
                     rsp_length <= ((1 << MMC_FILL_LEVEL_BITS) - 8);
                 else begin
-                    if(uinttmp[15:0] > {4'd0, meas_fifo_cnt_i[12:1]})
+                    if(uinttmp[31:16] > {4'd0, meas_fifo_cnt_i[12:1]})
                         // requested more then there is, return all bytes
                         rsp_length <= {1'd0, meas_fifo_cnt_i, 2'b00};
-                    else
-                        rsp_length <= {uinttmp[12:0], 3'b000};  // requested measurements times 8 bytes per
+                    else begin
+                        if(uinttmp[7:0] > 1) 
+                            rsp_length <= {uinttmp[29:16], 3'b000};  // requested measurements times 8 bytes per
+                        else
+                            rsp_length <= {uinttmp[29:16], 2'b00};   // dBm, requested measurements times 4 bytes per
+                    end
                 end
                 rsp_source <= MEAS_FIFO;
-                state <= `STATE_BEGIN_RESPONSE;
-            end
-            `CALZMON: begin
-                status_o <= `ERR_OPC_NOT_SUPPORTED;
-                rsp_length <= 0;
                 state <= `STATE_BEGIN_RESPONSE;
             end
             default: begin
@@ -920,6 +937,27 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 fifo_rd_en_o <= 0;      // pause opcode fifo reads
             length <= length - 1;
         end
+        `CALZMON: begin
+            // stash these bytes in the response buffer as temporary storage.
+            if(length == 0) begin
+                // got all the data, update in-use registers
+                zm_fi_gain_o     <= {rsp_data[3], rsp_data[2], rsp_data[1], rsp_data[0]};
+                zm_fi_offset_o   <= {rsp_data[5], rsp_data[4]};
+                zm_fq_gain_o     <= {rsp_data[9], rsp_data[8], rsp_data[7], rsp_data[6]};
+                zm_fq_offset_o   <= {rsp_data[11], rsp_data[10]};
+                zm_ri_gain_o     <= {rsp_data[15], rsp_data[14], rsp_data[13], rsp_data[12]};
+                zm_ri_offset_o   <= {rsp_data[17], rsp_data[16]};
+                zm_rq_gain_o     <= {rsp_data[21], rsp_data[20], rsp_data[19], rsp_data[18]};
+                zm_rq_offset_o   <= {rsp_data[23], rsp_data[22]};
+                next_opcode();
+            end
+            else begin
+                rsp_data[24-length] <= fifo_dat_i;
+                if(length == 2)             // Turn OFF with 2 clocks left. 1=last read
+                    fifo_rd_en_o <= 0;      // pause opcode fifo reads
+                length <= length - 1;
+            end
+        end
         default: begin
             status_o <= `ERR_INVALID_OPCODE;
             rsp_length <= 0;
@@ -962,7 +1000,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         pwr_calidx_o <= 12'd0;
         pwr_calibrate_o <= 1'b0;
         pwrcal_mode <= PWRCAL1;
-
+        
         response_ready <= 1'b0;
         response_length <= 16'h0000;
         rsp_index <= 16'h0000;
@@ -972,6 +1010,16 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         mode_o <= 32'h0000_0000;
         bias_enable_o <= 1'b0;
         fifo_rst_o <= 1'b0;
+        
+        zm_fi_gain_o <= 32'h0001_0000;      // zmon fwd "I" ADC gain, Q15.16 float
+        zm_fi_offset_o <= 16'd0;            // zmon fwd "I" ADC offset, signed int
+        zm_fq_gain_o <= 32'h0001_0000;      // zmon fwd "Q" ADC gain, Q15.16 float
+        zm_fq_offset_o <= 16'd0;            // zmon fwd "Q" ADC offset, signed int
+        
+        zm_ri_gain_o <= 32'h0001_0000;      // zmon refl "I" ADC gain, Q15.16 float
+        zm_ri_offset_o <= 16'd0;            // zmon refl "I" ADC offset, signed int
+        zm_rq_gain_o <= 32'h0001_0000;      // zmon refl "Q" ADC gain, Q15.16 float
+        zm_rq_offset_o <= 16'd0;            // zmon refl "Q" ADC offset, signed int
         
         adc_dly <= 5000;     // default is 50us in 10ns ticks
     end
