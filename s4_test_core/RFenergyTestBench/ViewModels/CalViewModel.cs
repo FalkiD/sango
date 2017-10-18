@@ -1150,8 +1150,8 @@ namespace RFenergyUI.ViewModels
         {
             try
             {
-                //System.Threading.Thread.Sleep(50);
-                //return dBmTarget - 0.01;
+                System.Threading.Thread.Sleep(50);
+                return dBmTarget - 0.01;
                 if (MainViewModel.TestPanel.DutyCycle == 100)
                     return MainViewModel.IMeter.ReadCw(false);
                 else
