@@ -342,13 +342,14 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     meas_fifo_ren_o <= 1'b0;
                     state <= `STATE_RD_MEAS2;
                 end
-                `STATE_RD_MEAS2: begin                  
-                    if(uinttmp[29] == 1'b1)             // sign extend bipolar value
+                `STATE_RD_MEAS2: begin
+                    // uinttmp => [XX][14 bits FWDQ][XX][14 bits FWDI]                  
+                    if(uinttmp[29] == 1'b1)             // sign extend bipolar FWDQ value
                         uinttmp <= {uinttmp[63:32], 2'b11, uinttmp[29:0]};
                     state <= `STATE_RD_MEAS3;
                 end 
                 `STATE_RD_MEAS3: begin
-                    if(uinttmp[13] == 1'b1)             // sign extend bipolar value
+                    if(uinttmp[13] == 1'b1)             // sign extend bipolar FWDI value
                         uinttmp <= {uinttmp[63:16], 2'b11, uinttmp[13:0]};
                     state <= `STATE_RD_MEAS4;
                 end 
