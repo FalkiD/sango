@@ -28,11 +28,11 @@ module meas_calcs(
     input  wire         pwr_i,              // do power calculation
     output wire         done_o,             // calculation done
 
-    input  wire [31:0]  adcf_dat_i,         // [xx][FWDQ][xx][FWDI]
-    input  wire [31:0]  adcr_dat_i,         // [xx][RFLQ][xx][RFLI]
+    input  wire [31:0]  adcf_dat_i,         // Raw MEAS ADC fifo data, [xx][FWDQ][xx][FWDI]
+    input  wire [31:0]  adcr_dat_i,         // Raw MEAS ADC fifo data, [xx][RFLQ][xx][RFLI]
 
-    //output reg  [31:0]  adcf_dat_o,         // [16 bits calibrated FWDQ][16 bits calibrated FWDI]
-    //output reg  [31:0]  adcr_dat_o,         // [16 bits calibrated RFLQ][16 bits calibrated RFLI]
+    output reg  [31:0]  adcf_dat_o,         // [16 bits calibrated FWDQ][16 bits calibrated FWDI]
+    output reg  [31:0]  adcr_dat_o,         // [16 bits calibrated RFLQ][16 bits calibrated RFLI]
 
     // ZMON cal data registers
     input  wire [31:0]  zm_fi_gain_i,       // zmon fwd "I" ADC gain, Q15.16 float
@@ -167,12 +167,12 @@ module meas_calcs(
             end
             CAL6: begin
                 // done, write results to output fifo.
-//                adc_fifo_dat_o <= {cal_tmp2, cal_tmp1};
+                //adc_fifo_dat_o <= {cal_tmp2, cal_tmp1};
 //                adc_fifo_wen_o <= 1'b1;                // write ADCF data
                 cal_state <= CAL7;
             end
             CAL7: begin                
-//                adc_fifo_dat_o <= {cal_tmp4, cal_tmp3};
+                //adc_fifo_dat_o <= {cal_tmp4, cal_tmp3};
 //                adc_fifo_wen_o <= 1'b1;                // write ADCF data                
                 cal_state <= CAL8;
             end

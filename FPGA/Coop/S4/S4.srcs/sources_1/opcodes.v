@@ -106,16 +106,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     output reg         meas_fifo_ren_o,           // measurement fifo read enable
     input  wire [PTN_FILL_BITS-1:0] meas_fifo_cnt_i, // measurements in fifo after pulse/pattern
 
-    output reg  [31:0] zm_fi_gain_o,              // zmon fwd "I" ADC gain, Q15.16 float
-    output reg  [15:0] zm_fi_offset_o,            // zmon fwd "I" ADC offset, signed int
-    output reg  [31:0] zm_fq_gain_o,              // zmon fwd "Q" ADC gain, Q15.16 float
-    output reg  [15:0] zm_fq_offset_o,            // zmon fwd "Q" ADC offset, signed int
-
-    output reg  [31:0] zm_ri_gain_o,              // zmon refl "I" ADC gain, Q15.16 float
-    output reg  [15:0] zm_ri_offset_o,            // zmon refl "I" ADC offset, signed int
-    output reg  [31:0] zm_rq_gain_o,              // zmon refl "Q" ADC gain, Q15.16 float
-    output reg  [15:0] zm_rq_offset_o,            // zmon refl "Q" ADC offset, signed int
-
     output reg         bias_enable_o,             // bias control
 
     output wire [31:0] trig_conf_o,               // trig_configuration word
@@ -211,6 +201,46 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 
     reg  [15:0]  version = `VERSION;
 
+    // Zmon (MEAS) calibration registers
+    reg  [31:0]  zm_fi_gain;         // zmon fwd "I" ADC gain, Q15.16 float
+    reg  [15:0]  zm_fi_offset;       // zmon fwd "I" ADC offset, signed int
+    reg  [31:0]  zm_fq_gain;         // zmon fwd "Q" ADC gain, Q15.16 float
+    reg  [15:0]  zm_fq_offset;       // zmon fwd "Q" ADC offset, signed int
+
+    reg  [31:0]  zm_ri_gain;         // zmon refl "I" ADC gain, Q15.16 float
+    reg  [15:0]  zm_ri_offset;       // zmon refl "I" ADC offset, signed int
+    reg  [31:0]  zm_rq_gain;         // zmon refl "Q" ADC gain, Q15.16 float
+    reg  [15:0]  zm_rq_offset;       // zmon refl "Q" ADC offset, signed int
+
+    // Measurement calculation, calibration instance
+    meas_calcs meas_math
+    (
+        .sys_clk            (sys_clk),
+        .sys_rst_n          (sys_rst_n),
+  
+        .cal_i              (1'b1),
+        .pwr_i              (1'b1),
+        .done_o             (),
+
+        .adcf_dat_i         (),                     // [xx][FWDQ][xx][FWDI]
+        .adcr_dat_i         (),                     // [xx][RFLQ][xx][RFLI]
+
+        .adcf_dat_o         (),                     // [16 bits calibrated FWDQ][16 bits calibrated FWDI]
+        .adcr_dat_o         (),                     // [16 bits calibrated RFLQ][16 bits calibrated RFLI]
+
+        .zm_fi_gain_i       (zm_fi_gain),           // zmon fwd "I" ADC gain, Q15.16 float
+        .zm_fi_offset_i     (zm_fi_offset),         // zmon fwd "I" ADC offset, signed int
+        .zm_fq_gain_i       (zm_fq_gain),           // zmon fwd "Q" ADC gain, Q15.16 float
+        .zm_fq_offset_i     (zm_fq_offset),         // zmon fwd "Q" ADC offset, signed int
+    
+        .zm_ri_gain_i       (zm_ri_gain),           // zmon refl "I" ADC gain, Q15.16 float
+        .zm_ri_offset_i     (zm_ri_offset),         // zmon refl "I" ADC offset, signed int
+        .zm_rq_gain_i       (zm_rq_gain),           // zmon refl "Q" ADC gain, Q15.16 float
+        .zm_rq_offset_i     (zm_rq_offset)         // zmon refl "Q" ADC offset, signed int  
+    );
+
+
+    // opcode processing
     always @( posedge sys_clk) begin
         if(!sys_rst_n) begin
             reset_opcode_processor();
@@ -942,14 +972,14 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             // stash these bytes in the response buffer as temporary storage.
             if(length == 0) begin
                 // got all the data, update in-use registers
-                zm_fi_gain_o     <= {rsp_data[3], rsp_data[2], rsp_data[1], rsp_data[0]};
-                zm_fi_offset_o   <= {rsp_data[5], rsp_data[4]};
-                zm_fq_gain_o     <= {rsp_data[9], rsp_data[8], rsp_data[7], rsp_data[6]};
-                zm_fq_offset_o   <= {rsp_data[11], rsp_data[10]};
-                zm_ri_gain_o     <= {rsp_data[15], rsp_data[14], rsp_data[13], rsp_data[12]};
-                zm_ri_offset_o   <= {rsp_data[17], rsp_data[16]};
-                zm_rq_gain_o     <= {rsp_data[21], rsp_data[20], rsp_data[19], rsp_data[18]};
-                zm_rq_offset_o   <= {rsp_data[23], rsp_data[22]};
+                zm_fi_gain     <= {rsp_data[3], rsp_data[2], rsp_data[1], rsp_data[0]};
+                zm_fi_offset   <= {rsp_data[5], rsp_data[4]};
+                zm_fq_gain     <= {rsp_data[9], rsp_data[8], rsp_data[7], rsp_data[6]};
+                zm_fq_offset   <= {rsp_data[11], rsp_data[10]};
+                zm_ri_gain     <= {rsp_data[15], rsp_data[14], rsp_data[13], rsp_data[12]};
+                zm_ri_offset   <= {rsp_data[17], rsp_data[16]};
+                zm_rq_gain     <= {rsp_data[21], rsp_data[20], rsp_data[19], rsp_data[18]};
+                zm_rq_offset   <= {rsp_data[23], rsp_data[22]};
                 next_opcode();
             end
             else begin
@@ -1012,15 +1042,15 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         bias_enable_o <= 1'b0;
         fifo_rst_o <= 1'b0;
         
-        zm_fi_gain_o <= 32'h0001_0000;      // zmon fwd "I" ADC gain, Q15.16 float
-        zm_fi_offset_o <= 16'd0;            // zmon fwd "I" ADC offset, signed int
-        zm_fq_gain_o <= 32'h0001_0000;      // zmon fwd "Q" ADC gain, Q15.16 float
-        zm_fq_offset_o <= 16'd0;            // zmon fwd "Q" ADC offset, signed int
+        zm_fi_gain <= 32'h0001_0000;      // zmon fwd "I" ADC gain, Q15.16 float
+        zm_fi_offset <= 16'd0;            // zmon fwd "I" ADC offset, signed int
+        zm_fq_gain <= 32'h0001_0000;      // zmon fwd "Q" ADC gain, Q15.16 float
+        zm_fq_offset <= 16'd0;            // zmon fwd "Q" ADC offset, signed int
         
-        zm_ri_gain_o <= 32'h0001_0000;      // zmon refl "I" ADC gain, Q15.16 float
-        zm_ri_offset_o <= 16'd0;            // zmon refl "I" ADC offset, signed int
-        zm_rq_gain_o <= 32'h0001_0000;      // zmon refl "Q" ADC gain, Q15.16 float
-        zm_rq_offset_o <= 16'd0;            // zmon refl "Q" ADC offset, signed int
+        zm_ri_gain <= 32'h0001_0000;      // zmon refl "I" ADC gain, Q15.16 float
+        zm_ri_offset <= 16'd0;            // zmon refl "I" ADC offset, signed int
+        zm_rq_gain <= 32'h0001_0000;      // zmon refl "Q" ADC gain, Q15.16 float
+        zm_rq_offset <= 16'd0;            // zmon refl "Q" ADC offset, signed int
         
         adc_dly <= 5000;     // default is 50us in 10ns ticks
     end

@@ -416,16 +416,6 @@ wire         meas_fifo_mt;             // meas fifo empty flag
 wire         meas_fifo_full;           // meas fifo full flag
 wire [`PATTERN_FILL_BITS-1:0]   meas_fifo_count;
 
-// ZMON cal data registers
-wire [31:0]  zm_fi_gain;               // zmon fwd "I" ADC gain, Q15.16 float
-wire [15:0]  zm_fi_offset;             // zmon fwd "I" ADC offset, signed int
-wire [31:0]  zm_fq_gain;               // zmon fwd "Q" ADC gain, Q15.16 float
-wire [15:0]  zm_fq_offset;             // zmon fwd "Q" ADC offset, signed int
-wire [31:0]  zm_ri_gain;               // zmon refl "I" ADC gain, Q15.16 float
-wire [15:0]  zm_ri_offset;             // zmon refl "I" ADC offset, signed int
-wire [31:0]  zm_rq_gain;               // zmon refl "Q" ADC gain, Q15.16 float
-wire [15:0]  zm_rq_offset;             // zmon refl "Q" ADC offset, signed int
-
 // Bias enable wire
 wire         bias_en;                 // bias control
 
@@ -1044,33 +1034,6 @@ end
     .status_o           (pls_status)            // 0=busy, SUCCESS when done, or an error code
   );
 
-  // Measurement calculations, calibration
-  meas_calcs meas_math
-  (
-    .sys_clk            (sys_clk),
-    .sys_rst_n          (sys_rst_n),
-  
-    .cal_i              (1'b1),
-    .pwr_i              (1'b1),
-    .done_o             (),
-
-    .adcf_dat_i         (),                     // [xx][FWDQ][xx][FWDI]
-    .adcr_dat_i         (),                     // [xx][RFLQ][xx][RFLI]
-
-//    .adcf_dat_o         (),                     // [16 bits calibrated FWDQ][16 bits calibrated FWDI]
-//    .adcr_dat_o         (),                     // [16 bits calibrated RFLQ][16 bits calibrated RFLI]
-
-    .zm_fi_gain_i       (zm_fi_gain),           // zmon fwd "I" ADC gain, Q15.16 float
-    .zm_fi_offset_i     (zm_fi_offset),         // zmon fwd "I" ADC offset, signed int
-    .zm_fq_gain_i       (zm_fq_gain),           // zmon fwd "Q" ADC gain, Q15.16 float
-    .zm_fq_offset_i     (zm_fq_offset),         // zmon fwd "Q" ADC offset, signed int
-    
-    .zm_ri_gain_i       (zm_ri_gain),           // zmon refl "I" ADC gain, Q15.16 float
-    .zm_ri_offset_i     (zm_ri_offset),         // zmon refl "I" ADC offset, signed int
-    .zm_rq_gain_i       (zm_rq_gain),           // zmon refl "Q" ADC gain, Q15.16 float
-    .zm_rq_offset_i     (zm_rq_offset)         // zmon refl "Q" ADC offset, signed int  
-  );
-
   patterns #(
         .PTN_DEPTH(`PATTERN_DEPTH),
         .PTN_BITS(`PATTERN_FILL_BITS),
@@ -1157,16 +1120,6 @@ end
     .meas_fifo_ren_o            (meas_fifo_ren),    // measurement fifo read enable
     .meas_fifo_cnt_i            (meas_fifo_count),  // measurements in fifo after pulse/pattern
                                           
-    .zm_fi_gain_o               (zm_fi_gain),       // zmon fwd "I" ADC gain, Q15.16 float
-    .zm_fi_offset_o             (zm_fi_offset),     // zmon fwd "I" ADC offset, signed int
-    .zm_fq_gain_o               (zm_fq_gain),       // zmon fwd "Q" ADC gain, Q15.16 float
-    .zm_fq_offset_o             (zm_fq_offset),     // zmon fwd "Q" ADC offset, signed int
-
-    .zm_ri_gain_o               (zm_ri_gain),       // zmon refl "I" ADC gain, Q15.16 float
-    .zm_ri_offset_o             (zm_ri_offset),     // zmon refl "I" ADC offset, signed int
-    .zm_rq_gain_o               (zm_rq_gain),       // zmon refl "Q" ADC gain, Q15.16 float
-    .zm_rq_offset_o             (zm_rq_offset),     // zmon refl "Q" ADC offset, signed int
-                                                    
     .bias_enable_o              (bias_en),          // bias control
 
     .trig_conf_o                (trig_config),      // triger config word
