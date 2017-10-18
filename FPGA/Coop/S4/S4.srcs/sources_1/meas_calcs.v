@@ -31,8 +31,8 @@ module meas_calcs(
     input  wire [31:0]  adcf_dat_i,         // [xx][FWDQ][xx][FWDI]
     input  wire [31:0]  adcr_dat_i,         // [xx][RFLQ][xx][RFLI]
 
-    output reg  [31:0]  adcf_dat_o,         // [16 bits calibrated FWDQ][16 bits calibrated FWDI]
-    output reg  [31:0]  adcr_dat_o,         // [16 bits calibrated RFLQ][16 bits calibrated RFLI]
+    //output reg  [31:0]  adcf_dat_o,         // [16 bits calibrated FWDQ][16 bits calibrated FWDI]
+    //output reg  [31:0]  adcr_dat_o,         // [16 bits calibrated RFLQ][16 bits calibrated RFLI]
 
     // ZMON cal data registers
     input  wire [31:0]  zm_fi_gain_i,       // zmon fwd "I" ADC gain, Q15.16 float
@@ -42,19 +42,19 @@ module meas_calcs(
     input  wire [31:0]  zm_ri_gain_i,       // zmon refl "I" ADC gain, Q15.16 float
     input  wire [15:0]  zm_ri_offset_i,     // zmon refl "I" ADC offset, signed int
     input  wire [31:0]  zm_rq_gain_i,       // zmon refl "Q" ADC gain, Q15.16 float
-    input  wire [15:0]  zm_rq_offset_i,     // zmon refl "Q" ADC offset, signed int
+    input  wire [15:0]  zm_rq_offset_i     // zmon refl "Q" ADC offset, signed int
     );
 
     // Calibration definitions, registers
-    localparam CAL1     = 3'd1; // idle state
-    localparam CAL2     = 3'd2;
-    localparam CAL3     = 3'd3;
-    localparam CAL4     = 3'd4;    
-    localparam CAL5     = 3'd5;    
-    localparam CAL6     = 3'd6;    
-    localparam CAL7     = 3'd7;    
-    localparam CAL8     = 3'd8;    
-    localparam CAL_MULT = 3'd9;    
+    localparam CAL1     = 4'd1; // idle state
+    localparam CAL2     = 4'd2;
+    localparam CAL3     = 4'd3;
+    localparam CAL4     = 4'd4;    
+    localparam CAL5     = 4'd5;    
+    localparam CAL6     = 4'd6;    
+    localparam CAL7     = 4'd7;    
+    localparam CAL8     = 4'd8;    
+    localparam CAL_MULT = 4'd9;    
     reg  [3:0]      cal_state;
     reg  [3:0]      next_state;
     reg  [15:0]     cal_tmp1;
@@ -112,10 +112,10 @@ module meas_calcs(
             case(cal_state)
             CAL1: begin
                 // registers always loaded, state=>CAL2 to start
-                cal_tmp1 <= { 2'b00, adcf_dat[31:18]};
-                cal_tmp2 <= { 2'b00, adcf_dat[15:2] };
-                cal_tmp3 <= { 2'b00, adcr_dat[31:18]};
-                cal_tmp4 <= { 2'b00, adcr_dat[15:2] };
+                cal_tmp1 <= { 2'b00, adcf_dat_i[31:18]};
+                cal_tmp2 <= { 2'b00, adcf_dat_i[15:2] };
+                cal_tmp3 <= { 2'b00, adcr_dat_i[31:18]};
+                cal_tmp4 <= { 2'b00, adcr_dat_i[15:2] };
             end
             CAL2: begin
                 // cal_tmp => [XX][14 bits ADC]
@@ -167,23 +167,23 @@ module meas_calcs(
             end
             CAL6: begin
                 // done, write results to output fifo.
-                adc_fifo_dat_o <= {cal_tmp2, cal_tmp1};
-                adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                adc_fifo_dat_o <= {cal_tmp2, cal_tmp1};
+//                adc_fifo_wen_o <= 1'b1;                // write ADCF data
                 cal_state <= CAL7;
             end
             CAL7: begin                
-                adc_fifo_dat_o <= {cal_tmp4, cal_tmp3};
-                adc_fifo_wen_o <= 1'b1;                // write ADCF data                
+//                adc_fifo_dat_o <= {cal_tmp4, cal_tmp3};
+//                adc_fifo_wen_o <= 1'b1;                // write ADCF data                
                 cal_state <= CAL8;
             end
             CAL8: begin
                 // done
-                adc_fifo_wen_o <= 1'b0;          
+//                adc_fifo_wen_o <= 1'b0;          
                 cal_state <= CAL1;
             end
             CAL_MULT: begin           
                 if(latency_counter == 0) begin
-                    state <= next_state;
+                    cal_state <= next_state;
                     multiply <= 1'b0;
                 end
                 else

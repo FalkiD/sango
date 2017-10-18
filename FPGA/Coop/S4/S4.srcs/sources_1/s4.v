@@ -1050,15 +1050,15 @@ end
     .sys_clk            (sys_clk),
     .sys_rst_n          (sys_rst_n),
   
-    .cal_i              (),
-    .pwr_i              (),
+    .cal_i              (1'b1),
+    .pwr_i              (1'b1),
     .done_o             (),
 
     .adcf_dat_i         (),                     // [xx][FWDQ][xx][FWDI]
     .adcr_dat_i         (),                     // [xx][RFLQ][xx][RFLI]
 
-    .adcf_dat_o         (),                     // [16 bits calibrated FWDQ][16 bits calibrated FWDI]
-    .adcr_dat_o         (),                     // [16 bits calibrated RFLQ][16 bits calibrated RFLI]
+//    .adcf_dat_o         (),                     // [16 bits calibrated FWDQ][16 bits calibrated FWDI]
+//    .adcr_dat_o         (),                     // [16 bits calibrated RFLQ][16 bits calibrated RFLI]
 
     .zm_fi_gain_i       (zm_fi_gain),           // zmon fwd "I" ADC gain, Q15.16 float
     .zm_fi_offset_i     (zm_fi_offset),         // zmon fwd "I" ADC offset, signed int
@@ -1068,7 +1068,7 @@ end
     .zm_ri_gain_i       (zm_ri_gain),           // zmon refl "I" ADC gain, Q15.16 float
     .zm_ri_offset_i     (zm_ri_offset),         // zmon refl "I" ADC offset, signed int
     .zm_rq_gain_i       (zm_rq_gain),           // zmon refl "Q" ADC gain, Q15.16 float
-    .zm_rq_offset_i     (zm_rq_offset),         // zmon refl "Q" ADC offset, signed int  
+    .zm_rq_offset_i     (zm_rq_offset)         // zmon refl "Q" ADC offset, signed int  
   );
 
   patterns #(
