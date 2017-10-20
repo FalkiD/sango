@@ -2,6 +2,17 @@
 
 namespace Interfaces
 {
+    public class PowerCalData
+    {
+        public int IQDacMag { get; set; }
+        public double PowerDB { get; set; }
+        public double ExternaldBm { get; set; }
+        public double Coupler { get; set; }
+        public double Temperature { get; set; } // Average
+        public double Volts { get; set; }       // Average
+        public double Amps { get; set; }        // Max
+    }
+
     /// <summary>
     /// PA status info
     /// </summary>
@@ -119,6 +130,8 @@ namespace Interfaces
         /// <param name="reflected"></param>
         /// <returns></returns>
         int ZMonPower(ref double forward, ref double reflected);
+
+        int WriteCalResults(double frequency, List<PowerCalData> CalResults);
 
         /// <summary>
         /// Read device status
