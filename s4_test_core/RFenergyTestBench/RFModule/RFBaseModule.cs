@@ -248,6 +248,11 @@ namespace RFModule
             throw new NotImplementedException();
         }
 
+        public virtual int WriteCalResults(double frequency, List<PowerCalData> results)
+        {
+            throw new NotImplementedException();
+        }
+
         // Appends each line to Results property
         protected virtual void ParseResponseLines(string response)
         {

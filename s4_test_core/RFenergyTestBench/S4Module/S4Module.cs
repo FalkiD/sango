@@ -12,6 +12,7 @@ using System.Diagnostics;
 using System.Text;
 using Interfaces;
 using RFModule;
+using System.Collections.Generic;
 
 namespace S4TestModule
 {
@@ -494,6 +495,12 @@ namespace S4TestModule
                 reflected = ((rsp[7] << 8) | rsp[6]) / 256.0;
             }
             return status;
+        }
+
+        public override int WriteCalResults(double frequency, List<PowerCalData> results)
+        {
+            throw new NotImplementedException();
+            return 0;
         }
 
         public override string ErrorDescription(int errorCode)

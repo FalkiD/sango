@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.ObjectModel;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Reactive.Linq;
@@ -11,17 +12,6 @@ using Interfaces;
 
 namespace RFenergyUI.ViewModels
 {
-    public class PowerCalData
-    {
-        public int IQDacMag { get; set; }
-        public double PowerDB { get; set; }
-        public double ExternaldBm { get; set; }
-        public double Coupler { get; set; }
-        public double Temperature { get; set; } // Average
-        public double Volts { get; set; }       // Average
-        public double Amps { get; set; }        // Max
-    }
-
     public class CalViewModel : ReactiveObject
     {
         CalView _calview;
@@ -404,62 +394,14 @@ namespace RFenergyUI.ViewModels
             string msg = "";
             try
             {
-                const int BLOCKS = 8;   // FW power table is 51 entries long from 40.0
-                                        // to 65.0 dBm in 0.5 dBm steps. Requires 8
-                                        // blocks
-
-                // Fill 8 blocks. Last block will be null-terminated after TOP_INDEX
-                const int ENTRIES_PER_BLOCK = 7;
-                const int BYTES_PER_VALUE = 4;
-                const int TOP_INDEX = ((int)((65.0 - 40.0) / 0.5) + 1)*BYTES_PER_VALUE;
-                byte[] cmd = new byte[31];
-                cmd[0] = M2Cmd.CAL_PWR;
-                byte record = 0;
-                int frq_index = 0;
-                if (Frequency < 2420.0)
-                    frq_index = 0;
-                else if (Frequency < 2440.0)
-                    frq_index = 1;
-                else if (Frequency < 2460.0)
-                    frq_index = 2;
-                else if (Frequency < 2480.0)
-                    frq_index = 3;
-                else frq_index = 4;
-                string strData;
-                string str = "";
-                for (int k = 0; k < BLOCKS * ENTRIES_PER_BLOCK;)
+                List<PowerCalData> results = new List<PowerCalData>(CalResults);
+                int status = MainViewModel.ICmd.WriteCalResults(Frequency, results);
+                if (status != 0)
                 {
-                    strData = "";
-                    for (int j = k; j < (record+1)*ENTRIES_PER_BLOCK; ++j)
-                    {
-                        if(j < CalResults.Count)
-                        {
-                            // Table in FW is low to high values
-                            ushort data = (ushort)(CalResults[j].PowerDB * 100.0);
-                            str = string.Format("{0:d4}", data);
-                        }
-                        strData += str;
-                    }
-                    byte byte1 = record++;
-                    byte1 = (byte)((byte1 & 0xf) | (frq_index << 4));
-                    cmd[1] = byte1;
-                    for(int i = 0; i < ENTRIES_PER_BLOCK * BYTES_PER_VALUE; ++i)
-                    {
-                        if (k+i >= TOP_INDEX-1)   // Terminate after 51st entry
-                            cmd[i+2] = 0;
-                        else
-                            cmd[i+2] = (byte)strData[i];
-                    }
-                    byte[] rsp = null;
-                    int status = MainViewModel.ICmd.RunCmd(cmd, ref rsp);
-                    if(status != 0)
-                    {
-                        msg = string.Format(" Write CalResults failed, status:{0}", MainViewModel.IErr.ErrorDescription(status));
-                        wnd.ReportProgress(0, msg);
-                        fout.WriteLine(MainViewModel.Timestamp + msg);
-                        return;
-                    }
-                    k += ENTRIES_PER_BLOCK;
+                    msg = string.Format(" Write CalResults failed, status:{0}", MainViewModel.IErr.ErrorDescription(status));
+                    wnd.ReportProgress(0, msg);
+                    fout.WriteLine(MainViewModel.Timestamp + msg);
+                    return;
                 }
                 msg = " Wrote CalResults to device.";
                 wnd.ReportProgress(0, msg);
@@ -1150,9 +1092,8 @@ namespace RFenergyUI.ViewModels
         {
             try
             {
-                System.Threading.Thread.Sleep(50);
-                return dBmTarget - 0.01;
-
+                //System.Threading.Thread.Sleep(50);
+                //return dBmTarget - 0.01;
                 if (MainViewModel.TestPanel.DutyCycle == 100)
                     return MainViewModel.IMeter.ReadCw(false);
                 else
