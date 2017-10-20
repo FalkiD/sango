@@ -44,12 +44,14 @@
 `define STATE_WRITE_RESPONSE        7'h10
 `define STATE_WR_PTN                7'h11
 `define STATE_PTN_DATA2             7'h12
-//`define STATE_WMD                   7'h13
+//`define STATE_MEASUREMENTS          7'h13
 `define STATE_RD_MEAS1              7'h14
 `define STATE_RD_MEAS2              7'h15
 `define STATE_RD_MEAS3              7'h16
 `define STATE_RD_MEAS4              7'h17
-`define STATE_DBG3                  7'h18
+`define STATE_RD_MEAS5              7'h18
+`define STATE_RD_SPACER             7'h19
+`define STATE_DBG3                  7'h1a
 
 /*
     Opcode block MUST be terminated by a NULL opcode
@@ -211,22 +213,33 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     reg  [15:0]  zm_ri_offset;       // zmon refl "I" ADC offset, signed int
     reg  [31:0]  zm_rq_gain;         // zmon refl "Q" ADC gain, Q15.16 float
     reg  [15:0]  zm_rq_offset;       // zmon refl "Q" ADC offset, signed int
-
+    
+    reg  [7:0]   meas_ops;           // which operations
+    reg          run_calcs;          // run meas_calcs instance, process one measurement
+    wire         calc_done;          // done flag    
+    reg  [31:0]  adcf_raw;           // meas_calcs input raw data
+    reg  [31:0]  adcr_raw;           // meas_calcs input raw data
+    wire [31:0]  adcf_dat;           // meas_calcs output, FWDQ FWDI ADC or Q15.16 FWDI volts
+    wire [31:0]  adcr_dat;           // meas_calcs output, RFLQ RFLI ADC or Q15.16 RFLI volts
+    wire [31:0]  adcfq_volts;        // meas_calcs output, Q15.16 FWDQ volts
+    wire [31:0]  adcrq_volts;        // meas_calcs output, Q15.16 RFLQ volts
     // Measurement calculation, calibration instance
     meas_calcs meas_math
     (
         .sys_clk            (sys_clk),
         .sys_rst_n          (sys_rst_n),
   
-        .cal_i              (1'b1),
-        .pwr_i              (1'b1),
-        .done_o             (),
+        .ops_i              (meas_ops),             // which operation(s)
+        .run_i              (run_calcs),            // do it
+        .done_o             (calc_done),            // calculation(s) done
 
-        .adcf_dat_i         (),                     // [xx][FWDQ][xx][FWDI]
-        .adcr_dat_i         (),                     // [xx][RFLQ][xx][RFLI]
+        .adcf_dat_i         (adcf_raw),             // [xx][FWDQ][xx][FWDI]
+        .adcr_dat_i         (adcr_raw),             // [xx][RFLQ][xx][RFLI]
 
-        .adcf_dat_o         (),                     // [16 bits calibrated FWDQ][16 bits calibrated FWDI]
-        .adcr_dat_o         (),                     // [16 bits calibrated RFLQ][16 bits calibrated RFLI]
+        .adcf_dat_o         (adcf_dat),             // [16 bits calibrated FWDQ][16 bits calibrated FWDI]
+        .adcr_dat_o         (adcr_dat),             // [16 bits calibrated RFLQ][16 bits calibrated RFLI]
+        .adcfq_volts_o      (adcfq_volts),          // [Q15.16 format calibrated FWDQ voltage] (ops_i[M_VOLTS])
+        .adcrq_volts_o      (adcrq_volts),          // [Q15.16 format calibrated RFLQ voltage] (ops_i[M_VOLTS])
 
         .zm_fi_gain_i       (zm_fi_gain),           // zmon fwd "I" ADC gain, Q15.16 float
         .zm_fi_offset_i     (zm_fi_offset),         // zmon fwd "I" ADC offset, signed int
@@ -349,8 +362,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                         if(rsp_source == MEAS_FIFO) begin
                             response_wr_en_o <= 1'b0;       // Off while we read fifo
                             meas_fifo_ren_o <= 1'b1;        // start reading measurement fifo                        
-                            uinttmp[31:0] <= 32'd0;
-                            state <= `STATE_RD_MEAS1;
+                            uinttmp <= 64'd0;
+                            state <= `STATE_RD_SPACER;
                         end
                         else begin
                             response_o <= rsp_data[rsp_index];
@@ -366,24 +379,45 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                             status_o <= `SUCCESS;       // Reset status_o if it's not set to an error
                     end
                 end
-                `STATE_RD_MEAS1: begin
-                    uinttmp <= {32'd0, meas_fifo_dat_i};
+                `STATE_RD_SPACER: begin
                     response_wr_en_o <= 1'b0;           // don't write extra response byte after meas word
+                    state <= `STATE_RD_MEAS1;
+                end
+                `STATE_RD_MEAS1: begin
+                    adcf_raw <= meas_fifo_dat_i;
+                    //response_wr_en_o <= 1'b0;           // don't write extra response byte after meas word
                     meas_fifo_ren_o <= 1'b0;
                     state <= `STATE_RD_MEAS2;
                 end
                 `STATE_RD_MEAS2: begin
-                    // uinttmp => [XX][14 bits FWDQ][XX][14 bits FWDI]                  
-                    if(uinttmp[29] == 1'b1)             // sign extend bipolar FWDQ value
-                        uinttmp <= {uinttmp[63:32], 2'b11, uinttmp[29:0]};
+                    adcr_raw <= meas_fifo_dat_i;
+                    // too late  meas_fifo_ren_o <= 1'b0;
                     state <= `STATE_RD_MEAS3;
-                end 
+                end
                 `STATE_RD_MEAS3: begin
-                    if(uinttmp[13] == 1'b1)             // sign extend bipolar FWDI value
-                        uinttmp <= {uinttmp[63:16], 2'b11, uinttmp[13:0]};
+                    // process meas fifo adc results based on requested MEAS arg options
+                    run_calcs <= 1'b1;
                     state <= `STATE_RD_MEAS4;
-                end 
+                end
                 `STATE_RD_MEAS4: begin
+                    if(calc_done) begin
+                        run_calcs <= 1'b0;
+                        if(meas_ops[1] == 1'b1) begin
+                            uinttmp <= {adcr_dat, adcf_dat};
+                        end
+                        else if(meas_ops[2] == 1'b1) begin
+                            // volts needs 16 bytes, uses 2 sets of registers,
+                            // if we're not on a 16-byte boundary then use
+                            // 2nd set of registers
+                            if((rsp_index & 4'b1111) == 4'b0000)
+                                uinttmp <= {adcfq_volts, adcf_dat};
+                            else
+                                uinttmp <= {adcrq_volts, adcr_dat};
+                        end
+                        state <= `STATE_RD_MEAS5;                    
+                    end
+                end
+                `STATE_RD_MEAS5: begin
                     rsp_length <= rsp_length - 1;
                     rsp_index <= rsp_index + 1;
 
@@ -392,13 +426,13 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     response_o <= uinttmp[7:0];
 
                     // prep next byte
-                    if(((rsp_index+1) & 2'b11) == 2'b0 &&
+                    if(((rsp_index+1) & 3'b111) == 3'b000 &&
                             rsp_length > 1) begin
                         meas_fifo_ren_o <= 1'b1;                // read next result
-                        state <= `STATE_RD_MEAS1;
+                        state <= `STATE_RD_SPACER;
                     end
                     else
-                        uinttmp <= {8'h00, uinttmp[31:8]};
+                        uinttmp <= {8'h00, uinttmp[63:8]};
 
                     // Done?
                     if(rsp_length == 0) begin
@@ -885,34 +919,51 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             end            
             `MEAS:  begin
                 // return measurements, 1st 4 bytes are standard, opcode status, last opcode, 2 length bytes.
-                // args: byte 0 is mode, 1=dBm, 2=calibrated ADC, 3=raw ADC
+                // args: byte 0 is operations, bitmask,
+                // d3 = dBm
+                // d2 =	Volts
+                // d1 = Adc counts
+                // d0 = Calibrated
+                //
                 // byte 1: unused
                 // byte 2: LSB, # of measurements requested
                 // byte 3: MSB, # of measurements requested
-                // each measurement is 8 bytes:
+                // each measurement is initially 8 bytes:
                 // 16 bits FWDI, 16 bits FWDQ, 16 bits REFLI, 16 bits REFLQ
                 // (I is real component, Q is imaginary component)
+                // Process as needed & write response fifo
                 //
-                // Mode 1, each entry returns 4 bytes, 2 Q7.8 unsigned ints, FwdPower, ReflectedPower
-                // Mode 2 & 3, each entry returns 8 bytes, 4 16-bit signed ints: 
-                //      16 bits FWDI, 16 bits FWDQ, 16 bits REFLI, 16 bits REFLQ
+                // Returned size depends on format, each result is returned as:
+                // d1, Adc counts, 8 bytes, 4 signed 16-bit ints
+                // d2, Volts, 16 bytes, 4 Q15.16 values
+                // d3, dBm, 4 bytes, 2 Q7.8 values
                 //
-                // if more data available than can be sent at once, cut down the length
-                if( ({1'd0, meas_fifo_cnt_i, 2'b00}) > ((1 << MMC_FILL_LEVEL_BITS)-8))
-                    rsp_length <= ((1 << MMC_FILL_LEVEL_BITS) - 8);
-                else begin
-                    if(uinttmp[31:16] > {4'd0, meas_fifo_cnt_i[12:1]})
-                        // requested more then there is, return all bytes
-                        rsp_length <= {1'd0, meas_fifo_cnt_i, 2'b00};
-                    else begin
-                        if(uinttmp[7:0] > 1) 
-                            rsp_length <= {uinttmp[29:16], 3'b000};  // requested measurements times 8 bytes per
-                        else
-                            rsp_length <= {uinttmp[29:16], 2'b00};   // dBm, requested measurements times 4 bytes per
-                    end
+                if(uinttmp[3:1] == 3'd0) begin
+                    status_o <= `ERR_MEAS_TYPE;
+                    rsp_length <= 0;
+                    state <= `STATE_BEGIN_RESPONSE;
                 end
-                rsp_source <= MEAS_FIFO;
-                state <= `STATE_BEGIN_RESPONSE;
+                else begin 
+                    meas_ops <= uinttmp[7:0];   // save this
+                    // if more data available than can be sent at once, cut down the length
+                    if( ({1'd0, meas_fifo_cnt_i, 2'b00}) > ((1 << MMC_FILL_LEVEL_BITS)-8))
+                        rsp_length <= ((1 << MMC_FILL_LEVEL_BITS) - 8);
+                    else begin
+                        if(uinttmp[31:16] > {4'd0, meas_fifo_cnt_i[12:1]})
+                            // requested more than there is, return all bytes
+                            rsp_length <= {1'd0, meas_fifo_cnt_i, 2'b00};
+                        else begin
+                            if(uinttmp[1] == 1'b1) 
+                                rsp_length <= {uinttmp[28:16], 3'b000};  // requested measurements times 8 bytes per
+                            else if(uinttmp[2] == 1'b1)
+                                rsp_length <= {uinttmp[27:16], 4'b0000}; // requested measurements times 16 bytes per
+                            else if(uinttmp[3] == 1'b1)
+                                rsp_length <= {uinttmp[29:16], 2'b00};   // dBm, requested measurements times 4 bytes per
+                        end
+                    end
+                    rsp_source <= MEAS_FIFO;
+                    state <= `STATE_BEGIN_RESPONSE;                
+                end
             end
             default: begin
                 status_o <= `ERR_INVALID_OPCODE;
@@ -1041,6 +1092,9 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         mode_o <= 32'h0000_0000;
         bias_enable_o <= 1'b0;
         fifo_rst_o <= 1'b0;
+
+        run_calcs <= 1'b0;
+        meas_ops <= 1'b0;        
         
         zm_fi_gain <= 32'h0001_0000;      // zmon fwd "I" ADC gain, Q15.16 float
         zm_fi_offset <= 16'd0;            // zmon fwd "I" ADC offset, signed int

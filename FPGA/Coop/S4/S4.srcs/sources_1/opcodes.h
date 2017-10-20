@@ -43,6 +43,12 @@
 `define MEAS                7'h32
 // Change bad_opcode() task in opcodes.v when adding/changing opcode list
 
+//// Bit numbers for MEAS opcode, format of results
+//`define M_CALIBRATE         d'0
+//`define M_ADC               d'1
+//`define M_VOLTS             d'2
+//`define M_DBM               d'3
+
 //// Debug, 0x40 based
 //`define DBG_ATTENSPI		7'h40
 //`define DBG_LEVELSPI		7'h41
