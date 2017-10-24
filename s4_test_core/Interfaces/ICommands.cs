@@ -131,7 +131,24 @@ namespace Interfaces
         /// <returns></returns>
         int ZMonPower(ref double forward, ref double reflected);
 
-        int WriteCalResults(double frequency, List<PowerCalData> CalResults);
+        /// <summary>
+        /// Write cal results to instrument
+        /// </summary>
+        /// <param name="inuse">update in-use firmware power table</param>
+        /// <param name="persist">persist data to tag</param>
+        /// <param name="frequency">which table, 2410, 2430, 2450, 2470, or 2490</param>
+        /// <param name="CalResults">51 cal results</param>
+        /// <returns></returns>
+        int WriteCalResults(bool inuse, bool persist, double frequency, List<PowerCalData> CalResults);
+
+        /// <summary>
+        /// Persist cal results to a tag. Typically
+        /// 5 frequencies between 2410 & 2490.
+        /// PC0 is 2410, PC1 is 2430, etc.
+        /// </summary>
+        /// <param name="frequency"></param>
+        /// <returns></returns>
+        int PersistCalResults(double frequency);
 
         /// <summary>
         /// Read device status
