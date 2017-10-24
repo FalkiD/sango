@@ -395,7 +395,7 @@ namespace RFenergyUI.ViewModels
             try
             {
                 List<PowerCalData> results = new List<PowerCalData>(CalResults);
-                int status = MainViewModel.ICmd.WriteCalResults(Frequency, results);
+                int status = MainViewModel.ICmd.WriteCalResults(UpdatePowerTable, PersistCalData, Frequency, results);
                 if (status != 0)
                 {
                     msg = string.Format(" Write CalResults failed, status:{0}", MainViewModel.IErr.ErrorDescription(status));
@@ -468,46 +468,24 @@ namespace RFenergyUI.ViewModels
         void PersistCalResults(StreamWriter fout, BackgroundWorker wnd)
         {
             string msg = "";
-            byte[] cmd = new byte[2];
             try
             {
-                cmd[0] = M2Cmd.CAL_SAVE_PWRCAL;
-                switch((int)Frequency)
-                {
-                    case 2410:
-                        cmd[1] = 0;
-                        break;
-                    case 2430:
-                        cmd[1] = 1;
-                        break;
-                    default:
-                    case 2450:
-                        cmd[1] = 2;
-                        break;
-                    case 2470:
-                        cmd[1] = 3;
-                        break;
-                    case 2490:
-                        cmd[1] = 4;
-                        break;
-                }
-                byte[] rsp = null;
-                int status = MainViewModel.ICmd.RunCmd(cmd, ref rsp);
+                int status = MainViewModel.ICmd.PersistCalResults(Frequency);
                 if (status != 0)
                 {
-                    msg = string.Format(" Persist CalResults failed, frequency:{0:f1} MHz, tag:{1}, status:{2}", 
-                                            Frequency, cmd[1], MainViewModel.IErr.ErrorDescription(status));
+                    msg = string.Format(" Persist CalResults failed, frequency:{0:f1} MHz, status:{1}", 
+                                            Frequency, MainViewModel.IErr.ErrorDescription(status));
                     wnd.ReportProgress(0, msg);
                     fout.WriteLine(MainViewModel.Timestamp + msg);
                     return;
                 }
-                msg = string.Format(" Persisted CalResults {0:f1} MHz to 'PC{1}' tag in EEPROM.", Frequency, cmd[1]);
+                msg = string.Format(" Persisted CalResults {0:f1} MHz to 'PCn' tag in EEPROM.", Frequency);
                 wnd.ReportProgress(0, msg);
                 fout.WriteLine(MainViewModel.Timestamp + msg);
             }
             catch (Exception ex)
             {
-                msg = string.Format(" Exception persisting CalResults to EEPROM tag PC{0}:{1}", cmd[1], ex.Message);
+                msg = string.Format(" Exception persisting CalResults to EEPROM tag PCn:{0}", ex.Message);
                 wnd.ReportProgress(0, msg);
                 fout.WriteLine(MainViewModel.Timestamp + msg);
             }
@@ -1092,8 +1070,8 @@ namespace RFenergyUI.ViewModels
         {
             try
             {
-                //System.Threading.Thread.Sleep(50);
-                //return dBmTarget - 0.01;
+                System.Threading.Thread.Sleep(50);
+                return dBmTarget - 0.01;
                 if (MainViewModel.TestPanel.DutyCycle == 100)
                     return MainViewModel.IMeter.ReadCw(false);
                 else

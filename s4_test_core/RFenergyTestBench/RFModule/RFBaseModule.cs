@@ -248,7 +248,12 @@ namespace RFModule
             throw new NotImplementedException();
         }
 
-        public virtual int WriteCalResults(double frequency, List<PowerCalData> results)
+        public virtual int WriteCalResults(bool inuse, bool persist, double frequency, List<PowerCalData> results)
+        {
+            throw new NotImplementedException();
+        }
+
+        public virtual int PersistCalResults(double frequency)
         {
             throw new NotImplementedException();
         }

@@ -26,6 +26,7 @@ namespace S4TestModule
         }
 
         S4Hardware _s4hw = null;
+        const int HALF_DB_CAL_POINTS = 51;
 
         /// <summary>
         /// On success, returns 0, S4 device has been opened.
@@ -463,15 +464,20 @@ namespace S4TestModule
             return status;
         }
 
-        public override int SetCalPower(double dbm)
+        ushort dacFromDB(double db)
         {
-            // Convert dB into dac value & send it
             // dB is relative to dac 0x80(128) (from M2 anyway)
             // S4 uses attenuation control, so 4095-value gets sent to dac
-            double value = dbm / 20.0;
+            double value = db / 20.0;
             value = Math.Pow(10.0, value);
             value = value * 128.0 + 0.5;
-            ushort vmag = (ushort)(4095 - (int)value);
+            return (ushort)(4095 - (int)value);
+        }
+
+        public override int SetCalPower(double db)
+        {
+            // Convert dB into dac value & send it
+            ushort vmag = dacFromDB(db);
             //string cmd = string.Format("fw 0xe 0x{0:x} 0x{1:x} 0x17 0\n", (vmag&0xf)<<4, (vmag&0xff0)>>4);
             string cmd = string.Format("calpwr 0x0017{0:x2}{1:x2}\n", (vmag & 0xff0) >> 4, (vmag & 0xf) << 4);
             string rsp = "";
@@ -497,10 +503,76 @@ namespace S4TestModule
             return status;
         }
 
-        public override int WriteCalResults(double frequency, List<PowerCalData> results)
+        public override int WriteCalResults(bool inuse, bool persist, double frequency, List<PowerCalData> results)
         {
-            throw new NotImplementedException();
-            return 0;
+            if (results.Count > HALF_DB_CAL_POINTS)
+                throw new ApplicationException(string.Format("Too many cal points({0}), maximum is {1}", 
+                                                                results.Count, HALF_DB_CAL_POINTS));
+
+            string cmd = "calpwtbl";
+            string freq;
+            if (frequency <= 2410.0)
+                freq = " 2410";
+            else if (frequency <= 2430.0)
+                freq = " 2430";
+            else if (frequency <= 2450.0)
+                freq = " 2450";
+            else if (frequency <= 2470.0)
+                freq = " 2470";
+            else freq = " 2490";
+            cmd += freq;
+
+            int bits = 0;
+            if (inuse)  bits |= 1;
+            if (persist) bits |= 2;
+            string update = " " + bits.ToString();
+            cmd += update;
+
+            // Create 251 entries from the 51 entries, put together 502 byte data string
+            PowerCalData entry = null;
+            string strData = "";
+            for (int k = 0; k < results.Count; ++k)
+            {
+                entry = results[k];
+                ushort vmag = dacFromDB(entry.PowerDB);
+                strData = string.Format(" {0} {1}", (vmag & 0xff), ((vmag >> 8) & 0xff));
+                cmd += strData;
+                // do interpolation here to fill next 4 entries until last entry
+                if(k < results.Count-1)
+                {
+                    double span = results[k + 1].PowerDB - entry.PowerDB;
+                    double increment = span / 4.0;
+                    for (int j = 1; j <= 4; ++j)
+                    {
+                        double next = entry.PowerDB + j*increment;
+                        vmag = dacFromDB(next);
+                        //strData = string.Format(" 0x{0:x2} 0x{1:x2}", (vmag & 0xff), ((vmag >> 8) & 0xff));
+                        strData = string.Format(" {0} {1}", (vmag & 0xff), ((vmag >> 8) & 0xff));
+                        cmd += strData;
+                    }
+                }
+            }
+            // pad the table with the last power entry
+            if (entry == null || strData.Length == 0)
+                throw new ApplicationException("Missing top cal entry");
+
+            for (int k = results.Count; k < HALF_DB_CAL_POINTS; ++k)
+            {
+                cmd += strData;
+                // fill next 4 entries
+                for (int j = 1; j <= 4; ++j)
+                {
+                    cmd += strData;
+                }
+            }
+            cmd += "\n";
+            string rsp = "";
+            return RunCmd(cmd, ref rsp);
+        }
+
+        public override int PersistCalResults(double frequency)
+        {
+            return 0;   // not needed on S4, handled in WriteCalResults()
         }
 
         public override string ErrorDescription(int errorCode)

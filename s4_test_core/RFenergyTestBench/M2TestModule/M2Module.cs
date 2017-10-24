@@ -519,7 +519,7 @@ namespace M2TestModule
             return status;
         }
 
-        public override int WriteCalResults(double frequency, List<PowerCalData> results)
+        public override int WriteCalResults(bool inuse, bool persist, double frequency, List<PowerCalData> results)
         {
             const int BLOCKS = 8;   // FW power table is 51 entries long from 40.0
                                     // to 65.0 dBm in 0.5 dBm steps. Requires 8
@@ -544,6 +544,7 @@ namespace M2TestModule
             else frq_index = 4;
             string strData;
             string str = "";
+            int status = 0;
             for (int k = 0; k < BLOCKS * ENTRIES_PER_BLOCK;)
             {
                 strData = "";
@@ -568,12 +569,44 @@ namespace M2TestModule
                         cmd[i + 2] = (byte)strData[i];
                 }
                 byte[] rsp = null;
-                int status = RunCmd(cmd, ref rsp);
+                status = RunCmd(cmd, ref rsp);
                 if (status != 0)
                     break;
                 k += ENTRIES_PER_BLOCK;
             }
-            return 0;
+            return status;
+        }
+
+        /// <summary>
+        /// Issue FW command that writes power cal table to
+        /// the tag PC2 for 2450MHz. 
+        /// PC0=2410, PC1=2430, PC3=2470, PC4=2490)
+        /// </summary>
+        public override int PersistCalResults(double frequency)
+        {
+            byte[] cmd = new byte[2];
+            cmd[0] = M2Cmd.CAL_SAVE_PWRCAL;
+            switch ((int)frequency)
+            {
+                case 2410:
+                    cmd[1] = 0;
+                    break;
+                case 2430:
+                    cmd[1] = 1;
+                    break;
+                default:
+                case 2450:
+                    cmd[1] = 2;
+                    break;
+                case 2470:
+                    cmd[1] = 3;
+                    break;
+                case 2490:
+                    cmd[1] = 4;
+                    break;
+            }
+            byte[] rsp = null;
+            return RunCmd(cmd, ref rsp);
         }
 
         public override int SetPwm(int duty, int rateHz, bool on, bool external)
