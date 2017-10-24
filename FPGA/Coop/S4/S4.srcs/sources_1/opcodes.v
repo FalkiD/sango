@@ -405,15 +405,10 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                         if(meas_ops[1] == 1'b1) begin
                             uinttmp <= {adcr_dat, adcf_dat};
                         end
-                        else if(meas_ops[2] == 1'b1) begin
+                        else if(meas_ops[2])
                             // volts needs 16 bytes, uses 2 sets of registers,
-                            // if we're not on a 16-byte boundary then use
-                            // 2nd set of registers
-                            if((rsp_index & 4'b1111) == 4'b0000)
-                                uinttmp <= {adcfq_volts, adcf_dat};
-                            else
-                                uinttmp <= {adcrq_volts, adcr_dat};
-                        end
+                            // here we're always on a 16-byte boundary, use the 1st set of registers
+                            uinttmp <= {adcfq_volts, adcf_dat};
                         state <= `STATE_RD_MEAS5;                    
                     end
                 end
@@ -426,19 +421,29 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     response_o <= uinttmp[7:0];
 
                     // prep next byte
-                    if(((rsp_index+1) & 3'b111) == 3'b000 &&
-                            rsp_length > 1) begin
-                        meas_fifo_ren_o <= 1'b1;                // read next result
-                        state <= `STATE_RD_SPACER;
+                    if(((rsp_index+1) & 3'b111) == 3'b000 && rsp_length > 1) begin
+                        // volts mode needs 16 bytes, uses 2 sets of registers,
+                        // if we're not on a 16-byte boundary then use
+                        // 2nd set of registers
+                        if(meas_ops[2] && ((rsp_index+1) & 4'b1111) != 4'b0000)
+                            // not on 16-byte boundary, continue using 2nd register set
+                            uinttmp <= {adcrq_volts, adcr_dat}; 
+                        else begin
+                            meas_fifo_ren_o <= 1'b1;                // read next result
+                            state <= `STATE_RD_SPACER;
+                        end
                     end
                     else
                         uinttmp <= {8'h00, uinttmp[63:8]};
 
                     // Done?
                     if(rsp_length == 0) begin
+                        // Note: we have already completed response, set the flag to
+                        // prevent null opcodes from generating another response
                         response_wr_en_o <= 1'b0;
                         response_ready <= 1'b1;
-                        state <= `STATE_IDLE;
+                        next_opcode();
+                        blk_rsp_done <= 1'b1;      // Flag we've done a response
                         if(status_o == 0)
                             status_o <= `SUCCESS;       // Reset status_o if it's not set to an error
                     end
@@ -945,21 +950,29 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 end
                 else begin 
                     meas_ops <= uinttmp[7:0];   // save this
-                    // if more data available than can be sent at once, cut down the length
-                    if( ({1'd0, meas_fifo_cnt_i, 2'b00}) > ((1 << MMC_FILL_LEVEL_BITS)-8))
-                        rsp_length <= ((1 << MMC_FILL_LEVEL_BITS) - 8);
-                    else begin
-                        if(uinttmp[31:16] > {4'd0, meas_fifo_cnt_i[12:1]})
-                            // requested more than there is, return all bytes
-                            rsp_length <= {1'd0, meas_fifo_cnt_i, 2'b00};
-                        else begin
-                            if(uinttmp[1] == 1'b1) 
-                                rsp_length <= {uinttmp[28:16], 3'b000};  // requested measurements times 8 bytes per
-                            else if(uinttmp[2] == 1'b1)
-                                rsp_length <= {uinttmp[27:16], 4'b0000}; // requested measurements times 16 bytes per
-                            else if(uinttmp[3] == 1'b1)
-                                rsp_length <= {uinttmp[29:16], 2'b00};   // dBm, requested measurements times 4 bytes per
-                        end
+                    //
+                    // if more data available than can be sent at once
+                    // including the 4 bytes of rsp header, cut down the length
+                    //
+                    // if requested more than there is, extra values will be all 0
+                    //
+                    if(uinttmp[1]) begin        // ADC readings, 8 bytes per reading, 4 signed 16-bit integers 
+                        if( ({1'd0, meas_fifo_cnt_i, 2'b00}) > ((1 << MMC_FILL_LEVEL_BITS)-8))
+                            rsp_length <= ((1 << MMC_FILL_LEVEL_BITS) - 8);
+                        else
+                            rsp_length <= {uinttmp[28:16], 3'b000};  // requested measurements times 8 bytes per
+                    end
+                    else if(uinttmp[2]) begin   // voltage, 16 bytes per reading, Q15.16
+                        if( ({meas_fifo_cnt_i, 3'b000}) > ((1 << MMC_FILL_LEVEL_BITS)-16))
+                            rsp_length <= ((1 << MMC_FILL_LEVEL_BITS) - 16);
+                        else
+                            rsp_length <= {uinttmp[27:16], 4'b0000}; // requested measurements times 16 bytes per
+                    end
+                    else if(uinttmp[3]) begin   // Power, 4 bytes per reading, Q7.8, same as raw meas fifo count
+                        if( ({2'd0, meas_fifo_cnt_i, 1'b0}) > ((1 << MMC_FILL_LEVEL_BITS)-4))
+                            rsp_length <= ((1 << MMC_FILL_LEVEL_BITS) - 4);
+                        else
+                            rsp_length <= {uinttmp[29:16], 2'b00};   // dBm, requested measurements times 4 bytes per
                     end
                     rsp_source <= MEAS_FIFO;
                     state <= `STATE_BEGIN_RESPONSE;                

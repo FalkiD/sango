@@ -17,14 +17,6 @@
 d 10 us ;            -- Initial delay
 u 0.5 ms ;            -- <CR> (Allows autobaud to obtain lock on baud rate.)
 
---u 0.5 ms w 300002c 4000; -- SPI debug mode, processors should not drive SPI
---u 0.5 ms w 3000040 01 03 17 FF F0; -- Both DAC's full scale
---u 0.5 ms w 3000040 03 03 A5 5A 03; -- 3 bytes to SPI device #3
-
--- Test syn_doInit from debug commands
---u 1.0 ms w 300002c 0020; -- Do SYN init
---u 1.0 ms w 300002c 0;
-
 u 0.5 ms w 3000009 010624DE; -- Set DDS for sd_clk_o of 400kHz
 u 0.5 ms w 300000E 0; -- Set host DMA address at 0x00
 u 0.5 ms w 3000000 200 0; -- Set blk_size=512, blk_count=0
@@ -68,16 +60,42 @@ u 4.0 ms r 3000038 8; -- read debug registers
 
 -- read measurement results, args are mode, unused, & 2-byte length, how many results to read.
 -- each result is 8 bytes, 16 bits each: FWDQ, FWDI, REFLQ, REFLI
-u 2.0 ms w 4000000 04 64 03 00 04 00 00 00 00 00 00 00; --Read 2 sets of results 
+u 2.0 ms w 4000000 04 64 04 00 02 00 00 00 00 00 00 00; --Read 2 sets of raw ADC results 
 u 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
 u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
 u 2.0 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
 -- read opcode processor response
 u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
 u 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
-u 4.0 ms r 4000000 14; --Read response data from host adapter RAM  
+u 4.0 ms r 4000000 28; --Read response data from host adapter RAM  
 -- read status registers to get pattern processing status
 u 4.0 ms r 3000038 8; -- read debug registers
+
+
+
+--repeat run pattern & read results
+u 2.0 ms w 4000000 04 44 01 00 00 01 00 00 00 00 00 00; --PAT_CTRL[Run] 0x100 
+u 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+u 0.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+-- read opcode processor response
+u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+u 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+u 1.5 ms r 4000000 8; --Read response data from host adapter RAM  
+
+-- read measurement results, args are mode, unused, & 2-byte length, how many results to read.
+-- each result is 8 bytes, 16 bits each: FWDQ, FWDI, REFLQ, REFLI
+u 2.0 ms w 4000000 04 64 05 00 02 00 00 00 00 00 00 00; --Read 2 sets of calibrated voltage results 
+u 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+u 2.0 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+-- read opcode processor response
+u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+u 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+u 4.0 ms r 4000000 28; --Read response data from host adapter RAM  
+-- read status registers to get pattern processing status
+u 4.0 ms r 3000038 8; -- read debug registers
+
 
 
 -- load pattern is done, run using trigger every 10ms
@@ -210,6 +228,8 @@ u 4.0 ms r 3000038 8; -- read debug registers
 --u 1.0 ms w 300003C 33323130 37363534 3B3A3938; -- Write 60 of 64 bytes to opcode backdoor
 --u 1.0 ms w 300003F 3F3E3D3C; -- Write 64 of 64 bytes to opcode backdoor, last byte enables opcode procesor
 
+
+--Older, original John C testing
 --u 1.0 ms r0 300002F 4; -- Read 4 card data pipe FIFO values
 --u 0.5 ms w 300000E 0; -- Set DMA address at 0x00
 --u 0.5 ms w 3000002 12 00000200; -- Write CMD18 (READ_MULTIPLE_BLOCK)
@@ -322,5 +342,3 @@ u 4.0 ms r 3000038 8; -- read debug registers
 --u 0.5 ms w 3000022 100; -- Enable register access of TLM data
 --u 20.0 ms r0 300002A 80; -- Read TLM data
 --u 16.0 ms r0 300002F 40; -- Read 64 card data pipe FIFO values
-
-
