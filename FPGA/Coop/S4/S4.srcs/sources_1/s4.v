@@ -1489,10 +1489,9 @@ end
   assign ADCTRIG = trig_config[11] ? pls_adctrig : ptn_adctrig; 
   assign TRIG_OUT = trig_config[10] ? ADCTRIG : 1'b0;
  
-  // 22-Jun have to scope MMC signals
-  assign FPGA_MCU4 = DDS_MOSI; //CONV; //MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.
-  assign FPGA_MCU3 = DDS_SCLK; // ADC_SCLK; //MMC_CMD; //count3[15];    // 200MHz div'd by 2^16.
-  assign FPGA_MCU2 = VGA_MOSI;  //ZMON_EN;
-  assign FPGA_MCU1 = VGA_SCLK;  //MMC_CMD;
+  assign FPGA_MCU4 = CONV;      // DDS_MOSI; //MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.
+  assign FPGA_MCU3 = ADC_SCLK;  // DDS_SCLK; //MMC_CMD; //count3[15];    // 200MHz div'd by 2^16.
+  assign FPGA_MCU2 = ADCF_SDO;  // VGA_MOSI;  //ZMON_EN;
+  assign FPGA_MCU1 = ADCR_SDO;  // VGA_SCLK;  //MMC_CMD;
 
   endmodule

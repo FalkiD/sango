@@ -636,7 +636,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 // last opcode executed
                 // patadr count, how many patterns have been written
                 // opcode fifo count, 2 bytes
-                // opcode response fifo count, 2 bytes
+                // measurement results available count, 2 bytes
                 // frequency, 4 bytes
                 // power, 2 bytes, dBm on Q7.8 format
                 // pattern processor status
@@ -702,11 +702,11 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                         rsp_index <= rsp_index + 1; 
                     end
                     13: begin
-                        rsp_data[rsp_index] <= response_fifo_count_i[7:0];  // opcode response fifo count, 2 bytes
+                        rsp_data[rsp_index] <= meas_fifo_cnt_i[8:1];  // Divide by 2, 2 entries=one measurement set. response_fifo_count_i[7:0];  // measurement results available count, 2 bytes. Was opcode response fifo count, 2 bytes
                         rsp_index <= rsp_index + 1; 
                     end
                     14: begin
-                        rsp_data[rsp_index] <= {6'd0, response_fifo_count_i[10:8]};       
+                        rsp_data[rsp_index] <= {5'd0, meas_fifo_cnt_i[PTN_FILL_BITS-1:9]}; //response_fifo_count_i[10:8]}; // measurement results available count, ms byte. Was opcode response fifo count, 2 bytes       
                         rsp_index <= rsp_index + 1; 
                     end
                     15: begin
@@ -956,20 +956,23 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     //
                     // if requested more than there is, extra values will be all 0
                     //
-                    if(uinttmp[1]) begin        // ADC readings, 8 bytes per reading, 4 signed 16-bit integers 
-                        if( ({1'd0, meas_fifo_cnt_i, 2'b00}) > ((1 << MMC_FILL_LEVEL_BITS)-8))
+                    if(uinttmp[1]) begin        // ADC readings, 8 bytes per reading, 4 signed 16-bit integers
+                        if({uinttmp[28:16], 3'b000} > ((1 << MMC_FILL_LEVEL_BITS)-8)) 
+                        //if( ({1'd0, meas_fifo_cnt_i, 2'b00}) > ((1 << MMC_FILL_LEVEL_BITS)-8))
                             rsp_length <= ((1 << MMC_FILL_LEVEL_BITS) - 8);
                         else
                             rsp_length <= {uinttmp[28:16], 3'b000};  // requested measurements times 8 bytes per
                     end
                     else if(uinttmp[2]) begin   // voltage, 16 bytes per reading, Q15.16
-                        if( ({meas_fifo_cnt_i, 3'b000}) > ((1 << MMC_FILL_LEVEL_BITS)-16))
+                        if( {uinttmp[27:16], 4'b0000} > ((1 << MMC_FILL_LEVEL_BITS)-16))
+                        //if( ({meas_fifo_cnt_i, 3'b000}) > ((1 << MMC_FILL_LEVEL_BITS)-16))
                             rsp_length <= ((1 << MMC_FILL_LEVEL_BITS) - 16);
                         else
                             rsp_length <= {uinttmp[27:16], 4'b0000}; // requested measurements times 16 bytes per
                     end
                     else if(uinttmp[3]) begin   // Power, 4 bytes per reading, Q7.8, same as raw meas fifo count
-                        if( ({2'd0, meas_fifo_cnt_i, 1'b0}) > ((1 << MMC_FILL_LEVEL_BITS)-4))
+                        if({uinttmp[29:16], 2'b00}  > ((1 << MMC_FILL_LEVEL_BITS)-4))
+                        //if( ({2'd0, meas_fifo_cnt_i, 1'b0}) > ((1 << MMC_FILL_LEVEL_BITS)-4))
                             rsp_length <= ((1 << MMC_FILL_LEVEL_BITS) - 4);
                         else
                             rsp_length <= {uinttmp[29:16], 2'b00};   // dBm, requested measurements times 4 bytes per

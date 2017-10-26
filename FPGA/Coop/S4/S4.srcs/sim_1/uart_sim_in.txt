@@ -60,7 +60,7 @@ u 4.0 ms r 3000038 8; -- read debug registers
 
 -- read measurement results, args are mode, unused, & 2-byte length, how many results to read.
 -- each result is 8 bytes, 16 bits each: FWDQ, FWDI, REFLQ, REFLI
-u 2.0 ms w 4000000 04 64 04 00 02 00 00 00 00 00 00 00; --Read 2 sets of raw ADC results 
+u 2.0 ms w 4000000 04 64 02 00 40 00 00 00 00 00 00 00; --Read 64 sets of raw ADC results 
 u 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
 u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
 u 2.0 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
@@ -85,7 +85,7 @@ u 1.5 ms r 4000000 8; --Read response data from host adapter RAM
 
 -- read measurement results, args are mode, unused, & 2-byte length, how many results to read.
 -- each result is 8 bytes, 16 bits each: FWDQ, FWDI, REFLQ, REFLI
-u 2.0 ms w 4000000 04 64 05 00 02 00 00 00 00 00 00 00; --Read 2 sets of calibrated voltage results 
+u 2.0 ms w 4000000 04 64 02 00 40 00 00 00 00 00 00 00; --Read 64 sets of raw adc results 
 u 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
 u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
 u 2.0 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
