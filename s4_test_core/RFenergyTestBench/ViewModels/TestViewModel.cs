@@ -116,6 +116,8 @@ namespace RFenergyUI.ViewModels
             //    });
             //}
             ChannelVms = new ObservableCollection<ChannelViewModel>();
+            bool M2only = MainViewModel.ICmd.HwType == InstrumentInfo.InstrumentType.M2 ? true : false;
+            bool S4only = MainViewModel.ICmd.HwType == InstrumentInfo.InstrumentType.S4 ? true : false;
             for (int channel = 1; channel < MainViewModel.ICmd.PaChannels + 1; ++channel)
             {
                 ChannelVms.Add(new ChannelViewModel
@@ -127,28 +129,45 @@ namespace RFenergyUI.ViewModels
                         Title = "Phase/S4_1A",
                         WhichDac = Dac.ePhaseTrim,
                         Channel = channel,
-                        ShowChannel = true
+                        ShowChannel = true,
+                        M2Only = M2only,
+                        S4Only = S4only
                     },
                     GainDacVm = new DacViewModel
                     {
                         Title = "Gain/S4_1B",
                         WhichDac = Dac.eGainTrim,
                         Channel = channel,
-                        ShowChannel = false
+                        ShowChannel = false,
+                        M2Only = M2only,
+                        S4Only = S4only
                     },
                     Bias1DacVm = new DacViewModel
                     {
                         Title = "Bias1/S4_2A",
                         WhichDac = Dac.eBias1,
                         Channel = channel,
-                        ShowChannel = false
+                        ShowChannel = false,
+                        M2Only = M2only,
+                        S4Only = S4only
                     },
                     Bias2DacVm = new DacViewModel
                     {
                         Title = "Bias2/S4_2B",
                         WhichDac = Dac.eBias2,
                         Channel = channel,
-                        ShowChannel = false
+                        ShowChannel = false,
+                        M2Only = M2only,
+                        S4Only = S4only
+                    },
+                    S4PaVm = new DacViewModel
+                    {
+                        Title = "S4 PA Bias",
+                        WhichDac = Dac.eS4Pa,
+                        Channel = channel,
+                        ShowChannel = false,
+                        M2Only = M2only,
+                        S4Only = S4only
                     },
                     PaVm = new PaViewModel
                     {

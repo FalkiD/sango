@@ -535,7 +535,7 @@ namespace S4TestModule
             {
                 entry = results[k];
                 ushort vmag = dacFromDB(entry.PowerDB);
-                strData = string.Format(" {0} {1}", (vmag & 0xff), ((vmag >> 8) & 0xff));
+                strData = string.Format(" {0}", vmag);
                 cmd += strData;
                 // do interpolation here to fill next 4 entries until last entry
                 if(k < results.Count-1)
@@ -547,7 +547,7 @@ namespace S4TestModule
                         double next = entry.PowerDB + j*increment;
                         vmag = dacFromDB(next);
                         //strData = string.Format(" 0x{0:x2} 0x{1:x2}", (vmag & 0xff), ((vmag >> 8) & 0xff));
-                        strData = string.Format(" {0} {1}", (vmag & 0xff), ((vmag >> 8) & 0xff));
+                        strData = string.Format(" {0}", vmag);
                         cmd += strData;
                     }
                 }

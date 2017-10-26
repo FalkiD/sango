@@ -23,7 +23,9 @@
         </ResourceDictionary>
     </UserControl.Resources>
 
-    <Grid>
+    <Grid   
+        
+        >
         <Grid.ColumnDefinitions>
             <ColumnDefinition MinWidth="80" Width="*"/>
             <ColumnDefinition MinWidth="80" Width="*"/>

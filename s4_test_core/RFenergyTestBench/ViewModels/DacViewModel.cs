@@ -25,7 +25,8 @@ namespace RFenergyUI.ViewModels
         ePhaseTrim,
         eGainTrim,
         eBias1,
-        eBias2
+        eBias2,
+        eS4Pa
     }
 
     public class DacViewModel : ReactiveObject
@@ -98,6 +99,20 @@ namespace RFenergyUI.ViewModels
         {
             get { return _dacbits; }
             set { this.RaiseAndSetIfChanged(ref _dacbits, value); }
+        }
+
+        bool _m2only;
+        public bool M2Only
+        {
+            get { return _m2only; }
+            set { this.RaiseAndSetIfChanged(ref _m2only, value); }
+        }
+
+        bool _s4only;
+        public bool S4Only
+        {
+            get { return _s4only; }
+            set { this.RaiseAndSetIfChanged(ref _s4only, value); }
         }
 
         // commands
@@ -189,35 +204,51 @@ namespace RFenergyUI.ViewModels
                 {
                     string descrip = "";
                     byte chnl;
+                    int address;
+                    double voltsPerLsb;
                     DacBits = (ushort)(value & 0xfff);
-                    DacValue = value * VOLTS_PER_LSB;
                     switch (WhichDac)
                     {
                         case Dac.ePhaseTrim:
                             chnl = CMD_BYTE_BASE;    // Single-write command, channel A
                             descrip = "Phase/S4_1A";
+                            address = MainViewModel.IDbg.Mcp4728Address;
+                            voltsPerLsb = MainViewModel.IDbg.Mcp4728VoltsPerLsb;
                             break;
                         case Dac.eGainTrim:
                             chnl = CMD_BYTE_BASE | 2;    // Single-write command, channel B
                             descrip = "Gain/S4_1B";
+                            address = MainViewModel.IDbg.Mcp4728Address;
+                            voltsPerLsb = MainViewModel.IDbg.Mcp4728VoltsPerLsb;
                             break;
                         default:
                         case Dac.eBias1:
                             chnl = CMD_BYTE_BASE | 4;    // Single-write command, channel C
                             descrip = "Bias1/S4_2A";
+                            address = MainViewModel.IDbg.Mcp4728Address;
+                            voltsPerLsb = MainViewModel.IDbg.Mcp4728VoltsPerLsb;
                             break;
                         case Dac.eBias2:
                             chnl = CMD_BYTE_BASE | 6;    // Single-write command, channel D
                             descrip = "Bias2/S4_2B";
+                            address = MainViewModel.IDbg.Mcp4728Address;
+                            voltsPerLsb = MainViewModel.IDbg.Mcp4728VoltsPerLsb;
+                            break;
+                        case Dac.eS4Pa:
+                            chnl = 0;                   // MCP4726 write
+                            descrip = "S4 Pa Bias";
+                            address = MainViewModel.IDbg.Mcp4726Address;
+                            voltsPerLsb = MainViewModel.IDbg.Mcp4726VoltsPerLsb;
                             break;
                     }
+                    DacValue = value * voltsPerLsb;
                     if (MainViewModel.IDbg != null)
                     {
                         byte[] data = new byte[3];
                         data[0] = chnl;
                         data[1] = (byte)(((value & 0x0f00) >> 8) | BYTE3_BASE);
                         data[2] = (byte)(value & 0xff);
-                        int status = MainViewModel.IDbg.WriteI2C(_channel, MainViewModel.IDbg.Mcp4728Address, data);
+                        int status = MainViewModel.IDbg.WriteI2C(_channel, address, data);
                         if (status == 0)
                         {
                             result = string.Format(" Wrote channel {0} {1} Dac {2:x02} {3:x02} {4:x02} ",

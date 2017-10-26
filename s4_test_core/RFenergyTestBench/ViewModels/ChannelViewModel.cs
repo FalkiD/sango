@@ -64,5 +64,14 @@ namespace RFenergyUI.ViewModels
             get { return _paVm; }
             set { this.RaiseAndSetIfChanged(ref _paVm, value); }
         }
+
+        // Confusing, S4 uses above 4 DacViewModels for MCP4728 quad DAC
+        // This additional vm controls the S4 PA MCP4726 single-channel DAC
+        DacViewModel _s4PaVm;
+        public DacViewModel S4PaVm
+        {
+            get { return _s4PaVm; }
+            set { this.RaiseAndSetIfChanged(ref _s4PaVm, value); }
+        }
     }
 }

@@ -27,6 +27,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto"/>
@@ -45,6 +46,12 @@
 
         <local:DacView Grid.Row="3"
                        DataContext="{Binding Path=Bias2DacVm}" />
+
+        <!--S4 PA DacView-->
+        <local:DacView Grid.Row="4"
+                       Visibility="{Binding S4Only, 
+                                    Converter={StaticResource visibilityConverter}}"
+                       DataContext="{Binding Path=S4PaVm}" />
     </Grid>
 
 </UserControl>

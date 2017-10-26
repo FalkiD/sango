@@ -80,7 +80,9 @@ namespace RFenergyUI.ViewModels
             ShowDebugTab = ConfigurationManager.AppSettings["mode"] == "factory" ? true : false;
 
             // Fix this so it's automatic, etc
-            SelectedSystem = RfModules[1];  // pick startup hw, sets # of channels, needs to be variable
+            // for now just use config file setting
+            int index = ConfigurationManager.AppSettings["instrument"] == "M2A" ? 0 : 1;
+            SelectedSystem = RfModules[index];  // pick startup hw, sets # of channels, needs to be variable
         }
 
         // Properties

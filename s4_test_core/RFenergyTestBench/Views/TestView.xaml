@@ -45,7 +45,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>  <!--Connect Buttons-->
             <RowDefinition Height="Auto"/>  <!--List of channels (not used, moved DAC's to Debug panel-->
-            <RowDefinition Height="*" MaxHeight="240"/>     <!--Must set ItemsControl size correctly, ItemsControl for ChannelView's, spans all columns-->
+            <RowDefinition Height="*" MaxHeight="600"/>     <!--Must set ItemsControl size correctly, ItemsControl for ChannelView's, spans all columns-->
             <RowDefinition Height="Auto"/>  <!--Header 'Value'-->
             <RowDefinition Height="Auto"/>  <!--Frequency-->
             <RowDefinition Height="Auto"/>  <!--Power-->
