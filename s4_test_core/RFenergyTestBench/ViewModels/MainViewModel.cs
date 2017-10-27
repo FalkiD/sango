@@ -33,7 +33,13 @@ namespace RFenergyUI.ViewModels
         public static void MsgAppendLines(List<string> results)
         { ThisPtr.AppendLines(results); }
         public static void MsgAppendLine(string format, params object[] args)
-        { ThisPtr.AppendLine(format, args); }
+        {
+            ThisPtr.MainView.Dispatcher.BeginInvoke((Action)(() =>
+            {
+                ThisPtr.AppendLine(format, args);
+            }));
+            //ThisPtr.AppendLine(format, args);
+        }
         public static string MainLogFile
         { get { return ThisPtr.LogFile; } }
 

@@ -73,5 +73,19 @@ namespace RFenergyUI.ViewModels
             get { return _s4PaVm; }
             set { this.RaiseAndSetIfChanged(ref _s4PaVm, value); }
         }
+
+        bool _m2only;
+        public bool M2Only
+        {
+            get { return _m2only; }
+            set { this.RaiseAndSetIfChanged(ref _m2only, value); }
+        }
+
+        bool _s4only;
+        public bool S4Only
+        {
+            get { return _s4only; }
+            set { this.RaiseAndSetIfChanged(ref _s4only, value); }
+        }
     }
 }

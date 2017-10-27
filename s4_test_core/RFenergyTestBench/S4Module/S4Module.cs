@@ -471,7 +471,7 @@ namespace S4TestModule
             double value = db / 20.0;
             value = Math.Pow(10.0, value);
             value = value * 128.0 + 0.5;
-            return (ushort)(4095 - (int)value);
+            return (value > 4095) ? (ushort)0 : (ushort)(4095 - (int)value);
         }
 
         public override int SetCalPower(double db)
@@ -481,6 +481,7 @@ namespace S4TestModule
             //string cmd = string.Format("fw 0xe 0x{0:x} 0x{1:x} 0x17 0\n", (vmag&0xf)<<4, (vmag&0xff0)>>4);
             string cmd = string.Format("calpwr 0x0017{0:x2}{1:x2}\n", (vmag & 0xff0) >> 4, (vmag & 0xf) << 4);
             string rsp = "";
+            WriteMessage(string.Format("dB:{0:f2}, {1}", db, cmd));
             return RunCmd(cmd, ref rsp);
         }
 

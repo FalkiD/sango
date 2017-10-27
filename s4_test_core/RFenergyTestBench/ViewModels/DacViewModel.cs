@@ -101,20 +101,6 @@ namespace RFenergyUI.ViewModels
             set { this.RaiseAndSetIfChanged(ref _dacbits, value); }
         }
 
-        bool _m2only;
-        public bool M2Only
-        {
-            get { return _m2only; }
-            set { this.RaiseAndSetIfChanged(ref _m2only, value); }
-        }
-
-        bool _s4only;
-        public bool S4Only
-        {
-            get { return _s4only; }
-            set { this.RaiseAndSetIfChanged(ref _s4only, value); }
-        }
-
         // commands
         public ReactiveCommand<string> CmdRead { get; protected set; }
         IObservable<string> CmdReadDacRun()

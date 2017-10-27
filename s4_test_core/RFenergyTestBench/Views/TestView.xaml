@@ -57,6 +57,9 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto" MinHeight="14"/>
             <RowDefinition Height="Auto" MinHeight="14"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!--1st row is Connect/Disconnect/Clear buttons-->
@@ -80,47 +83,6 @@
                 Content="Monitor PA's"
                 Style="{StaticResource CheckBoxH4}"
                 IsChecked="{Binding LoopReadings}"/>
-
-        <!--Use Horizontal ItemsControl to show any number of channels in a scrolling list--><!--
-        <ItemsControl Grid.Row="1" Grid.ColumnSpan="4"
-                      ItemsSource="{Binding Path=ChannelVms}"
-                      HorizontalAlignment="Center">
-            <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <VirtualizingStackPanel Orientation="Horizontal"/>
-                </ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.Template>
-                <ControlTemplate TargetType="ItemsControl">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                                  VerticalScrollBarVisibility="Hidden">
-                            <ItemsPresenter/>
-                        </ScrollViewer>
-                        <Button Grid.Column="1"
-                                Content="Read DAC's" 
-                                Command="{Binding CmdRead}"
-                                Style="{StaticResource ButtonKeyNormal}"/>
-                        <CheckBox Grid.Column="2"
-                                  Content="Monitor PA's"
-                                  Style="{StaticResource CheckBoxH4}"
-                                  IsChecked="{Binding LoopReadings}"/>
-                    </Grid>
-                </ControlTemplate>
-            </ItemsControl.Template>
-            <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                    <CheckBox Content="{Binding Path=Number, Converter={StaticResource channelConverter}}"
-                              Style="{StaticResource CheckBoxH4}"
-                              IsChecked="{Binding Path=IsSelected}"/>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>-->
 
         <!--Can't seem to get HeaderedItemsControl border to show?
         BorderThickness="10"
@@ -240,19 +202,6 @@
                 Command="{Binding CmdPwrSweep}"
                 Focusable="True"
                 Style="{StaticResource ButtonKeyNormal}"/>
-
-        <!--Set Power in dB--><!--
-        <TextBlock Grid.Row="6" Text="Power in dB:" HorizontalAlignment="Right"
-                   Style="{StaticResource LabelH4}"/>
-        <TextBox Grid.Row="6" Grid.Column="1"
-                 Text="{Binding PwrInDb, StringFormat=N3}"
-                 Style="{StaticResource TextBoxH4}">
-            <TextBox.InputBindings>
-                <KeyBinding Gesture="Enter" 
-                    Command="{Binding CmdPwrInDb}"
-                    CommandParameter="{Binding RelativeSource={RelativeSource FindAncestor,AncestorType={x:Type TextBox}},Path=Text}" />
-            </TextBox.InputBindings>
-        </TextBox>-->
 
         <!--Read coupler power controls-->
         <TextBlock Grid.Row="6" Text="Coupler:" HorizontalAlignment="Right"
@@ -405,6 +354,105 @@
                      IsChecked="{Binding PowerLevelCompensation}"
                      Visibility="{Binding M2Only, 
                                   Converter={StaticResource visibilityConverter}}"/>
+
+        <!--Additional S4 controls-->
+        <!--Set Power in dB-->
+        <TextBlock Grid.Row="13" Text="CalPower(dB):" HorizontalAlignment="Right"
+                   Style="{StaticResource LabelH4}"/>
+        <TextBox Grid.Row="13" Grid.Column="1"
+                 Text="{Binding PwrInDb, StringFormat=N3}"
+                 Style="{StaticResource TextBoxH4}">
+            <TextBox.InputBindings>
+                <KeyBinding Gesture="Enter" 
+                    Command="{Binding CmdPwrInDb}"
+                    CommandParameter="{Binding RelativeSource={RelativeSource FindAncestor,AncestorType={x:Type TextBox}},Path=Text}" />
+            </TextBox.InputBindings>
+        </TextBox>
+
+        <TextBlock Grid.Row="14" Text="Pattern file(*.PAT):" HorizontalAlignment="Right"
+                    Style="{StaticResource LabelH4}"
+                    Visibility="{Binding S4Only, 
+                                  Converter={StaticResource visibilityConverter}}"/>
+        <TextBox Grid.Row="14" Grid.Column="1"
+                Text="{Binding PatternFile}"
+                Style="{StaticResource TextBoxH4}"
+                Visibility="{Binding S4Only, 
+                             Converter={StaticResource visibilityConverter}}">
+            <TextBox.InputBindings>
+                <KeyBinding Gesture="Enter" 
+                    Command="{Binding CmdLoadPtnFile}"
+                    CommandParameter="{Binding RelativeSource={RelativeSource FindAncestor,AncestorType={x:Type TextBox}},Path=Text}" />
+            </TextBox.InputBindings>
+        </TextBox>
+        <Button Grid.Row="14" Grid.Column="2" 
+                Content="Choose" 
+                Command="{Binding CmdChoosePtnFile}"
+                Focusable="True"
+                Visibility="{Binding S4Only, 
+                             Converter={StaticResource visibilityConverter}}"                
+                Style="{StaticResource ButtonKeyNormal}"/>
+        <Button Grid.Row="14" Grid.Column="3" 
+                Content="Load It" 
+                Command="{Binding CmdLoadPtnFile}"
+                Focusable="True"
+                Visibility="{Binding S4Only, 
+                             Converter={StaticResource visibilityConverter}}"                
+                Style="{StaticResource ButtonKeyNormal}"/>
+        <Button Grid.Row="14" Grid.Column="4" 
+                Content="Dir" 
+                Command="{Binding CmdFwDir}"
+                Focusable="True"
+                Visibility="{Binding S4Only, 
+                             Converter={StaticResource visibilityConverter}}"                
+                Style="{StaticResource ButtonKeyNormal}"/>
+
+        <!--Run pattern using trig command-->
+        <TextBlock Grid.Row="15" Text="trig command:" HorizontalAlignment="Right"
+                    Style="{StaticResource LabelH4}"
+                    Visibility="{Binding S4Only, 
+                                  Converter={StaticResource visibilityConverter}}"/>
+        <TextBox Grid.Row="15" Grid.Column="1"
+                Text="{Binding TrigCommand}"
+                Style="{StaticResource TextBoxH4}"
+                Visibility="{Binding S4Only, 
+                             Converter={StaticResource visibilityConverter}}">
+            <TextBox.InputBindings>
+                <KeyBinding Gesture="Enter" 
+                    Command="{Binding CmdTrig}"
+                    CommandParameter="{Binding RelativeSource={RelativeSource FindAncestor,AncestorType={x:Type TextBox}},Path=Text}" />
+            </TextBox.InputBindings>
+        </TextBox>
+        <Button Grid.Row="15" Grid.Column="2" 
+                Content="Trigger" 
+                Command="{Binding CmdStopPtn}"
+                Focusable="True"
+                Visibility="{Binding S4Only, 
+                             Converter={StaticResource visibilityConverter}}"                
+                Style="{StaticResource ButtonKeyNormal}"/>
+
+        <!--Return measurements-->
+        <TextBlock Grid.Row="16" Text="Results:" HorizontalAlignment="Right"
+                    Style="{StaticResource LabelH4}"
+                    Visibility="{Binding S4Only, 
+                                 Converter={StaticResource visibilityConverter}}"/>
+        <TextBox Grid.Row="16" Grid.Column="1"
+                Text="{Binding MeasCount, Converter={StaticResource intConverter}}"
+                Style="{StaticResource TextBoxH4}"
+                Visibility="{Binding S4Only, 
+                             Converter={StaticResource visibilityConverter}}">
+            <TextBox.InputBindings>
+                <KeyBinding Gesture="Enter" 
+                    Command="{Binding CmdMeas}"
+                    CommandParameter="{Binding RelativeSource={RelativeSource FindAncestor,AncestorType={x:Type TextBox}},Path=Text}" />
+            </TextBox.InputBindings>
+        </TextBox>
+        <Button Grid.Row="16" Grid.Column="2" 
+                Content="MEAS" 
+                Command="{Binding CmdMeas}"
+                Focusable="True"
+                Visibility="{Binding S4Only, 
+                             Converter={StaticResource visibilityConverter}}"                
+                Style="{StaticResource ButtonKeyNormal}"/>
 
     </Grid>
 </UserControl>

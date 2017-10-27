@@ -18,6 +18,7 @@
             </ResourceDictionary.MergedDictionaries>
             <cnvtr:DoubleToTextConverter x:Key="doubleConverter"/>
             <cnvtr:HexTextConverter x:Key="hexConverter"/>
+            <cnvtr:BoolToVisibilityConverter x:Key="visibilityConverter"/>
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -47,10 +48,10 @@
         <local:DacView Grid.Row="3"
                        DataContext="{Binding Path=Bias2DacVm}" />
 
-        <!--S4 PA DacView-->
+        <!--S4 PA DacView  Visibility needs to bind to ChannelView, parent-->
         <local:DacView Grid.Row="4"
                        Visibility="{Binding S4Only, 
-                                    Converter={StaticResource visibilityConverter}}"
+                                    Converter={StaticResource visibilityConverter}}"                       
                        DataContext="{Binding Path=S4PaVm}" />
     </Grid>
 

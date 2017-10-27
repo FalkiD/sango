@@ -46,8 +46,10 @@ namespace RFenergyUI.ViewModels
             DutyCycleCompensation = true; // default
             OpenLoopCompensation = true;
 
-            CmdConnect = ReactiveCommand.CreateAsyncObservable(x => CmdConnectRun());
+            CmdConnect = ReactiveCommand.CreateAsyncObservable(x => CmdConnectRun()); //, RxApp.TaskpoolScheduler);
+            //CmdConnect.SubscribeOn(RxApp.MainThreadScheduler);
             CmdConnect.Subscribe(result => MainViewModel.MsgAppendLine(result));
+            //CmdConnect.ThrownExceptions.Subscribe(result => MainViewModel.MsgAppendLine(result.Message));
 
             CmdDisconnect = ReactiveCommand.CreateAsyncObservable(x => CmdDisconnectRun());
             CmdDisconnect.Subscribe(result => MainViewModel.MsgAppendLine(result));
@@ -68,8 +70,8 @@ namespace RFenergyUI.ViewModels
             CmdPwrArrow = ReactiveCommand.CreateAsyncObservable(x => CmdPwrArrowRun(x));
             CmdPwrArrow.Subscribe(result => MainViewModel.MsgAppendLine(result));
 
-            //CmdPwrInDb = ReactiveCommand.CreateAsyncObservable(x => CmdPwrInDbRun(x));
-            //CmdPwrInDb.Subscribe(result => MainViewModel.MsgAppendLine(result));
+            CmdPwrInDb = ReactiveCommand.CreateAsyncObservable(x => CmdPwrInDbRun(x));
+            CmdPwrInDb.Subscribe(result => MainViewModel.MsgAppendLine(result));
 
             CmdPhase = ReactiveCommand.CreateAsyncObservable(x => CmdPhsRun());
             CmdPhase.Subscribe(result => MainViewModel.MsgAppendLine(result));
@@ -103,6 +105,25 @@ namespace RFenergyUI.ViewModels
             //CmdZMonMeasure = ReactiveCommand.CreateAsyncObservable(x => CmdZMonMeasRun());
             //CmdZMonMeasure.Subscribe(result => MainViewModel.MsgAppendLine(result));
 
+
+            CmdLoadPtnFile = ReactiveCommand.CreateAsyncObservable(x => CmdLoadPtnRun(x));
+            CmdLoadPtnFile.Subscribe(result => MainViewModel.MsgAppendLine(result));
+
+            CmdChoosePtnFile = ReactiveCommand.CreateAsyncObservable(x => CmdChoosePtnRun(x));
+            CmdChoosePtnFile.Subscribe(result => MainViewModel.MsgAppendLine(result));
+
+            CmdFwDir = ReactiveCommand.CreateAsyncObservable(x => CmdFwDirRun(x)); //, RxApp.TaskpoolScheduler);
+            CmdFwDir.Subscribe(result => MainViewModel.MsgAppendLine(result));
+
+            CmdTrig = ReactiveCommand.CreateAsyncObservable(x => CmdTrigRun(x));
+            CmdTrig.Subscribe(result => MainViewModel.MsgAppendLine(result));
+
+            CmdStopPtn = ReactiveCommand.CreateAsyncObservable(x => CmdStopPtnRun(x));
+            CmdStopPtn.Subscribe(result => MainViewModel.MsgAppendLine(result));
+
+            CmdMeas = ReactiveCommand.CreateAsyncObservable(x => CmdMeasRun(x));
+            CmdMeas.Subscribe(result => MainViewModel.MsgAppendLine(result));
+
             //CmdTempComp = ReactiveCommand.CreateAsyncObservable(x => CmdTempCompRun(x));
             //CmdTempComp.Subscribe(result => MainViewModel.MsgAppendLine(result));
 
@@ -124,50 +145,42 @@ namespace RFenergyUI.ViewModels
                 {
                     Number = channel,
                     IsSelected = true,
+                    M2Only = M2only,
+                    S4Only = S4only,
                     PhaseDacVm = new DacViewModel
                     {
                         Title = "Phase/S4_1A",
                         WhichDac = Dac.ePhaseTrim,
                         Channel = channel,
-                        ShowChannel = true,
-                        M2Only = M2only,
-                        S4Only = S4only
+                        ShowChannel = true
                     },
                     GainDacVm = new DacViewModel
                     {
                         Title = "Gain/S4_1B",
                         WhichDac = Dac.eGainTrim,
                         Channel = channel,
-                        ShowChannel = false,
-                        M2Only = M2only,
-                        S4Only = S4only
+                        ShowChannel = false
                     },
                     Bias1DacVm = new DacViewModel
                     {
                         Title = "Bias1/S4_2A",
                         WhichDac = Dac.eBias1,
                         Channel = channel,
-                        ShowChannel = false,
-                        M2Only = M2only,
-                        S4Only = S4only
+                        ShowChannel = false
                     },
                     Bias2DacVm = new DacViewModel
                     {
                         Title = "Bias2/S4_2B",
                         WhichDac = Dac.eBias2,
                         Channel = channel,
-                        ShowChannel = false,
-                        M2Only = M2only,
-                        S4Only = S4only
+                        ShowChannel = false
                     },
                     S4PaVm = new DacViewModel
                     {
                         Title = "S4 PA Bias",
                         WhichDac = Dac.eS4Pa,
                         Channel = channel,
-                        ShowChannel = false,
-                        M2Only = M2only,
-                        S4Only = S4only
+                        ShowChannel = false
                     },
                     PaVm = new PaViewModel
                     {
@@ -229,12 +242,12 @@ namespace RFenergyUI.ViewModels
         //    set { this.RaiseAndSetIfChanged(ref _paVms, value); }
         //}
 
-        //double _pwrInDb;
-        //public double PwrInDb
-        //{
-        //    get { return _pwrInDb; }
-        //    set { this.RaiseAndSetIfChanged(ref _pwrInDb, value); }
-        //}
+        double _pwrInDb;
+        public double PwrInDb
+        {
+            get { return _pwrInDb; }
+            set { this.RaiseAndSetIfChanged(ref _pwrInDb, value); }
+        }
 
         double _frequency;
         public double Frequency
@@ -499,6 +512,41 @@ namespace RFenergyUI.ViewModels
             }
         }
 
+        // Various S4 properties
+
+        /// <summary>
+        /// Pattern filename (*.PAT)
+        /// In the S4 MCU filesystem it's parsed into a binary
+        /// *.PTF file.
+        /// </summary>
+        string _patternFile;
+        public string PatternFile
+        {
+            get { return _patternFile; }
+            set { this.RaiseAndSetIfChanged(ref _patternFile, value); }
+        }
+
+        /// <summary>
+        /// Run a pattern using this trig command
+        /// </summary>
+        string _trigCommand;
+        public string TrigCommand
+        {
+            get { return _trigCommand; }
+            set { this.RaiseAndSetIfChanged(ref _trigCommand, value); }
+        }
+
+
+        /// <summary>
+        /// Return this number of measurement results
+        /// </summary>
+        int _measCount;
+        public int MeasCount
+        {
+            get { return _measCount; }
+            set { this.RaiseAndSetIfChanged(ref _measCount, value); }
+        }
+
         // initialization
         bool Initialized { get; set; }
         public void Initialize()
@@ -555,27 +603,30 @@ namespace RFenergyUI.ViewModels
         public ReactiveCommand<string> CmdConnect { get; protected set; }
         IObservable<string> CmdConnectRun()
         {
-            string result = "";
-            try
-            {
-                if (MainViewModel.IDbg != null)
+            //return Observable.Start(() =>
+            //{
+                string result = "";
+                try
                 {
-                    int status = MainViewModel.IDbg.Initialize(MainViewModel.MainLogFile);
-                    if (status == 0)
+                    if (MainViewModel.IDbg != null)
                     {
-                        result = MainViewModel.SelectedSystemName + " hardware connected Ok";
-                        LoadValuesFromHardware(); // Fill-in panel with values from hardware
+                        int status = MainViewModel.IDbg.Initialize(MainViewModel.MainLogFile);
+                        if (status == 0)
+                        {
+                            result = MainViewModel.SelectedSystemName + " hardware connected Ok";
+                            LoadValuesFromHardware(); // Fill-in panel with values from hardware
+                        }
+                        else result = string.Format("{0} connect failed:{1}", MainViewModel.SelectedSystemName,
+                                                                              MainViewModel.IErr.ErrorDescription(status));
                     }
-                    else result = string.Format("{0} connect failed:{1}", MainViewModel.SelectedSystemName,
-                                                                          MainViewModel.IErr.ErrorDescription(status));
+                    else result = "MainViewModel.IDbg interface is null, can't execute anything";
                 }
-                else result = "MainViewModel.IDbg interface is null, can't execute anything";
-            }
-            catch (Exception ex)
-            {
-                result = string.Format("Connect{0} Exception:{1}", MainViewModel.SelectedSystemName, ex.Message);
-            }
-            return Observable.Return(result);
+                catch (Exception ex)
+                {
+                    result = string.Format("Connect{0} Exception:{1}", MainViewModel.SelectedSystemName, ex.Message);
+                }
+                return Observable.Return(result);
+            //});
         }
 
         public ReactiveCommand<string> CmdDisconnect { get; protected set; }
@@ -723,32 +774,182 @@ namespace RFenergyUI.ViewModels
             return Observable.Return("");
         }
 
-        //public ReactiveCommand<string> CmdPwrInDb { get; protected set; }
-        //IObservable<string> CmdPwrInDbRun(object text)
-        //{
-        //    string result = "";
-        //    try
-        //    {
-        //        double value;
-        //        if (Double.TryParse(text.ToString(), out value))
-        //        {
-        //            if (value < 0.0 || value > 40.0)
-        //                return Observable.Return(string.Format("Power out of range({0}) must be between 0 and 40 dB", value));
-        //            PwrInDb = value;
-        //            int status;
-        //            if ((status = MainViewModel.CalPanel.SetCalPower(PwrInDb)) == 0)
-        //                result = " Set PwrInDb Ok";
-        //            else result = string.Format(" Set PwrInDb failed:{0}", MainViewModel.IErr.ErrorDescription(status));
-        //        }
-        //        else
-        //            return Observable.Return(string.Format("Error, cannot convert '{0}' to a double", text.ToString()));
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        result = string.Format("Set PwrInDb exception:{0}", ex.Message);
-        //    }
-        //    return Observable.Return(result);
-        //}
+        public ReactiveCommand<string> CmdLoadPtnFile { get; protected set; }
+        IObservable<string> CmdLoadPtnRun(object text)
+        {
+            string result = "";
+            try
+            {
+                if (MainViewModel.ICmd != null)
+                {
+                    string rsp = "";
+                    int status = MainViewModel.ICmd.RunCmd(string.Format("loadpat {0}\n", text.ToString()), ref rsp);
+                    if (status == 0)
+                    {
+                        result = " S4 loadpat:" + rsp;
+                    }
+                    else result = string.Format(" S4 loadpat failed:{0}", MainViewModel.IErr.ErrorDescription(status));
+                }
+                else result = "ICmd interface is null, can't execute anything";
+            }
+            catch (Exception ex)
+            {
+                result = string.Format("Load pattern file exception:{0}", ex.Message);
+            }
+            return Observable.Return(result);
+        }
+
+        public ReactiveCommand<string> CmdChoosePtnFile { get; protected set; }
+        IObservable<string> CmdChoosePtnRun(object text)
+        {
+            string result = "";
+            try
+            {
+                if (MainViewModel.ICmd != null)
+                {
+                    string rsp = "";
+                    int status = MainViewModel.ICmd.RunCmd(string.Format("loadpat {0}\n"), ref rsp);
+                    if (status == 0)
+                    {
+                        result = " S4 MCU DIR:" + rsp;
+                    }
+                    else result = string.Format(" S4 DIR failed:{0}", MainViewModel.IErr.ErrorDescription(status));
+                }
+                else result = "ICmd interface is null, can't execute anything";
+            }
+            catch (Exception ex)
+            {
+                result = string.Format("Choose pattern file exception:{0}", ex.Message);
+            }
+            return Observable.Return(result);
+        }
+
+        public ReactiveCommand<string> CmdFwDir { get; protected set; }
+        IObservable<string> CmdFwDirRun(object text)
+        {
+            string result = "";
+            try
+            {
+                if (MainViewModel.ICmd != null)
+                {
+                    string rsp = "";
+                    int status = MainViewModel.ICmd.RunCmd("dir\n", ref rsp);
+                    if (status == 0)
+                    {
+                        result = " S4 MCU DIR:" + rsp;
+                    }
+                    else result = string.Format(" S4 DIR failed:{0}", MainViewModel.IErr.ErrorDescription(status));
+                }
+                else result = "ICmd interface is null, can't execute anything";
+            }
+            catch (Exception ex)
+            {
+                result = string.Format("S4 filesystem DIR exception:{0}", ex.Message);
+            }
+            return Observable.Return(result);
+        }
+
+        public ReactiveCommand<string> CmdTrig { get; protected set; }
+        IObservable<string> CmdTrigRun(object text)
+        {
+            string result = "";
+            try
+            {
+                if (MainViewModel.ICmd != null)
+                {
+                    string rsp = "";
+                    int status = MainViewModel.ICmd.RunCmd(text.ToString() + "\n", ref rsp);
+                    if (status == 0)
+                    {
+                        result = string.Format(" S4 {0}:{1}", text.ToString(), rsp);
+                    }
+                    else result = string.Format(" S4 {0} failed:{1}", text.ToString(), MainViewModel.IErr.ErrorDescription(status));
+                }
+                else result = "ICmd interface is null, can't execute anything";
+            }
+            catch (Exception ex)
+            {
+                result = string.Format("S4 trig command exception:{0}", ex.Message);
+            }
+            return Observable.Return(result);
+        }
+
+        public ReactiveCommand<string> CmdStopPtn { get; protected set; }
+        IObservable<string> CmdStopPtnRun(object text)
+        {
+            string result = "";
+            try
+            {
+                if (MainViewModel.ICmd != null)
+                {
+                    string rsp = "";
+                    int status = MainViewModel.ICmd.RunCmd("trig ctrl 0x81\n", ref rsp);
+                    if (status == 0)
+                    {
+                        result = string.Format(" S4 trig ctrl 0x81:{0}", rsp);
+                    }
+                    else result = string.Format(" S4 trig ctrl 0x81 failed:{0}", MainViewModel.IErr.ErrorDescription(status));
+                }
+                else result = "ICmd interface is null, can't execute anything";
+            }
+            catch (Exception ex)
+            {
+                result = string.Format("S4 stop ptn(trig ctrl 0x81) exception:{0}", ex.Message);
+            }
+            return Observable.Return(result);
+        }
+
+        public ReactiveCommand<string> CmdMeas { get; protected set; }
+        IObservable<string> CmdMeasRun(object text)
+        {
+            string result = "";
+            try
+            {
+                if (MainViewModel.ICmd != null)
+                {
+                    string rsp = "";
+                    int status = MainViewModel.ICmd.RunCmd(text.ToString() + "\n", ref rsp);
+                    if (status == 0)
+                    {
+                        result = string.Format(" S4 {0}:{1}", text.ToString(), rsp);
+                    }
+                    else result = string.Format(" S4 {0} failed:{1}", text.ToString(), MainViewModel.IErr.ErrorDescription(status));
+                }
+                else result = "ICmd interface is null, can't execute anything";
+            }
+            catch (Exception ex)
+            {
+                result = string.Format("S4 MEAS exception:{0}", ex.Message);
+            }
+            return Observable.Return(result);
+        }
+
+        public ReactiveCommand<string> CmdPwrInDb { get; protected set; }
+        IObservable<string> CmdPwrInDbRun(object text)
+        {
+            string result = "";
+            try
+            {
+                double value;
+                if (Double.TryParse(text.ToString(), out value))
+                {
+                    if (value < 0.0 || value > 45.0)
+                        return Observable.Return(string.Format("Power out of range({0}) must be between 0 and 45 dB", value));
+                    PwrInDb = value;
+                    int status;
+                    if ((status = MainViewModel.CalPanel.SetCalPower(PwrInDb)) == 0)
+                        result = " Set PwrInDb Ok";
+                    else result = string.Format(" Set PwrInDb failed:{0}", MainViewModel.IErr.ErrorDescription(status));
+                }
+                else
+                    return Observable.Return(string.Format("Error, cannot convert '{0}' to a double", text.ToString()));
+            }
+            catch (Exception ex)
+            {
+                result = string.Format("Set PwrInDb exception:{0}", ex.Message);
+            }
+            return Observable.Return(result);
+        }
 
         public ReactiveCommand<string> CmdPhase { get; protected set; }
         IObservable<string> CmdPhsRun()
