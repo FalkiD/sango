@@ -20,7 +20,8 @@
 //      1           0       Low Gain Mode
 //      1           1       Undefined
 //
-//  We'll use high-gain mode, datasheet figure 12 gives gain data
+//  We'll default to low-gain mode, 
+//  datasheet figure 12 gives gain data(higain)
 //  at 2.6GHz while varying both VGAIN1 & VGAIN2
 //  Looks like 3.3v ~ -12dB, 0v ~ +2dB
 // 
@@ -60,6 +61,8 @@ module power #(parameter FILL_BITS = 4)
   output reg            pwr_fifo_ren_o,           // fifo read line
   input  wire           pwr_fifo_mt_i,            // fifo empty flag
   input  wire [FILL_BITS-1:0] pwr_fifo_count_i,   // fifo count
+
+  input  wire           vga_higain_i,             // default to 0, low gain mode
 
   // outputs, VGA SPI to DAC7563
   output wire           VGA_MOSI_o,
@@ -227,7 +230,7 @@ module power #(parameter FILL_BITS = 4)
   // End of power state definitions //
   ////////////////////////////////////////
 
-  assign VGA_VSW_o = 1'b1;          // We'll use high-gain mode
+  assign VGA_VSW_o = vga_higain_i;  // Try low-gain mode 28-Oct     We'll use high-gain mode
 
   // DAC7563 uses SPI mode 1. As long as SSEL(SYNC) is low for 24 bits
   // to be clocked in, the DAC will be updated on the 24th falling 

@@ -487,6 +487,7 @@ wire [31:0]  trig_config;           // true if we're the trigger source
 wire         adctrig;               // trigger on pattern start by default, or pulse
 wire         pls_adctrig;           // trigger on start of pulse opcode
 wire         ptn_adctrig;           // default: trigger at start of pattern
+wire         vga_higain;            // VGA gain mode, default=0, low gain mode
 
 //------------------------------------------------------------------------
 // Start of logic
@@ -982,6 +983,8 @@ end
     .pwr_fifo_ren_o     (pwr_fifo_ren),         // power processor fifo read line
     .pwr_fifo_mt_i      (pwr_fifo_mt),          // power fifo empty flag
     .pwr_fifo_count_i   (pwr_fifo_count),       // power fifo count
+    
+    .vga_higain_i       (vga_higain),           // default to 0, low gain mode
 
     .VGA_MOSI_o         (pwr_mosi),
     .VGA_SCLK_o         (pwr_sclk),
@@ -1124,6 +1127,7 @@ end
 
     .trig_conf_o                (trig_config),      // triger config word
     .adc_dly_o                  (adc_dly),          // adcdly in 10ns ticks
+    .vga_higain_o               (vga_higain),       // default is 0, low gain mode
 
     // pattern opcodes are saved in pattern RAM.
     .ptn_wen_o                  (ptn_wen),          // opcode processor saves pattern opcodes to pattern RAM 

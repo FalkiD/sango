@@ -112,6 +112,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 
     output wire [31:0] trig_conf_o,               // trig_configuration word
     output wire [31:0] adc_dly_o,                 // adcdly in 10ns ticks
+    output reg         vga_higain_o,              // default=0, low gain mode. CONFIG opc can set it
 
     // pattern opcodes are saved in pattern RAM.
     output reg                      ptn_wen_o,    // opcode processor saves pattern opcodes to pattern RAM 
@@ -622,7 +623,9 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         if(length == 0) begin   // got all the data, write to correct fifo based on opcode, or execute opcode
             case(opcode)
             `CONFIG: begin
+                // byte 2, d0=1 for VGA high gain mode, 0 for default low gain mode
                 adc_dly <= {16'd0, uinttmp[15:0]};
+                vga_higain_o <= uinttmp[16];
                 next_opcode();   
             end
             `STATUS:  begin
@@ -1122,7 +1125,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         zm_rq_gain <= 32'h0001_0000;      // zmon refl "Q" ADC gain, Q15.16 float
         zm_rq_offset <= 16'd0;            // zmon refl "Q" ADC offset, signed int
         
-        adc_dly <= 5000;     // default is 50us in 10ns ticks
+        adc_dly <= 5000;                  // default is 50us in 10ns ticks
+        vga_higain_o <= 1'b0;             // default low gain mode
     end
     endtask
 
