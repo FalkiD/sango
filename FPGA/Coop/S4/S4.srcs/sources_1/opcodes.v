@@ -112,7 +112,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 
     output wire [31:0] trig_conf_o,               // trig_configuration word
     output wire [31:0] adc_dly_o,                 // adcdly in 10ns ticks
-    output reg         vga_higain_o,              // default=0, low gain mode. CONFIG opc can set it
+    output reg         vga_higain_o,              // default=1, high gain mode. CONFIG opc can set it
     output reg         vga_dacctla_o,             // DAC control bit. Normally fix A, control dac B
 
     // pattern opcodes are saved in pattern RAM.
@@ -913,6 +913,12 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 end
                 `PTN_ABORT: begin
                     stop_pattern();
+                    next_opcode(); 
+                end
+                `PTN_RST: begin
+                    // clear the space between pat_addr & the address specified in the arg
+                    // TBD
+
                     next_opcode(); 
                 end
                 endcase

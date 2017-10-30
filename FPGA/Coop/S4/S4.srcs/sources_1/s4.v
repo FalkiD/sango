@@ -405,7 +405,7 @@ wire [7:0]   pls_status;              // pulse processor status
 wire [`PROCESSOR_FIFO_FILL_BITS-1:0]   pls_fifo_count;
 wire         pls_zmonen;              // from pulse processor to ZMON_EN
 wire         pls_rfgate;              // from pulse processor to RF_GATE
-wire         pls_rfgate2;             // from pulse processor to RF_GATE2
+wire         pls_rfgate2;             // Initial release, always ON. from pulse processor to RF_GATE2
 
 // Measurement fifo wires
 wire [31:0]  meas_fifo_dat_i;          // to results fifo from measurement processing in pulse processor
@@ -485,7 +485,6 @@ wire         dds_synth_initing;     // SYN initializing
 wire [31:0]  adc_dly;               // default is 50us in 10ns ticks, set from opcode processor
 wire [31:0]  trig_config;           // true if we're the trigger source
 wire         adctrig;               // trigger on pattern start by default, or pulse
-wire         pls_adctrig;           // trigger on start of pulse opcode
 wire         ptn_adctrig;           // default: trigger at start of pattern
 wire         vga_higain;            // VGA gain mode, default=1, high gain mode
 wire         vga_dacctla;            // DAC control bit, default=0 = Fix A, control B. 1=control A&B
@@ -985,7 +984,7 @@ end
     .pwr_fifo_mt_i      (pwr_fifo_mt),          // power fifo empty flag
     .pwr_fifo_count_i   (pwr_fifo_count),       // power fifo count
     
-    .vga_higain_i       (vga_higain),           // default to 0, low gain mode
+    .vga_higain_i       (vga_higain),           // default to 1, hi gain mode
     .vga_dacctla_i      (vga_dacctla),          // DAC control bit. Normally fix A, control dac B
 
     .VGA_MOSI_o         (pwr_mosi),
@@ -1032,9 +1031,6 @@ end
     // output ZMON ADC data fifo
     .adc_fifo_dat_o     (meas_fifo_dat_i),      // 32 bits of FWD REFL ADC data written to output fifo
     .adc_fifo_wen_o     (meas_fifo_wen),        // ADC results fifo write enable
-
-    .adc_dly_i          (adc_dly),              // delay between RF_GATE and TRIG_OUT in 10 ns increments(ticks)
-    .trig_out_o         (pls_adctrig),          // 10us pulse at start of PULSE opcode(RF_GATE)
 
     .status_o           (pls_status)            // 0=busy, SUCCESS when done, or an error code
   );
@@ -1493,7 +1489,7 @@ end
  
   assign ACTIVE_LEDn = RF_GATE ? count2[24]: count2[26];
 
-  assign ADCTRIG = trig_config[11] ? RF_GATE : ptn_adctrig; //pls_adctrig : ptn_adctrig; 
+  assign ADCTRIG = trig_config[11] ? RF_GATE : ptn_adctrig; 
   assign TRIG_OUT = trig_config[10] ? ADCTRIG : 1'b0;
  
   assign FPGA_MCU4 = CONV;      // DDS_MOSI; //MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.

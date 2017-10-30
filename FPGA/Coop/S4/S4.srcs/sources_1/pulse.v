@@ -39,7 +39,7 @@ module pulse #(parameter FILL_BITS = 4)
 
     input  wire         rf_enable_i,        // RF enabled by MCU, Interlock, etc.
     output wire         rf_gate_o,          // RF_GATE line
-    output wire         rf_gate2_o,         // RF_GATE2 line
+    output wire         rf_gate2_o,         // RF_GATE2 line, initial release always ON
     input  wire         dbg_rf_gate_i,      // Debug mode assert RF_GATE lines
 
     output wire         zmon_en_o,          // Enable ZMON
@@ -50,9 +50,6 @@ module pulse #(parameter FILL_BITS = 4)
 
     output reg  [31:0]  adc_fifo_dat_o,     // 32 bits of FWD REFL ADC data written to output fifo
     output reg          adc_fifo_wen_o,     // ADC results fifo write enable
-
-    input  wire [31:0]  adc_dly_i,          // delay between RF_GATE and TRIG_OUT in 10 ns increments
-    output wire         trig_out_o,         // drive TRIG_OUT
 
     output reg  [7:0]   status_o            // Pulse status, 0=Busy, SUCCESS when done, or an error code
     );
@@ -78,7 +75,6 @@ module pulse #(parameter FILL_BITS = 4)
     reg             zmon_en;
     reg             conv;
     reg             adc_sclk;
-    reg             trig_out;
 
     // connect external wires
     assign rf_gate_o = dbg_rf_gate_i ? 1'b1 : rf_gate;
@@ -86,7 +82,6 @@ module pulse #(parameter FILL_BITS = 4)
     assign zmon_en_o = zmon_en;
     assign adc_sclk_o = adc_sclk;
     assign conv_o = conv;
-    assign trig_out_o = trig_out;
 
     // ZMON ADC variables, processing
     // LTC1407A ADC state machine
@@ -177,7 +172,7 @@ module pulse #(parameter FILL_BITS = 4)
             measure <= 1'b0;
             measure_at <= 24'h00_0000;
             rf_gate <= 1'b0;
-            rf_gate2 <= 1'b0;
+            rf_gate2 <= 1'b1;       // Initial release this is always ON
             conv <= 1'b0;
             zmon_en <= 1'b0;
             status_o <= `SUCCESS;
@@ -193,7 +188,7 @@ module pulse #(parameter FILL_BITS = 4)
                 end
                 else begin
                     rf_gate <= 1'b0;
-                    rf_gate2 <= 1'b0;
+                    rf_gate2 <= 1'b1;           // Initial release, always ON
                     conv <= 1'b0;
                     zmon_en <= 1'b0;
                     if(status_o == 8'h00)
@@ -213,7 +208,7 @@ module pulse #(parameter FILL_BITS = 4)
                 measure_at <= pls_fifo_dat_i[63:39] - 24'h00_0000_0001;   // meas offset 0-based 
                 pls_fifo_ren_o <= 0;
                 rf_gate <= pulse_en & rf_enable_i;   // on
-                rf_gate2 <= pulse_en & rf_enable_i;
+                //rf_gate2 <= pulse_en & rf_enable_i;
                 zmon_en <= 1'b1;
                 if(pls_fifo_dat_i[32] == 1'b1 &&
                     pls_fifo_dat_i[63:39] - 24'h00_0000_0001 == 0)
@@ -225,7 +220,7 @@ module pulse #(parameter FILL_BITS = 4)
                 if(ticks == pulse) begin
                     state <= PULSE_DONE;
                     rf_gate <= 1'b0;
-                    rf_gate2 <= 1'b0;
+                    //rf_gate2 <= 1'b0;
                     conv <= 1'b0;
                 end
                 if(measure) begin
@@ -257,46 +252,5 @@ module pulse #(parameter FILL_BITS = 4)
             endcase
         end
     end    
-
-    // trig_out logic, just follow RF_GATE
-//    reg  [31:0]     trig_out_delay;
-//    reg  [9:0]      trig_out_width;     // room for 1024, 1000 10ns ticks => 10us    
-//    reg             rf_gaten;
-//    reg             run_trigger;
-    always @(posedge sys_clk) begin
-        if(!sys_rst_n) begin
-            trig_out <= 1'b0;
-//            trig_out_delay <= 32'h0000_0000;
-//            trig_out_width <= 10'd0;
-//            rf_gaten <= 1'b0;
-//            run_trigger <= 1'b0;
-        end
-//        else begin
-//            rf_gaten <= rf_gate;
-//            if(rf_gate && !rf_gaten) begin
-//                trig_out_delay <= adc_dly_i;
-//                run_trigger <= 1'b1;
-//            end
-            
-//            if(run_trigger) begin
-//                if(trig_out) begin
-//                    if(trig_out_width == 10'h00) begin
-//                        trig_out <= 1'b0;
-//                        run_trigger <= 1'b0;
-//                    end
-//                    else
-//                        trig_out_width <= trig_out_width - 10'd1;
-//                end
-//                else begin                
-//                    if(trig_out_delay == 32'h0000_0000) begin
-//                        trig_out <= 1'b1;
-//                        trig_out_width <= 10'd1000;    // use 10us trigger pulse                
-//                    end
-//                    else              
-//                        trig_out_delay <= trig_out_delay - 32'h0000_0001;
-//                end
-//            end 
-//        end
-    end
 
 endmodule

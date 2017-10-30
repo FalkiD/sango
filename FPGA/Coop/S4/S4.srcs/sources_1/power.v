@@ -62,7 +62,7 @@ module power #(parameter FILL_BITS = 4)
   input  wire           pwr_fifo_mt_i,            // fifo empty flag
   input  wire [FILL_BITS-1:0] pwr_fifo_count_i,   // fifo count
 
-  input  wire           vga_higain_i,             // default to 0, low gain mode
+  input  wire           vga_higain_i,             // default to 1, low gain mode
   input  wire           vga_dacctla_i,            // DAC control A bit. Normally fix A, control dac B
 
   // outputs, VGA SPI to DAC7563
