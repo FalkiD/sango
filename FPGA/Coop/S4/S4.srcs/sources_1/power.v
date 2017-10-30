@@ -20,7 +20,8 @@
 //      1           0       Low Gain Mode
 //      1           1       Undefined
 //
-//  We'll use high-gain mode, datasheet figure 12 gives gain data
+//  We'll default to low-gain mode, 
+//  datasheet figure 12 gives gain data(higain)
 //  at 2.6GHz while varying both VGAIN1 & VGAIN2
 //  Looks like 3.3v ~ -12dB, 0v ~ +2dB
 // 
@@ -61,6 +62,9 @@ module power #(parameter FILL_BITS = 4)
   input  wire           pwr_fifo_mt_i,            // fifo empty flag
   input  wire [FILL_BITS-1:0] pwr_fifo_count_i,   // fifo count
 
+  input  wire           vga_higain_i,             // default to 0, low gain mode
+  input  wire           vga_dacctla_i,            // DAC control A bit. Normally fix A, control dac B
+
   // outputs, VGA SPI to DAC7563
   output wire           VGA_MOSI_o,
   output wire           VGA_SCLK_o,
@@ -89,6 +93,9 @@ module power #(parameter FILL_BITS = 4)
   // state modifiers for host set power opcode and initialization mode
   localparam NORMAL_MODE        = 2'd0;
   localparam INIT_DACS          = 2'd1;
+  
+  localparam CTL_DACB_ONLY      = 8'h11;
+  localparam CTL_DACA_ALSO      = 8'h17;
 
   // Main Globals
   reg  [6:0]      state = 0;
@@ -102,6 +109,7 @@ module power #(parameter FILL_BITS = 4)
   reg  [31:0]     ten;                // for dbm * 10
   reg  [1:0]      modifier;           // state modifer for host set power opcode and initialize DAC's
   reg  [2:0]      init_wordnum;       // count of initialization words sent. Initially 4 words to setup
+  reg  [7:0]      dac_control;        // defaults to B only, change w/CONFIG opcode
   
   // interpolation multiplier vars
   reg  [31:0]     dbmA;
@@ -227,7 +235,7 @@ module power #(parameter FILL_BITS = 4)
   // End of power state definitions //
   ////////////////////////////////////////
 
-  assign VGA_VSW_o = 1'b1;          // We'll use high-gain mode
+  assign VGA_VSW_o = vga_higain_i;  // Default is 1, high-gain mode
 
   // DAC7563 uses SPI mode 1. As long as SSEL(SYNC) is low for 24 bits
   // to be clocked in, the DAC will be updated on the 24th falling 
@@ -248,8 +256,14 @@ module power #(parameter FILL_BITS = 4)
       dbmx10_o <= INIT_DBMx10;  // present power setting for all top-level modules to access, dBm x10
       init_wordnum <= 3'd0;
       slope_is_neg <= 1'b0;
+      dac_control <= CTL_DACB_ONLY;        // defaults to B only, change w/CONFIG opcode
     end
     else if(power_en == 1) begin
+
+      if(vga_dacctla_i && dac_control != CTL_DACA_ALSO)
+        dac_control <= CTL_DACA_ALSO;
+      else if(!vga_dacctla_i && dac_control != CTL_DACB_ONLY)
+        dac_control <= CTL_DACB_ONLY;
 
       // calibrate is special case, overwrite teh values in the
       // cal table from he opcode processor
@@ -368,6 +382,9 @@ module power #(parameter FILL_BITS = 4)
         end
         // initialize processor starts here after setting data in 'power' register
         PWR_VGA1: begin
+          if(!vga_dacctla_i)
+            // control only DAC B, clear ctl bits for dac A
+            power[23:16] <= CTL_DACB_ONLY;
           VGA_SSn_o <= 1'b0;
           state <= PWR_VGA2;
         end
@@ -441,9 +458,7 @@ module power #(parameter FILL_BITS = 4)
           // interpolate between power tables
           if(frequency_i <= FRQ1) begin
               // 02-Oct set power & bypass interpolation
-              power <= {8'd0, 8'h17, dbmx10_2410[dbm_idx], 4'd0};
-              state <= PWR_VGA2;        // write 1st byte of 3
-              VGA_SSn_o <= 1'b0;          
+              power <= {8'd0, dac_control, dbmx10_2410[dbm_idx], 4'd0};
           end
           else if(frequency_i <= FRQ2) begin
           // slope = ((dbmx10_2410[dbm_idx] - dbmx10_2430[dbm_idx]))/(FRQ_DELTA);
@@ -458,39 +473,34 @@ module power #(parameter FILL_BITS = 4)
 //            if(dbmx10_2410[dbm_idx] < dbmx10_2430[dbm_idx])
 //              slope_is_neg <= 1'b1;
             // 02-Oct set power & bypass interpolation
-            power <= {8'd0, 8'h17, dbmx10_2430[dbm_idx], 4'd0};
-            state <= PWR_VGA2;        // write 1st byte of 3
-            VGA_SSn_o <= 1'b0;          
+            power <= {8'd0, dac_control, dbmx10_2430[dbm_idx], 4'd0};
           end
           else if(frequency_i <= FRQ3) begin
 //            dbmA <= dbmx10_2430[dbm_idx] - dbmx10_2450[dbm_idx];    
 //            if(dbmx10_2430[dbm_idx] < dbmx10_2450[dbm_idx])
 //              slope_is_neg <= 1'b1;
               // 02-Oct set power & bypass interpolation
-            power <= {8'd0, 8'h17, dbmx10_2450[dbm_idx], 4'd0};
-            state <= PWR_VGA2;        // write 1st byte of 3
-            VGA_SSn_o <= 1'b0;          
+            power <= {8'd0, dac_control, dbmx10_2450[dbm_idx], 4'd0};
           end
           else if(frequency_i <= FRQ4) begin
 //            dbmA <= dbmx10_2450[dbm_idx] - dbmx10_2470[dbm_idx];           
 //            if(dbmx10_2450[dbm_idx] < dbmx10_2470[dbm_idx])
 //              slope_is_neg <= 1'b1;
               // 02-Oct set power & bypass interpolation
-            power <= {8'd0, 8'h17, dbmx10_2470[dbm_idx], 4'd0};
-            state <= PWR_VGA2;        // write 1st byte of 3
-            VGA_SSn_o <= 1'b0;          
+            power <= {8'd0, dac_control, dbmx10_2470[dbm_idx], 4'd0};
           end
           else begin
 //            dbmA <= dbmx10_2470[dbm_idx] - dbmx10_2490[dbm_idx];           
 //            if(dbmx10_2470[dbm_idx] < dbmx10_2490[dbm_idx])
 //              slope_is_neg <= 1'b1;
             // 02-Oct set power & bypass interpolation
-            power <= {8'd0, 8'h17, dbmx10_2490[dbm_idx], 4'd0};
-            state <= PWR_VGA2;        // write 1st byte of 3
-            VGA_SSn_o <= 1'b0;          
+            power <= {8'd0, dac_control, dbmx10_2490[dbm_idx], 4'd0};
           end
-          interp1 <= {16'd0, K};
-          state <= PWR_SLOPE2;
+          // Bypass interpolation for first article
+          state <= PWR_VGA2;        // write 1st byte of 3
+          VGA_SSn_o <= 1'b0;          
+          //interp1 <= {16'd0, K};
+          // bypass interpolation   state <= PWR_SLOPE2;
         end
         PWR_SLOPE2: begin
           interp_mul <= 1'b1;
@@ -564,10 +574,13 @@ module power #(parameter FILL_BITS = 4)
           state <= PWR_DBM4;
         end
         PWR_DBM4: begin
+          // 28-Oct-2017 Update:
+          // leave dac A fixed at full-scale, control only dac B
+          //
           // Ready to send data to both DAC's. Use this FSM to do it, 
           // except value is not in input fifo. Set next_state to PWR_VGA2
           // and let it run.
-          power <= {8'd0, 8'h17, slope[11:0], 4'd0}; 
+          power <= {8'd0, dac_control, slope[11:0], 4'd0}; 
           state <= PWR_VGA2;        // write 1st byte of 3
           VGA_SSn_o <= 1'b0;
         end

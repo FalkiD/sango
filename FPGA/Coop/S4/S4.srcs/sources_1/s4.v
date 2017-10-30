@@ -487,6 +487,8 @@ wire [31:0]  trig_config;           // true if we're the trigger source
 wire         adctrig;               // trigger on pattern start by default, or pulse
 wire         pls_adctrig;           // trigger on start of pulse opcode
 wire         ptn_adctrig;           // default: trigger at start of pattern
+wire         vga_higain;            // VGA gain mode, default=1, high gain mode
+wire         vga_dacctla;            // DAC control bit, default=0 = Fix A, control B. 1=control A&B
 
 //------------------------------------------------------------------------
 // Start of logic
@@ -982,6 +984,9 @@ end
     .pwr_fifo_ren_o     (pwr_fifo_ren),         // power processor fifo read line
     .pwr_fifo_mt_i      (pwr_fifo_mt),          // power fifo empty flag
     .pwr_fifo_count_i   (pwr_fifo_count),       // power fifo count
+    
+    .vga_higain_i       (vga_higain),           // default to 0, low gain mode
+    .vga_dacctla_i      (vga_dacctla),          // DAC control bit. Normally fix A, control dac B
 
     .VGA_MOSI_o         (pwr_mosi),
     .VGA_SCLK_o         (pwr_sclk),
@@ -1124,6 +1129,8 @@ end
 
     .trig_conf_o                (trig_config),      // triger config word
     .adc_dly_o                  (adc_dly),          // adcdly in 10ns ticks
+    .vga_higain_o               (vga_higain),       // default is 1, high gain mode
+    .vga_dacctla_o              (vga_dacctla),      // DAC control A bit, normally 0
 
     // pattern opcodes are saved in pattern RAM.
     .ptn_wen_o                  (ptn_wen),          // opcode processor saves pattern opcodes to pattern RAM 
@@ -1486,7 +1493,7 @@ end
  
   assign ACTIVE_LEDn = RF_GATE ? count2[24]: count2[26];
 
-  assign ADCTRIG = trig_config[11] ? pls_adctrig : ptn_adctrig; 
+  assign ADCTRIG = trig_config[11] ? RF_GATE : ptn_adctrig; //pls_adctrig : ptn_adctrig; 
   assign TRIG_OUT = trig_config[10] ? ADCTRIG : 1'b0;
  
   assign FPGA_MCU4 = CONV;      // DDS_MOSI; //MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.

@@ -258,45 +258,45 @@ module pulse #(parameter FILL_BITS = 4)
         end
     end    
 
-    // trig_out logic
-    reg  [31:0]     trig_out_delay;
-    reg  [9:0]      trig_out_width;     // room for 1024, 1000 10ns ticks => 10us    
-    reg             rf_gaten;
-    reg             run_trigger;
+    // trig_out logic, just follow RF_GATE
+//    reg  [31:0]     trig_out_delay;
+//    reg  [9:0]      trig_out_width;     // room for 1024, 1000 10ns ticks => 10us    
+//    reg             rf_gaten;
+//    reg             run_trigger;
     always @(posedge sys_clk) begin
         if(!sys_rst_n) begin
             trig_out <= 1'b0;
-            trig_out_delay <= 32'h0000_0000;
-            trig_out_width <= 10'd0;
-            rf_gaten <= 1'b0;
-            run_trigger <= 1'b0;
+//            trig_out_delay <= 32'h0000_0000;
+//            trig_out_width <= 10'd0;
+//            rf_gaten <= 1'b0;
+//            run_trigger <= 1'b0;
         end
-        else begin
-            rf_gaten <= rf_gate;
-            if(rf_gate && !rf_gaten) begin
-                trig_out_delay <= adc_dly_i;
-                run_trigger <= 1'b1;
-            end
+//        else begin
+//            rf_gaten <= rf_gate;
+//            if(rf_gate && !rf_gaten) begin
+//                trig_out_delay <= adc_dly_i;
+//                run_trigger <= 1'b1;
+//            end
             
-            if(run_trigger) begin
-                if(trig_out) begin
-                    if(trig_out_width == 10'h00) begin
-                        trig_out <= 1'b0;
-                        run_trigger <= 1'b0;
-                    end
-                    else
-                        trig_out_width <= trig_out_width - 10'd1;
-                end
-                else begin                
-                    if(trig_out_delay == 32'h0000_0000) begin
-                        trig_out <= 1'b1;
-                        trig_out_width <= 10'd1000;    // use 10us trigger pulse                
-                    end
-                    else              
-                        trig_out_delay <= trig_out_delay - 32'h0000_0001;
-                end
-            end 
-        end
+//            if(run_trigger) begin
+//                if(trig_out) begin
+//                    if(trig_out_width == 10'h00) begin
+//                        trig_out <= 1'b0;
+//                        run_trigger <= 1'b0;
+//                    end
+//                    else
+//                        trig_out_width <= trig_out_width - 10'd1;
+//                end
+//                else begin                
+//                    if(trig_out_delay == 32'h0000_0000) begin
+//                        trig_out <= 1'b1;
+//                        trig_out_width <= 10'd1000;    // use 10us trigger pulse                
+//                    end
+//                    else              
+//                        trig_out_delay <= trig_out_delay - 32'h0000_0001;
+//                end
+//            end 
+//        end
     end
 
 endmodule
