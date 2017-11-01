@@ -1478,7 +1478,7 @@ end
    
   wire dbg_zmonen;
   assign dbg_zmonen = ((dbg_enables & BIT_ZMON_EN) == BIT_ZMON_EN);
-  assign ZMON_EN = 1'b0; //dbg_spi_mode ? dbg_zmonen : config_word[2];
+  assign ZMON_EN = dbg_spi_mode ? dbg_zmonen : config_word[2];
   
   assign dbg_sys_rst_i = 1'b0; //dbg_enables & BIT_TEMP_SYS_RST ? 1'b1 : 1'b0;
 
