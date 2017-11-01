@@ -403,7 +403,7 @@ wire         pls_fifo_mt;             // pulse fifo empty flag
 wire         pls_fifo_full;           // pulse fifo full flag
 wire [7:0]   pls_status;              // pulse processor status
 wire [`PROCESSOR_FIFO_FILL_BITS-1:0]   pls_fifo_count;
-wire         pls_zmonen;              // from pulse processor to ZMON_EN
+//wire         zmon_en;                 // from opcode CONFIG d2 to ZMON_EN
 wire         pls_rfgate;              // from pulse processor to RF_GATE
 wire         pls_rfgate2;             // Initial release, always ON. from pulse processor to RF_GATE2
 
@@ -482,12 +482,13 @@ wire         dds_synth_doInit;      // Init SYN when DDS init has completed
 wire         dds_synth_initing;     // SYN initializing
 
 // Don't need this delay...ADC delay betwixt RF_GATE & TRIG_OUT/ADCTRIG in 10 ns ticks
-wire [31:0]  adc_dly;               // default is 50us in 10ns ticks, set from opcode processor
+//wire [31:0]  adc_dly;               // default is 50us in 10ns ticks, set from opcode processor
 wire [31:0]  trig_config;           // true if we're the trigger source
 wire         adctrig;               // trigger on pattern start by default, or pulse
 wire         ptn_adctrig;           // default: trigger at start of pattern
-wire         vga_higain;            // VGA gain mode, default=1, high gain mode
-wire         vga_dacctla;            // DAC control bit, default=0 = Fix A, control B. 1=control A&B
+wire [31:0]  config_word;           // various config bits, default 0x00000001, VGA dac higain mode, ctl only dac B, ZMonEn off
+//wire         vga_higain;            // VGA gain mode, default=1, high gain mode
+//wire         vga_dacctla;            // DAC control bit, default=0 = Fix A, control B. 1=control A&B
 
 //------------------------------------------------------------------------
 // Start of logic
@@ -984,8 +985,8 @@ end
     .pwr_fifo_mt_i      (pwr_fifo_mt),          // power fifo empty flag
     .pwr_fifo_count_i   (pwr_fifo_count),       // power fifo count
     
-    .vga_higain_i       (vga_higain),           // default to 1, hi gain mode
-    .vga_dacctla_i      (vga_dacctla),          // DAC control bit. Normally fix A, control dac B
+    .vga_higain_i       (config_word[0]),       // default to 1, hi gain mode
+    .vga_dacctla_i      (config_word[1]),       // DAC control bit. Normally fix A, control dac B
 
     .VGA_MOSI_o         (pwr_mosi),
     .VGA_SCLK_o         (pwr_sclk),
@@ -1022,7 +1023,7 @@ end
     .rf_gate2_o         (pls_rfgate2),          // RF_GATE2 line
     .dbg_rf_gate_i      (dbg_opc_rfgate),       // Debug mode assert RF_GATE lines
 
-    .zmon_en_o          (pls_zmonen),           // Enable ZMON
+    //.zmon_en_o          (pls_zmonen),           // Enable ZMON  controlled by opcode
     .conv_o             (CONV),                 // CONV pulse
     .adc_sclk_o         (ADC_SCLK),             // ZMON SCK
     .adcf_sdo_i         (ADCF_SDO),             // FWD SDO
@@ -1124,9 +1125,10 @@ end
     .bias_enable_o              (bias_en),          // bias control
 
     .trig_conf_o                (trig_config),      // triger config word
-    .adc_dly_o                  (adc_dly),          // adcdly in 10ns ticks
-    .vga_higain_o               (vga_higain),       // default is 1, high gain mode
-    .vga_dacctla_o              (vga_dacctla),      // DAC control A bit, normally 0
+    //.adc_dly_o                  (adc_dly),          // adcdly in 10ns ticks
+    .config_o                   (config_word),      // various config bits from CONFIG opcode
+    //.vga_higain_o               (vga_higain),       // default is 1, high gain mode
+    //.vga_dacctla_o              (vga_dacctla),      // DAC control A bit, normally 0
 
     // pattern opcodes are saved in pattern RAM.
     .ptn_wen_o                  (ptn_wen),          // opcode processor saves pattern opcodes to pattern RAM 
@@ -1476,7 +1478,7 @@ end
    
   wire dbg_zmonen;
   assign dbg_zmonen = ((dbg_enables & BIT_ZMON_EN) == BIT_ZMON_EN);
-  assign ZMON_EN = dbg_spi_mode ? dbg_zmonen : pls_zmonen;
+  assign ZMON_EN = 1'b0; //dbg_spi_mode ? dbg_zmonen : config_word[2];
   
   assign dbg_sys_rst_i = 1'b0; //dbg_enables & BIT_TEMP_SYS_RST ? 1'b1 : 1'b0;
 

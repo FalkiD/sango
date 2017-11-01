@@ -111,9 +111,10 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     output reg         bias_enable_o,             // bias control
 
     output wire [31:0] trig_conf_o,               // trig_configuration word
-    output wire [31:0] adc_dly_o,                 // adcdly in 10ns ticks
-    output reg         vga_higain_o,              // default=1, high gain mode. CONFIG opc can set it
-    output reg         vga_dacctla_o,             // DAC control bit. Normally fix A, control dac B
+    //output wire [31:0] adc_dly_o,                 // adcdly in 10ns ticks
+    output reg  [31:0] config_o,                  // various configuration bits, CONFIG opcode
+//    output reg         vga_higain_o,              // default=1, high gain mode. CONFIG opc can set it
+//    output reg         vga_dacctla_o,             // DAC control bit. Normally fix A, control dac B
 
     // pattern opcodes are saved in pattern RAM.
     output reg                      ptn_wen_o,    // opcode processor saves pattern opcodes to pattern RAM 
@@ -189,7 +190,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     localparam TICKS_PER_MS   = 18'd100000;
     reg  [8:0]   trig_ms;            // continuous trigger millisecond counter
     reg  [17:0]  trig_counter = 18'd0; // 100,000 ticks per millisecond, 18 bits
-    reg  [31:0]  adc_dly = 5000;     // default is 50us in 10ns ticks
+    //reg  [31:0]  adc_dly = 5000;     // default is 50us in 10ns ticks
 
     reg  [15:0]  sync_conf;          // sync configuration, from sync_conf opcode
     
@@ -467,7 +468,9 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     uinttmp <= 64'h0000_0000_0000_0000;
                     length <= {1'b0, fifo_dat_i};
                     // **** 02-Aug if 0 length then turn OFF read NOW
-                    if({1'b0, fifo_dat_i} > (fifo_rd_count_i-1) || fifo_dat_i == 8'h00)
+                    // 01-Nov added '=' to '<', if not enough to continue
+                    // must turn OFF now to avoid missing next byte
+                    if({1'b0, fifo_dat_i} >= (fifo_rd_count_i-1) || fifo_dat_i == 8'h00)
                         fifo_rd_en_o <= 0;                    // must turn OFF REN 1 clock early
                     state <= `STATE_LENGTH;   // Part 1 of length, get length msb & get opcode next
                 end
@@ -625,9 +628,10 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             case(opcode)
             `CONFIG: begin
                 // byte 2, d0=1 for VGA high gain mode, 0 for default low gain mode
-                adc_dly <= {16'd0, uinttmp[15:0]};
-                vga_higain_o <= uinttmp[16];
-                vga_dacctla_o <= uinttmp[17];          // d1, DAC control A bit. Normally fix A, control dac B
+                //adc_dly <= {16'd0, uinttmp[15:0]};
+                config_o <= uinttmp[31:0];              // various config bits
+                //vga_higain_o <= uinttmp[16];
+                //vga_dacctla_o <= uinttmp[17];          // d1, DAC control A bit. Normally fix A, control dac B
                 next_opcode();   
             end
             `STATUS:  begin
@@ -879,6 +883,18 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 ptn_clk <= uinttmp[23:0];
                 next_opcode();   
             end
+            `PTN_BRANCH: begin
+                if(operating_mode == `PTNCMD_LOAD) begin  // Write pattern mode
+                // save opcode in pattern RAM
+                    // 12 bytes, 3 bytes patclk tick, 1 byte opcode, 8 bytes for opcode data (uinttmp)
+                    ptn_data_reg <= {ptn_clk, 1'b0, opcode, uinttmp};
+                    ptn_wen_o <= 1'b1; 
+                    state <= `STATE_WR_PTN;
+                end
+                else
+                    // pattern processor handles PTN_BRANCH, opcode processor does nothing in run mod
+                    next_opcode();                     
+            end
             `PTN_PATCTL: begin
                 case(uinttmp[7:0])
                 `PTN_END: begin                   // end of pattern writing or running
@@ -894,17 +910,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                         stop_pattern();
                         next_opcode(); 
                     end
-                end
-                `PTN_BRANCH: begin                   // end of pattern writing or running
-                    if(operating_mode == `PTNCMD_LOAD) begin  // Write pattern mode, end of pattern
-                    // save opcode in pattern RAM
-                        // 12 bytes, 3 bytes patclk tick, 1 byte opcode, 8 bytes for opcode data (uinttmp)
-                        ptn_data_reg <= {ptn_clk, 1'b0, opcode, uinttmp};
-                        ptn_wen_o <= 1'b1; 
-                        state <= `STATE_WR_PTN;
-                    end
-                    else
-                        next_opcode();                     
                 end
                 `PTN_RUN: begin
                     ptn_addr <= uinttmp[31:16]; // save for ccontinuous trigger mode
@@ -1133,9 +1138,10 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         zm_rq_gain <= 32'h0001_0000;      // zmon refl "Q" ADC gain, Q15.16 float
         zm_rq_offset <= 16'd0;            // zmon refl "Q" ADC offset, signed int
         
-        adc_dly <= 5000;                  // default is 50us in 10ns ticks
-        vga_higain_o <= 1'b1;             // default high gain mode
-        vga_dacctla_o <= 1'b0;            // default fix A, control dac B only
+        //adc_dly <= 5000;                  // default is 50us in 10ns ticks
+        config_o <= 32'h0000_0001;        // defauly VGA hi gain mode, control only VGA DAC B, ZMonEn OFF
+        //vga_higain_o <= 1'b1;             // default high gain mode
+        //vga_dacctla_o <= 1'b0;            // default fix A, control dac B only
     end
     endtask
 
@@ -1203,6 +1209,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     assign ptn_addr_o           = ptn_addr;
     assign pwr_caldata_o        = pwr_caldata;
     assign trig_conf_o          = trig_conf;
-    assign adc_dly_o            = adc_dly;
+    //assign adc_dly_o            = adc_dly;
 
 endmodule

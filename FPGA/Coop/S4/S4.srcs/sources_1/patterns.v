@@ -63,6 +63,7 @@ module patterns #(parameter PTN_DEPTH = 65536,
   // Variables/registers:
   reg   [3:0]           init_state;
   reg   [3:0]           ptn_state;
+  reg   [15:0]          branch_count = 16'hffff;    // 0xffff means not in loop
 
   // pattern RAM registers
   wire  [RD_WIDTH-1:0]  ptn_data;                   // opcode and data payload into RAM
@@ -112,6 +113,7 @@ module patterns #(parameter PTN_DEPTH = 65536,
         ptn_state <= PTN_INIT_RAM;
         ptn_wen <= 1'b0;
         opcptn_fif_wen_o <= 1'b0;
+        branch_count <= 16'hffff;
         init_state <= INIT_IDLE;
     end
     else begin
@@ -147,13 +149,11 @@ module patterns #(parameter PTN_DEPTH = 65536,
         end
         else if(ptn_run_i) begin
             ptn_wen <= 1'b0;
-            // don't do anything unless SUCCESS or BUSY
-            //            if(ptn_addr_rd < PTN_DEPTH-1 && status_o <= `SUCCESS) begin
-            //                case(ptn_state)
             case(ptn_state)
             PTN_IDLE: begin
                 ptn_addr <= ptn_addr_i;         // init read index, absolute RAM index
                 sys_counter <= 6'd0;
+                branch_count <= 16'hffff;
                 status_o <= 8'h00;              // busy           
                 ptn_state <= PTN_SPACER;
             end
@@ -168,10 +168,29 @@ module patterns #(parameter PTN_DEPTH = 65536,
                     ptn_state <= PTN_STOP;
                 end
                 else if(ptn_data_rd[70:64] != 7'd0) begin
-                    opcptn_data_o <= ptn_data_rd;
-                    opcptn_fif_wen_o <= 1'b1;
-                    sys_counter <= sys_counter + 6'd1;
-                    ptn_state <= PTN_OPCODE_GO;
+                    // if pat_branch, adjust counter & get opcode from new address
+                    if(ptn_data_rd[70:64] == `PTN_BRANCH) begin
+                        if(branch_count == 16'h0000) begin
+                            branch_count <= 16'hffff;           // reset
+                            sys_counter <= sys_counter + 6'd1;
+                            ptn_state <= PTN_OPCODE_GO;  // don't do anything
+                        end
+                        else begin
+                            if(branch_count == 16'hffff)
+                                // starting loop
+                                branch_count <= ptn_data_rd[31:16];                         
+                            else
+                                branch_count <= branch_count - 16'h0001;                                                    
+                            ptn_addr <= ptn_data_rd[15:0] + ptn_addr_i;
+                            ptn_state <= PTN_SPACER; // immediately start next opcode, 1 clock late
+                        end                        
+                    end
+                    else begin
+                        opcptn_data_o <= ptn_data_rd;
+                        opcptn_fif_wen_o <= 1'b1;
+                        sys_counter <= sys_counter + 6'd1;
+                        ptn_state <= PTN_OPCODE_GO;
+                    end
                 end
                 else begin
                     sys_counter <= sys_counter + 6'd1;
@@ -223,14 +242,12 @@ module patterns #(parameter PTN_DEPTH = 65536,
   // trigger at start of pattern
   reg             trig_out;
   // trig_out logic
-  //reg  [31:0]     trig_out_delay;
   reg  [9:0]      trig_out_width;     // room for 1024, 1000 10ns ticks => 10us    
   reg             ptn_runn;
   reg             run_trigger;
   always @(posedge sys_clk) begin
       if(!sys_rst_n) begin
           trig_out <= 1'b0;
-          //trig_out_delay <= 32'h0000_0000;
           trig_out_width <= 10'd0;
           ptn_runn <= 1'b0;
           run_trigger <= 1'b0;
@@ -238,7 +255,6 @@ module patterns #(parameter PTN_DEPTH = 65536,
       else begin
           ptn_runn <= ptn_run_i;
           if(ptn_run_i && !ptn_runn) begin
-              //trig_out_delay <= adc_dly_i;
               run_trigger <= 1'b1;
           end
             
@@ -252,12 +268,8 @@ module patterns #(parameter PTN_DEPTH = 65536,
                       trig_out_width <= trig_out_width - 10'd1;
               end
               else begin                
-                  //if(trig_out_delay == 32'h0000_0000) begin
                   trig_out <= 1'b1;
                   trig_out_width <= 10'd1000;    // use 10us trigger pulse                
-                  //end
-                  //else              
-                  //    trig_out_delay <= trig_out_delay - 32'h0000_0001;
               end
           end 
       end

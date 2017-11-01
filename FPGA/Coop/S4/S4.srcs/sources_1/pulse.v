@@ -42,7 +42,7 @@ module pulse #(parameter FILL_BITS = 4)
     output wire         rf_gate2_o,         // RF_GATE2 line, initial release always ON
     input  wire         dbg_rf_gate_i,      // Debug mode assert RF_GATE lines
 
-    output wire         zmon_en_o,          // Enable ZMON
+    // controlled by opcode output wire         zmon_en_o,          // Enable ZMON
     output wire         conv_o,             // CONV pulse
     output wire         adc_sclk_o,         // ZMON SCK
     input  wire         adcf_sdo_i,         // FWD SDO
@@ -72,14 +72,14 @@ module pulse #(parameter FILL_BITS = 4)
 
     reg             rf_gate;
     reg             rf_gate2;
-    reg             zmon_en;
+    //reg             zmon_en;
     reg             conv;
     reg             adc_sclk;
 
     // connect external wires
     assign rf_gate_o = dbg_rf_gate_i ? 1'b1 : rf_gate;
     assign rf_gate2_o = dbg_rf_gate_i ? 1'b1 : rf_gate2;
-    assign zmon_en_o = zmon_en;
+    //assign zmon_en_o = zmon_en;
     assign adc_sclk_o = adc_sclk;
     assign conv_o = conv;
 
@@ -174,7 +174,7 @@ module pulse #(parameter FILL_BITS = 4)
             rf_gate <= 1'b0;
             rf_gate2 <= 1'b1;       // Initial release this is always ON
             conv <= 1'b0;
-            zmon_en <= 1'b0;
+            //zmon_en <= 1'b0;
             status_o <= `SUCCESS;
         end
         else if(pulse_en == 1'b1) begin
@@ -190,7 +190,7 @@ module pulse #(parameter FILL_BITS = 4)
                     rf_gate <= 1'b0;
                     rf_gate2 <= 1'b1;           // Initial release, always ON
                     conv <= 1'b0;
-                    zmon_en <= 1'b0;
+                    //zmon_en <= 1'b0;
                     if(status_o == 8'h00)
                         status_o <= `SUCCESS;
                 end
@@ -209,7 +209,7 @@ module pulse #(parameter FILL_BITS = 4)
                 pls_fifo_ren_o <= 0;
                 rf_gate <= pulse_en & rf_enable_i;   // on
                 //rf_gate2 <= pulse_en & rf_enable_i;
-                zmon_en <= 1'b1;
+                //zmon_en <= 1'b1;
                 if(pls_fifo_dat_i[32] == 1'b1 &&
                     pls_fifo_dat_i[63:39] - 24'h00_0000_0001 == 0)
                     conv <= 1'b1;   // measure at tick 0
