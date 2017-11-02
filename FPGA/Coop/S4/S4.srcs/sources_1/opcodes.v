@@ -286,7 +286,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             end
 
             // Handle triggering options, continuous mode mostly
-            if(trig_conf[12] == 1'b1 && trig_conf[0] == 1'b1) begin
+            if(trig_conf[12] == 1'b1 && trig_conf[8] == 1'b1) begin
                 if(trig_ms >= trig_conf[23:16]) begin
                     // run pattern, reset counters
                     start_pattern(ptn_addr);
@@ -628,10 +628,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             case(opcode)
             `CONFIG: begin
                 // byte 2, d0=1 for VGA high gain mode, 0 for default low gain mode
-                //adc_dly <= {16'd0, uinttmp[15:0]};
                 config_o <= uinttmp[31:0];              // various config bits
-                //vga_higain_o <= uinttmp[16];
-                //vga_dacctla_o <= uinttmp[17];          // d1, DAC control A bit. Normally fix A, control dac B
                 next_opcode();   
             end
             `STATUS:  begin

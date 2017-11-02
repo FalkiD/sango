@@ -176,14 +176,14 @@
 // ********************************************************************************************
 // ** Note ** To use Synthesizer clock its pins must be un-commented in the contraints file  **
 // ********************************************************************************************
-`define USE_FPGA_MCLK   1             // Use MCU clock, 102MHz
-`define GLBL_CLK_FREQ   102000000.0   //100000000.0  //  "       "        "      "
-// When using FPGA_MCLK: `define GLBL_CLK_FREQ 102000000.0
+`define USE_FPGA_MCLK   1             // Use MCU clock, 100MHz
+`define GLBL_CLK_FREQ   100000000.0  //  "       "        "      "
+// When using FPGA_MCLK: `define GLBL_CLK_FREQ 100000000.0
+// (fixed so MCU generated FPGA clk is 100MHz)
 //`define CLKFB_FACTOR_BRD 10.000        //  "       "        "      "
-//`define CLKFB_FACTOR_MCU 9.800         //  "       "        "      "
+//`define CLKFB_FACTOR_MCU 10.000         //  "       "        "      "
 `define GLBL_MMC_FILL_LEVEL         2048
 `define GLBL_MMC_FILL_LEVEL_BITS    11
-//`define PWR_FIFO_FILL_BITS          4
 
 `define PATTERN_DEPTH               8192
 `define PATTERN_FILL_BITS           13
@@ -481,8 +481,6 @@ wire         dds_synth_mute_n;      // DDS processor muting SYN
 wire         dds_synth_doInit;      // Init SYN when DDS init has completed
 wire         dds_synth_initing;     // SYN initializing
 
-// Don't need this delay...ADC delay betwixt RF_GATE & TRIG_OUT/ADCTRIG in 10 ns ticks
-//wire [31:0]  adc_dly;               // default is 50us in 10ns ticks, set from opcode processor
 wire [31:0]  trig_config;           // true if we're the trigger source
 wire         adctrig;               // trigger on pattern start by default, or pulse
 wire         ptn_adctrig;           // default: trigger at start of pattern
@@ -1125,7 +1123,6 @@ end
     .bias_enable_o              (bias_en),          // bias control
 
     .trig_conf_o                (trig_config),      // triger config word
-    //.adc_dly_o                  (adc_dly),          // adcdly in 10ns ticks
     .config_o                   (config_word),      // various config bits from CONFIG opcode
     //.vga_higain_o               (vga_higain),       // default is 1, high gain mode
     //.vga_dacctla_o              (vga_dacctla),      // DAC control A bit, normally 0
@@ -1239,6 +1236,36 @@ end
       .dbg3_o                       ()                       // syn_initing
     );
 
+
+  // Manage the blue ACTIVE_LEDn signal.
+  // ON when a pattern is running for at least 50 or 100ms so a user can see it.
+  // Blinking(25ms) every 2 seconds when a pattern is ready to be run but not running.
+  localparam    COUNTER_100MS   = 32'd10000000;     
+  localparam    COUNTER_50MS    = 32'd5000000;      // 5e6 * 10e-9 ==> 50e-3
+  localparam    COUNTER_25MS    = 32'd2500000;
+  reg           ptn_runn;
+  reg           active_led;
+  reg  [31:0]   led_counter;
+  always @(posedge sys_clk) begin
+      if(sys_rst_n == 1'b0) begin
+        active_led <= 1'b1;
+        led_counter <= 32'd0;
+      end
+      else begin
+        ptn_runn <= ptn_busy;
+        if(ptn_busy && !ptn_runn) begin
+            // rising edge of ptn_busy
+            active_led <= 1'b0;
+            led_counter <= COUNTER_50MS;        
+        end
+        else if(!active_led) begin
+            led_counter <= led_counter - 32'd1;        
+        end
+        
+        if(led_counter == 32'd0)
+            active_led <= 1'b1;                
+      end
+  end
 
 // ******************************************************************************
 // * RMR Debug SPI                                                              *
@@ -1489,7 +1516,8 @@ end
   // Debugging, assert RF_GATE lines based on MODE opcode & RF_GATE bit
   assign dbg_opc_rfgate = ((sys_mode[15:0] & BIT_RF_GATE) == BIT_RF_GATE);
  
-  assign ACTIVE_LEDn = RF_GATE ? count2[24]: count2[26];
+  //assign ACTIVE_LEDn = RF_GATE ? count2[24]: count2[26];
+  assign ACTIVE_LEDn = active_led;
 
   assign ADCTRIG = trig_config[11] ? RF_GATE : ptn_adctrig; 
   assign TRIG_OUT = trig_config[10] ? ADCTRIG : 1'b0;
