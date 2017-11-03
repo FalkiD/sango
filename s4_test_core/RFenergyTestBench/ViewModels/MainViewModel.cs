@@ -137,6 +137,8 @@ namespace RFenergyUI.ViewModels
                     ICmd = (ICommands)mod;
                     ICmd.ShowMessage += new MessageCallback(ShowMessage);
                     //IOpcodes = (IOpcodes)mod;
+                    IMeter = new ExternalMeter();
+                    IMeter.ShowMessage += new MessageCallback(ShowMessage);
                 }
                 else if (SelectedSystem.SystemName == "MMC/FPGA")
                 {

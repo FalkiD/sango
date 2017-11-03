@@ -171,6 +171,13 @@ namespace RFenergyUI.ViewModels
             if(SkipCollectData)
                 RestoreCalResults(ResultsFile, wrk);
 
+            if (SetupForCal(0xc80, ref result) != 0)
+            {
+                wrk.ReportProgress(0, result);
+                wrk.ReportProgress(0, "Calibration aborted");
+                return;
+            }
+
             SetDutyCycleCompensation(false);
 
             try
@@ -178,7 +185,7 @@ namespace RFenergyUI.ViewModels
                 bool inCompression = false;
                 double dBmTarget = TargetStart;
                 double tolerance = 0.05;
-                int MAX_ITERATIONS = 20;
+                int MAX_ITERATIONS = 40;
                 int MIN_ADJUST = 1;
                 double MAX_DBMOUT = 62.0;
                 double MAX_POWER = -1.0;    // keep track of max
@@ -359,8 +366,10 @@ namespace RFenergyUI.ViewModels
                     }
                     nextValue += stepsize;
                 }
-                ResetPower();
-                if(inCompression || SkipCollectData)
+                result = ResetPower();
+                if(result.Length > 0)
+                    wrk.ReportProgress(0, result);
+                if (inCompression || SkipCollectData)
                 {
                     if(UpdatePowerTable)
                         UpdateCalData(fout, wrk);
@@ -967,6 +976,58 @@ namespace RFenergyUI.ViewModels
 
         // private funcs
 
+        /// <summary>
+        /// For S4:
+        /// Fix DAC A at the passed in value.
+        /// Set to adjust only DAC B
+        /// </summary>
+        /// <param name="dacAValue"></param>
+        int SetupForCal(ushort dacAValue, ref string result)
+        {
+            int status = 0;
+            result = "";
+            if (MainViewModel.ICmd.HwType == InstrumentInfo.InstrumentType.S4)
+            {
+                System.Threading.Thread.Sleep(150);
+                string rsp = "";
+                if ((status = MainViewModel.ICmd.RunCmd("fw 12 3 0 0 0\n", ref rsp)) != 0)
+                    result = "Error setting S4 VGA DAC mode:" + rsp;
+                else
+                {
+                    System.Threading.Thread.Sleep(150);
+                    if ((status = MainViewModel.ICmd.RunCmd(string.Format("calpwr 0x17{0:x3}0\n", dacAValue), ref rsp)) != 0)
+                        result = "Error setting S4 VGA DAC's:" + rsp;
+                    else
+                    {
+                        System.Threading.Thread.Sleep(150);
+                        if ((status = MainViewModel.ICmd.RunCmd("fw 12 1 0 0 0\n", ref rsp)) != 0)
+                            result = "Error setting S4 VGA DAC mode to B only:" + rsp;
+                        else
+                        {
+                            System.Threading.Thread.Sleep(150);
+                            if ((status = MainViewModel.ICmd.RunCmd("fw 6 1 1\n", ref rsp)) != 0)
+                                result = "Error turning S4 BIAS ON:" + rsp;
+                            else
+                            {
+                                System.Threading.Thread.Sleep(150);
+                                if ((status = MainViewModel.ICmd.RunCmd("loadpat cal100us.ptf 100\n", ref rsp)) != 0)
+                                    result = "Error loading calibration pattern:" + rsp;
+                                else
+                                {
+                                    System.Threading.Thread.Sleep(150);
+                                    if ((status = MainViewModel.ICmd.RunCmd("trig ctrl 0x95 10\n", ref rsp)) != 0)
+                                        result = "Error loading calibration pattern:" + rsp;
+                                    else
+                                        result = "S4 ready for power calibration";
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return status;
+        }
+
         void NextCouplerReading(out double fwd, out double refl)
         {
             System.Threading.Thread.Sleep(1000);    // correct coupler reading until fw fix
@@ -1070,8 +1131,8 @@ namespace RFenergyUI.ViewModels
         {
             try
             {
-                System.Threading.Thread.Sleep(50);
-                return dBmTarget - 0.01;
+                //System.Threading.Thread.Sleep(50);
+                //return dBmTarget - 0.01;
                 if (MainViewModel.TestPanel.DutyCycle == 100)
                     return MainViewModel.IMeter.ReadCw(false);
                 else
@@ -1166,9 +1227,19 @@ namespace RFenergyUI.ViewModels
             return status;
         }
 
-        void ResetPower()
+        string ResetPower()
         {
             SetCalPower(PowerStart);
+
+            string result = "";
+            if (MainViewModel.ICmd.HwType == InstrumentInfo.InstrumentType.S4)
+            {
+                System.Threading.Thread.Sleep(150);
+                string rsp = "";
+                if (MainViewModel.ICmd.RunCmd("fw 6 1 0\n", ref rsp) != 0)
+                    result = "Error turning S4 BIAS OFF:" + rsp;
+            }
+            return result;
         }
 
         // props

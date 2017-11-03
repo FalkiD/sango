@@ -466,22 +466,23 @@ namespace S4TestModule
 
         ushort dacFromDB(double db)
         {
-            // dB is relative to dac 0x80(128) (from M2 anyway)
+            // for S4, dB is relative to dac 0x10(16)
             // S4 uses attenuation control, so 4095-value gets sent to dac
             double value = db / 20.0;
             value = Math.Pow(10.0, value);
-            value = value * 128.0 + 0.5;
+            value = value * 16.0 + 0.5;
             return (value > 4095) ? (ushort)0 : (ushort)(4095 - (int)value);
         }
 
         public override int SetCalPower(double db)
         {
             // Convert dB into dac value & send it
+            // DAC A is fixed, driving DAC B only
             ushort vmag = dacFromDB(db);
             //string cmd = string.Format("fw 0xe 0x{0:x} 0x{1:x} 0x17 0\n", (vmag&0xf)<<4, (vmag&0xff0)>>4);
-            string cmd = string.Format("calpwr 0x0017{0:x2}{1:x2}\n", (vmag & 0xff0) >> 4, (vmag & 0xf) << 4);
+            string cmd = string.Format("calpwr 0x0011{0:x2}{1:x2}\n", (vmag & 0xff0) >> 4, (vmag & 0xf) << 4);
             string rsp = "";
-            WriteMessage(string.Format("dB:{0:f2}, {1}", db, cmd));
+            //WriteMessage(string.Format("dB:{0:f2}, {1}", db, cmd));
             return RunCmd(cmd, ref rsp);
         }
 
@@ -509,6 +510,11 @@ namespace S4TestModule
             if (results.Count > HALF_DB_CAL_POINTS)
                 throw new ApplicationException(string.Format("Too many cal points({0}), maximum is {1}", 
                                                                 results.Count, HALF_DB_CAL_POINTS));
+
+            // 01-Nov-2017 update, fw command line is only 256 bytes,
+            // break up calpwtbl write into 6 pieces.
+            // calpwtbl has 5 45 element records & 1 26 element record
+            // calpwtbl rec# freq mode value0 value1 value2...value44
 
             string cmd = "calpwtbl";
             string freq;
