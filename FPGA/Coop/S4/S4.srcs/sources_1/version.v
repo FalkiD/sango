@@ -38,7 +38,7 @@
 // Revision 1.00.D  08/04/2017 JLC SYN SPI Init for LTC6946.
 // Revision 1.00.E  08/04/2017 JLC SYN SPI Init for LTC6946 resequenced to wait for DDS init.
 // Revision 1.00.F  11/01/2017 RMR STATUS returns VERSION, ZMON_EN, Dac gain/ctrl on CONFIG opcode.
-// Revision 1.01.0  11/01/2017 RMR 
+// Revision 1.01.0  11/01/2017 RMR ActiveLed fixes. STATUS returns correct last opcode run.
 //
 //------------------------------------------------------------------------------
 

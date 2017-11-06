@@ -547,7 +547,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                         reset_opcode_processor();
                     end
                     else begin
-                        dbg_opcodes_o[7:0] <= {1'b0, opcode};
+                        if(opcode > `STATUS)    // STATUS opc always shows STATUS as last otherwise...
+                            dbg_opcodes_o[7:0] <= {1'b0, opcode};
                       // Reset response already sent flag
                         blk_rsp_done <= 1'b0;   // flag, response is required
                         // Gather opcode data payload, then run it
@@ -628,7 +629,10 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             case(opcode)
             `CONFIG: begin
                 // byte 2, d0=1 for VGA high gain mode, 0 for default low gain mode
+                //adc_dly <= {16'd0, uinttmp[15:0]};
                 config_o <= uinttmp[31:0];              // various config bits
+                //vga_higain_o <= uinttmp[16];
+                //vga_dacctla_o <= uinttmp[17];          // d1, DAC control A bit. Normally fix A, control dac B
                 next_opcode();   
             end
             `STATUS:  begin

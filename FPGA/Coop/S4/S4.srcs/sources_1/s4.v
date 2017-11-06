@@ -302,8 +302,6 @@ wire         dbg_sys_rst_i;
 reg  [9:0]   dbg_sys_rst_sr   = 0; //10'b0;
 reg          dbg_sys_rst_n    = 1'b1;
 
-reg  [26:0]  count2;
-
 wire         sys_clk;
 wire         sys_rst_n;
 // initialize hw after a reset
@@ -403,7 +401,6 @@ wire         pls_fifo_mt;             // pulse fifo empty flag
 wire         pls_fifo_full;           // pulse fifo full flag
 wire [7:0]   pls_status;              // pulse processor status
 wire [`PROCESSOR_FIFO_FILL_BITS-1:0]   pls_fifo_count;
-//wire         zmon_en;                 // from opcode CONFIG d2 to ZMON_EN
 wire         pls_rfgate;              // from pulse processor to RF_GATE
 wire         pls_rfgate2;             // Initial release, always ON. from pulse processor to RF_GATE2
 
@@ -424,7 +421,6 @@ wire                            ptn_wen;         // opcode processor saves patte
 wire [`PATTERN_FILL_BITS-1:0]   ptn_addr;        // address
 wire [23:0]                     ptn_clk;         // patclk, pattern tick, tick=100ns
 wire [`PATTERN_WR_WORD-1:0]     ptn_data;        // 12 bytes, 3 bytes patClk tick, 9 bytes for opcode, length, and data   
-//wire [`PATTERN_RD_WORD-1:0]     ptn_next;        // Next pattern opcode to execute, 0 if nothing to do, 9 bytes, opcode and 8 bytes data   
 wire                            ptn_run;         // Run pattern processor 
 wire [`PATTERN_FILL_BITS-1:0]   ptn_index;       // address of pattern entry to run (for status) 
 wire [7:0]                      ptn_status;      // status from pattern processor 
@@ -485,8 +481,6 @@ wire [31:0]  trig_config;           // true if we're the trigger source
 wire         adctrig;               // trigger on pattern start by default, or pulse
 wire         ptn_adctrig;           // default: trigger at start of pattern
 wire [31:0]  config_word;           // various config bits, default 0x00000001, VGA dac higain mode, ctl only dac B, ZMonEn off
-//wire         vga_higain;            // VGA gain mode, default=1, high gain mode
-//wire         vga_dacctla;            // DAC control bit, default=0 = Fix A, control B. 1=control A&B
 
 //------------------------------------------------------------------------
 // Start of logic
@@ -626,21 +620,6 @@ assign sys_rst_n = MCU_TRIG ? 1'b0 : dbg_sys_rst_n;
 assign opc_fifo_enable = 1'b1;
 assign opc_fifo_rst = 1'b0;
 assign opc_enable = 1'b1;
-
-// Create a "blink" counter.
-//   2^28 @ 100MHz wraps at ~4.5 seconds. Use this to indicate FPGA running
-//   2^26 @ 100MHz wraps at ~1.5 seconds.
-//   2^20 ! 100MHz wraps at ~1 ms 
-//   2^25 ! 100MHz wraps at ~32 ms 
-//   2^40 @ 100MHz wraps at ~3.05 hours.
-//
-always @(posedge sys_clk)
-  if (!sys_rst_n) begin
-    count2     <= 0;
-  end
-  else begin
-    count2     <= count2+1;
-  end
 
 // Initialize things after reset pulse
 always @(posedge sys_clk) begin
@@ -1239,11 +1218,12 @@ end
 
   // Manage the blue ACTIVE_LEDn signal.
   // ON when a pattern is running for at least 50 or 100ms so a user can see it.
-  // Blinking(25ms) every 2 seconds when a pattern is ready to be run but not running.
+  // Blinking(25ms) every 3 seconds when a pattern is ready to be run but not running.
   localparam    COUNTER_100MS   = 32'd10000000;     
   localparam    COUNTER_50MS    = 32'd5000000;      // 5e6 * 10e-9 ==> 50e-3
   localparam    COUNTER_25MS    = 32'd2500000;
   reg           ptn_runn;
+  reg           bias_enn;
   reg           active_led;
   reg  [31:0]   led_counter;
   always @(posedge sys_clk) begin
@@ -1252,9 +1232,14 @@ end
         led_counter <= 32'd0;
       end
       else begin
+      
         ptn_runn <= ptn_busy;
-        if(ptn_busy && !ptn_runn) begin
-            // rising edge of ptn_busy
+        bias_enn <= PA_BIAS_EN;
+        
+        if((ptn_busy && !ptn_runn && PA_BIAS_EN) ||
+           (PA_BIAS_EN && !bias_enn && ptn_busy)) begin
+            // rising edge of ptn_busy with BIAS ON --OR--
+            // rising edge of BIAS when ptn_busy
             active_led <= 1'b0;
             led_counter <= COUNTER_50MS;        
         end
@@ -1266,6 +1251,121 @@ end
             active_led <= 1'b1;                
       end
   end
+  
+
+
+//
+// This doesn't work either...
+// 
+//  localparam    COUNTER_3S      = 32'd300000000;     
+//  localparam    COUNTER_100MS   = 32'd10000000;     
+//  localparam    COUNTER_50MS    = 32'd5000000;      // 5e6 * 10e-9 ==> 50e-3
+//  localparam    COUNTER_25MS    = 32'd2500000;
+//  reg           ptn_runn;
+//  reg           bias_enn;  
+//  reg           active_led;
+//  reg  [31:0]   led_counter;
+//  reg  [31:0]   rdy_counter;
+//  always @(posedge sys_clk) begin
+//      if(sys_rst_n == 1'b0) begin
+//        active_led <= 1'b1;
+//        led_counter <= COUNTER_50MS;        // init as non-0    32'd0;
+//        rdy_counter <= 32'd0;
+//        ptn_runn <= 1'b0;
+//        bias_enn <= 1'b0;
+//      end
+//      else begin
+      
+//        // 1 tick signals
+//        ptn_runn <= ptn_busy;
+//        bias_enn <= PA_BIAS_EN;
+        
+//        if(ptn_busy && !ptn_runn && PA_BIAS_EN ||
+//           PA_BIAS_EN && !bias_enn && ptn_busy) begin
+//            // rising edge of ptn_busy when BIAS ON _OR_
+//            // rising edge of BIAS when ptn_busy
+//            active_led <= 1'b0;
+//            led_counter <= COUNTER_50MS;        
+//        end
+//        else if(active_led && dbg_opcodes[23:16] > 8'h0) begin
+//            // nothing happening but pattern is loaded,
+//            // blink READY every 3 seconds
+//            if(rdy_counter == 32'd0) begin
+//                active_led <= 1'b0;
+//                led_counter <= COUNTER_25MS;
+//                rdy_counter <= COUNTER_3S;
+//            end
+//            else
+//                rdy_counter <= rdy_counter - 1;               
+//        end
+//        else if(!active_led) begin
+//            led_counter <= led_counter - 32'd1;        
+//        end
+        
+//        if(led_counter == 32'd0) begin
+//            active_led <= 1'b1;
+//            rdy_counter <= COUNTER_3S;
+//        end                
+//      end
+//  end
+
+///
+/// This didn't work...
+/// No blue flash when pattern loaded
+/// Blue stayed on 30 seconds after pattern stopped running
+///
+//reg  [31:0]   rdy_counter;    // every 2 secs short blink if any patterns loaded & not running a pattern
+//reg  [31:0]   rdy_on_count;   // blink for 25ms
+//always @(posedge sys_clk) begin
+//    if(sys_rst_n == 1'b0) begin
+//      active_led <= 1'b1;
+//      led_counter <= 32'd0;
+//      rdy_counter <= 32'd0;
+//      rdy_on_count <= 32'd0;
+//    end
+//    else begin
+//      ptn_runn <= ptn_busy;
+//      bias_enn <= PA_BIAS_EN;
+      
+//      if((ptn_busy && !ptn_runn && PA_BIAS_EN) ||
+//          (PA_BIAS_EN && !bias_enn && ptn_busy)) begin
+//          // rising edge of ptn_busy with BIAS ON  _OR_
+//          // rising edge of PA_BIAS_EN with pattern running
+//          active_led <= 1'b0;
+//          led_counter <= COUNTER_50MS;        
+//      end
+//      else if(!active_led && ptn_busy && PA_BIAS_EN) begin
+//          if(led_counter == 32'd0)
+//              active_led <= 1'b1;
+//          else 
+//              led_counter <= led_counter - 32'd1;
+//      end
+         
+//      // if any patterns have been loaded do a
+//      // short blink every 2 seconds to indicate
+//      // "READY" when a pattern is not running
+//      // ptn_count register in opcode processor records how many
+//      // patterns have been loaded. Available here in: 
+//      // dbg_opcodes[23:16]
+//      if(active_led && dbg_opcodes[23:16] > 8'd0) begin
+//          if(rdy_counter == 32'd0) begin
+//              rdy_counter <= COUNTER_2S;
+//              if(rdy_on_count == 32'd0) begin
+//                  rdy_on_count <= COUNTER_25MS;
+//                  active_led <= 1'b0;                
+//              end
+//          end
+//          else
+//              rdy_counter <= rdy_counter - 32'd1;
+//      end
+//      else if(!ptn_busy && !active_led) begin
+//          rdy_on_count <= rdy_on_count - 32'd1;
+//          if(rdy_on_count == 32'd0) begin
+//              active_led <= 1'b1;                            
+//          end
+//      end
+
+
 
 // ******************************************************************************
 // * RMR Debug SPI                                                              *
@@ -1516,7 +1616,6 @@ end
   // Debugging, assert RF_GATE lines based on MODE opcode & RF_GATE bit
   assign dbg_opc_rfgate = ((sys_mode[15:0] & BIT_RF_GATE) == BIT_RF_GATE);
  
-  //assign ACTIVE_LEDn = RF_GATE ? count2[24]: count2[26];
   assign ACTIVE_LEDn = active_led;
 
   assign ADCTRIG = trig_config[11] ? RF_GATE : ptn_adctrig; 
