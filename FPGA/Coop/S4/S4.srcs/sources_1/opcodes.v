@@ -20,7 +20,10 @@
 // a response will be sent. No more  processing will be done until the
 // response fifo is empty. If no errors occur processing continues until
 // the read fifo is empty.
-// 
+//
+// History:
+//  11-Jan-2018 V1.01.1, bugfix, can't get to STATE_DATA when RD line is OFF!
+//  11-Nov-2017 Shipped first article to Imagineering, FPGA V1.01.0 
 //////////////////////////////////////////////////////////////////////////////////
 
 `include "timescale.v"
@@ -286,7 +289,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             end
 
             // Handle triggering options, continuous mode mostly
-            if(trig_conf[12] == 1'b1 && trig_conf[8] == 1'b1) begin
+            if(trig_conf[`TRGBIT_CONT] == 1'b1 && trig_conf[`TRGBIT_EN] == 1'b1) begin
                 if(trig_ms >= trig_conf[23:16]) begin
                     // run pattern, reset counters
                     start_pattern(ptn_addr);
@@ -500,7 +503,12 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                         if({fifo_dat_i[0], length[7:0]} == 0) begin
                             fifo_rd_en_o <= 0;              // don't read next byte, opcode has no data
                         end
-                        state <= `STATE_DATA;
+                        else if(fifo_rd_en_o == 1'b0) begin
+                            fifo_rd_en_o <= 1'b1;           // 11-Jan-2018 bugfix, can't get to STATE_DATA when RD line is OFF!
+                            state <= `STATE_READ_SPACER;                        
+                        end
+                        else
+                            state <= `STATE_DATA;
                     end
                 end
                 `STATE_WAIT_DATA: begin // Wait for asynch FIFO to receive all our data

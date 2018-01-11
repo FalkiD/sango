@@ -56,7 +56,7 @@ u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
 u 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
 u 1.5 ms r 4000000 8; --Read response data from host adapter RAM  
 
-d 10 ms ; -- Wait to see 25ms blink end before starting pattern
+--d 10 ms ; -- Wait to see 25ms blink end before starting pattern
 
 -- load pattern is done, run using trigger every 10ms
 -- trigconf opcode is 0x09,

@@ -39,7 +39,10 @@
 // Revision 1.00.E  08/04/2017 JLC SYN SPI Init for LTC6946 resequenced to wait for DDS init.
 // Revision 1.00.F  11/01/2017 RMR STATUS returns VERSION, ZMON_EN, Dac gain/ctrl on CONFIG opcode.
 // Revision 1.01.0  11/01/2017 RMR ActiveLed fixes. STATUS returns correct last opcode run.
+// Revision 1.01.1  12/13/2017 RMR Refactor using TRGBIT_ definitions for clarity. 
+//                                 Bugfix, STATE_LENGTH went to STATE_DATA when rd_line OFF under
+//                                 certain 'input fifo length' related conditions.
 //
 //------------------------------------------------------------------------------
 
-`define VERSION 16'h1_01_0     // V.vv.r FPGA development revision
+`define VERSION 16'h1_01_1     // V.vv.r FPGA development revision

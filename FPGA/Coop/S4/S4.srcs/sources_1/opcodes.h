@@ -88,4 +88,23 @@
 
 `define STATUS_RESPONSE_SIZE    16'd26  // 26 bytes defined initially
 
+// Trigger bit definitions, shifted left 8 due to 1st
+// byte of opcode being channel #
+`define TRIG_EN             16'h0100
+`define TRIG_EXT            16'h0200
+`define TRIG_SRC            16'h0400
+`define TRIG_RFGT           16'h0800
+`define TRIG_CONT           16'h1000
+`define TRIG_NOW            16'h2000
+`define TRIG_ABRT           16'h4000
+`define TRIG_ARM            16'h8000
+`define TRGBIT_EN           8
+`define TRGBIT_EXT          9
+`define TRGBIT_SRC          10
+`define TRGBIT_RFGT         11
+`define TRGBIT_CONT         12
+`define TRGBIT_NOW          13
+`define TRGBIT_ABRT         14
+`define TRGBIT_ARM          15
+
 `endif

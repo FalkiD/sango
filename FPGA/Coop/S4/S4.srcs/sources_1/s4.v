@@ -1618,8 +1618,8 @@ end
  
   assign ACTIVE_LEDn = active_led;
 
-  assign ADCTRIG = trig_config[11] ? RF_GATE : ptn_adctrig; 
-  assign TRIG_OUT = trig_config[10] ? ADCTRIG : 1'b0;
+  assign ADCTRIG = trig_config[`TRGBIT_RFGT] ? RF_GATE : ptn_adctrig; 
+  assign TRIG_OUT = trig_config[`TRGBIT_SRC] ? ADCTRIG : 1'bz;
  
   assign FPGA_MCU4 = CONV;      // DDS_MOSI; //MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.
   assign FPGA_MCU3 = ADC_SCLK;  // DDS_SCLK; //MMC_CMD; //count3[15];    // 200MHz div'd by 2^16.
