@@ -63,7 +63,7 @@
 
 `define ERR_PTN_FIFO_FULL       8'h30   // Pattern processor error, opcode fifo is full
 
-
+`define PTN_CLEAR_MODE          8'h40   // Pattern processor clearuing RAM section
 
 // Overall state definitions
 `define STATE_RESET             16'h0001    

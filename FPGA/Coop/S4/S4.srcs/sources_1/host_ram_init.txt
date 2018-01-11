@@ -32,8 +32,8 @@
 00000044 ; 0x22 << 1 
 00000010 ; PTN_END bit, d4
 00000000
-00000000 ; pattern starting address, not really necessary
-00000000
+0000002C ; pattern ending address, 300 ticks (0x12c). Only necessary when clearing RAM(Reset bit)
+00000001
 00000000
 00000000
 00000000

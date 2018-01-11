@@ -47,14 +47,15 @@
 `define STATE_WRITE_RESPONSE        7'h10
 `define STATE_WR_PTN                7'h11
 `define STATE_PTN_DATA2             7'h12
-//`define STATE_MEASUREMENTS          7'h13
-`define STATE_RD_MEAS1              7'h14
-`define STATE_RD_MEAS2              7'h15
-`define STATE_RD_MEAS3              7'h16
-`define STATE_RD_MEAS4              7'h17
-`define STATE_RD_MEAS5              7'h18
-`define STATE_RD_SPACER             7'h19
-`define STATE_DBG3                  7'h1a
+`define STATE_CLR_PTN1              7'h13
+`define STATE_CLR_PTN2              7'h14
+`define STATE_RD_MEAS1              7'h15
+`define STATE_RD_MEAS2              7'h16
+`define STATE_RD_MEAS3              7'h17
+`define STATE_RD_MEAS4              7'h18
+`define STATE_RD_MEAS5              7'h19
+`define STATE_RD_SPACER             7'h1a
+`define STATE_DBG3                  7'h1b
 
 /*
     Opcode block MUST be terminated by a NULL opcode
@@ -63,6 +64,7 @@
     Normal to wait for next byte.
 */
 module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
+                 parameter PCMD_BITS = 4,
                  parameter PTN_FILL_BITS = 16,
                  parameter PTN_WR_WORD = 96,
                  parameter PTN_RD_WORD = 72,
@@ -114,12 +116,10 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     output reg         bias_enable_o,             // bias control
 
     output wire [31:0] trig_conf_o,               // trig_configuration word
-    //output wire [31:0] adc_dly_o,                 // adcdly in 10ns ticks
     output reg  [31:0] config_o,                  // various configuration bits, CONFIG opcode
-//    output reg         vga_higain_o,              // default=1, high gain mode. CONFIG opc can set it
-//    output reg         vga_dacctla_o,             // DAC control bit. Normally fix A, control dac B
 
     // pattern opcodes are saved in pattern RAM.
+    output reg  [PCMD_BITS-1:0]     ptn_cmd_o,    // command/mode, used to clear sections of pattern RAM
     output reg                      ptn_wen_o,    // opcode processor saves pattern opcodes to pattern RAM 
     output wire [PTN_FILL_BITS-1:0] ptn_addr_o,   // address 
     output wire [PTN_WR_WORD-1:0]   ptn_data_o,   // 12 bytes, 3 bytes patclk tick, 9 bytes for opcode and its data   
@@ -193,7 +193,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     localparam TICKS_PER_MS   = 18'd100000;
     reg  [8:0]   trig_ms;            // continuous trigger millisecond counter
     reg  [17:0]  trig_counter = 18'd0; // 100,000 ticks per millisecond, 18 bits
-    //reg  [31:0]  adc_dly = 5000;     // default is 50us in 10ns ticks
 
     reg  [15:0]  sync_conf;          // sync configuration, from sync_conf opcode
     
@@ -589,6 +588,19 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     else
                         ptn_latch_count = ptn_latch_count - 1;
                 end
+
+                // Clearing section of pattern RAM, when done, back to idle
+                `STATE_CLR_PTN1: begin
+                    state <= `STATE_CLR_PTN2;               // 1 clock until ptn_status_i is asserted
+                end
+                `STATE_CLR_PTN2: begin
+                    if(ptn_status_i == `SUCCESS) begin      // pattern processor status, SUCCESS when done clearing RAM section
+                        ptn_cmd_o <= `OPCODE_NORMAL;
+                        ptn_data_reg <= 0;
+                        next_opcode();
+                    end
+                end
+
                 default:
                 begin
                     status_o = `ERR_INVALID_STATE;
@@ -932,9 +944,10 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 end
                 `PTN_RST: begin
                     // clear the space between pat_addr & the address specified in the arg
-                    // TBD
-
-                    next_opcode(); 
+                    // use pat_addr & ptn_data_reg, set ptn_cmd_o so pattern module clears RAM
+                    ptn_data_reg <= { 80'h0000_0000_0000_0000_0000, uinttmp[31:16] };
+                    ptn_cmd_o <= `PTNCMD_CLEAR;
+                    state <= `STATE_CLR_PTN1;
                 end
                 endcase
             end
@@ -1113,9 +1126,10 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         blk_rsp_done <= 1'b0;               // Ready
         operating_mode <= `OPCODE_NORMAL;
         ptn_addr <= 16'h0000;               // pattern address to write
-        ptn_clk <= 24'h00_0000;             // pattern clock tick to write
+        ptn_clk <= 24'h00_0000;             // pattern clock tick to write, also used to clear RAM section
         ptn_run_o <= 1'b0;                  // Stop pattern processor 
         ptn_count <= 8'h00;                 // total patadr opcodes received(debugging only)
+        ptn_cmd_o <= `OPCODE_NORMAL;        // used to clear sections of pattern RAM. Other cmds not used yet
         ptn_wen_o <= 1'b0;
         ptn_fifo_ren_o <= 1'b0;
         ptn_data_reg <= 0;                

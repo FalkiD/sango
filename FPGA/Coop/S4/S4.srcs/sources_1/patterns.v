@@ -14,6 +14,8 @@
 // Dependencies: 
 // 
 // Revision:
+// 11-Jan-2018  Clear RAM before writing new pattern data
+//
 // Revision 0.01 - File Created
 // Additional Comments:
 // 1) on reset, clear the ram using PTN_INIT_RAM
@@ -44,7 +46,7 @@ module patterns #(parameter PTN_DEPTH = 65536,
 
       // opcode processor writes into pattern RAM
       input  wire [PTN_BITS-1:0]  ptn_addr_i,         // Start of pattern address
-      input  wire [WR_WIDTH-1:0]  ptn_data_i,         // Write pattern data word from opcode processor
+      input  wire [WR_WIDTH-1:0]  ptn_data_i,         // Write pattern data word from opcode processor, also used to clear ptn RAM
       input  wire                 ptn_wen_i,          // Pattern RAM write enable
 
       // pattern processor(this instance) writes next pattern entry for opcode processor to run
@@ -53,7 +55,7 @@ module patterns #(parameter PTN_DEPTH = 65536,
       output reg                  opcptn_fif_wen_o,   // fifo write enable for next pattern entry
       input  wire                 opcptn_fif_fl_i,    // opcode processor pattern fifo full
       
-      input  wire [PCMD_BITS-1:0] ptn_cmd_i,          // Command/mode, i.e. writing pattern, run pattern, stop, etc
+      input  wire [PCMD_BITS-1:0] ptn_cmd_i,          // Command/mode, used to clear sections of pattern RAM
 
       output wire                 trig_out_o,         // generate trigger at start of pattern
 
@@ -61,9 +63,11 @@ module patterns #(parameter PTN_DEPTH = 65536,
   );
     
   // Variables/registers:
+  reg                   ptn_cmdd;                   // latch to detect rising edge only
   reg   [3:0]           init_state;
   reg   [3:0]           ptn_state;
   reg   [15:0]          branch_count = 16'hffff;    // 0xffff means not in loop
+  reg   [15:0]          end_addr;
 
   // pattern RAM registers
   wire  [RD_WIDTH-1:0]  ptn_data;                   // opcode and data payload into RAM
@@ -114,6 +118,8 @@ module patterns #(parameter PTN_DEPTH = 65536,
         ptn_wen <= 1'b0;
         opcptn_fif_wen_o <= 1'b0;
         branch_count <= 16'hffff;
+        end_addr <= PTN_DEPTH-1;
+        ptn_cmdd <= 1'b0;               // latch to detect rising edge only
         init_state <= INIT_IDLE;
     end
     else begin
@@ -122,7 +128,8 @@ module patterns #(parameter PTN_DEPTH = 65536,
             INIT_IDLE: begin
                 ptn_wen <= 1'b1;
                 ptn_addr <= 0;
-                init_state <= INIT1;         
+                init_state <= INIT1;
+                status_o <= `PTN_CLEAR_MODE;         
             end
             INIT1: begin
                 // Data is written to RAM at this clock, read address is valid at next clock
@@ -134,7 +141,7 @@ module patterns #(parameter PTN_DEPTH = 65536,
 //                    status_o <= `ERR_WR_PTN_RAM;
 //                    ptn_state <= PTN_IDLE;
 //                end
-                if(ptn_addr < PTN_DEPTH - 1) begin
+                if(ptn_addr < end_addr) begin
                     ptn_addr = ptn_addr + 1;
                     init_state <= INIT1;
                 end
@@ -143,9 +150,22 @@ module patterns #(parameter PTN_DEPTH = 65536,
                     ptn_addr <= 0;
                     init_state <= INIT_IDLE;
                     ptn_state <= PTN_IDLE;         
+                    status_o <= `SUCCESS;
                 end
             end
             endcase
+        end
+        else if(ptn_cmdd == 1'b0 && ptn_cmd_i == `PTNCMD_CLEAR) begin
+            // pat_addr already set to starting address
+            // set end_addr from passed-in data
+            end_addr <= ptn_data_i[15:0];         // End of pattern address to clear
+            status_o <= `PTN_CLEAR_MODE;         
+            init_state <= INIT_IDLE;
+            ptn_state <= PTN_INIT_RAM;
+            ptn_cmdd <= 1'b1;                       // latch, only execute on rising edge of ptn_cmd_i
+        end
+        else if(ptn_cmd_i == `OPCODE_NORMAL && ptn_cmdd == 1'b1) begin
+            ptn_cmdd <= 1'b0;   // reset
         end
         else if(ptn_run_i) begin
             ptn_wen <= 1'b0;
@@ -229,7 +249,8 @@ module patterns #(parameter PTN_DEPTH = 65536,
             endcase        
         end
         else begin
-            // not initializing RAM or running a pattern, use opcode processor inputs
+            // not initializing RAM, clearing RAM, or running a pattern, 
+            // use opcode processor inputs to write pattern RAM
             ptn_wen <= ptn_wen_i;
             ptn_addr <= ptn_data_i[95:72] + ptn_addr_i;
             if(status_o == 8'h00)

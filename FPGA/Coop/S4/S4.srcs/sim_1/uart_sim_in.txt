@@ -58,14 +58,21 @@ u 1.5 ms r 4000000 8; --Read response data from host adapter RAM
 
 --d 10 ms ; -- Wait to see 25ms blink end before starting pattern
 
+-- load pattern is done, test clearing pattern RAM
+-- pat_ctl[RESET] 0 to 300 (0x12c)
+u 2.0 ms w 4000000 04 44 04 00 2C 01 00 00 00 00 00 00; --pat_ctl[Reset] end_addr=>0x12C (300 ticks out) 
+u 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+
 -- load pattern is done, run using trigger every 10ms
 -- trigconf opcode is 0x09,
 -- bits 0x95 for arm, continuous, source, enable
-u 2.0 ms w 4000000 04 12 01 95 0A 00 00 00 00 00 00 00; --Continuous trigger, 10ms 
-u 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+--u 2.0 ms w 4000000 04 12 01 95 0A 00 00 00 00 00 00 00; --Continuous trigger, 10ms 
+--u 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+
 -- load pattern is done, now run it & read response
 --u 2.0 ms w 4000000 04 44 01 00 00 00 00 00 00 00 00 00; --PAT_CTRL[Run] 
 --u 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+-- write opcode block(sector) to MMC
 u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
 u 0.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
 -- read opcode processor response

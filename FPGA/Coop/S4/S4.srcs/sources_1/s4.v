@@ -189,6 +189,7 @@
 `define PATTERN_FILL_BITS           13
 `define PTN_TO_OPC_COUNT            16
 `define PTN_TO_OPC_BITS             4
+`define PTN_CMD_BITS                4
 
 `define PROCESSOR_FIFO_DEPTH        8
 `define PROCESSOR_FIFO_FILL_BITS    3
@@ -424,7 +425,7 @@ wire [`PATTERN_WR_WORD-1:0]     ptn_data;        // 12 bytes, 3 bytes patClk tic
 wire                            ptn_run;         // Run pattern processor 
 wire [`PATTERN_FILL_BITS-1:0]   ptn_index;       // address of pattern entry to run (for status) 
 wire [7:0]                      ptn_status;      // status from pattern processor 
-wire [3:0]                      ptn_cmd;         // Command/mode, i.e. writing pattern, run pattern, stop, etc
+wire [`PTN_CMD_BITS-1:0]        ptn_cmd;         // Command/mode, used to clear sections of pattern RAM
 // Fifo from pattern processor to opcode processor (to run pattern)
 wire [`PATTERN_RD_WORD-1:0]     opcptn_fifo_dat_i;  // pattern processor to opcode processor, run next entry
 wire                            opcptn_fifo_wen;    // ptn to opc fifo write enable
@@ -1016,6 +1017,7 @@ end
   patterns #(
         .PTN_DEPTH(`PATTERN_DEPTH),
         .PTN_BITS(`PATTERN_FILL_BITS),
+        .PCMD_BITS(`PTN_CMD_BITS),
         .WR_WIDTH(`PATTERN_WR_WORD),
         .RD_WIDTH(`PATTERN_RD_WORD)
   )
@@ -1037,7 +1039,7 @@ end
     .opcptn_fif_wen_o   (opcptn_fifo_wen),      // fifo write enable for next pattern entry
     .opcptn_fif_fl_i    (opcptn_fifo_full),
 
-    .ptn_cmd_i          (ptn_cmd),              // Command/mode, i.e. writing pattern, run pattern, stop, etc
+    .ptn_cmd_i          (ptn_cmd),              // Command/mode, used to clear sections of pattern RAM
 
     .trig_out_o         (ptn_adctrig),          // 10us pulse at start of pattern
 
@@ -1053,6 +1055,7 @@ end
 
   opcodes #(
      .MMC_FILL_LEVEL_BITS(`GLBL_MMC_FILL_LEVEL_BITS),
+     .PCMD_BITS(`PTN_CMD_BITS),
      .PTN_FILL_BITS(`PATTERN_FILL_BITS),
      .PTN_WR_WORD(`PATTERN_WR_WORD),
      .PTN_RD_WORD(`PATTERN_RD_WORD)
@@ -1103,10 +1106,9 @@ end
 
     .trig_conf_o                (trig_config),      // triger config word
     .config_o                   (config_word),      // various config bits from CONFIG opcode
-    //.vga_higain_o               (vga_higain),       // default is 1, high gain mode
-    //.vga_dacctla_o              (vga_dacctla),      // DAC control A bit, normally 0
 
     // pattern opcodes are saved in pattern RAM.
+    .ptn_cmd_o                  (ptn_cmd),          // command/mode, used to clear sections of pattern RAM
     .ptn_wen_o                  (ptn_wen),          // opcode processor saves pattern opcodes to pattern RAM 
     .ptn_addr_o                 (ptn_addr),         // address 
     .ptn_data_o                 (ptn_data),         // 12 bytes, 3 bytes patclk tick, 9 bytes for opcode and data   
