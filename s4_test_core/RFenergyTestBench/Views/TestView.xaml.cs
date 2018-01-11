@@ -1,4 +1,5 @@
-﻿using System.Windows;
+﻿using System;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
 using RFenergyUI.ViewModels;
@@ -12,6 +13,7 @@ namespace RFenergyUI.Views
     {
         TestViewModel _vm;
         DispatcherTimer _timer;
+        bool _initVm;
 
         public TestView()
         {
@@ -26,6 +28,24 @@ namespace RFenergyUI.Views
             DataContext = _vm;     // Bindings
 
             InitializeComponent();
+            _initVm = true;
+        }
+
+        // startup operations after windows have been created
+        void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (_initVm)
+                {
+                    _vm.SetupHardware();
+                    _initVm = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                MainViewModel.MsgAppendLine(string.Format("OnLoad exception:{0}", ex.Message));
+            }
         }
 
         void _timer_Tick(object sender, System.EventArgs e)

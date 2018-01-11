@@ -15,6 +15,17 @@ namespace ExternalPowerMeter
         LB_API2_Declarations.SDByte[] _sensDesc;
 
         public event MessageCallback ShowMessage;
+        public event DoubleEvent FrequencyEvent;
+        public event IntegerEvent AveragesEvent;
+        public event BooleanEvent TrigInEnEvent;
+        public event BooleanEvent TrigInvertEvent;
+        public event IntegerEvent TrigInTmoEvent;
+        public event BooleanEvent TrigOutEnEvent;
+        public event BooleanEvent DutyCycleEnEvent;
+        public event IntegerEvent DutyCyclePcntEvent;
+        public event BooleanEvent OffsetEnEvent;
+        public event DoubleEvent OffsetEvent;
+        public event BooleanEvent ExtTrigEvent;
 
         const int HEAD_OFFSET_FREQUENCIES = 3;  // 2400, 2450, 2500 for now
 
@@ -95,8 +106,9 @@ namespace ExternalPowerMeter
                     int rtn = LB_API2_Declarations.LB_SetTTLTriggerInEnabled(_sensDesc[0].DeviceAddress, st);
                     if (rtn > 0)
                     {
-                        ShowMessage?.Invoke("SetTriggerInEnable Ok");
+                        //ShowMessage?.Invoke("SetTriggerInEnable Ok");
                         _triggerInEnable = value;
+                        TrigInEnEvent?.Invoke(value, "SetTriggerInEnable Ok");
                     }
                     else
                     {
@@ -106,6 +118,34 @@ namespace ExternalPowerMeter
                 catch (Exception ex)
                 {
                     throw new ApplicationException("Error setting TriggerInEnable", ex);
+                }
+            }
+        }
+
+        bool _triggerInvert;
+        public bool TriggerInvert
+        {
+            get { return _triggerInvert; }
+            set
+            {
+                try
+                {
+                    LB_API2_Declarations.FEATURE_STATE st =
+                        value ? LB_API2_Declarations.FEATURE_STATE.ST_ON : LB_API2_Declarations.FEATURE_STATE.ST_OFF;
+                    int rtn = LB_API2_Declarations.LB_SetTTLTriggerInInverted(_sensDesc[0].DeviceAddress, st);
+                    if (rtn > 0)
+                    {
+                        ShowMessage?.Invoke("SetTriggerInvert Ok");
+                        _triggerInvert = value;
+                    }
+                    else
+                    {
+                        ShowMessage?.Invoke("SetTriggerInvert *FAILED*");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    throw new ApplicationException("Error setting TriggerInvert", ex);
                 }
             }
         }

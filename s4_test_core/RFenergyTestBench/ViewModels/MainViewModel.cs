@@ -54,6 +54,11 @@ namespace RFenergyUI.ViewModels
         public static TestViewModel TestPanel { get; set; }
         public static RfeDebugViewModel DebugPanel { get; set; }
 
+        public static bool FactoryMode
+        {
+            get { return ThisPtr.ShowDebugTab;  }                
+        }
+
         public static string SelectedSystemName
         { get { return ThisPtr.SelectedSystem.SystemName; } }
 
@@ -136,6 +141,7 @@ namespace RFenergyUI.ViewModels
                     IErr = (IErrors)mod;
                     ICmd = (ICommands)mod;
                     ICmd.ShowMessage += new MessageCallback(ShowMessage);
+
                     //IOpcodes = (IOpcodes)mod;
                     IMeter = new ExternalMeter();
                     IMeter.ShowMessage += new MessageCallback(ShowMessage);

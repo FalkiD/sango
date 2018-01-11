@@ -8,7 +8,8 @@
              xmlns:cnvtr="clr-namespace:Converters"
              mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="300"
-             LayoutUpdated="TestView_LayoutUpdated">
+             LayoutUpdated="TestView_LayoutUpdated"
+             Loaded="Window_Loaded">
 
     <UserControl.Resources>
         <ResourceDictionary>
@@ -45,7 +46,6 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>  <!--Connect Buttons-->
             <RowDefinition Height="Auto"/>  <!--List of channels (not used, moved DAC's to Debug panel-->
-            <RowDefinition Height="*" MaxHeight="600"/>     <!--Must set ItemsControl size correctly, ItemsControl for ChannelView's, spans all columns-->
             <RowDefinition Height="Auto"/>  <!--Header 'Value'-->
             <RowDefinition Height="Auto"/>  <!--Frequency-->
             <RowDefinition Height="Auto"/>  <!--Power-->
@@ -56,6 +56,8 @@
             <RowDefinition Height="Auto"/>  <!--PWM-->
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto" MinHeight="14"/>
+            <RowDefinition Height="*" MaxHeight="600"/>
+            <!--Must set ItemsControl size correctly, ItemsControl for ChannelView's, spans all columns-->
             <RowDefinition Height="Auto" MinHeight="14"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -84,69 +86,27 @@
                 Style="{StaticResource CheckBoxH4}"
                 IsChecked="{Binding LoopReadings}"/>
 
-        <!--Can't seem to get HeaderedItemsControl border to show?
-        BorderThickness="10"
-        BorderBrush="Black"
-        Background="LightGray"-->
-        <!--Use Vertical ItemsControl to show any number of ChannelViews in a scrolling list-->      
-        <HeaderedItemsControl Grid.Row="2" Grid.ColumnSpan="5"
-                      ItemsSource="{Binding Path=ChannelVms}"
-                      HorizontalAlignment="Center">
-            <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <VirtualizingStackPanel Orientation="Vertical"/>
-                </ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.Template>
-                <ControlTemplate TargetType="HeaderedItemsControl">
-                    <!--<Border Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{Binding BorderThickness}">-->
-                        <Grid>
-                            <!--Use first row of Grid for header-->
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>    <!--Must set ItemsControl size correctly, need better technique, set to required height only-->
-                        </Grid.RowDefinitions>
-                            <local:ChnlHdrView/>    <!--13-Oct was PaHdrView-->
-                            <ScrollViewer Grid.Row="1"
-                                      HorizontalScrollBarVisibility="Hidden"
-                                      VerticalScrollBarVisibility="Auto"
-                                      Style="{StaticResource MetroScrollViewer}">
-                                <ItemsPresenter/>
-                            </ScrollViewer>
-                    </Grid>
-                    <!--</Border>-->
-                </ControlTemplate>
-            </ItemsControl.Template>
-            <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                    <local:ChannelView/>    <!--Back to ChannelView... PaView for each channel, was ChannelView at first-->
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </HeaderedItemsControl>
-
         <!--Header line for Frequency, Power, Phase, PWM controls-->
-        <TextBlock Grid.Row="3" Grid.Column="1" 
+        <TextBlock Grid.Row="2" Grid.Column="1" 
                    Text="(Start) Value"
                    Style="{StaticResource LabelH4}"/>
-        <TextBlock Grid.Row="3" Grid.Column="2" 
+        <TextBlock Grid.Row="2" Grid.Column="2" 
                    Text="Step Size"
                    Style="{StaticResource LabelH4}"/>
-        <TextBlock Grid.Row="3" Grid.Column="3" 
+        <TextBlock Grid.Row="2" Grid.Column="3" 
                    Text="End Value"
                    Style="{StaticResource LabelH4}"/>
-        <TextBlock Grid.Row="3" Grid.Column="4" 
+        <TextBlock Grid.Row="2" Grid.Column="4" 
                    Text="ms/Step"
                    Style="{StaticResource LabelH4}"/>
-        <TextBlock Grid.Row="3" Grid.Column="5" 
+        <TextBlock Grid.Row="2" Grid.Column="5" 
                    Text="Start/Stop Sweep"
                    Style="{StaticResource LabelH4}"/>
 
         <!--Frequency controls-->
-        <TextBlock Grid.Row="4" Text="Frequency(MHz):" HorizontalAlignment="Right"
+        <TextBlock Grid.Row="3" Text="Frequency(MHz):" HorizontalAlignment="Right"
                     Style="{StaticResource LabelH4}"/>
-        <TextBox Grid.Row="4" Grid.Column="1"
+        <TextBox Grid.Row="3" Grid.Column="1"
                 Text="{Binding Frequency, Converter={StaticResource frequencyConverter}}"
                 Style="{StaticResource TextBoxH4}">
             <TextBox.InputBindings>
@@ -157,28 +117,28 @@
                 <KeyBinding Key="Up" Command="{Binding CmdFrqArrow}" CommandParameter="up"/>
             </TextBox.InputBindings>
         </TextBox>
-        <TextBox Grid.Row="4" Grid.Column="2"
+        <TextBox Grid.Row="3" Grid.Column="2"
                 Text="{Binding FreqStepSize, Converter={StaticResource frequencyConverter}}"
                 Style="{StaticResource TextBoxH4}">
         </TextBox>
-        <TextBox Grid.Row="4" Grid.Column="3"
+        <TextBox Grid.Row="3" Grid.Column="3"
                 Text="{Binding FreqTop, Converter={StaticResource frequencyConverter}}"
                 Style="{StaticResource TextBoxH4}">
         </TextBox>
-        <TextBox Grid.Row="4" Grid.Column="4"
+        <TextBox Grid.Row="3" Grid.Column="4"
                 Text="{Binding MsPerStep, Converter={StaticResource frequencyConverter}}"
                 Style="{StaticResource TextBoxH4}">
         </TextBox>
-        <Button Grid.Row="4" Grid.Column="5" 
+        <Button Grid.Row="3" Grid.Column="5" 
                 Content="{Binding FrqSweepBtnTxt}" 
                 Command="{Binding CmdFrqSweep}"
                 Focusable="True"
                 Style="{StaticResource ButtonKeyNormal}"/>
 
         <!--Power controls-->
-        <TextBlock Grid.Row="5" Text="Power(dBm):" HorizontalAlignment="Right"
+        <TextBlock Grid.Row="4" Text="Power(dBm):" HorizontalAlignment="Right"
                     Style="{StaticResource LabelH4}"/>
-        <TextBox Grid.Row="5" Grid.Column="1"
+        <TextBox Grid.Row="4" Grid.Column="1"
                     Text="{Binding Power, Converter={StaticResource powerConverter}}"
                     Style="{StaticResource TextBoxH4}">
             <TextBox.InputBindings>
@@ -189,83 +149,97 @@
                 <KeyBinding Key="Up" Command="{Binding CmdPwrArrow}" CommandParameter="up"/>
             </TextBox.InputBindings>
         </TextBox>
-        <TextBox Grid.Row="5" Grid.Column="2"
+        <TextBox Grid.Row="4" Grid.Column="2"
                 Text="{Binding PowerStepSize, Converter={StaticResource powerConverter}}"
                 Style="{StaticResource TextBoxH4}">
         </TextBox>
-        <TextBox Grid.Row="5" Grid.Column="3"
+        <TextBox Grid.Row="4" Grid.Column="3"
                 Text="{Binding PowerTop, Converter={StaticResource powerConverter}}"
                 Style="{StaticResource TextBoxH4}">
         </TextBox>
-        <Button Grid.Row="5" Grid.Column="5" 
+        <Button Grid.Row="4" Grid.Column="5" 
                 Content="{Binding PwrSweepBtnTxt}" 
                 Command="{Binding CmdPwrSweep}"
                 Focusable="True"
                 Style="{StaticResource ButtonKeyNormal}"/>
 
         <!--Read coupler power controls-->
-        <TextBlock Grid.Row="6" Text="Coupler:" HorizontalAlignment="Right"
+        <TextBlock Grid.Row="5" Text="Coupler:" HorizontalAlignment="Right"
                    Style="{StaticResource LabelH4}"
                    Visibility="{Binding M2Only, 
                                 Converter={StaticResource visibilityConverter}}"/>
-        <TextBox Grid.Row="6" Grid.Column="1"
+        <TextBox Grid.Row="5" Grid.Column="1"
                  Text="{Binding CouplerFwd, Converter={StaticResource powerConverter}}"
                  IsReadOnly="True"
                  Style="{StaticResource TextBoxH4}"
                  Visibility="{Binding M2Only, 
                               Converter={StaticResource visibilityConverter}}"/>
-        <TextBox Grid.Row="6" Grid.Column="2"
+        <TextBox Grid.Row="5" Grid.Column="2"
                  Text="{Binding CouplerRefl, Converter={StaticResource powerConverter}}"
                  IsReadOnly="True"
                  Style="{StaticResource TextBoxH4}"
                  Visibility="{Binding M2Only, 
                               Converter={StaticResource visibilityConverter}}"/>
-        <Button Grid.Row="6" Grid.Column="3" 
+        <Button Grid.Row="5" Grid.Column="3" 
                 Content="Strobe Coupler" 
                 Command="{Binding CmdCouplerMeasure}"
                 Style="{StaticResource ButtonKeyNormal}"
                 Visibility="{Binding M2Only, 
                             Converter={StaticResource visibilityConverter}}"/>
         
-        <!--Phase controls-->
-        <TextBlock Grid.Row="7" Text="Phase(degrees):" 
+        <!--Phase controls commandeered for BIAS on S4-->
+        <Button Grid.Row="6"
+                Content="{Binding BiasTitle}" 
+                Command="{Binding CmdBias}"
+                Style="{StaticResource ButtonKeyNormal}"
+                Visibility="{Binding S4Only, 
+                            Converter={StaticResource visibilityConverter}}"/>
+        <CheckBox Grid.Row="6" Grid.Column="1"
+                    Content="BIAS"
+                    IsHitTestVisible="False"
+                    Focusable="False"
+                    Style="{StaticResource CheckBoxH4}"
+                    IsChecked="{Binding BiasOn}"
+                    Visibility="{Binding S4Only, 
+                                 Converter={StaticResource visibilityConverter}}"/>
+        <!--<TextBlock Grid.Row="6" Text="Phase(degrees):" 
                    HorizontalAlignment="Right"
                    Visibility="{Binding PhaseVisible, Converter={StaticResource visibilityConverter}}"
                    Style="{StaticResource LabelH4}"/>
-        <TextBox Grid.Row="7" Grid.Column="1"
+        <TextBox Grid.Row="6" Grid.Column="1"
                  Text="{Binding Phase, Converter={StaticResource powerConverter}}"
                  Visibility="{Binding PhaseVisible, Converter={StaticResource visibilityConverter}}"
                  Style="{StaticResource TextBoxH4}">
             <TextBox.InputBindings>
-                <!--Fix Phase Command to pass the control(like freq/power/etc)-->
+                --><!--Fix Phase Command to pass the control(like freq/power/etc)--><!--
                 <KeyBinding Key="Enter" Command="{Binding CmdPhase}"/>
                 <KeyBinding Key="Down" Command="{Binding CmdPhsArrow}" CommandParameter="down"/>
                 <KeyBinding Key="Up" Command="{Binding CmdPhsArrow}" CommandParameter="up"/>
             </TextBox.InputBindings>
-        </TextBox>
+        </TextBox>-->
 
         <!--PWM controls-->
-        <TextBlock Grid.Row="8" Grid.Column="1" 
+        <TextBlock Grid.Row="7" Grid.Column="1" 
                    Text="DutyCycle(%)"
                    Style="{StaticResource LabelH4}"
                    Visibility="{Binding M2Only, 
                                 Converter={StaticResource visibilityConverter}}"/>
-        <TextBlock Grid.Row="8" Grid.Column="2" 
+        <TextBlock Grid.Row="7" Grid.Column="2" 
                    Text="Rate(Hz)"
                    Style="{StaticResource LabelH4}"
                    Visibility="{Binding M2Only, 
                                 Converter={StaticResource visibilityConverter}}"/>
-        <TextBlock Grid.Row="8" Grid.Column="3" 
+        <TextBlock Grid.Row="7" Grid.Column="3" 
                    Text="External"
                    Style="{StaticResource LabelH4}"
                    Visibility="{Binding M2Only, 
                                 Converter={StaticResource visibilityConverter}}"/>
 
-        <TextBlock Grid.Row="9" Text="PWM:" HorizontalAlignment="Right"
+        <TextBlock Grid.Row="8" Text="PWM:" HorizontalAlignment="Right"
                    Style="{StaticResource LabelH4}"
                    Visibility="{Binding M2Only, 
                                 Converter={StaticResource visibilityConverter}}"/>
-        <TextBox Grid.Row="9" Grid.Column="1"
+        <TextBox Grid.Row="8" Grid.Column="1"
                  Name="DutyCycle"
                  Text="{Binding DutyCycle, Converter={StaticResource intConverter}}"
                  Style="{StaticResource TextBoxH4}"
@@ -279,7 +253,7 @@
                 <KeyBinding Key="Up" Command="{Binding CmdPwmDutyArrow}" CommandParameter="up"/>
             </TextBox.InputBindings>
         </TextBox>
-        <TextBox Grid.Row="9" Grid.Column="2"
+        <TextBox Grid.Row="8" Grid.Column="2"
                  Text="{Binding PwmRate, Converter={StaticResource intConverter}}"
                  Style="{StaticResource TextBoxH4}"
                  Visibility="{Binding M2Only, 
@@ -292,27 +266,29 @@
                 <KeyBinding Key="Up" Command="{Binding CmdPwmTArrow}" CommandParameter="up"/>
             </TextBox.InputBindings>
         </TextBox>
-        <CheckBox Grid.Row="9" Grid.Column="3"
+        <CheckBox Grid.Row="8" Grid.Column="3"
                     Content="External"
                     Style="{StaticResource CheckBoxH4}"
                     IsChecked="{Binding ExternalPwm}"
                     Visibility="{Binding M2Only, 
                                  Converter={StaticResource visibilityConverter}}"/>
 
-        <CheckBox Grid.Row="10"
+        <CheckBox Grid.Row="9"
                   Grid.Column="1"
                   Content="DemoMode"
                   Style="{StaticResource CheckBoxH4}"
-                  IsChecked="{Binding DemoMode}"/>
-        <CheckBox Grid.Row="10" 
+                  IsChecked="{Binding DemoMode}"
+                  Visibility="{Binding FactoryMode, 
+                               Converter={StaticResource visibilityConverter}}"/>
+        <CheckBox Grid.Row="9" 
                   Grid.Column="2"
                   Content="HiresFrq"
                   Style="{StaticResource CheckBoxH4}"
                   IsChecked="{Binding HiresMode}"
-                  Visibility="{Binding M2Only, 
+                  Visibility="{Binding FactoryMode, 
                                Converter={StaticResource visibilityConverter}}"/>
 
-        <CheckBox Grid.Row="11" 
+        <CheckBox Grid.Row="10" 
                   MinHeight="16"
                   Grid.Column="1"
                   Grid.ColumnSpan="2"
@@ -320,48 +296,99 @@
                   Content="DutyCycleComp"
                   Style="{StaticResource CheckBoxH4}"
                   IsChecked="{Binding DutyCycleCompensation}"
-                  Visibility="{Binding M2Only, 
+                  Visibility="{Binding FactoryMode, 
                                Converter={StaticResource visibilityConverter}}"/>
 
-        <TextBlock Grid.Row="12" 
+        <TextBlock Grid.Row="11" 
                    Text="Compensation:" 
                    HorizontalAlignment="Right"
                    VerticalAlignment="Center"
                    Style="{StaticResource LabelH4}"
-                   Visibility="{Binding M2Only, 
+                   Visibility="{Binding FactoryMode, 
                                 Converter={StaticResource visibilityConverter}}"/>
-        <RadioButton Grid.Row="12" Grid.Column="1"
+        <RadioButton Grid.Row="11" Grid.Column="1"
                      MinHeight="16"
                      GroupName="Compensation"
                      Content="Ambient"
                      VerticalAlignment="Center"
                      IsChecked="{Binding AmbientCompensation}"
-                     Visibility="{Binding M2Only, 
+                     Visibility="{Binding FactoryMode, 
                                   Converter={StaticResource visibilityConverter}}"/>
-        <RadioButton Grid.Row="12" Grid.Column="2"
+        <RadioButton Grid.Row="11" Grid.Column="2"
                      MinHeight="16"
                      GroupName="Compensation"
                      Content="OpenLoop"
                      VerticalAlignment="Center"
                      IsChecked="{Binding OpenLoopCompensation}"
-                     Visibility="{Binding M2Only, 
+                     Visibility="{Binding FactoryMode, 
                                   Converter={StaticResource visibilityConverter}}"/>
-        <RadioButton Grid.Row="12" Grid.Column="3"
+        <RadioButton Grid.Row="11" Grid.Column="3"
                      MinHeight="16"
                      GroupName="Compensation"
                      Content="PowerLeveling"
                      VerticalAlignment="Center"
                      IsChecked="{Binding PowerLevelCompensation}"
-                     Visibility="{Binding M2Only, 
+                     Visibility="{Binding FactoryMode, 
                                   Converter={StaticResource visibilityConverter}}"/>
 
+        <!--Can't seem to get HeaderedItemsControl border to show?
+        BorderThickness="10"
+        BorderBrush="Black"
+        Background="LightGray"-->
+        <!--Use Vertical ItemsControl to show any number of ChannelViews in a scrolling list-->
+        <HeaderedItemsControl Grid.Row="12" Grid.ColumnSpan="5"
+                      ItemsSource="{Binding Path=ChannelVms}"
+                      HorizontalAlignment="Center" 
+                      Visibility="{Binding FactoryMode, 
+                                   Converter={StaticResource visibilityConverter}}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <VirtualizingStackPanel Orientation="Vertical"/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.Template>
+                <ControlTemplate TargetType="HeaderedItemsControl">
+                    <!--<Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{Binding BorderThickness}">-->
+                    <Grid>
+                        <!--Use first row of Grid for header-->
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <!--Must set ItemsControl size correctly, need better technique, set to required height only-->
+                        </Grid.RowDefinitions>
+                        <local:ChnlHdrView/>
+                        <!--13-Oct was PaHdrView-->
+                        <ScrollViewer Grid.Row="1"
+                                      HorizontalScrollBarVisibility="Hidden"
+                                      VerticalScrollBarVisibility="Auto"
+                                      Style="{StaticResource MetroScrollViewer}">
+                            <ItemsPresenter/>
+                        </ScrollViewer>
+                    </Grid>
+                    <!--</Border>-->
+                </ControlTemplate>
+            </ItemsControl.Template>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <local:ChannelView/>
+                    <!--Back to ChannelView... PaView for each channel, was ChannelView at first-->
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </HeaderedItemsControl>
+        
         <!--Additional S4 controls-->
         <!--Set Power in dB-->
         <TextBlock Grid.Row="13" Text="CalPower(dB):" HorizontalAlignment="Right"
-                   Style="{StaticResource LabelH4}"/>
+                   Style="{StaticResource LabelH4}"
+                   Visibility="{Binding FactoryMode, 
+                                Converter={StaticResource visibilityConverter}}"/>
         <TextBox Grid.Row="13" Grid.Column="1"
                  Text="{Binding PwrInDb, StringFormat=N3}"
-                 Style="{StaticResource TextBoxH4}">
+                 Style="{StaticResource TextBoxH4}"
+                 Visibility="{Binding FactoryMode, 
+                              Converter={StaticResource visibilityConverter}}">
             <TextBox.InputBindings>
                 <KeyBinding Gesture="Enter" 
                     Command="{Binding CmdPwrInDb}"

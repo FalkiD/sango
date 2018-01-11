@@ -30,28 +30,49 @@ namespace RFenergyUI.ViewModels
             MainViewModel.CalPanel = this;
 
             CmdInit = ReactiveCommand.CreateAsyncObservable(x => CmdInitRun());
-            CmdInit.Subscribe(result => MainViewModel.MsgAppendLine(result));
+            CmdInit.IsExecuting.ToProperty(this, x => x.IsIniting, out _isIniting);
+            CmdInit.Subscribe(result => CmdDone(result));
+            CmdInit.ThrownExceptions.Subscribe(result => MainViewModel.MsgAppendLine(result.Message));
 
             CmdReadCw = ReactiveCommand.CreateAsyncObservable(x => CmdReadCwRun());
-            CmdReadCw.Subscribe(result => MainViewModel.MsgAppendLine(result));
+            CmdReadCw.IsExecuting.ToProperty(this, x => x.IsReading, out _isReading);
+            CmdReadCw.Subscribe(result => CmdDone(result));
+            CmdReadCw.ThrownExceptions.Subscribe(result => MainViewModel.MsgAppendLine(result.Message));
 
             CmdReadPulsed = ReactiveCommand.CreateAsyncObservable(x => CmdRdPulsedRun());
-            CmdReadPulsed.Subscribe(result => MainViewModel.MsgAppendLine(result));
+            CmdReadPulsed.IsExecuting.ToProperty(this, x => x.IsReading, out _isReading);
+            CmdReadPulsed.Subscribe(result => CmdDone(result));
+            CmdReadPulsed.ThrownExceptions.Subscribe(result => MainViewModel.MsgAppendLine(result.Message));
 
             CmdEnableOffset = ReactiveCommand.CreateAsyncObservable(x => CmdEnableOffsetRun());
-            CmdEnableOffset.Subscribe(result => MainViewModel.MsgAppendLine(result));
+            CmdEnableOffset.IsExecuting.ToProperty(this, x => x.IsOffseting, out _isOffseting);
+            CmdEnableOffset.Subscribe(result => CmdDone(result));
+            CmdEnableOffset.ThrownExceptions.Subscribe(result => MainViewModel.MsgAppendLine(result.Message));
 
             CmdOffsets = ReactiveCommand.CreateAsyncObservable(x => CmdOffsetsRun(x));
-            CmdOffsets.Subscribe(result => MainViewModel.MsgAppendLine(result));
+            CmdOffsets.IsExecuting.ToProperty(this, x => x.IsOffseting, out _isOffseting);
+            CmdOffsets.Subscribe(result => CmdDone(result));
+            CmdOffsets.ThrownExceptions.Subscribe(result => MainViewModel.MsgAppendLine(result.Message));
 
             CmdFreq = ReactiveCommand.CreateAsyncObservable(x => CmdFreqRun(x));
-            CmdFreq.Subscribe(result => MainViewModel.MsgAppendLine(result));
+            CmdFreq.IsExecuting.ToProperty(this, x => x.IsFrqing, out _isFrqing);
+            CmdFreq.Subscribe(result => CmdDone(result));
+            CmdFreq.ThrownExceptions.Subscribe(result => MainViewModel.MsgAppendLine(result.Message));
 
             CmdTriggerDelay = ReactiveCommand.CreateAsyncObservable(x => CmdTrigDlyRun(x));
-            CmdTriggerDelay.Subscribe(result => MainViewModel.MsgAppendLine(result));
+            CmdTriggerDelay.IsExecuting.ToProperty(this, x => x.IsTrging, out _isTrging);
+            CmdTriggerDelay.Subscribe(result => CmdDone(result));
+            CmdTriggerDelay.ThrownExceptions.Subscribe(result => MainViewModel.MsgAppendLine(result.Message));
 
             CmdTriggerWidth = ReactiveCommand.CreateAsyncObservable(x => CmdTrigWidthRun(x));
-            CmdTriggerWidth.Subscribe(result => MainViewModel.MsgAppendLine(result));
+            CmdTriggerWidth.IsExecuting.ToProperty(this, x => x.IsTrging, out _isTrging);
+            CmdTriggerWidth.Subscribe(result => CmdDone(result));
+            CmdTriggerWidth.ThrownExceptions.Subscribe(result => MainViewModel.MsgAppendLine(result.Message));
+
+            CmdReadSNs = ReactiveCommand.CreateAsyncObservable(x => CmdReadSNsRun(x));
+            CmdReadSNs.IsExecuting.ToProperty(this, x => x.IsExecuting, out _isExecuting);
+            CmdReadSNs.Subscribe(result => CmdReadSNsDone(result));
+            CmdReadSNs.ThrownExceptions.Subscribe(result => MainViewModel.MsgAppendLine(result.Message));
 
             // Power calibration routines
             CmdPwrCal = ReactiveCommand.CreateAsyncObservable(x => CmdPwrCalRun());
@@ -62,42 +83,108 @@ namespace RFenergyUI.ViewModels
             CmdPwrCalArrow.Subscribe(result => MainViewModel.MsgAppendLine(result));
 
             CmdAverages = ReactiveCommand.CreateAsyncObservable(x => CmdAvgRun(x));
-            CmdAverages.Subscribe(result => MainViewModel.MsgAppendLine(result));
+            CmdAverages.IsExecuting.ToProperty(this, x => x.IsAvging, out _isAvging);
+            CmdAverages.Subscribe(result => CmdDone(result));
+            CmdAverages.ThrownExceptions.Subscribe(result => MainViewModel.MsgAppendLine(result.Message));
 
             CmdCouplerOffsets = ReactiveCommand.CreateAsyncObservable(x => CmdCouplerOffsetsRun());
-            CmdCouplerOffsets.Subscribe(result => MainViewModel.MsgAppendLine(result));
+            CmdCouplerOffsets.IsExecuting.ToProperty(this, x => x.IsCouplering, out _isCouplering);
+            CmdCouplerOffsets.Subscribe(result => CmdDone(result));
+            CmdCouplerOffsets.ThrownExceptions.Subscribe(result => MainViewModel.MsgAppendLine(result.Message));
 
             CmdTempCoefficient = ReactiveCommand.CreateAsyncObservable(x => CmdTempCoefficientRun());
-            CmdTempCoefficient.Subscribe(result => MainViewModel.MsgAppendLine(result));
+            CmdTempCoefficient.Subscribe(result => CmdDone(result));
+            CmdTempCoefficient.ThrownExceptions.Subscribe(result => MainViewModel.MsgAppendLine(result.Message));
 
             // Meter cal
             CmdMtrCal = ReactiveCommand.CreateAsyncObservable(x => CmdMtrCalRun());
-            CmdMtrCal.Subscribe(result => MainViewModel.MsgAppendLine(result));
+            CmdMtrCal.IsExecuting.ToProperty(this, x => x.IsMtrCaling, out _isMtrCaling);
+            CmdMtrCal.Subscribe(result => CmdDone(result));
+            CmdMtrCal.ThrownExceptions.Subscribe(result => MainViewModel.MsgAppendLine(result.Message));
             //CmdMtrBreakpointArrow = ReactiveCommand.CreateAsyncObservable(x => CmdMtrBreakpointArrowRun(x));
             //CmdMtrBreakpointArrow.Subscribe(result => MainViewModel.MsgAppendLine(result));
 
+            CmdJsonToDriver = ReactiveCommand.CreateAsyncObservable(x => CmdJsonRun(true));
+            CmdJsonToDriver.IsExecuting.ToProperty(this, x => x.IsJsoning, out _isJsoning);
+            CmdJsonToDriver.Subscribe(result => CmdDone(result));
+            CmdJsonToDriver.ThrownExceptions.Subscribe(result => MainViewModel.MsgAppendLine(result.Message));
+
+            CmdJsonFromDriver = ReactiveCommand.CreateAsyncObservable(x => CmdJsonRun(false));
+            CmdJsonFromDriver.IsExecuting.ToProperty(this, x => x.IsJsoning, out _isJsoning);
+            CmdJsonFromDriver.Subscribe(result => CmdDone(result));
+            CmdJsonFromDriver.ThrownExceptions.Subscribe(result => MainViewModel.MsgAppendLine(result.Message));
+
             CouplerFwdOffset = CouplerReflOffset = 0;
 
-            // Set some defaults, still must press Enter to send to LaadyBug
-            Offsets = 54.34;
+            // Set some defaults, still must press Enter to send to LadyBug
             Frequency = 2450;
             Averages = 200;
             PowerStepSize = 0.5;
-            PowerStart = 2.76;          // dB for ~0xb0 start
-            TargetStart = 40.0;
-            PowerStop = 26.0;
-            Compression = 2.0;
+            // Some items setup after window initialization has completed
             MeterBreakpoint = 500;
             LowSlope = 6.4;
             LowIntercept = 6.0;
             HighSlope = 7.6;
             HighIntercept = -2.0;
 
-            ResultsFile = "PowerCalResults.json";
             SkipCollectData = false;
             TempMeasPeriod = 500;
             TempMeasTime = 30000;
             TempCoeffBtnTxt = STR_START_TMPCOEFF;
+        }
+
+        public void SetupHardware()
+        {
+            if (MainViewModel.ICmd.HwType == InstrumentInfo.InstrumentType.S4)
+            {
+                Offsets = 44.0;
+                TargetStart = 40.0;
+                PowerStart = 20.0;
+                Compression = 3.0;
+                PowerStop = 50.0;
+                DacAFixed = 0xe00;
+                DriverSN = "1";    // init to bogus number
+            }
+            else
+            {
+                Offsets = 54.34;
+                TargetStart = 40.0;
+                PowerStart = 2.76;          // dB for ~0xb0 start
+                Compression = 2.0;
+                PowerStop = 26.0;
+            }
+
+            // setup Visibility flags based on hardware type
+            switch (MainViewModel.ICmd.HwType)
+            {
+                default:
+                case InstrumentInfo.InstrumentType.M2:
+                    M2Only = MainViewModel.TestPanel.M2Only = true;
+                    S4Only = MainViewModel.TestPanel.S4Only = false;
+                    X7Only = MainViewModel.TestPanel.X7Only = false;
+                    break;
+                case InstrumentInfo.InstrumentType.S4:
+                    M2Only = MainViewModel.TestPanel.M2Only = false;
+                    S4Only = MainViewModel.TestPanel.S4Only = true;
+                    X7Only = MainViewModel.TestPanel.X7Only = false;
+                    break;
+                case InstrumentInfo.InstrumentType.X7:
+                    M2Only = MainViewModel.TestPanel.M2Only = false;
+                    S4Only = MainViewModel.TestPanel.S4Only = false;
+                    X7Only = MainViewModel.TestPanel.X7Only = true;
+                    break;
+            }
+        }
+
+        // general use executing property helper
+        public bool IsExecuting { get { return _isExecuting.Value; } }
+        readonly ObservableAsPropertyHelper<bool> _isExecuting;
+
+        // Called when any command finishes
+        void CmdDone(string result)
+        {
+            if (result.Length > 0)
+                MainViewModel.MsgAppendLine(result);
         }
 
         /// <summary>
@@ -140,7 +227,7 @@ namespace RFenergyUI.ViewModels
         }
         /// <summary>
         /// 14-May re-do using dB instead of DAC count.
-        /// 0dB = 0x80
+        /// 0dB = 0x80 (M2, 0x10 S4)
         /// ADC = 10^(dB/20) * 0x80
         /// 
         /// Note: Unit 1 40dBm was around 0xb0,  this is
@@ -156,29 +243,12 @@ namespace RFenergyUI.ViewModels
                 MsPerStep = 250;
 
             StreamWriter fout = null;
-            try
-            {
-                fout = OpenCalFile("RfePowerCal.txt");
-                string hdr = string.Format(" {0} RF Energy Source Calibration", MainViewModel.SelectedSystemName);
-                WriteCalDataHeader(fout, hdr);
-            }
-            catch (Exception fileEx)
-            {
-                wrk.ReportProgress(0, 
-                    string.Format("Exception opening cal data file:{0}", fileEx.Message));
-            }
+            if (InitCalData(wrk, ref fout, ref result) == 0)
+                return; // Error
 
-            if(SkipCollectData)
-                RestoreCalResults(ResultsFile, wrk);
-
-            if (SetupForCal(0xc80, ref result) != 0)
-            {
-                wrk.ReportProgress(0, result);
-                wrk.ReportProgress(0, "Calibration aborted");
-                return;
-            }
-
-            SetDutyCycleCompensation(false);
+            double InputStepSize = PowerStepSize; // separate from PowerStepSize, S4 needs much bigger input steps
+            if (MainViewModel.ICmd.HwType == InstrumentInfo.InstrumentType.S4)
+                InputStepSize = 2.0;
 
             try
             {
@@ -189,15 +259,16 @@ namespace RFenergyUI.ViewModels
                 int MIN_ADJUST = 1;
                 double MAX_DBMOUT = 62.0;
                 double MAX_POWER = -1.0;    // keep track of max
-                const double COMPRESSION_CHECK = 50.0;  // don't check compression until above this power
+                double COMPRESSION_CHECK = DriverCal ? 45.0 : 50.0;  // don't check compression until above this power
+                double TOP_END = 60.0;      // check compression at high end when not in tolerance
 
                 double nextValue = PowerStart;
-                if(SkipCollectData == false)
+                if (SkipCollectData == false)
                     CalResults = new ObservableCollection<PowerCalData>();
                 double lastValue = Double.NaN;
                 double gain = Double.NaN;
                 double maxGain = 0.0;
-                while (PwrCalRunning && nextValue < PowerStop 
+                while (PwrCalRunning && nextValue <= PowerStop
                         && !inCompression && !SkipCollectData)
                 {
                     int status = SetCalPower(nextValue);
@@ -216,117 +287,37 @@ namespace RFenergyUI.ViewModels
                         break;
 
                     // half steps for iterations
-                    double stepsize = PowerStepSize;
+                    double stepsize = InputStepSize; // PowerStepSize;
                     int iterations = 0;
                     bool converged = false;
                     bool high = true;   // enter binary search from high side
                     MonitorPa[] results = null;
-                    if (externalPwr > (dBmTarget - PowerStepSize) ||
+                    PowerCalData caldata = null;
+                    if (externalPwr > (dBmTarget - PowerStepSize / 2) ||   // get as close as possible
                         Math.Abs(externalPwr - dBmTarget) <= tolerance)
                     {
-                        stepsize = PowerStepSize / 2.0;
+                        if (dBmTarget > PowerStart)
+                            stepsize = InputStepSize / 2.0;
                         do
                         {
-                            PowerCalData caldata = null;
-
                             if ((Math.Abs(externalPwr - dBmTarget) <= tolerance) ||
                                 (externalPwr > COMPRESSION_CHECK &&
-                                 CheckCompression(maxGain, externalPwr, nextValue)))
+                                 CheckCompression(maxGain, externalPwr, nextValue, wrk)))
                             {
-                                // Update Pa status
-                                System.Threading.Thread.Sleep(250);
-                                if ((status = MainViewModel.ICmd.PaStatus(M2Cmd.PWR_ADC, ref results)) != 0)
-                                {
-                                    result = string.Format(" PaStatus read failed, status:{0}, exit cal", status);
-                                    PwrCalRunning = false;
-                                    wrk.ReportProgress(0, result);
-                                    break;
-                                }
-                                caldata = new PowerCalData
-                                {
-                                    IQDacMag = SynDacValue(nextValue),  // for reference
-                                    PowerDB = nextValue,
-                                    Coupler = results[0].Forward,
-                                    ExternaldBm = externalPwr,       // or target?
-                                    Temperature = Temperature(results),
-                                    Volts = Voltage(results),
-                                    Amps = MaxCurrent(results)
-                                };
-                                CalResults.Add(caldata);
-                                if (Math.Abs(externalPwr - dBmTarget) <= tolerance)
-                                {
-                                    if (!Double.IsNaN(lastValue))
-                                    {
-                                        stepsize = nextValue - lastValue;
-                                        gain = externalPwr - nextValue;
-                                        if (gain > maxGain)
-                                            maxGain = gain;
-                                    }
-                                    lastValue = nextValue;
-                                    result = string.Format(" Cal Entry, dB:{0,6:f3}, ExtdBm:{1,5:f2}, CouplerFwd:{2,4:f0}, Temp:{3,2:f0}, Volts:{4,5:f2}, Amps:{5,5:f2}, Stepsize:{6:f2}, Gain:{7,5:f2}",
-                                                                nextValue,
-                                                                externalPwr,
-                                                                caldata.Coupler,
-                                                                caldata.Temperature,
-                                                                caldata.Volts,
-                                                                caldata.Amps,
-                                                                stepsize, gain);
-                                    wrk.ReportProgress(0, result);
-                                    WriteCalData(fout, result, caldata.IQDacMag);
-                                    dBmTarget += PowerStepSize;
-                                    converged = true;
-                                    // Check compression too
-                                    if (externalPwr > COMPRESSION_CHECK &&
-                                        CheckCompression(maxGain, externalPwr, nextValue))
-                                    {
-                                        wrk.ReportProgress(0, "In compression, done.");
-                                        inCompression = true;
-                                    }
-                                    break;  // Next target
-                                }
-                                else
-                                //if (externalPwr > COMPRESSION_CHECK &&
-                                //    CheckCompression(maxGain, externalPwr, nextValue))
-                                {
-                                    gain = externalPwr - nextValue; // hasn't been updated yet during binary search
-                                    result = string.Format(" Compression, dB:{0,6:f3}, ExtdBm:{1,5:f2}, CouplerFwd:{2,4:f0}, Temp:{3,2:f0}, Volts:{4,5:f2}, Amps:{5,5:f2}, Stepsize:{6:f2}, Gain:{7,5:f2}",
-                                                                nextValue,
-                                                                externalPwr,
-                                                                caldata.Coupler,
-                                                                caldata.Temperature,
-                                                                caldata.Volts,
-                                                                caldata.Amps,
-                                                                stepsize, gain);
-                                    wrk.ReportProgress(0, result);
-                                    WriteCalData(fout, result, caldata.IQDacMag);
-                                    inCompression = true;
-                                    break;
-                                }
+                                InCompressionOrOnTarget(wrk, ref result, ref results,
+                                                        fout, ref caldata, ref lastValue,
+                                                        nextValue, externalPwr,
+                                                        COMPRESSION_CHECK, ref dBmTarget,
+                                                        tolerance, ref stepsize, ref gain,
+                                                        ref maxGain, ref converged,
+                                                        ref inCompression);
+                                break; // done or next target
                             }
 
                             double lastTry = nextValue;
-                            if (externalPwr > dBmTarget)
-                            {
-                                nextValue -= stepsize;
-                                if (nextValue == lastTry)
-                                    nextValue -= MIN_ADJUST;
-                                if (!high)
-                                {
-                                    stepsize /= 2.0;
-                                    high = true;
-                                }
-                            }
-                            else
-                            {
-                                nextValue = nextValue += stepsize;
-                                if (nextValue == lastTry)
-                                    nextValue += MIN_ADJUST;
-                                if (high)
-                                {
-                                    stepsize /= 2.0;
-                                    high = false;
-                                }
-                            }
+                            GetNextTry(ref nextValue, ref high, ref stepsize,
+                                       externalPwr, dBmTarget,
+                                       lastTry, MIN_ADJUST);
                             status = SetCalPower(nextValue);
                             System.Threading.Thread.Sleep(250);
                             externalPwr = ReadExternal(dBmTarget);
@@ -334,14 +325,21 @@ namespace RFenergyUI.ViewModels
                                     nextValue < PowerStop &&
                                     ++iterations < MAX_ITERATIONS);
                     }
-
-                    if (nextValue >= PowerStop)
+                    else if(externalPwr > TOP_END)
                     {
-                        result += string.Format(", Stopped, input dB >= Max({0})", PowerStop);
-                        wrk.ReportProgress(0, result);
-                        WriteCalData(fout, result);
+                        // check compression even if not in tolerance at the top end.
+                        // might never hit target
+                        if(CheckCompression(maxGain, externalPwr, nextValue, wrk))
+                        {
+                            InCompressionDone(wrk, ref result, ref results,
+                                              fout, ref caldata,
+                                              nextValue, externalPwr,
+                                              ref stepsize, ref gain,
+                                              ref inCompression);
+                        }
                     }
-                    else if (!converged && !inCompression)
+
+                    if (!converged && !inCompression)
                     {
                         System.Threading.Thread.Sleep(250);
                         if ((status = MainViewModel.ICmd.PaStatus(M2Cmd.PWR_ADC, ref results)) != 0)
@@ -351,32 +349,35 @@ namespace RFenergyUI.ViewModels
                             wrk.ReportProgress(0, result);
                             break;
                         }
-                        result = string.Format(" Searching, dB:{0,6:f3}, ExtdBm:{1:f2}, CouplerFwd:{2,4:f0}, Temp:{3,2:f0}, Volts:{4,5:f2}, Amps:{5,5:f2}, Stepsize:{6:f2}",
-                                                nextValue,
-                                                externalPwr,
-                                                results[0].Forward,
-                                                Temperature(results),
-                                                Voltage(results),
-                                                MaxCurrent(results),
-                                                stepsize);
+                        result = SearchResult(nextValue, externalPwr, results[0].Forward,
+                                              Temperature(results), Voltage(results),
+                                              MaxCurrent(results), stepsize);
                         if (iterations >= MAX_ITERATIONS)
                             result += ", *ERROR*, exceeded max iterations";
                         wrk.ReportProgress(0, result);
-                        WriteCalData(fout, result);
+                        WriteCalData(fout, result, MainViewModel.ICmd.DacFromDB(nextValue));
                     }
                     nextValue += stepsize;
                 }
                 result = ResetPower();
-                if(result.Length > 0)
+                if (result.Length > 0)
                     wrk.ReportProgress(0, result);
+
+                // Show why we exited
+                if (nextValue >= PowerStop)
+                {
+                    result = string.Format("Power cal stopped: target output >= Max({0})", PowerStop);
+                    wrk.ReportProgress(0, result);
+                }
+
                 if (inCompression || SkipCollectData)
                 {
-                    if(UpdatePowerTable)
+                    if (UpdatePowerTable)
                         UpdateCalData(fout, wrk);
-                    if(PersistCalData)
+                    if (PersistCalData)
                         PersistCalResults(fout, wrk);
                 }
-                if(CalResults.Count > 0)
+                if (CalResults.Count > 0)
                 {
                     SaveCalResults(ResultsFile, wrk);
                 }
@@ -390,6 +391,312 @@ namespace RFenergyUI.ViewModels
             CloseCalData(fout);
             e.Result = 0;
             SetDutyCycleCompensation(true);
+        }
+
+        /// <summary>
+        /// Returns 0 on error, 1 if all Ok.
+        /// On error, result will have length (error description)
+        /// </summary>
+        /// <param name="wrk"></param>
+        /// <param name="fout"></param>
+        /// <param name="result"></param>
+        /// <returns></returns>
+        int InitCalData(BackgroundWorker wrk, ref StreamWriter fout, ref string result)
+        {
+            try
+            {
+                fout = OpenCalFile("RfePowerCal.txt");
+                string hdr = string.Format(" {0} RF Energy Source Calibration", MainViewModel.SelectedSystemName);
+                WriteCalDataHeader(fout, hdr);
+            }
+            catch (Exception fileEx)
+            {
+                wrk.ReportProgress(0,
+                    string.Format("Exception opening cal data file:{0}", fileEx.Message));
+            }
+
+            // Restore cal data, driver data as necessary
+        //// Read driver serial number & fill-in property
+        //MainViewModel.DebugPanel.GetTag = "drsn";
+        //MainViewModel.DebugPanel.CmdGetTag.Execute(null);
+        //System.Threading.Thread.Sleep(200);
+
+
+
+
+            string driverFile = string.Format("PowerCalResults{0}_Driver_{1}.json", Frequency, DriverSN);
+            if (DriverCal)
+                ResultsFile = driverFile;
+            else
+            {
+                ResultsFile = string.Format("PowerCalResults{0}.json", Frequency);
+                RestoreDriverGain(driverFile, wrk);
+            }
+            if (SkipCollectData)
+                RestoreCalResults(ResultsFile, wrk);
+
+            try
+            {
+                if (!SkipCollectData && SetupForCal((ushort)DacAFixed, ref result) != 0)
+                {
+                    wrk.ReportProgress(0, result);
+                    wrk.ReportProgress(0, "Calibration aborted");
+                    return 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                wrk.ReportProgress(0,
+                    string.Format("Exception SetupForCal():{0}", ex.Message));
+            }
+
+            SetDutyCycleCompensation(false);
+            return 1;
+        }
+
+        /// <summary>
+        /// In compression or at target, process data & exit search loop
+        /// </summary>
+        void InCompressionOrOnTarget(BackgroundWorker wrk, ref string result, 
+                                    ref MonitorPa[] results, StreamWriter fout,
+                                    ref PowerCalData caldata,
+                                    ref double lastValue, double nextValue, 
+                                    double externalPwr, double COMPRESSION_CHECK,
+                                    ref double dBmTarget, double tolerance,
+                                    ref double stepsize, ref double gain,
+                                    ref double maxGain,
+                                    ref bool converged, ref bool inCompression)
+        {
+            // Update Pa status
+            System.Threading.Thread.Sleep(250);
+            int status;
+            if ((status = MainViewModel.ICmd.PaStatus(M2Cmd.PWR_ADC, ref results)) != 0)
+            {
+                result = string.Format(" PaStatus read failed, status:{0}, exit cal", status);
+                PwrCalRunning = false;
+                wrk.ReportProgress(0, result);
+                return;
+            }
+            caldata = new PowerCalData
+            {
+                IQDacMag = MainViewModel.ICmd.DacFromDB(nextValue),
+                PowerDB = nextValue,
+                Coupler = results[0].Forward,
+                ExternaldBm = externalPwr,       // or target?
+                Temperature = Temperature(results),
+                Volts = Voltage(results),
+                Amps = MaxCurrent(results)
+            };
+            CalResults.Add(caldata);
+            if (!DriverCal && CalResults.Count == 1 && TargetStart > 40.0)
+            {
+                // fill-in the bottom of our table with the lowest value we can use.
+                for (int tmp_idx = 0; tmp_idx < (TargetStart - 40.0) / PowerStepSize; ++tmp_idx)
+                    CalResults.Add(caldata);
+            }
+            if (Math.Abs(externalPwr - dBmTarget) <= tolerance)
+            {
+                if (!Double.IsNaN(lastValue))
+                {
+                    stepsize = nextValue - lastValue;
+                    gain = externalPwr - ReferencePower(nextValue, caldata.IQDacMag);
+                    if (gain > maxGain && dBmTarget > 47.5) // ignore lower power gain
+                        maxGain = gain;
+                }
+                lastValue = nextValue;
+                WriteCalEntry(wrk, fout, false,
+                              nextValue, externalPwr, caldata.Coupler,
+                              caldata.Temperature, caldata.Volts, caldata.Amps,
+                              stepsize, gain, caldata.IQDacMag);
+                dBmTarget += PowerStepSize;
+                converged = true;
+                // Check compression too
+                if (externalPwr > COMPRESSION_CHECK &&
+                    CheckCompression(maxGain, externalPwr, nextValue, wrk))
+                {
+                    wrk.ReportProgress(0, "In compression, done.");
+                    inCompression = true;
+                }
+                return;  // on to next target
+            }
+            else
+            {
+                // Not within tolerance but already in compression
+                gain = externalPwr - ReferencePower(nextValue, caldata.IQDacMag); // hasn't been updated yet during binary search
+                WriteCalEntry(wrk, fout, true,
+                              nextValue, externalPwr, caldata.Coupler,
+                              caldata.Temperature, caldata.Volts, caldata.Amps,
+                              stepsize, gain, caldata.IQDacMag);
+                wrk.ReportProgress(0, "In compression, done.");
+                inCompression = true;
+                return;    // in compression, done
+            }
+        }
+
+        void InCompressionDone(BackgroundWorker wrk, ref string result,
+                               ref MonitorPa[] results, StreamWriter fout,
+                               ref PowerCalData caldata,
+                               double nextValue, double externalPwr, 
+                               ref double stepsize, ref double gain,
+                               ref bool inCompression)
+        {
+            // In compression, done, but not within spec of target
+            System.Threading.Thread.Sleep(250);
+            int status;
+            if ((status = MainViewModel.ICmd.PaStatus(M2Cmd.PWR_ADC, ref results)) != 0)
+            {
+                result = string.Format(" PaStatus read failed, status:{0}, exit cal", status);
+                PwrCalRunning = false;
+                wrk.ReportProgress(0, result);
+                return;
+            }
+            caldata = new PowerCalData
+            {
+                IQDacMag = MainViewModel.ICmd.DacFromDB(nextValue),
+                PowerDB = nextValue,
+                Coupler = results[0].Forward,
+                ExternaldBm = externalPwr,       // or target?
+                Temperature = Temperature(results),
+                Volts = Voltage(results),
+                Amps = MaxCurrent(results)
+            };
+            CalResults.Add(caldata);
+            gain = externalPwr - ReferencePower(nextValue, caldata.IQDacMag); // hasn't been updated yet during binary search
+            WriteCalEntry(wrk, fout, true,
+                          nextValue, externalPwr, caldata.Coupler,
+                          caldata.Temperature, caldata.Volts, caldata.Amps,
+                          stepsize, gain, caldata.IQDacMag);
+            wrk.ReportProgress(0, "In compression, done.");
+            inCompression = true;
+        }
+
+        /// <summary>
+        /// Return 'nextValue' to try
+        /// </summary>
+        /// <returns>sets nextValue, dB in to try next
+        /// sets 'high' boolean</returns>
+        void GetNextTry(ref double nextValue, ref bool high,
+                        ref double stepsize,
+                        double externalPwr, 
+                        double dBmTarget,
+                        double lastTry, 
+                        double MIN_ADJUST)
+        {
+            if (externalPwr > dBmTarget)
+            {
+                nextValue -= stepsize;
+                if (nextValue == lastTry)
+                    nextValue -= MIN_ADJUST;
+                if (!high)
+                {
+                    stepsize /= 2.0;
+                    high = true;
+                }
+            }
+            else
+            {
+                nextValue += stepsize;
+                if (nextValue == lastTry)
+                    nextValue += MIN_ADJUST;
+                if (high)
+                {
+                    stepsize /= 2.0;
+                    high = false;
+                }
+            }
+        }
+
+        void WriteCalEntry(BackgroundWorker wrk, StreamWriter fout, bool compression,
+                            double nextValue, double externalPwr, 
+                            double coupler, double temperature, double volts, 
+                            double amps, double stepsize, double gain, int dac)
+        {
+            string result = "";
+            if (MainViewModel.ICmd.HwType == InstrumentInfo.InstrumentType.S4)
+                result = string.Format(" Cal Entry, dB:{0,6:f3}, POut:{1,5:f2}, Temp:{2,2:f0}, Amps:{3,5:f2}, Stepsize:{4:f2}, Gain:{5,5:f2}",
+                                        nextValue,
+                                        externalPwr,
+                                        temperature,
+                                        amps,
+                                        stepsize, gain);
+            else
+                result = string.Format(" Cal Entry, dB:{0,6:f3}, POut:{1,5:f2}, CouplerFwd:{2,4:f0}, Temp:{3,2:f0}, Volts:{4,5:f2}, Amps:{5,5:f2}, Stepsize:{6:f2}, Gain:{7,5:f2}",
+                                        nextValue,
+                                        externalPwr,
+                                        coupler,
+                                        temperature,
+                                        volts,
+                                        amps,
+                                        stepsize, gain);
+            wrk.ReportProgress(0, result);
+            WriteCalData(fout, result, dac);
+        }
+
+        string SearchResult(double nextValue, double externalPwr, double couplerFwd,
+                            double temperature, double volts,
+                            double current, double stepsize)
+        {
+            string result;
+            if (MainViewModel.ICmd.HwType == InstrumentInfo.InstrumentType.S4)
+                result = string.Format(" Searching, dB:{0,6:f3}, POut:{1:f2}, Temp:{2,2:f0}, Amps:{3,5:f2}, Stepsize:{4:f2}",
+                                        nextValue,
+                                        externalPwr,
+                                        temperature,
+                                        current,
+                                        stepsize);
+            else
+                result = string.Format(" Searching, dB:{0,6:f3}, ExtdBm:{1:f2}, CouplerFwd:{2,4:f0}, Temp:{3,2:f0}, Volts:{4,5:f2}, Amps:{5,5:f2}, Stepsize:{6:f2}",
+                                        nextValue,
+                                        externalPwr,
+                                        couplerFwd,
+                                        temperature,
+                                        volts,
+                                        current,
+                                        stepsize);
+            return result;
+        }
+
+        /// <summary>
+        /// Different values used depending on system type
+        /// </summary>
+        /// <param name="nextValue"></param>
+        /// <param name="IQDacMag"></param>
+        /// <returns></returns>
+        double ReferencePower(double nextValue, int IQDacMag)
+        {
+            if (MainViewModel.ICmd.HwType == InstrumentInfo.InstrumentType.S4 && DriverGain != null)
+            {
+                bool maxDriver;
+                return DriverOutput(IQDacMag, out maxDriver);
+            }
+            else return nextValue;
+        }
+
+        /// <summary>
+        /// Search driver data to find driver output for specified dac value
+        /// </summary>
+        /// <param name="dacValue"></param>
+        /// <returns>Driver output for specified dac value</returns>
+        double DriverOutput(int dacValue, out bool maxDriver)
+        {
+            for(int k = 0; k < DriverGain.Count; ++k)
+            {
+                if (DriverGain[k].IQDacMag <= dacValue)
+                {
+                    maxDriver = false;
+                    if (k == 0)
+                        return DriverGain[k].ExternaldBm;
+                    else if (k >= DriverGain.Count - 1)
+                        return DriverGain[k - 1].ExternaldBm;
+
+                    // linear for now...
+                    double dacDelta = DriverGain[k - 1].IQDacMag - DriverGain[k].IQDacMag;
+                    double dbmDelta = DriverGain[k].ExternaldBm - DriverGain[k - 1].ExternaldBm;
+                    return DriverGain[k].ExternaldBm - (((dacValue - DriverGain[k].IQDacMag) / dacDelta) * dbmDelta);
+                }
+            }
+            maxDriver = true;
+            return DriverGain[DriverGain.Count - 1].ExternaldBm;
         }
 
         /// <summary>
@@ -447,6 +754,29 @@ namespace RFenergyUI.ViewModels
             }
         }
 
+        void RestoreDriverGain(string driverFile, BackgroundWorker wnd)
+        {
+            string filename = "";
+            try
+            {
+                filename = Environment.GetFolderPath(Environment.SpecialFolder.CommonDocuments) +
+                    "\\" + driverFile;
+                if (File.Exists(filename) == false)
+                    return;
+                StreamReader fin = new StreamReader(filename);
+                if (fin != null)
+                {
+                    string json = fin.ReadToEnd();
+                    fin.Close();
+                    DriverGain = JsonConvert.DeserializeObject<ObservableCollection<PowerCalData>>(json);
+                }
+            }
+            catch (Exception ex)
+            {
+                wnd.ReportProgress(0, string.Format("Exception reading DriverGain from JSON file{0}:{1}", filename, ex.Message));
+            }
+        }
+
         void SaveCalResults(string resultsFile, BackgroundWorker wnd)
         {
             string filename = "";
@@ -500,11 +830,6 @@ namespace RFenergyUI.ViewModels
             }
         }
 
-        int SynDacValue(double db)
-        {
-            return (int)((Math.Pow(10.0, db / 20.0) * (double)0x80) + 0.5);
-        }
-
         void pwrcal_ProgressChanged(object sender, ProgressChangedEventArgs e)
         {
             if (e.UserState != null)
@@ -548,266 +873,400 @@ namespace RFenergyUI.ViewModels
         }
         // End of power cal
 
-
+        readonly ObservableAsPropertyHelper<bool> _isIniting;
+        public bool IsIniting { get { return _isIniting.Value; } }
         public ReactiveCommand<string> CmdInit { get; protected set; }
         IObservable<string> CmdInitRun()
         {
-            string result = "";
-            try
+            return Observable.Start(() =>
             {
-                if (MainViewModel.IMeter != null)
+                string result = "";
+                try
                 {
-                    MainViewModel.IMeter.Startup();
-                    CmdOffsetsRun(Offsets.ToString());
-                    CmdFreqRun(Frequency.ToString());
-                    CmdAvgRun(Averages.ToString());
-                    ExternalTrigger = MainViewModel.TestPanel.DutyCycle == 100 ? false : true;
+                    if (MainViewModel.IMeter != null)
+                    {
+                        MainViewModel.IMeter.Startup();
+                        CmdOffsetsRun(Offsets.ToString());
+                        CmdFreqRun(Frequency.ToString());
+                        CmdAvgRun(Averages.ToString());
+                        ExternalTrigger = MainViewModel.TestPanel.DutyCycle == 100 ? false : true;
+                    }
+                    else result = "MainViewModel.IMeter interface is null, can't execute anything";
                 }
-                else result = "MainViewModel.IMeter interface is null, can't execute anything";
-            }
-            catch (Exception ex)
-            {
-                result = string.Format("Initialize LadyBug sensor exception:{0}", ex.Message);
-            }
-            return Observable.Return(result);
+                catch (Exception ex)
+                {
+                    result = string.Format("Initialize LadyBug sensor exception:{0}", ex.Message);
+                }
+                return result;
+            });
         }
 
+        readonly ObservableAsPropertyHelper<bool> _isReading;
+        public bool IsReading { get { return _isReading.Value; } }
         public ReactiveCommand<string> CmdReadCw { get; protected set; }
         IObservable<string> CmdReadCwRun()
         {
-            string result = "";
-            try
+            return Observable.Start(() =>
             {
-                if (MainViewModel.IMeter != null)
+                string result = "";
+                try
                 {
-                    Power = ReadExternal(40.0);
-                    result = string.Format("LadyBug ReadCw:{0:f2} dBm", Power);
+                    if (MainViewModel.IMeter != null)
+                    {
+                        Power = ReadExternal(40.0);
+                        result = string.Format("LadyBug ReadCw:{0:f2} dBm", Power);
+                    }
+                    else result = "MainViewModel.IMeter interface is null, can't execute anything";
                 }
-                else result = "MainViewModel.IMeter interface is null, can't execute anything";
-            }
-            catch (Exception ex)
-            {
-                result = ex.Message;
-            }
-            return Observable.Return(result);
+                catch (Exception ex)
+                {
+                    result = ex.Message;
+                }
+                return result;
+            });
         }
 
         public ReactiveCommand<string> CmdReadPulsed { get; protected set; }
         IObservable<string> CmdRdPulsedRun()
         {
-            string result = "";
-            try
+            return Observable.Start(() =>
             {
-                if (MainViewModel.IMeter != null)
+                string result = "";
+                try
                 {
-                    Power = ReadExternal(40.0);
-                    result = string.Format("LadyBug ReadPulsed:{0:f2} dBm", Power);
+                    if (MainViewModel.IMeter != null)
+                    {
+                        Power = ReadExternal(40.0);
+                        result = string.Format("LadyBug ReadPulsed:{0:f2} dBm", Power);
+                    }
+                    else result = "MainViewModel.IMeter interface is null, can't execute anything";
                 }
-                else result = "MainViewModel.IMeter interface is null, can't execute anything";
-            }
-            catch (Exception ex)
-            {
-                result = ex.Message;
-            }
-            return Observable.Return(result);
+                catch (Exception ex)
+                {
+                    result = ex.Message;
+                }
+                return result;
+            });
         }
 
+        readonly ObservableAsPropertyHelper<bool> _isOffseting;
+        public bool IsOffseting { get { return _isOffseting.Value; } }
         public ReactiveCommand<string> CmdEnableOffset { get; protected set; }
         IObservable<string> CmdEnableOffsetRun()
         {
-            string result = "";
-            try
+            return Observable.Start(() =>
             {
-                if (MainViewModel.IMeter != null)
+                string result = "";
+                try
                 {
-                    MainViewModel.IMeter.OffsetEnable = true;
-                    result = "LadyBug EnableOffsets true";
+                    if (MainViewModel.IMeter != null)
+                    {
+                        MainViewModel.IMeter.OffsetEnable = true;
+                        result = "LadyBug EnableOffsets true";
+                    }
+                    else result = "MainViewModel.IMeter interface is null, can't execute anything";
                 }
-                else result = "MainViewModel.IMeter interface is null, can't execute anything";
-            }
-            catch (Exception ex)
-            {
-                result = string.Format("EnableOffsets exception:{0}", ex.Message);
-            }
-            return Observable.Return(result);
+                catch (Exception ex)
+                {
+                    result = string.Format("EnableOffsets exception:{0}", ex.Message);
+                }
+                return result;
+            });
         }
 
         public ReactiveCommand<string> CmdOffsets { get; protected set; }
         IObservable<string> CmdOffsetsRun(object text)
         {
-            string result = "";
-            try
+            return Observable.Start(() =>
             {
-                if (MainViewModel.IMeter != null)
+                string result = "";
+                try
                 {
-                    double value;
-                    if (Double.TryParse(text.ToString(), out value))
+                    if (MainViewModel.IMeter != null)
                     {
-                        Offsets = value;
-                        if (Offsets < 0.0 || Offsets > 65.0)
-                            return Observable.Return(string.Format("Offset out of range({0}) must be between 0 and 65", Offsets));
-                        MainViewModel.IMeter.Offset = Offsets;
-                        result = string.Format("Offsest set to {0}", Offsets);
-                        double check = MainViewModel.IMeter.Offset;
-                        result += string.Format(", read:{0:f1}", check);
+                        double value;
+                        if (Double.TryParse(text.ToString(), out value))
+                        {
+                            Offsets = value;
+                            if (Offsets < 0.0 || Offsets > 65.0)
+                                return string.Format("Offset out of range({0}) must be between 0 and 65", Offsets);
+                            MainViewModel.IMeter.Offset = Offsets;
+                            result = string.Format("Offsest set to {0}", Offsets);
+                            double check = MainViewModel.IMeter.Offset;
+                            result += string.Format(", read:{0:f1}", check);
 
-                        CmdEnableOffsetRun();
+                            CmdEnableOffsetRun();
+                        }
+                        else
+                            return string.Format("Error, cannot convert '{0}' to a double", text.ToString());
                     }
-                    else
-                        return Observable.Return(string.Format("Error, cannot convert '{0}' to a double", text.ToString()));
+                    else result = "MainViewModel.IMeter interface is null, can't execute anything";
                 }
-                else result = "MainViewModel.IMeter interface is null, can't execute anything";
-            }
-            catch (Exception ex)
-            {
-                result = string.Format("Offsets exception:{0}", ex.Message);
-            }
-            return Observable.Return(result);
+                catch (Exception ex)
+                {
+                    result = string.Format("Offsets exception:{0}", ex.Message);
+                }
+                return result;
+            });
         }
 
+        readonly ObservableAsPropertyHelper<bool> _isFrqing;
+        public bool IsFrqing { get { return _isFrqing.Value; } }
         public ReactiveCommand<string> CmdFreq { get; protected set; }
         IObservable<string> CmdFreqRun(object text)
         {
-            string result = "";
-            try
+            return Observable.Start(() =>
             {
-                if (MainViewModel.IMeter != null)
+                string result = "";
+                try
                 {
-                    double value;
-                    if (Double.TryParse(text.ToString(), out value))
+                    if (MainViewModel.IMeter != null)
                     {
-                        if (value < 2400.0 || value > 2500.0)
-                            return Observable.Return(string.Format("Frequency out of range({0}) must be between 2400 and 2500", value));
-                        Frequency = value;
-                        MainViewModel.IMeter.SetFrequency(Frequency);
-                        result = string.Format("LadyBug SetFrequency {0:f1} mHz", Frequency);
+                        double value;
+                        if (Double.TryParse(text.ToString(), out value))
+                        {
+                            if (value < 2400.0 || value > 2500.0)
+                                return string.Format("Frequency out of range({0}) must be between 2400 and 2500", value);
+                            //Frequency = value;
+                            MainViewModel.IMeter.SetFrequency(Frequency);
+                            result = string.Format("LadyBug SetFrequency {0:f1} mHz", Frequency);
+             result += "**Need Meter Freq Event to update UI**";
+                        }
+                        else
+                            return string.Format("Error, cannot convert '{0}' to a double", text.ToString());
                     }
-                    else
-                        return Observable.Return(string.Format("Error, cannot convert '{0}' to a double", text.ToString()));
+                    else result = "MainViewModel.IMeter interface is null, can't execute anything";
                 }
-                else result = "MainViewModel.IMeter interface is null, can't execute anything";
-            }
-            catch (Exception ex)
-            {
-                result = string.Format("Set LadyBug frequency exception:{0}", ex.Message);
-            }
-            return Observable.Return(result);
+                catch (Exception ex)
+                {
+                    result = string.Format("Set LadyBug frequency exception:{0}", ex.Message);
+                }
+                return result;
+            });
         }
 
+        readonly ObservableAsPropertyHelper<bool> _isTrging;
+        public bool IsTrging { get { return _isTrging.Value; } }
         public ReactiveCommand<string> CmdTriggerDelay { get; protected set; }
         IObservable<string> CmdTrigDlyRun(object text)
         {
-            string result = "";
-            try
+            return Observable.Start(() =>
             {
-                int value;
-                if (int.TryParse(text.ToString(), out value))
+                string result = "";
+                try
                 {
-                    TriggerDelay = value;
-                    MainViewModel.IMeter.TriggerInTimeout = TriggerDelay;
-                    result = string.Format("TriggerInTimeout set to {0}", TriggerDelay);
+                    int value;
+                    if (int.TryParse(text.ToString(), out value))
+                    {
+                        //TriggerDelay = value;
+                        MainViewModel.IMeter.TriggerInTimeout = TriggerDelay;
+                        result = string.Format("TriggerInTimeout set to {0}", TriggerDelay);
+            result += "**Need TriggerDelay Event to update UI**";
+                    }
+                    else
+                        return string.Format("Error, cannot convert '{0}' to an int", text.ToString());
                 }
-                else
-                    return Observable.Return(string.Format("Error, cannot convert '{0}' to an int", text.ToString()));
-            }
-            catch (Exception ex)
-            {
-                result = string.Format("TriggerDelay exception:{0}", ex.Message);
-            }
-            return Observable.Return(result);
+                catch (Exception ex)
+                {
+                    result = string.Format("TriggerDelay exception:{0}", ex.Message);
+                }
+                return result;
+            });
         }
 
         public ReactiveCommand<string> CmdTriggerWidth { get; protected set; }
         IObservable<string> CmdTrigWidthRun(object text)
         {
-            string result = "";
-            try
+            return Observable.Start(() =>
             {
-                int value;
-                if (int.TryParse(text.ToString(), out value))
+                string result = "";
+                try
                 {
-                    TriggerWidth = value;
-                    MainViewModel.IMeter.TriggerInTimeout = TriggerWidth;
-                    result = string.Format("TriggerInTimeout set to {0}", TriggerDelay);
+                    int value;
+                    if (int.TryParse(text.ToString(), out value))
+                    {
+                        //TriggerWidth = value;
+                        MainViewModel.IMeter.TriggerInTimeout = TriggerWidth;
+                        result = string.Format("TriggerInTimeout set to {0}", TriggerDelay);
+               result += "**Need TriggerWidth Event to update UI**";
+                    }
+                    else
+                        return string.Format("Error, cannot convert '{0}' to an int", text.ToString());
                 }
-                else
-                    return Observable.Return(string.Format("Error, cannot convert '{0}' to an int", text.ToString()));
-            }
-            catch (Exception ex)
-            {
-                result = string.Format("TriggerWidth exception:{0}", ex.Message);
-            }
-            return Observable.Return(result);
+                catch (Exception ex)
+                {
+                    result = string.Format("TriggerWidth exception:{0}", ex.Message);
+                }
+                return result;
+            });
         }
 
+        public ReactiveCommand<string> CmdReadSNs { get; protected set; }
+        IObservable<string> CmdReadSNsRun(object text)
+        {
+            return Observable.Start(() =>
+            {
+                string result = "";
+                try
+                {
+                    string tag = "";
+                    int status = MainViewModel.IDbg.GetTag("drsn", ref tag);
+                    if (status == 0)
+                    {
+                        tag = tag.TrimEnd(new char[] { '>', '\n', '\r' });
+                        string[] tmp = tag.Split(new char[] { '=' });
+                        if(tmp.Length == 2)
+                            return tmp[1];
+                    }
+                    else
+                        result = "Required drsn tag not found";
+                }
+                catch (Exception ex)
+                {
+                    result = string.Format("CmdReadSNs exception:{0}", ex.Message);
+                }
+                return result;
+            });
+        }
+        void CmdReadSNsDone(string result)
+        {
+            if (result.Length > 0)
+                DriverSN = result;
+        }
+
+        readonly ObservableAsPropertyHelper<bool> _isAvging;
+        public bool IsAvging { get { return _isAvging.Value; } }
         public ReactiveCommand<string> CmdAverages { get; protected set; }
         IObservable<string> CmdAvgRun(object text)
         {
-            string result = "";
-            try
+            return Observable.Start(() =>
             {
-                int value;
-                if (int.TryParse(text as string, out value))
+                string result = "";
+                try
                 {
-                    MainViewModel.IMeter.SetAverages(value);
-                    return Observable.Return("CmdAverages done");
+                    int value;
+                    if (int.TryParse(text as string, out value))
+                    {
+                        MainViewModel.IMeter.SetAverages(value);
+                        return "CmdAverages done";
+                    }
+                    else return string.Format("Can't convert {0} to integer", text.ToString());
                 }
-                else return Observable.Return(string.Format("Can't convert {0} to integer", text.ToString()));
-            }
-            catch (Exception ex)
-            {
-                result = string.Format("CmdAverages exception:{0}", ex.Message);
-            }
-            return Observable.Return(result);
+                catch (Exception ex)
+                {
+                    result = string.Format("CmdAverages exception:{0}", ex.Message);
+                }
+                return result;
+            });
         }
 
+        readonly ObservableAsPropertyHelper<bool> _isJsoning;
+        public bool IsJsoning { get { return _isJsoning.Value; } }
+        public ReactiveCommand<string> CmdJsonToDriver { get; protected set; }
+        public ReactiveCommand<string> CmdJsonFromDriver { get; protected set; }
+        IObservable<string> CmdJsonRun(bool toDriver)
+        {
+            return Observable.Start(() =>
+            {
+                string result = "";
+                try
+                {
+                    if (MainViewModel.ICmd != null)
+                    {
+                        string filename = "";
+                        try
+                        {
+                            if (DriverSN == "1")
+                                throw new ApplicationException("Driver serial number required, read tag 'drsn'");
+                            string driverFile = string.Format("PowerCalResults{0}_Driver_{1}.json", Frequency, DriverSN);
+                            filename = Environment.GetFolderPath(Environment.SpecialFolder.CommonDocuments) +
+                                "\\" + driverFile;
+                            if (File.Exists(filename))
+                            {
+                                StreamReader fin = new StreamReader(filename);
+                                if (fin != null)
+                                {
+                                    string json = fin.ReadToEnd();
+                                    fin.Close();
+                                    byte[] jsonData = System.Text.Encoding.ASCII.GetBytes(json);
+                                    int status = MainViewModel.ICmd.WriteDriverCalData(Frequency, jsonData, -1);
+                                    if (status == 0)
+                                        result = "Driver caldata written.";
+                                    else result = "DriverGain invalid or missing data";
+                                }
+                                else
+                                    result = string.Format("Error reading DriverGain JSON file{0}", filename);
+                            }
+                            else
+                                result = string.Format("DriverGain JSON file{0} not found", filename);
+                        }
+                        catch (Exception ex)
+                        {
+                            result = string.Format("Exception reading DriverGain JSON file{0}:{1}", filename, ex.Message);
+                        }
+                    }
+                    else result = "MainViewModel.ICmd interface is null, can't execute anything";
+                }
+                catch (Exception ex)
+                {
+                    result = string.Format("Write json caldata exception:{0}", ex.Message);
+                }
+                return result;
+            });
+        }
+
+        readonly ObservableAsPropertyHelper<bool> _isMtrCaling;
+        public bool IsMtrCaling { get { return _isMtrCaling.Value; } }
         public ReactiveCommand<string> CmdMtrCal { get; protected set; }
         IObservable<string> CmdMtrCalRun()
         {
-            string result = "";
-            try
+            return Observable.Start(() =>
             {
-                if (MeterBreakpoint < MIN_METER_BREAKPOINT &&
-                    MeterBreakpoint > MAX_METER_BREAKPOINT)
+                string result = "";
+                try
                 {
-                    return Observable.Return(string.Format("MeterBreakpont out of range({0}) must be between {1} and {2}",
-                                                                                    MeterBreakpoint, MIN_METER_BREAKPOINT, MAX_METER_BREAKPOINT));
-                }
-                if (MainViewModel.IDbg != null)
-                {
-                    byte[] cmd = new byte[M2Cmd.MTR_CAL_DATA + 1];
-                    cmd[0] = M2Cmd.CAL_MTR;
-                    cmd[1] = M2Cmd.MTR_UPDATE_INUSE;
-                    if (WriteMtrTag)
-                        cmd[1] |= (byte)M2Cmd.MTR_UPDATE_EEPROM;
-                    cmd[2] = (byte)((short)MeterBreakpoint & 0xff);
-                    cmd[3] = (byte)(((short)MeterBreakpoint >> 8) &0xff);
-                    short tmp = (short)(LowSlope * 256.0);
-                    cmd[4] = (byte)(tmp & 0xff);
-                    cmd[5] = (byte)((tmp >> 8) & 0xff);
-                    tmp = (short)(LowIntercept * 256.0);
-                    cmd[6] = (byte)(tmp & 0xff);
-                    cmd[7] = (byte)((tmp >> 8) & 0xff);
+                    if (MeterBreakpoint < MIN_METER_BREAKPOINT &&
+                        MeterBreakpoint > MAX_METER_BREAKPOINT)
+                    {
+                        return string.Format("MeterBreakpont out of range({0}) must be between {1} and {2}",
+                                              MeterBreakpoint, MIN_METER_BREAKPOINT, MAX_METER_BREAKPOINT);
+                    }
+                    if (MainViewModel.IDbg != null)
+                    {
+                        byte[] cmd = new byte[M2Cmd.MTR_CAL_DATA + 1];
+                        cmd[0] = M2Cmd.CAL_MTR;
+                        cmd[1] = M2Cmd.MTR_UPDATE_INUSE;
+                        if (WriteMtrTag)
+                            cmd[1] |= (byte)M2Cmd.MTR_UPDATE_EEPROM;
+                        cmd[2] = (byte)((short)MeterBreakpoint & 0xff);
+                        cmd[3] = (byte)(((short)MeterBreakpoint >> 8) & 0xff);
+                        short tmp = (short)(LowSlope * 256.0);
+                        cmd[4] = (byte)(tmp & 0xff);
+                        cmd[5] = (byte)((tmp >> 8) & 0xff);
+                        tmp = (short)(LowIntercept * 256.0);
+                        cmd[6] = (byte)(tmp & 0xff);
+                        cmd[7] = (byte)((tmp >> 8) & 0xff);
 
-                    tmp = (short)(HighSlope * 256.0);
-                    cmd[8] = (byte)(tmp & 0xff);
-                    cmd[9] = (byte)((tmp >> 8) & 0xff);
-                    tmp = (short)(HighIntercept * 256.0);
-                    cmd[10] = (byte)(tmp & 0xff);
-                    cmd[11] = (byte)((tmp >> 8) & 0xff);
-                    byte[] data = null;
-                    int status = MainViewModel.ICmd.RunCmd(cmd, ref data);
-                    if (status == 0)
-                        result = "CAL_MTR Ok\n";
-                    else result = string.Format("CAL_MTR error:{0}", MainViewModel.IErr.ErrorDescription(status));
+                        tmp = (short)(HighSlope * 256.0);
+                        cmd[8] = (byte)(tmp & 0xff);
+                        cmd[9] = (byte)((tmp >> 8) & 0xff);
+                        tmp = (short)(HighIntercept * 256.0);
+                        cmd[10] = (byte)(tmp & 0xff);
+                        cmd[11] = (byte)((tmp >> 8) & 0xff);
+                        byte[] data = null;
+                        int status = MainViewModel.ICmd.RunCmd(cmd, ref data);
+                        if (status == 0)
+                            result = "CAL_MTR Ok\n";
+                        else result = string.Format("CAL_MTR error:{0}", MainViewModel.IErr.ErrorDescription(status));
+                    }
+                    else result = "MainViewModel.IDbg interface is null, can't execute anything";
                 }
-                else result = "MainViewModel.IDbg interface is null, can't execute anything";
-            }
-            catch (Exception ex)
-            {
-                result = string.Format("CmdMtrCal exception:{0}", ex.Message);
-            }
-            return Observable.Return(result);
+                catch (Exception ex)
+                {
+                    result = string.Format("CmdMtrCal exception:{0}", ex.Message);
+                }
+                return result;
+            });
         }
 
         //public ReactiveCommand<string> CmdMtrBreakpointArrow { get; protected set; }
@@ -830,74 +1289,77 @@ namespace RFenergyUI.ViewModels
         //    return Observable.Return(result);
         //}
 
+        readonly ObservableAsPropertyHelper<bool> _isCouplering;
+        public bool IsCouplering { get { return _isCouplering.Value; } }
         public ReactiveCommand<string> CmdCouplerOffsets { get; protected set; }
         IObservable<string> CmdCouplerOffsetsRun()
         {
-            string result = "";
-            try
+            return Observable.Start(() =>
             {
-                int status = EnableChannels(false);
-                if (status != 0)
+                string result = "";
+                try
                 {
-                    result = string.Format(" Disable channels failed, status:{0}", MainViewModel.IErr.ErrorDescription(status));
-                    return Observable.Return(result);
-                }
-                System.Threading.Thread.Sleep(1000);
-
-                double fwd, refl;
-                fwd = refl = 0.0;
-                status = ReadCoupler(M2Cmd.PWR_RAW, ref fwd, ref refl);
-                if (status != 0)
-                {
-                    result = string.Format(" ReadCoupler failed, status:{0}", MainViewModel.IErr.ErrorDescription(status));
-                    return Observable.Return(result);
-                }
-                // To display these 16-bit signed numbers check the sign here. They're passed
-                // around as 16-bit unsigned #'s
-                uint tmpl = (uint)fwd;
-                unchecked
-                {
-                    if ((tmpl & 0x8000) == 0x8000)
-                    {
-                        tmpl |= 0xffff0000;
-                    }
-                }
-                CouplerFwdOffset = (double)(int)tmpl;
-                tmpl = (uint)refl;
-                unchecked
-                {
-                    if ((tmpl & 0x8000) == 0x8000)
-                    {
-                        tmpl = tmpl | 0xffff0000;
-                    }
-                }
-                CouplerReflOffset = (double)(int)tmpl;
-                if(WriteFofRofTags)
-                {
-                    // Write these values to binary tags FOF & ROF
-                    short tmp = (short)((int)CouplerFwdOffset & 0x3fff);
-                    if((status = MainViewModel.IDbg.SetTag("FOF", BitConverter.GetBytes(tmp))) == 0)
-                    {
-                        tmp = (short)((int)CouplerReflOffset & 0x3fff);
-                        status = MainViewModel.IDbg.SetTag("ROF", BitConverter.GetBytes(tmp));
-                    }
+                    int status = EnableChannels(false);
                     if (status != 0)
                     {
-                        result = string.Format(" Write FOF/ROF failed, status:{0}", MainViewModel.IErr.ErrorDescription(status));
+                        return string.Format(" Disable channels failed, status:{0}", MainViewModel.IErr.ErrorDescription(status));
+                    }
+                    System.Threading.Thread.Sleep(1000);
+
+                    double fwd, refl;
+                    fwd = refl = 0.0;
+                    status = ReadCoupler(M2Cmd.PWR_RAW, ref fwd, ref refl);
+                    if (status != 0)
+                    {
+                        return string.Format(" ReadCoupler failed, status:{0}", MainViewModel.IErr.ErrorDescription(status));
+                    }
+                    // To display these 16-bit signed numbers check the sign here. They're passed
+                    // around as 16-bit unsigned #'s
+                    uint tmpl = (uint)fwd;
+                    unchecked
+                    {
+                        if ((tmpl & 0x8000) == 0x8000)
+                        {
+                            tmpl |= 0xffff0000;
+                        }
+                    }
+                    CouplerFwdOffset = (double)(int)tmpl;
+                    tmpl = (uint)refl;
+                    unchecked
+                    {
+                        if ((tmpl & 0x8000) == 0x8000)
+                        {
+                            tmpl = tmpl | 0xffff0000;
+                        }
+                    }
+                    CouplerReflOffset = (double)(int)tmpl;
+                    if (WriteFofRofTags)
+                    {
+                        // Write these values to binary tags FOF & ROF
+                        short tmp = (short)((int)CouplerFwdOffset & 0x3fff);
+                        if ((status = MainViewModel.IDbg.SetTag("FOF", BitConverter.GetBytes(tmp))) == 0)
+                        {
+                            tmp = (short)((int)CouplerReflOffset & 0x3fff);
+                            status = MainViewModel.IDbg.SetTag("ROF", BitConverter.GetBytes(tmp));
+                        }
+                        if (status != 0)
+                        {
+                            result = string.Format(" Write FOF/ROF failed, status:{0}", MainViewModel.IErr.ErrorDescription(status));
+                        }
+                    }
+
+                    status = EnableChannels(true);
+                    if (status != 0)
+                    {
+                        result = string.Format(" Enable channels failed, status:{0}", MainViewModel.IErr.ErrorDescription(status));
                     }
                 }
-
-                status = EnableChannels(true);
-                if (status != 0)
+                catch (Exception ex)
                 {
-                    result = string.Format(" Enable channels failed, status:{0}", MainViewModel.IErr.ErrorDescription(status));
+                    result = string.Format("CmdCouplerOffsets exception:{0}", ex.Message);
                 }
-            }
-            catch (Exception ex)
-            {
-                result = string.Format("CmdCouplerOffsets exception:{0}", ex.Message);
-            }
-            return Observable.Return(result);
+                return result;
+            });
         }
 
         /// <summary>
@@ -978,6 +1440,7 @@ namespace RFenergyUI.ViewModels
 
         /// <summary>
         /// For S4:
+        /// NO, just use it as starting DAC value. We'll program both
         /// Fix DAC A at the passed in value.
         /// Set to adjust only DAC B
         /// </summary>
@@ -988,8 +1451,23 @@ namespace RFenergyUI.ViewModels
             result = "";
             if (MainViewModel.ICmd.HwType == InstrumentInfo.InstrumentType.S4)
             {
-                System.Threading.Thread.Sleep(150);
+                if (MainViewModel.TestPanel.PatternFile.Length == 0)
+                {
+                    result = "Missing pattern filename";
+                    return 100;
+                }
+                if (DriverSN.Length == 0 || DriverSN == "1")
+                {
+                    result = "Driver serial number required for S4 calibration";
+                    return 100;
+                }
+
                 string rsp = "";
+                System.Threading.Thread.Sleep(150);
+                MainViewModel.TestPanel.BiasOn =
+                    MainViewModel.ICmd.BiasEnable(false);
+
+                System.Threading.Thread.Sleep(150);
                 if ((status = MainViewModel.ICmd.RunCmd("fw 12 3 0 0 0\n", ref rsp)) != 0)
                     result = "Error setting S4 VGA DAC mode:" + rsp;
                 else
@@ -999,26 +1477,26 @@ namespace RFenergyUI.ViewModels
                         result = "Error setting S4 VGA DAC's:" + rsp;
                     else
                     {
-                        System.Threading.Thread.Sleep(150);
-                        if ((status = MainViewModel.ICmd.RunCmd("fw 12 1 0 0 0\n", ref rsp)) != 0)
-                            result = "Error setting S4 VGA DAC mode to B only:" + rsp;
-                        else
+                        //System.Threading.Thread.Sleep(150);
+                        //if ((status = MainViewModel.ICmd.RunCmd("fw 12 1 0 0 0\n", ref rsp)) != 0)
+                        //    result = "Error setting S4 VGA DAC mode to B only:" + rsp;
+                        //else
                         {
                             System.Threading.Thread.Sleep(150);
-                            if ((status = MainViewModel.ICmd.RunCmd("fw 6 1 1\n", ref rsp)) != 0)
-                                result = "Error turning S4 BIAS ON:" + rsp;
+                            string cmdline = string.Format("loadpat {0} 0\n", MainViewModel.TestPanel.PatternFile);
+                            if ((status = MainViewModel.ICmd.RunCmd(cmdline, ref rsp)) != 0)
+                                result = "Error loading calibration pattern:" + rsp;
                             else
                             {
                                 System.Threading.Thread.Sleep(150);
-                                if ((status = MainViewModel.ICmd.RunCmd("loadpat cal100us.ptf 100\n", ref rsp)) != 0)
-                                    result = "Error loading calibration pattern:" + rsp;
+                                if ((status = MainViewModel.ICmd.RunCmd("trig ctrl 0x95 10\n", ref rsp)) != 0)
+                                    result = "Error triggering pattern:" + rsp;
                                 else
                                 {
                                     System.Threading.Thread.Sleep(150);
-                                    if ((status = MainViewModel.ICmd.RunCmd("trig ctrl 0x95 10\n", ref rsp)) != 0)
-                                        result = "Error loading calibration pattern:" + rsp;
-                                    else
-                                        result = "S4 ready for power calibration";
+                                    MainViewModel.TestPanel.BiasOn =
+                                        MainViewModel.ICmd.BiasEnable(true);
+                                    result = "S4 ready for power calibration";
                                 }
                             }
                         }
@@ -1072,6 +1550,9 @@ namespace RFenergyUI.ViewModels
         /// <returns></returns>
         int Temperature(MonitorPa[] results)
         {
+            if (results.Length == 1)
+                return (int)results[0].Temperature;
+
             double temp = 0.0; ;
             for (int k = 0; k < results.Length; ++k)
             {
@@ -1087,6 +1568,9 @@ namespace RFenergyUI.ViewModels
         /// <returns></returns>
         double Voltage(MonitorPa[] results)
         {
+            if (results.Length == 1)
+                return (int)results[0].Voltage;
+
             double volts = 0.0; ;
             for (int k = 0; k < results.Length; ++k)
             {
@@ -1102,6 +1586,9 @@ namespace RFenergyUI.ViewModels
         /// <returns></returns>
         double MaxCurrent(MonitorPa[] results)
         {
+            if (results.Length == 1)
+                return results[0].Current;
+
             double maxAmps = Double.NegativeInfinity;
             for (int k = 0; k < results.Length; ++k)
             {
@@ -1111,12 +1598,30 @@ namespace RFenergyUI.ViewModels
             return maxAmps;
         }
 
-        bool CheckCompression(double maxGain, double pOut, double pIn)
+        bool CheckCompression(double maxGain, double pOut, double pIn,
+                                BackgroundWorker wrk)
         {
             if (maxGain > 0)
             {
                 double gain = pOut - pIn;
-                if (gain < maxGain && (maxGain - gain) > Compression)
+                // For S4 lookup driver output power
+                if (MainViewModel.ICmd.HwType == InstrumentInfo.InstrumentType.S4 && !DriverCal)
+                {
+                    bool maxDriver;
+                    pIn = DriverOutput(MainViewModel.ICmd.DacFromDB(pIn), out maxDriver);
+                    gain = pOut - pIn;
+                    if (maxDriver)
+                    {
+                        wrk.ReportProgress(0, string.Format("*AtMaxDriverOutput* Gain:{0:f2}, MaxGain:{1:f2}, Compression:{2:f1}",
+                                                gain, maxGain, (maxGain - gain)));
+                    }
+                }
+                //if (pOut > 55.0)
+                //    if (gain > 50)
+                //        System.Diagnostics.Debug.WriteLine("AFU");
+                //    wrk.ReportProgress(0, string.Format("Gain:{0:f2}, MaxGain:{1:f2}, Compression:{2:f1}", 
+                //                            gain, maxGain, (maxGain - gain)));
+                if (gain < maxGain && (maxGain - gain) >= Compression)
                     return true;
             }
             return false;
@@ -1127,7 +1632,7 @@ namespace RFenergyUI.ViewModels
         /// </summary>
         /// <param name="dBmTarget"></param>
         /// <returns></returns>
-        double ReadExternal(double dBmTarget)
+        public double ReadExternal(double dBmTarget)
         {
             try
             {
@@ -1157,6 +1662,8 @@ namespace RFenergyUI.ViewModels
                 fout.WriteLine(Environment.NewLine + MainViewModel.Timestamp + title);
                 string data = string.Format(" Frequency:{0:f1} MHz, DutyCycle:{1}", 
                                             Frequency, MainViewModel.TestPanel.DutyCycle);
+                if (MainViewModel.ICmd.HwType == InstrumentInfo.InstrumentType.S4)
+                    data += string.Format(", DacA:0x{0:x3}", DacAFixed);
                 fout.WriteLine(MainViewModel.Timestamp + data);
             }
         }
@@ -1170,7 +1677,12 @@ namespace RFenergyUI.ViewModels
         void WriteCalData(StreamWriter fout, string line, int synDac)
         {
             if (fout != null)
-                fout.WriteLine(MainViewModel.Timestamp + line + string.Format(", SynDac:0x{0:x}", synDac));
+            {
+                if (MainViewModel.ICmd.HwType == InstrumentInfo.InstrumentType.S4)
+                    fout.WriteLine(MainViewModel.Timestamp + line + string.Format(", VgaDacB:0x{0:x}", synDac));
+                else
+                    fout.WriteLine(MainViewModel.Timestamp + line + string.Format(", SynDac:0x{0:x}", synDac));
+            }
         }
 
         void CloseCalData(StreamWriter fout)
@@ -1235,9 +1747,11 @@ namespace RFenergyUI.ViewModels
             if (MainViewModel.ICmd.HwType == InstrumentInfo.InstrumentType.S4)
             {
                 System.Threading.Thread.Sleep(150);
-                string rsp = "";
-                if (MainViewModel.ICmd.RunCmd("fw 6 1 0\n", ref rsp) != 0)
-                    result = "Error turning S4 BIAS OFF:" + rsp;
+                MainViewModel.ICmd.BiasEnable(false);
+                MainViewModel.TestPanel.BiasOn = false;
+                //string rsp = "";
+                //if (MainViewModel.ICmd.RunCmd("fw 6 1 0\n", ref rsp) != 0)
+                //    result = "Error turning S4 BIAS OFF:" + rsp;
             }
             return result;
         }
@@ -1249,6 +1763,13 @@ namespace RFenergyUI.ViewModels
         {
             get { return _calResults; }
             set { this.RaiseAndSetIfChanged(ref _calResults, value); }
+        }
+
+        ObservableCollection<PowerCalData> _driverGain;
+        public ObservableCollection<PowerCalData> DriverGain
+        {
+            get { return _driverGain; }
+            set { this.RaiseAndSetIfChanged(ref _driverGain, value); }
         }
 
         double _couplerFwdOffset;
@@ -1317,6 +1838,19 @@ namespace RFenergyUI.ViewModels
             set { this.RaiseAndSetIfChanged(ref _compression, value); }
         }
 
+        string _driverSN;
+        public string DriverSN
+        {
+            get { return _driverSN; }
+            set { this.RaiseAndSetIfChanged(ref _driverSN, value); }
+        }
+        bool _driverCal;
+        public bool DriverCal
+        {
+            get { return _driverCal; }
+            set { this.RaiseAndSetIfChanged(ref _driverCal, value); }
+        }
+
         bool _externalTrigger;
         public bool ExternalTrigger
         {
@@ -1344,6 +1878,37 @@ namespace RFenergyUI.ViewModels
                 catch (Exception ex)
                 {
                     MainViewModel.MsgAppendLine(string.Format("TriggerWidth exception:{0}", ex.Message));
+                }
+            }
+        }
+
+        bool _invertTrigger;
+        public bool InvertTrigger
+        {
+            get
+            {
+                if (MainViewModel.IMeter != null)
+                {
+                    _invertTrigger = MainViewModel.IMeter.TriggerInvert;
+                }
+                return _invertTrigger;
+            }
+            set
+            {
+                try
+                {
+                    if (MainViewModel.IMeter != null)
+                    {
+                        MainViewModel.IMeter.TriggerInvert = value;
+                        MainViewModel.MsgAppendLine(string.Format("InvertTrigger set{0}", value ? "ON" : "OFF"));
+                        this.RaiseAndSetIfChanged(ref _invertTrigger, value);
+                    }
+                    else
+                        MainViewModel.MsgAppendLine("IMeter is null, can't set TriggerInvert");
+                }
+                catch (Exception ex)
+                {
+                    MainViewModel.MsgAppendLine(string.Format("TriggerInvert exception:{0}", ex.Message));
                 }
             }
         }
@@ -1423,6 +1988,13 @@ namespace RFenergyUI.ViewModels
         {
             get { return _averages; }
             set { this.RaiseAndSetIfChanged(ref _averages, value); }
+        }
+
+        int _dacAFixed;
+        public int DacAFixed
+        {
+            get { return _dacAFixed; }
+            set { this.RaiseAndSetIfChanged(ref _dacAFixed, value); }
         }
 
         double _offsets;
@@ -1519,6 +2091,27 @@ namespace RFenergyUI.ViewModels
         {
             get { return _updatePowerTable; }
             set { this.RaiseAndSetIfChanged(ref _updatePowerTable, value); }
+        }
+
+        bool _m2only;
+        public bool M2Only
+        {
+            get { return _m2only; }
+            set { this.RaiseAndSetIfChanged(ref _m2only, value); }
+        }
+
+        bool _s4only;
+        public bool S4Only
+        {
+            get { return _s4only; }
+            set { this.RaiseAndSetIfChanged(ref _s4only, value); }
+        }
+
+        bool _x7only;
+        public bool X7Only
+        {
+            get { return _x7only; }
+            set { this.RaiseAndSetIfChanged(ref _x7only, value); }
         }
     }
 }

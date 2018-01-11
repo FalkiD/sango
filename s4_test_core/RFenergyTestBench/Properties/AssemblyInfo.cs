@@ -1,8 +1,8 @@
 ﻿using System.Reflection;
-using System.Resources;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Windows;
+
+// Version 0.38     16-Nov      Added S4, debugging S4 & M2 operation
 
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
@@ -12,7 +12,7 @@ using System.Windows;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Ampleon")]
 [assembly: AssemblyProduct("RFenergyUI")]
-[assembly: AssemblyCopyright("Copyright © 2017, Ampleon.")]
+[assembly: AssemblyCopyright("Copyright © 2018, Ampleon.")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -49,5 +49,5 @@ using System.Windows;
 // You can specify all the values or you can default the Build and Revision Numbers 
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("0.38.*")]
-[assembly: AssemblyFileVersion("0.38.0.0")]
+[assembly: AssemblyVersion("0.40.*")]
+[assembly: AssemblyFileVersion("0.40.0.0")]

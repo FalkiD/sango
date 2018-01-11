@@ -6,13 +6,13 @@
  * 
  * If the delegate is null the messages still go into the log file.
  */
- using System;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text;
+using System.Text.RegularExpressions;
 using Interfaces;
 using RFModule;
-using System.IO;
-using System.Diagnostics;
-using System.Collections.Generic;
-using System.Text;
 
 namespace M2TestModule
 {
@@ -242,6 +242,133 @@ namespace M2TestModule
             }
         }
 
+        byte[] ReadEepromBin(string filename)
+        {
+            try
+            {
+                byte[] data = File.ReadAllBytes(filename);
+                return data;
+            }
+            catch(Exception ex)
+            {
+                throw new ApplicationException(string.Format("Exception opening/reading {0}:{1}",
+                                                            filename, ex.Message));
+            }
+        }
+
+        const int DATA_LEN = 0xcc;
+        const int HDR_LEN = 4;          // PCn=
+        /// <summary>
+        /// Read power cal tags from the EEPROM.bin file
+        /// </summary>
+        /// <param name="caldata">List of 5 tags, PC0 to PC4. 
+        /// Tags are in whatever order firmware wrote them in(unknown order)</param>
+        /// <returns>List of 5 tags in caldata arg, PC0 to PC4. 
+        /// Tags are in whatever order firmware wrote them in(unknown order)</returns>
+        public override int GetPowerCalTags(string filename, ref List<PowerCalTag> caldata)
+        {
+            try
+            {
+                byte[] data = ReadEepromBin(filename);
+
+                // Create list of 5 entries
+                caldata = new List<PowerCalTag>();
+                for (int k = 0; k < 5; k++)
+                    caldata.Add(new PowerCalTag());
+
+                // Look for PCn=\xCC followed by 0xcc(204) hex characters
+                // EEPROM.bin has NULL data so straight string methods probably
+                // won't work right?
+                //Regex xpr = new Regex("PC[0-4]=\xCC[0-9a-fA-F]{204}");
+                Regex xpr = new Regex("PC[0-4]=");
+                int index, tags;
+                tags = index = 0;
+                byte[] tmp = new byte[HDR_LEN];
+                do
+                {
+                    Array.Copy(data, index, tmp, 0, HDR_LEN);
+                    string next = Encoding.ASCII.GetString(tmp);
+                    Match match = xpr.Match(next);
+                    if(match.Success)
+                    {
+                        PowerCalTag entry = new PowerCalTag
+                        {
+                            Name = next,
+                            TagData = Encoding.ASCII.GetString(data, index + HDR_LEN + 1, DATA_LEN),
+                            Length = DATA_LEN,
+                            Fileoffset = index,
+                            Instrument = InstrumentInfo.InstrumentType.M2
+                        };
+                        int idx = Convert.ToInt32(next.Substring(2, 1));
+                        caldata.RemoveAt(idx);
+                        caldata.Insert(idx, entry);
+                        ++tags;
+                        index += (HDR_LEN + 1 + DATA_LEN);
+                    }
+                    else ++index;
+                } while (index < data.Length - HDR_LEN && tags < 5);
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                AppendLine(string.Format("GetPowerCalTags() exception:{0}", ex.Message));
+                return M2FwDefs.ERR_UNKNOWN;
+            }
+        }
+
+        public override int WritePowerCalTags(string backupfile, string filename, List<PowerCalTag> tags)
+        {
+            if (tags.Count > 5)
+            {
+                AppendLine(string.Format("WritePowerCalTags error: only 5 power cal tags allowed for M2A, {0} tags were sent", tags.Count));
+                return M2FwDefs.ERR_UNKNOWN;
+            }
+
+            if (backupfile != null && backupfile.Length > 0)
+            {
+                try { File.Copy(filename, backupfile, true); }
+                catch(Exception ex)
+                {
+                    AppendLine(string.Format("WritePowerCalTags() exception backing up data:{0}", ex.Message));
+                    return M2FwDefs.ERR_WRITING_CALDATA;
+                }
+            }
+
+            FileStream fout = null;
+            try
+            {
+                fout = File.OpenWrite(filename);
+                for (int j = 0; j < 5; ++j)
+                {
+                    PowerCalTag tag = tags[j];
+                    byte[] data = Encoding.ASCII.GetBytes(tag.TagData);
+                    long offset = tag.Fileoffset + HDR_LEN + 1;
+                    if (fout.Seek(offset, SeekOrigin.Begin) != offset)
+                    {
+                        fout.Close();
+                        AppendLine("WritePowerCalTags() seek error writing tag");
+                        return M2FwDefs.ERR_WRITING_CALDATA;
+                    }
+                    try { fout.Write(data, 0, data.Length); }
+                    catch(Exception wr_ex)
+                    {
+                        fout.Close();
+                        AppendLine(string.Format("WritePowerCalTags() exception writingh tag:{0}", wr_ex.Message));
+                        return M2FwDefs.ERR_WRITING_CALDATA;
+                    }
+                }
+                fout.Close();
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                if (fout != null)
+                    fout.Close();
+                AppendLine(string.Format("WritePowerCalTags() exception:{0}", ex.Message));
+                return M2FwDefs.ERR_UNKNOWN;
+            }
+        }
+
         public override int ReadI2C(int channel, int address, byte[] wrbytes, byte[] data)
         {
             try
@@ -418,12 +545,11 @@ namespace M2TestModule
             cmd[2] = (byte)((frq >> 8) & 0xff);
             cmd[3] = (byte)((frq >> 16) & 0xff);
             cmd[4] = (byte)((frq >> 24) & 0xff);
-            //else if (MainViewModel.SelectedSystemName.StartsWith("MMC"))
-            //{
-            //    status = MainViewModel.IOpcodes.FrequencyOpcode(Frequency * 1.0e6, ref cmd);
-            //}
             byte[] rsp = null;
-            return RunCmd(cmd, ref rsp);
+            int status = RunCmd(cmd, ref rsp);
+            if (status == 0)
+                FrequencyEvent?.Invoke(hertz, "FrequencyOk");
+            return status;
         }
 
         public override int SetPower(double dbm)
@@ -434,7 +560,14 @@ namespace M2TestModule
             cmd[1] = (byte)(pwr & 0xff);
             cmd[2] = (byte)((pwr >> 8) & 0xff);
             byte[] rsp = null;
-            return RunCmd(cmd, ref rsp);
+            int status = RunCmd(cmd, ref rsp);
+            double db = 0.0;
+            if (status == 0)
+            {
+                LastProgrammedDb(ref db);
+                PowerEvent?.Invoke(dbm, db, "PowerOk");
+            }
+            return status;
         }
 
         public override int GetPower(ref double dbm)
@@ -459,7 +592,10 @@ namespace M2TestModule
             cmd[1] = (byte)(q7dot8 & 0xff);
             cmd[2] = (byte)((q7dot8 >> 8) & 0xff);
             byte[] rspreset = null;
-            return RunCmd(cmd, ref rspreset);
+            int status = RunCmd(cmd, ref rspreset);
+            if (status == 0)
+                CalDbEvent?.Invoke(dbm, "CalDbOk");
+            return status;
         }
 
         public override int LastProgrammedDb(ref double db)
@@ -473,6 +609,12 @@ namespace M2TestModule
                 db = (double)((int)data[0] | ((int)data[1] << 8)) / 256.0;
             }
             return status;
+        }
+
+        public override ushort DacFromDB(double db)
+        {
+            // dB is relative to 0x80
+            return (ushort)((Math.Pow(10.0, db / 20.0) * (double)0x80) + 0.5);
         }
 
         public override int CouplerPower(int type, ref double forward, ref double reflected)
@@ -759,37 +901,38 @@ namespace M2TestModule
 
         public void AppendLine(string line)
         {
-            var now = DateTime.Now;
-            var timestamp = string.Format("{0:d02}_{1:d02}_{2:d02}_{3:d02}_{4:d02}_{5:d02}.{6:d03}:",
-                                            now.Month, now.Day, now.Year,
-                                            now.Hour, now.Minute, now.Second,
-                                            now.Millisecond);
+            ShowMessage?.Invoke(line);
+            //var now = DateTime.Now;
+            //var timestamp = string.Format("{0:d02}_{1:d02}_{2:d02}_{3:d02}_{4:d02}_{5:d02}.{6:d03}:",
+            //                                now.Month, now.Day, now.Year,
+            //                                now.Hour, now.Minute, now.Second,
+            //                                now.Millisecond);
 
-            if (!line.EndsWith("\r\n") && !line.EndsWith("\n"))
-                line += "\r\n";
+            //if (!line.EndsWith("\r\n") && !line.EndsWith("\n"))
+            //    line += "\r\n";
 
-            string text = timestamp + line;
-            ShowMessage?.Invoke(text);
+            //string text = timestamp + line;
+            //ShowMessage?.Invoke(text);
 
-            StreamWriter fLog = null;
-            try
-            {
-                fLog = new StreamWriter(logFile, true);
-                if (fLog != null)
-                {
-                    fLog.Write(timestamp + line);
-                    fLog.Close();
-                }
-            }
-            catch (Exception ex)
-            {
-                // Can't write to the file, last resort...
-                Debug.WriteLine("AppendLine() exception:{0}", ex.Message);
-            }
-            finally
-            {
-                if (fLog != null) fLog.Close();
-            }
+            //StreamWriter fLog = null;
+            //try
+            //{
+            //    fLog = new StreamWriter(logFile, true);
+            //    if (fLog != null)
+            //    {
+            //        fLog.Write(timestamp + line);
+            //        fLog.Close();
+            //    }
+            //}
+            //catch (Exception ex)
+            //{
+            //    // Can't write to the file, last resort...
+            //    Debug.WriteLine("AppendLine() exception:{0}", ex.Message);
+            //}
+            //finally
+            //{
+            //    if (fLog != null) fLog.Close();
+            //}
         }
 
         public override int HiresMode(bool frequencyHiresMode)

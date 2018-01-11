@@ -34,7 +34,12 @@ namespace Interfaces
     /// <remarks>All methods return a status code integer</remaorks>
     public interface ICommands
     {
-        event MessageCallback ShowMessage;
+        event MessageCallback   ShowMessage;
+        event BooleanEvent      BiasEvent;
+        event SetPowerEvent     PowerEvent;
+        event DoubleEvent       FrequencyEvent;
+        event DoubleEvent       CalDbEvent;
+        event IntegerEvent      CalDacEvent;
 
         /// <summary>
         /// Run byte array command, no response
@@ -107,6 +112,13 @@ namespace Interfaces
         int LastProgrammedDb(ref double db);
 
         /// <summary>
+        /// Return DAC value for given dB value
+        /// </summary>
+        /// <param name="db"></param>
+        /// <returns></returns>
+        ushort DacFromDB(double db);
+
+        /// <summary>
         /// Setup PWM, On/Off, etc
         /// </summary>
         /// <param name="duty"></param>
@@ -151,6 +163,15 @@ namespace Interfaces
         int PersistCalResults(double frequency);
 
         /// <summary>
+        /// Write driver calibration table to driver EEPROM
+        /// </summary>
+        /// <param name="frequency"></param>
+        /// <param name="jsonData"></param>
+        /// <param name="address">Override default value based on frequency. -1 to use default.</param>
+        /// <returns></returns>
+        int WriteDriverCalData(double frequency, byte[] jsonData, int address);
+
+        /// <summary>
         /// Read device status
         /// </summary>
         string Status { get; }
@@ -165,6 +186,11 @@ namespace Interfaces
         /// Calibration flag
         /// </summary>
         bool CalibrationOn { get; set; }
+
+        /// <summary>
+        /// BIAS enable
+        /// </summary>
+        bool BiasEnable(bool On);
 
         /// <summary>
         /// Returns PA channels supported by the hardware

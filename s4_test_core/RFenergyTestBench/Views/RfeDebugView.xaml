@@ -7,7 +7,8 @@
              xmlns:local="clr-namespace:RFenergyUI.Views"
              xmlns:cnvtr="clr-namespace:Converters"
              mc:Ignorable="d" 
-             d:DesignHeight="300" d:DesignWidth="300">
+             d:DesignHeight="300" d:DesignWidth="300"
+             Loaded="Window_Loaded">
 
     <UserControl.Resources>
         <ResourceDictionary>
@@ -37,6 +38,7 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -115,12 +117,69 @@
                 Style="{StaticResource ButtonKeyNormal}"
                 Visibility="{Binding M2Only, 
                              Converter={StaticResource visibilityConverter}}"/>
+        <Button Grid.Row="6" Grid.Column="3" 
+                Content="Get tags from EEPROM.bin" 
+                Command="{Binding CmdPwrCalTags}"
+                Style="{StaticResource ButtonKeyNormal}"
+                Visibility="{Binding M2Only, 
+                             Converter={StaticResource visibilityConverter}}"/>
 
-        <TextBlock Grid.Row="7" Text="Write EEPROM:" HorizontalAlignment="Right"
+        <!--Use Vertical ItemsControl to show M2A PowerCal tags in a scrolling list-->
+        <HeaderedItemsControl Grid.Row="7" Grid.ColumnSpan="4"
+                              HorizontalAlignment="Center"
+                              ItemsSource="{Binding Path=PowerCalTags}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <VirtualizingStackPanel Orientation="Vertical"/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.Template>
+                <ControlTemplate TargetType="HeaderedItemsControl">
+                    <Grid>
+                        <!--Use first row of Grid for header-->
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <!--Must set ItemsControl size correctly, need better technique, set to required height only-->
+                        </Grid.RowDefinitions>
+                        <TextBlock Text="Cal Data Tag Name, Data" HorizontalAlignment="Left"
+                                    Style="{StaticResource LabelH4}"
+                                    Visibility="{Binding M2Only, 
+                                        Converter={StaticResource visibilityConverter}}"/>
+                        <ScrollViewer Grid.Row="1"
+                                      HorizontalScrollBarVisibility="Auto"
+                                      VerticalScrollBarVisibility="Auto"
+                                      Style="{StaticResource MetroScrollViewer}">
+                            <ItemsPresenter/>
+                        </ScrollViewer>
+                    </Grid>
+                </ControlTemplate>
+            </ItemsControl.Template>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{Binding Name}" HorizontalAlignment="Right"
+                                    Style="{StaticResource LabelH4}"
+                                    Visibility="{Binding M2Only, 
+                                        Converter={StaticResource visibilityConverter}}"/>
+                        <TextBox Grid.Column="1" Style="{StaticResource TextBoxH4}" 
+                                    Text="{Binding TagData, UpdateSourceTrigger=PropertyChanged}"
+                                    Visibility="{Binding M2Only, 
+                                        Converter={StaticResource visibilityConverter}}"/>
+                    </Grid>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </HeaderedItemsControl>
+        
+        <TextBlock Grid.Row="8" Text="Write EEPROM:" HorizontalAlignment="Right"
                     Style="{StaticResource LabelH4}"                   
                     Visibility="{Binding M2Only, 
                                  Converter={StaticResource visibilityConverter}}"/>
-        <TextBox Grid.Row="7" Grid.Column="1" Style="{StaticResource TextBoxH4}" 
+        <TextBox Grid.Row="8" Grid.Column="1" Style="{StaticResource TextBoxH4}" 
                     Text="{Binding WriteEEPROM, UpdateSourceTrigger=PropertyChanged}"
                     Visibility="{Binding M2Only, 
                                  Converter={StaticResource visibilityConverter}}">
@@ -128,51 +187,62 @@
                 <KeyBinding Key="Enter" Command="{Binding CmdWriteEEPROM}"/>
             </TextBox.InputBindings>
         </TextBox>
-        <Button Grid.Row="7" Grid.Column="2" 
+        <Button Grid.Row="8" Grid.Column="2" 
                 Content="File to EEPROM" 
                 Command="{Binding CmdFileToEEPROM}"
                 Style="{StaticResource ButtonKeyNormal}"
                 Visibility="{Binding M2Only, 
                              Converter={StaticResource visibilityConverter}}"/>
+        <Button Grid.Row="8" Grid.Column="3" 
+                Content="Update EEPROM.bin w/Tags" 
+                Command="{Binding CmdWritePwrCalTags}"
+                Style="{StaticResource ButtonKeyNormal}"
+                Visibility="{Binding M2Only, 
+                             Converter={StaticResource visibilityConverter}}"/>
 
-        <TextBlock Grid.Row="8" Text="Read I2C:" HorizontalAlignment="Right"
+        <TextBlock Grid.Row="9" Text="Read I2C:" HorizontalAlignment="Right"
                     Style="{StaticResource LabelH4}"/>
-        <TextBox Grid.Row="8" Grid.Column="1" Style="{StaticResource TextBoxH4}" 
+        <TextBox Grid.Row="9" Grid.Column="1" Style="{StaticResource TextBoxH4}" 
                     Text="{Binding ReadI2C, UpdateSourceTrigger=PropertyChanged}">
             <TextBox.InputBindings>
                 <KeyBinding Key="Enter" Command="{Binding CmdReadI2C}"/>
             </TextBox.InputBindings>
         </TextBox>
 
-        <TextBlock Grid.Row="9" Text="Write I2C:" HorizontalAlignment="Right"
+        <TextBlock Grid.Row="10" Text="Write I2C:" HorizontalAlignment="Right"
                     Style="{StaticResource LabelH4}"/>
-        <TextBox Grid.Row="9" Grid.Column="1" Style="{StaticResource TextBoxH4}" 
+        <TextBox Grid.Row="10" Grid.Column="1" Style="{StaticResource TextBoxH4}" 
                     Text="{Binding WriteI2C, UpdateSourceTrigger=PropertyChanged}">
             <TextBox.InputBindings>
                 <KeyBinding Key="Enter" Command="{Binding CmdWriteI2C}"/>
             </TextBox.InputBindings>
         </TextBox>
 
-        <TextBlock Grid.Row="10" Text="Write/Read SPI:" HorizontalAlignment="Right"
+        <TextBlock Grid.Row="11" Text="Write/Read SPI:" HorizontalAlignment="Right"
                     Style="{StaticResource LabelH4}"/>
-        <TextBox Grid.Row="10" Grid.Column="1" Style="{StaticResource TextBoxH4}" 
+        <TextBox Grid.Row="11" Grid.Column="1" Style="{StaticResource TextBoxH4}" 
                     Text="{Binding WrRdSPI, UpdateSourceTrigger=PropertyChanged}">
             <TextBox.InputBindings>
                 <KeyBinding Key="Enter" Command="{Binding CmdWrRdSPI}"/>
             </TextBox.InputBindings>
         </TextBox>
-        <Button Grid.Row="10 " Grid.Column="2"
+        <Button Grid.Row="11" Grid.Column="2"
                 Content="Read DAC's" 
                 Command="{Binding CmdRead}"
                 Style="{StaticResource ButtonKeyNormal}"/>
+        <Button Grid.Row="11" Grid.Column="3"
+                Content="Start TemperatureData" 
+                Command="{Binding CmdTemperatureData}"
+                Style="{StaticResource ButtonKeyNormal}"
+                Visibility="{Binding S4Only, 
+                             Converter={StaticResource visibilityConverter}}"/>
 
-        
         <!--Set Power in dB-->
-        <TextBlock Grid.Row="11" Text="Power in dB:" HorizontalAlignment="Right"
+        <TextBlock Grid.Row="12" Text="Power in dB:" HorizontalAlignment="Right"
                    Style="{StaticResource LabelH4}"
                    Visibility="{Binding M2Only, 
                                 Converter={StaticResource visibilityConverter}}"/>
-        <TextBox Grid.Row="11" Grid.Column="1"
+        <TextBox Grid.Row="12" Grid.Column="1"
                  Text="{Binding PwrInDb, StringFormat=N3}"
                  Style="{StaticResource TextBoxH4}"
                  Visibility="{Binding M2Only, 
@@ -183,10 +253,21 @@
                     CommandParameter="{Binding RelativeSource={RelativeSource FindAncestor,AncestorType={x:Type TextBox}},Path=Text}" />
             </TextBox.InputBindings>
         </TextBox>
+        <Button Grid.Row="12" Grid.Column="2"
+                Content="Read Mode switch" 
+                Command="{Binding CmdModeSwitch}"
+                Style="{StaticResource ButtonKeyNormal}"
+                Visibility="{Binding S4Only, 
+                             Converter={StaticResource visibilityConverter}}"/>
+        <Button Grid.Row="12" Grid.Column="3"
+                Content="Stop TemperatureData" 
+                Command="{Binding CmdStopTemperatureData}"
+                Style="{StaticResource ButtonKeyNormal}"
+                Visibility="{Binding S4Only, 
+                             Converter={StaticResource visibilityConverter}}"/>
 
-        
         <!--Use Vertical ItemsControl to show any number of ChannelViews in a scrolling list-->
-        <HeaderedItemsControl Grid.Row="12" Grid.ColumnSpan="4"
+        <HeaderedItemsControl Grid.Row="13" Grid.ColumnSpan="4"
                               HorizontalAlignment="Center"
                               ItemsSource="{Binding Path=ChannelVms}">
             <ItemsControl.ItemsPanel>

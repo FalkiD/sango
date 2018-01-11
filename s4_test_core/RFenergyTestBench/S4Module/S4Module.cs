@@ -4,12 +4,10 @@
  * the calling assemnbly's ShowMessage delegate to show
  * status messages.
  * 
- * If the delegate is null the messages still go into the log file.
  */
 using System;
-using System.IO;
 using System.Diagnostics;
-using System.Text;
+using System.Text.RegularExpressions;
 using Interfaces;
 using RFModule;
 using System.Collections.Generic;
@@ -18,6 +16,14 @@ namespace S4TestModule
 {
     public class S4Module : RFBaseModule, IErrors, IDebugging, ICommands
     {
+        // Driver EEPROM addresses for 5 ~6.5kbyte json caldata files.
+        // spaced at 8192 byte intervals. 64kbyte total space
+        const int DRV_ADR_2410 = 1024;
+        const int DRV_ADR_2430 = 9216;
+        const int DRV_ADR_2450 = 17408;
+        const int DRV_ADR_2470 = 25600;
+        const int DRV_ADR_2490 = 33792;
+
         public static S4Module TopModule { get; set; }
         public static void WriteMessage(string message)
         {
@@ -41,6 +47,8 @@ namespace S4TestModule
             _s4hw = new S4Hardware();
             if (_s4hw != null)
                 status = _s4hw.StartupHardware(logFile);
+
+            ProgrammedDb = 0.0;
 
             return status;
         }
@@ -75,6 +83,13 @@ namespace S4TestModule
                 throw new NotImplementedException();
             }
         }
+
+        /// <summary>
+        /// Save last programmed db value from SetCalPower command
+        /// </summary>
+        public double ProgrammedDb { get; set; }
+
+        // methods
 
         public override string HardwareInfo(ref bool demoMode, ref bool hiresMode)
         {
@@ -113,43 +128,19 @@ namespace S4TestModule
         /// <returns></returns>
         public override int SetTag(string name, string value)
         {
-            byte[] data = Encoding.ASCII.GetBytes(value);
-            return _SetTag(name, data, false);
-        }
-
-        public override int SetTag(string name, byte[] value)
-        {
-            return _SetTag(name, value, true);
-        }
-
-        int _SetTag(string name, byte[] value, bool binary)
-        {
             try
             {
-                byte[] response = null;
                 if (_s4hw != null)
                 {
-                    //byte[] nam_bytes = Encoding.ASCII.GetBytes(name);
-                    //int offset = binary ? 3 : 2;
-                    //byte[] cmd = new byte[1 + name.Length + offset + value.Length];
-                    //cmd[0] = S4Cmd.SET_TAG;
-                    //Array.Copy(nam_bytes, 0, cmd, 1, name.Length);
-                    //if (binary)
-                    //{
-                    //    cmd[name.Length + 1] = 0x23;
-                    //    cmd[name.Length + 2] = (byte)value.Length;
-                    //}
-                    //else
-                    //    cmd[name.Length + 1] = 0x3d;
-                    //Array.Copy(value, 0, cmd, name.Length + offset, value.Length);
-                    //return _s4hw.ExecuteCommand(cmd, ref response);
-                    return 0;
+                    string rsp = "";
+                    return RunCmd(string.Format("eepw {0}={1}\n", name, value), ref rsp);
                 }
-                throw new ApplicationException("S4 hardware not initialized");
+                else
+                    throw new ApplicationException("S4 hardware not initialized");
             }
             catch (Exception ex)
             {
-                AppendLine(string.Format("SetTag() exception:{0}", ex.Message));
+                AppendLine(string.Format("SetTag({0},{1}) exception:{2}", name, value, ex.Message));
                 return S4FwDefs.ERR_UNKNOWN;
             }
         }
@@ -160,64 +151,12 @@ namespace S4TestModule
             {
                 if (_s4hw != null)
                 {
-                    byte[] data = null;
-                    int status = GetTag(name, ref data);
+                    string tag = "";
+                    int status = RunCmd(string.Format("eepr {0}\n", name), ref tag);
                     if (status == 0)
-                    {
-                        int j;
-                        for (j = 0; j < data.Length; ++j)
-                            if (data[j] == 0)
-                                break;
-                        value = Encoding.ASCII.GetString(data, 0, j);
-                    }
+                        value = tag;
+                    else value = string.Format(" Read tag {0} failed:{1}", name, ErrorDescription(status));
                     return status;
-                }
-                else
-                    throw new ApplicationException("S4 hardware not initialized");
-            }
-            catch (Exception ex)
-            {
-                AppendLine(string.Format("GetTag() exception:{0}", ex.Message));
-                return S4FwDefs.ERR_UNKNOWN;
-            }
-        }
-
-        public override int GetTag(string name, ref byte[] value)
-        {
-            try
-            {
-                if (_s4hw != null)
-                {
-                    //byte[] nam_bytes = Encoding.ASCII.GetBytes(name);
-                    //byte[] cmd = new byte[name.Length + 2];
-                    //cmd[0] = S4Cmd.GET_TAG;
-                    //Array.Copy(nam_bytes, 0, cmd, 1, name.Length);
-                    //cmd[name.Length + 1] = 0;
-                    //return _s4hw.ExecuteCommand(cmd, ref value);
-                    return 0;
-                }
-                else
-                    throw new ApplicationException("S4 hardware not initialized");
-            }
-            catch (Exception ex)
-            {
-                AppendLine(string.Format("GetTag() exception:{0}", ex.Message));
-                return S4FwDefs.ERR_UNKNOWN;
-            }
-        }
-
-        public override int ReadEeprom(int offset, ref byte[] data)
-        {
-            try
-            {
-                if (_s4hw != null)
-                {
-                    //byte[] cmd = new byte[3];
-                    //cmd[0] = S4Cmd.RD_EEPROM;
-                    //cmd[1] = (byte)offset;
-                    //cmd[2] = (byte)((offset >> 8) & 0xff);
-                    //return _s4hw.ExecuteCommand(cmd, ref data);
-                    return 0;
                 }
                 else
                     throw new ApplicationException("S4 hardware not initialized");
@@ -277,31 +216,6 @@ namespace S4TestModule
             catch (Exception ex)
             {
                 AppendLine(string.Format("ReadI2C() exception:{0}", ex.Message));
-                return S4FwDefs.ERR_UNKNOWN;
-            }
-        }
-
-        public override int WriteEeprom(int offset, byte[] data)
-        {
-            try
-            {
-                if (_s4hw != null)
-                {
-                    //byte[] cmd = new byte[3 + data.Length];
-                    //cmd[0] = S4Cmd.WR_EEPROM;
-                    //cmd[1] = (byte)offset;
-                    //cmd[2] = (byte)((offset >> 8) & 0xff);
-                    //Array.Copy(data, 0, cmd, 3, data.Length);
-                    //byte[] rsp = null;
-                    //return _s4hw.ExecuteCommand(cmd, ref rsp);
-                    return 0;
-                }
-                else
-                    throw new ApplicationException("S4 hardware not initialized");
-            }
-            catch (Exception ex)
-            {
-                AppendLine(string.Format("WriteEEPROM() exception:{0}", ex.Message));
                 return S4FwDefs.ERR_UNKNOWN;
             }
         }
@@ -414,7 +328,10 @@ namespace S4TestModule
         {
             string cmd = string.Format("freq {0:f0}\n", megahertz*1.0e6);
             string rsp = "";
-            return RunCmd(cmd, ref rsp);
+            int status = RunCmd(cmd, ref rsp);
+            if (status == 0)
+                FrequencyEvent?.Invoke(megahertz, "FrequencyOk");
+            return status;
         }
 
         public override int GetFrequency(ref double hertz)
@@ -441,7 +358,10 @@ namespace S4TestModule
         {
             string cmd = string.Format("power {0:f1}\n", dbm);
             string rsp = "";
-            return RunCmd(cmd, ref rsp);
+            int status = RunCmd(cmd, ref rsp);
+            if (status == 0)
+                PowerEvent?.Invoke(dbm, ProgrammedDb, "PowerOk");
+            return status;
         }
 
         public override int GetPower(ref double dbm)
@@ -464,7 +384,7 @@ namespace S4TestModule
             return status;
         }
 
-        ushort dacFromDB(double db)
+        public override ushort DacFromDB(double db)
         {
             // for S4, dB is relative to dac 0x10(16)
             // S4 uses attenuation control, so 4095-value gets sent to dac
@@ -477,18 +397,27 @@ namespace S4TestModule
         public override int SetCalPower(double db)
         {
             // Convert dB into dac value & send it
-            // DAC A is fixed, driving DAC B only
-            ushort vmag = dacFromDB(db);
-            //string cmd = string.Format("fw 0xe 0x{0:x} 0x{1:x} 0x17 0\n", (vmag&0xf)<<4, (vmag&0xff0)>>4);
-            string cmd = string.Format("calpwr 0x0011{0:x2}{1:x2}\n", (vmag & 0xff0) >> 4, (vmag & 0xf) << 4);
+            // Driving both DAC's
+            //
+            // Save the value to use when updating UI's with event 
+            //
+            ushort vmag = DacFromDB(db);
+            string cmd = string.Format("calpwr 0x0017{0:x2}{1:x2}\n", (vmag & 0xff0) >> 4, (vmag & 0xf) << 4);
             string rsp = "";
-            //WriteMessage(string.Format("dB:{0:f2}, {1}", db, cmd));
-            return RunCmd(cmd, ref rsp);
+            int status = RunCmd(cmd, ref rsp);
+            if (status == 0)
+            {
+                CalDbEvent?.Invoke(db, "CalDbOk");
+                ProgrammedDb = db;
+            }
+            return status;
         }
 
         public override int LastProgrammedDb(ref double db)
         {
-            return GetPower(ref db);
+            db = ProgrammedDb;
+            CalDbEvent?.Invoke(db, "CalDbOk");
+            return 0;
         }
 
         public override int ZMonPower(ref double forward, ref double reflected)
@@ -505,6 +434,89 @@ namespace S4TestModule
             return status;
         }
 
+        public override bool BiasEnable(bool enable)
+        {
+            try
+            {
+                string cmd, rsp = "";
+                cmd = enable ? "fw 6 1 1\n" : "fw 6 1 0\n";
+                int status = RunCmd(cmd, ref rsp);
+                if (status == 0)
+                    BiasEvent?.Invoke(enable, "BiasOk");
+            }
+            catch (Exception ex)
+            {
+                throw new ApplicationException(string.Format("S4 BIAS Exception:{0}", ex.Message), ex);
+            }
+            return enable;
+        }
+
+        void ShowResults()
+        {
+            if(Results.Count > 0)
+                foreach (string str in Results)
+                    WriteMessage(str);
+        }
+
+        public override int WriteDriverCalData(double frequency, byte[] jsonData, int address)
+        {
+            // Write the json file using 64 byte ASCII lines
+            int status = 0;
+            int addr;
+            try
+            {
+                if (frequency <= 2410.0)
+                    addr = DRV_ADR_2410;
+                else if (frequency <= 2430.0)
+                    addr = DRV_ADR_2430;
+                else if (frequency <= 2450.0)
+                    addr = DRV_ADR_2450;
+                else if (frequency <= 2470.0)
+                    addr = DRV_ADR_2470;
+                else addr = DRV_ADR_2490;
+
+                const int BYTES_PER_LINE = 64;
+                int count = jsonData.Length / BYTES_PER_LINE;
+                count += (jsonData.Length % BYTES_PER_LINE > 0 ? 1 : 0);
+                int index = 0;
+                while(index < jsonData.Length)
+                {
+                    // d15-d7 must stay the same for each block write, i.e. 128 bytes
+                    // at a time(same 'row').
+                    string line;
+                    if (index == 0)
+                        line = string.Format("iw drv 0xA0 {0} {1} {2} ", addr + index, jsonData.Length & 0xff, (jsonData.Length >> 8) & 0xff);
+                    else
+                        line = string.Format("iw drv 0xA0 {0} ", addr + index);
+                    int memory_row = (addr + index) & 0xff80;   // d15-d7 must remain the same to stay on same row
+                    for (int j = 0; j < BYTES_PER_LINE; ++j, ++index)
+                    {
+                        int next_row = (addr + index) & 0xff80;
+                        if (next_row != memory_row)
+                            break;
+
+                        line += string.Format("{0}{1}", jsonData[index], j < BYTES_PER_LINE-1 ? " " : "");
+                    }
+                    line += "\n";
+                    string rsp = "";
+                    if((status = RunCmd(line, ref rsp)) != 0)
+                        break;
+                }
+                if (status == 0)
+                    WriteMessage("Done writing S4 driver power table");
+                else
+                {
+                    WriteMessage(string.Format("Error writing S4 driver power table:{0}", status));
+                    ShowResults();
+                }
+            }
+            catch (Exception ex)
+            {
+                WriteMessage(string.Format("Exception writing S4 driver power table:{0}", ex.Message));
+            }
+            return status;
+        }
+
         public override int WriteCalResults(bool inuse, bool persist, double frequency, List<PowerCalData> results)
         {
             if (results.Count > HALF_DB_CAL_POINTS)
@@ -516,65 +528,87 @@ namespace S4TestModule
             // calpwtbl has 5 45 element records & 1 26 element record
             // calpwtbl rec# freq mode value0 value1 value2...value44
 
-            string cmd = "calpwtbl";
-            string freq;
-            if (frequency <= 2410.0)
-                freq = " 2410";
-            else if (frequency <= 2430.0)
-                freq = " 2430";
-            else if (frequency <= 2450.0)
-                freq = " 2450";
-            else if (frequency <= 2470.0)
-                freq = " 2470";
-            else freq = " 2490";
-            cmd += freq;
-
-            int bits = 0;
-            if (inuse)  bits |= 1;
-            if (persist) bits |= 2;
-            string update = " " + bits.ToString();
-            cmd += update;
-
-            // Create 251 entries from the 51 entries, put together 502 byte data string
-            PowerCalData entry = null;
-            string strData = "";
-            for (int k = 0; k < results.Count; ++k)
+            int status = 0;
+            try
             {
-                entry = results[k];
-                ushort vmag = dacFromDB(entry.PowerDB);
-                strData = string.Format(" {0}", vmag);
-                cmd += strData;
-                // do interpolation here to fill next 4 entries until last entry
-                if(k < results.Count-1)
+                string freq;
+                if (frequency <= 2410.0)
+                    freq = "2410";
+                else if (frequency <= 2430.0)
+                    freq = "2430";
+                else if (frequency <= 2450.0)
+                    freq = "2450";
+                else if (frequency <= 2470.0)
+                    freq = "2470";
+                else freq = "2490";
+
+                int bits = 0;
+                if (inuse) bits |= 1;
+                if (persist) bits |= 2;
+                string update = bits.ToString();
+
+                // Create 251 entries from the 51 entries, put together 5 45 
+                // entry data strings and one 26 entry string 
+                PowerCalData entry = null;
+                string strData = "";
+                int rec_size = 45;      // 5 45 entry records & 1 26 entry record
+                string cmd;
+                for (int recnum = 0; recnum < 6; ++recnum)
                 {
-                    double span = results[k + 1].PowerDB - entry.PowerDB;
-                    double increment = span / 4.0;
-                    for (int j = 1; j <= 4; ++j)
+                    if (recnum > 4)
+                        rec_size = 26;
+
+                    cmd = string.Format("calpwtbl {0} {1} {2}", recnum, freq, update);
+                    WriteMessage(string.Format("Writing S4 power table:{0}", cmd));
+
+                    int idx;
+                    for (int k = 0; k < rec_size / 5; ++k)
                     {
-                        double next = entry.PowerDB + j*increment;
-                        vmag = dacFromDB(next);
-                        //strData = string.Format(" 0x{0:x2} 0x{1:x2}", (vmag & 0xff), ((vmag >> 8) & 0xff));
+                        idx = k + recnum * 9;
+                        if (idx < results.Count)
+                            entry = results[idx];
+                        ushort vmag = DacFromDB(entry.PowerDB);
                         strData = string.Format(" {0}", vmag);
                         cmd += strData;
+                        // do interpolation here to fill next 4 entries until last entry
+                        if (k < rec_size - 1)
+                        {
+                            double span;
+                            if (idx < results.Count - 1)
+                                span = results[idx + 1].PowerDB - entry.PowerDB;
+                            else
+                                span = 0.0;
+                            double increment = span / 5.0;
+                            for (int j = 1; j <= 4; ++j)
+                            {
+                                double next = entry.PowerDB + j * increment;
+                                vmag = DacFromDB(next);
+                                strData = string.Format(" {0}", vmag);
+                                cmd += strData;
+                            }
+                        }
                     }
+                    WriteMessage(cmd);
+                    cmd += "\n";
+                    string rsp = "";
+                    System.Threading.Thread.Sleep(250);
+                    if ((status = RunCmd(cmd, ref rsp)) != 0)
+                        break;
+                    ShowResults();
                 }
-            }
-            // pad the table with the last power entry
-            if (entry == null || strData.Length == 0)
-                throw new ApplicationException("Missing top cal entry");
-
-            for (int k = results.Count; k < HALF_DB_CAL_POINTS; ++k)
-            {
-                cmd += strData;
-                // fill next 4 entries
-                for (int j = 1; j <= 4; ++j)
+                if (status == 0)
+                    WriteMessage("Done writing S4 power table");
+                else
                 {
-                    cmd += strData;
+                    WriteMessage(string.Format("Error writing S4 power table:{0}", status));
+                    ShowResults();
                 }
             }
-            cmd += "\n";
-            string rsp = "";
-            return RunCmd(cmd, ref rsp);
+            catch (Exception ex)
+            {
+                WriteMessage(string.Format("Exception writing S4 power table:{0}", ex.Message));
+            }
+            return status;
         }
 
         public override int PersistCalResults(double frequency)
@@ -625,17 +659,35 @@ namespace S4TestModule
         public override int PaStatus(int couplerMode, ref MonitorPa[] results)
         {
             results = new MonitorPa[S4FwDefs.CHANNELS];
-            string cmd = "status\n";
-            string data = "";
-            int status = RunCmd(cmd, ref data);
+            string cmd = "tc\n";
+            string rsp = "";
+            int status = RunCmd(cmd, ref rsp);
             if (status == 0)
             {
-                results[0].Temperature = 22.5;
-                results[0].Voltage = 31.8;
-                results[0].Current = 72.5;
-                results[0].IDrv = 0.258;
+                string[] s4_data = rsp.Split(new char[] { '\r', '\n' });
+                if(s4_data.Length >= 2)
+                {
+                    //string pa_temp, drv_temp, pa_i, drv_i;
+                    Regex rgx = new Regex("[a-zA-Z ]*:[ ]*([0-9]*)\t\tCurrent[ ]*([0-9]*).([0-9]*)");
+                    Match match = rgx.Match(s4_data[0]);
+                    if(match.Success)
+                    {
+                        results[0].Current = Convert.ToDouble(match.Groups[2].Value + "." + match.Groups[3].Value);
+                    }
+
+                    // Driver string only has 1 tab???
+                    rgx = new Regex("[a-zA-Z ]*:[ ]*([0-9]*)\tCurrent[ ]*([0-9]*).([0-9]*)");
+                    match = rgx.Match(s4_data[2]);
+                    if (match.Success)
+                    {
+                        // Driver temperature is higher on the S4
+                        results[0].Temperature = Convert.ToDouble(match.Groups[1].Value);
+                        results[0].IDrv = Convert.ToDouble(match.Groups[2].Value + "." + match.Groups[3].Value);
+                    }
+                    return status;
+                }
             }
-            else results[0].ErrorMessage = string.Format(" status cmd failed:{0}", ErrorDescription(status));
+            results[0].ErrorMessage = string.Format(" PaStatus cmd failed:{0}", ErrorDescription(status));
 
             //// Coupler power
             //double fwd, refl;
@@ -656,37 +708,7 @@ namespace S4TestModule
 
         public void AppendLine(string line)
         {
-            var now = DateTime.Now;
-            var timestamp = string.Format("{0:d02}_{1:d02}_{2:d02}_{3:d02}_{4:d02}_{5:d02}.{6:d03}:",
-                                            now.Month, now.Day, now.Year,
-                                            now.Hour, now.Minute, now.Second,
-                                            now.Millisecond);
-
-            if (!line.EndsWith("\r\n") && !line.EndsWith("\n"))
-                line += "\r\n";
-
-            string text = timestamp + line;
-            ShowMessage?.Invoke(text);
-
-            StreamWriter fLog = null;
-            try
-            {
-                fLog = new StreamWriter(logFile, true);
-                if (fLog != null)
-                {
-                    fLog.Write(timestamp + line);
-                    fLog.Close();
-                }
-            }
-            catch (Exception ex)
-            {
-                // Can't write to the file, last resort...
-                Debug.WriteLine("AppendLine() exception:{0}", ex.Message);
-            }
-            finally
-            {
-                if (fLog != null) fLog.Close();
-            }
+            ShowMessage?.Invoke(line);
         }
 
         public override int HiresMode(bool frequencyHiresMode)

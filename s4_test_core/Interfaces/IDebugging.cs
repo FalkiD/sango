@@ -1,4 +1,6 @@
-﻿/// <summary>
+﻿using System.Collections.Generic;
+
+/// <summary>
 /// Ampleon
 /// 
 /// Define IDebugging interface for RFE 
@@ -7,13 +9,22 @@
 /// </summary>
 namespace Interfaces
 {
+    public class PowerCalTag
+    {
+        public string Name { get; set; }
+        public string TagData { get; set; }
+        public int Length { get; set; }
+        public int Fileoffset { get; set; }
+        public InstrumentInfo.InstrumentType Instrument { get; set; }
+    }
+
     public delegate void SetDbCallback(int db);
     /// <summary>
     /// All functions throw ApplicationException on failure
     /// with the error description filled-in
     /// </summary>
     public interface IDebugging
-    {
+    {        
         /// <summary>
         /// I2C Address of 4-channel MCP4728 dac
         /// </summary>
@@ -113,6 +124,23 @@ namespace Interfaces
         /// <param name="data"></param>
         /// <returns></returns>
         int ReadEeprom(int offset, ref byte[] data);
+
+        /// <summary>
+        /// Retrieve the 5 cal tags from the EEPROM.bin file
+        /// </summary>
+        /// <param name="caldata"></param>
+        /// <returns></returns>
+        int GetPowerCalTags(string filename, ref List<PowerCalTag> caldata);
+
+        /// <summary>
+        /// Write (updated) tag data to EEPROM.bin
+        /// </summary>
+        /// <param name="filename"></param>
+        /// <param name="backupname">If non-0 length, save original EEPROM.bin
+        /// here before updating.</param>
+        /// <param name="tags"></param>
+        /// <returns></returns>
+        int WritePowerCalTags(string backupname, string filename, List<PowerCalTag> tags);
 
         int WriteI2C(int bus, int address, byte[] data);
 

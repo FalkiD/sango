@@ -3,7 +3,13 @@ using System.Collections.Generic;
 
 namespace Interfaces
 {
+    // define useful delegates
     public delegate void MessageCallback(string msg);
+    public delegate void BooleanEvent(bool parameter, string msg);
+    public delegate void DoubleEvent(double parameter, string msg);
+    public delegate void IntegerEvent(int parameter, string msg);
+    public delegate void SetPowerEvent(double dbmOut, double dbIn, string msg);
+
     /// <summary>
     /// All functions throw ApplicationException on failure
     /// with the error description filled-in
@@ -11,6 +17,17 @@ namespace Interfaces
     public interface IInstrument
     {
         event MessageCallback ShowMessage;
+        event DoubleEvent FrequencyEvent;
+        event IntegerEvent AveragesEvent;
+        event BooleanEvent TrigInEnEvent;
+        event BooleanEvent TrigInvertEvent;
+        event IntegerEvent TrigInTmoEvent;
+        event BooleanEvent TrigOutEnEvent;
+        event BooleanEvent DutyCycleEnEvent;
+        event IntegerEvent DutyCyclePcntEvent;
+        event BooleanEvent OffsetEnEvent;
+        event DoubleEvent OffsetEvent;
+        event BooleanEvent ExtTrigEvent;
 
         string ID { get; }
 
@@ -64,6 +81,8 @@ namespace Interfaces
         double ReadPulsed(bool continuous);
 
         bool TriggerInEnable { get; set; }
+
+        bool TriggerInvert { get; set; }
 
         int TriggerInTimeout { get; set; }
 

@@ -18,6 +18,44 @@ namespace RFModule
             remove  { ShowMessage = null;  }
         }
 
+        public BooleanEvent BiasEvent;
+        event BooleanEvent ICommands.BiasEvent
+        {
+            add     { BiasEvent = value; }
+            remove  { BiasEvent = null; }
+        }
+
+        public SetPowerEvent PowerEvent;
+        event SetPowerEvent ICommands.PowerEvent
+        {
+            add     { PowerEvent = value; }
+            remove  { PowerEvent = null; }
+        }
+
+        public DoubleEvent FrequencyEvent;
+        event DoubleEvent ICommands.FrequencyEvent
+        {
+            add { FrequencyEvent = value; }
+            remove { FrequencyEvent = null; }
+        }
+
+        public DoubleEvent CalDbEvent;
+        event DoubleEvent ICommands.CalDbEvent
+        {
+            add { CalDbEvent = value; }
+            remove { CalDbEvent = null; }
+        }
+
+        public IntegerEvent CalDacEvent;
+        event IntegerEvent ICommands.CalDacEvent
+        {
+            add { CalDacEvent = value; }
+            remove { CalDacEvent = null; }
+        }
+
+        public void SetupHardware()
+        { return; }
+
         public virtual string HardwareInfo(ref bool demoMode, ref bool hiresMode)
         {
             throw new NotImplementedException();
@@ -129,6 +167,16 @@ namespace RFModule
             throw new NotImplementedException();
         }
 
+        public virtual int GetPowerCalTags(string filename, ref List<PowerCalTag> caldata)
+        {
+            throw new NotImplementedException();
+        }
+
+        public virtual int WritePowerCalTags(string backupname, string filename, List<PowerCalTag> tags)
+        {
+            throw new NotImplementedException();
+        }
+
         public virtual int WriteI2C(int bus, int address, byte[] data)
         {
             throw new NotImplementedException();
@@ -201,6 +249,16 @@ namespace RFModule
             throw new NotImplementedException();
         }
 
+        public virtual ushort DacFromDB(double db)
+        {
+            throw new NotImplementedException();
+        }
+
+        public virtual bool BiasEnable(bool enable)
+        {
+            throw new NotImplementedException();
+        }
+
         public virtual int CouplerPower(int type, ref double forward, ref double reflected)
         {
             throw new NotImplementedException();
@@ -249,6 +307,11 @@ namespace RFModule
         }
 
         public virtual int WriteCalResults(bool inuse, bool persist, double frequency, List<PowerCalData> results)
+        {
+            throw new NotImplementedException();
+        }
+
+        public virtual int WriteDriverCalData(double frequency, byte[] jsonData, int address)
         {
             throw new NotImplementedException();
         }

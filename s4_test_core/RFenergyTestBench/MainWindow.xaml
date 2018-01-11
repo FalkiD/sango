@@ -114,7 +114,8 @@
                         <local:TestView/>
                     </TabItem>
 
-                    <TabItem Header="Calibration">
+                    <TabItem Header="Calibration" Visibility="{Binding ShowDebugTab, 
+                                            Converter={StaticResource BooleanToVisibilityConverter}}">
                         <Grid Name="Calibration">
                             <local:CalView/>
                         </Grid>

@@ -1,15 +1,14 @@
 ﻿using System;
 using System.Collections.ObjectModel;
 using System.Reactive.Linq;
+using System.Windows;
 using ReactiveUI;
 using RFenergyUI.Views;
 using RFenergyUI.Models;
 using System.Threading.Tasks;
-using System.Collections.Generic;
 using System.ComponentModel;
 using Interfaces;
 using M2TestModule;
-using System.Reactive.Disposables;
 
 namespace RFenergyUI.ViewModels
 {
@@ -25,8 +24,11 @@ namespace RFenergyUI.ViewModels
 
         const string STR_START_SWEEP = "Start Sweep";
         const string STR_STOP_SWEEP = "Stop sweep";
+        const string BIAS_ON = "Bias ON";
+        const string BIAS_OFF = "Bias OFF";
+        const string STR_HW_CONNECT_OK = " hardware connected Ok";
 
-        TestView _m2view;
+        TestView _testView;
         TestModel _model;
         bool _monitorBusy;
         static object _monitorLock = new object();
@@ -35,7 +37,7 @@ namespace RFenergyUI.ViewModels
         public TestViewModel(TestView view)
         {
             _monitorBusy = false;
-            _m2view = view;
+            _testView = view;
             _model = new TestModel(this);
             _initializing = false;
 
@@ -46,32 +48,53 @@ namespace RFenergyUI.ViewModels
             DutyCycleCompensation = true; // default
             OpenLoopCompensation = true;
 
-            CmdConnect = ReactiveCommand.CreateAsyncObservable(x => CmdConnectRun()); //, RxApp.TaskpoolScheduler);
-            //CmdConnect.SubscribeOn(RxApp.MainThreadScheduler);
-            CmdConnect.Subscribe(result => MainViewModel.MsgAppendLine(result));
-            //CmdConnect.ThrownExceptions.Subscribe(result => MainViewModel.MsgAppendLine(result.Message));
+            BiasTitle = BIAS_ON;
+            BiasOn = false;
+            PatternFile = "cal20us.ptf";    // default cal file
+
+            CmdBias = ReactiveCommand.CreateAsyncObservable(x => CmdBiasRun());
+            CmdBias.IsExecuting.ToProperty(this, x => x.IsBiasing, out _isBiasing);
+            CmdBias.Subscribe(result => CmdDone(result));
+            CmdBias.ThrownExceptions.Subscribe(result => MainViewModel.MsgAppendLine(result.Message));
+
+            CmdConnect = ReactiveCommand.CreateAsyncObservable(x => CmdConnectRun());
+            CmdConnect.IsExecuting.ToProperty(this, x => x.IsConnecting, out _isConnecting);
+            CmdConnect.Subscribe(result => CmdConnectDone(result));
+            CmdConnect.ThrownExceptions.Subscribe(result => MainViewModel.MsgAppendLine(result.Message));
 
             CmdDisconnect = ReactiveCommand.CreateAsyncObservable(x => CmdDisconnectRun());
-            CmdDisconnect.Subscribe(result => MainViewModel.MsgAppendLine(result));
+            CmdDisconnect.IsExecuting.ToProperty(this, x => x.IsDisconnecting, out _isDisconnecting);
+            CmdDisconnect.Subscribe(result => CmdDone(result));
+            CmdDisconnect.ThrownExceptions.Subscribe(result => MainViewModel.MsgAppendLine(result.Message));
 
             CmdClrFault = ReactiveCommand.CreateAsyncObservable(x => CmdClrFaultRun());
-            CmdClrFault.Subscribe(result => { MainViewModel.MsgAppendLine(result); });
+            CmdClrFault.IsExecuting.ToProperty(this, x => x.IsClrFaulting, out _isClrFaulting);
+            CmdClrFault.Subscribe(result => CmdDone(result));
+            CmdClrFault.ThrownExceptions.Subscribe(result => MainViewModel.MsgAppendLine(result.Message));
 
             CmdInfo = ReactiveCommand.CreateAsyncObservable(x => CmdInfoRun());
-            CmdInfo.Subscribe(result => { MainViewModel.MsgAppendLine(result); });
+            CmdInfo.IsExecuting.ToProperty(this, x => x.IsInfoing, out _isInfoing);
+            CmdInfo.Subscribe(result => CmdDone(result));
+            CmdInfo.ThrownExceptions.Subscribe(result => MainViewModel.MsgAppendLine(result.Message));
 
             CmdFrequency = ReactiveCommand.CreateAsyncObservable(x => CmdFrqRun(x));
-            CmdFrequency.Subscribe(result => MainViewModel.MsgAppendLine(result));
+            CmdFrequency.IsExecuting.ToProperty(this, x => x.IsFrqing, out _isFrqing);
+            CmdFrequency.Subscribe(result => CmdDone(result));
+            CmdFrequency.ThrownExceptions.Subscribe(result => MainViewModel.MsgAppendLine(result.Message));
             CmdFrqArrow = ReactiveCommand.CreateAsyncObservable(x => CmdFrqArrowRun(x));
             CmdFrqArrow.Subscribe(result => MainViewModel.MsgAppendLine(result));
 
             CmdPower = ReactiveCommand.CreateAsyncObservable(x => CmdPwrRun(x));
-            CmdPower.Subscribe(result => MainViewModel.MsgAppendLine(result));
+            CmdPower.IsExecuting.ToProperty(this, x => x.IsPowering, out _isPowering);
+            CmdPower.Subscribe(result => CmdDone(result));
+            CmdPower.ThrownExceptions.Subscribe(result => MainViewModel.MsgAppendLine(result.Message));
             CmdPwrArrow = ReactiveCommand.CreateAsyncObservable(x => CmdPwrArrowRun(x));
             CmdPwrArrow.Subscribe(result => MainViewModel.MsgAppendLine(result));
 
             CmdPwrInDb = ReactiveCommand.CreateAsyncObservable(x => CmdPwrInDbRun(x));
-            CmdPwrInDb.Subscribe(result => MainViewModel.MsgAppendLine(result));
+            CmdPwrInDb.IsExecuting.ToProperty(this, x => x.IsFrqing, out _isFrqing);
+            CmdPwrInDb.Subscribe(result => CmdDone(result));
+            CmdPwrInDb.ThrownExceptions.Subscribe(result => MainViewModel.MsgAppendLine(result.Message));
 
             CmdPhase = ReactiveCommand.CreateAsyncObservable(x => CmdPhsRun());
             CmdPhase.Subscribe(result => MainViewModel.MsgAppendLine(result));
@@ -127,6 +150,14 @@ namespace RFenergyUI.ViewModels
             //CmdTempComp = ReactiveCommand.CreateAsyncObservable(x => CmdTempCompRun(x));
             //CmdTempComp.Subscribe(result => MainViewModel.MsgAppendLine(result));
 
+            bool FactoryMode = MainViewModel.FactoryMode;
+        }
+
+        /// <summary>
+        /// Startup items after window has been created
+        /// </summary>
+        public void SetupHardware()
+        {
             //PaVms = new ObservableCollection<PaViewModel>();
             //for (int channel = 1; channel < HW_CHANNELS + 1; ++channel)
             //{
@@ -187,11 +218,11 @@ namespace RFenergyUI.ViewModels
                         Channel = channel,
                         ShowChannel = true
                     }
-            });
+                });
             }
 
             // setup Visibility flags based on hardware type
-            switch(MainViewModel.ICmd.HwType)
+            switch (MainViewModel.ICmd.HwType)
             {
                 default:
                 case InstrumentInfo.InstrumentType.M2:
@@ -211,6 +242,10 @@ namespace RFenergyUI.ViewModels
                     break;
             }
 
+            MainViewModel.ICmd.BiasEvent += new BooleanEvent(ICmd_BiasEvent);
+            MainViewModel.ICmd.FrequencyEvent += new DoubleEvent(ICmd_FrequencyEvent);
+            MainViewModel.ICmd.PowerEvent += new SetPowerEvent(ICmd_SetPowerEvent);
+            MainViewModel.ICmd.CalDbEvent += new DoubleEvent(ICmd_CalDbEvent);
             //MainViewModel.IDbg.SetDbHandler += UpdateLastProgrammedDb;
 
             // Possible to change View property from ViewModel
@@ -219,7 +254,51 @@ namespace RFenergyUI.ViewModels
             //    .Subscribe(x => theControl.SetValue(AttachedObject.MyAttachedProperty, x);
         }
 
+        // events from driver, **these are always on worker thread.
+
+        void ICmd_BiasEvent(bool biasState, string msg)
+        {
+            _testView.Dispatcher.BeginInvoke((Action)(() =>
+            {
+                BiasOn = biasState;
+            }));
+        }
+        void ICmd_FrequencyEvent(double megahertz, string msg)
+        {
+            _testView.Dispatcher.BeginInvoke((Action)(() =>
+            {
+                Frequency = megahertz;
+                MainViewModel.CalPanel.Frequency = megahertz;
+            }));
+        }
+
+        void ICmd_SetPowerEvent(double dbmOut, double db, string msg)
+        {
+            _testView.Dispatcher.BeginInvoke((Action)(() =>
+            {
+                Power = dbmOut;
+                PwrInDb = db;
+                MainViewModel.DebugPanel.PwrInDb = db;
+            }));
+        }
+
+        void ICmd_CalDbEvent(double db, string msg)
+        {
+            _testView.Dispatcher.BeginInvoke((Action)(() =>
+            {
+                PwrInDb = db;
+                MainViewModel.DebugPanel.PwrInDb = db;
+            }));
+        }
+
         // properties
+
+        bool _factoryMode;
+        public bool FactoryMode
+        {
+            get { return _factoryMode; }
+            set { this.RaiseAndSetIfChanged(ref _factoryMode, value); }
+        }
 
         bool _phaseVisible;
         public bool PhaseVisible
@@ -389,6 +468,20 @@ namespace RFenergyUI.ViewModels
             set { this.RaiseAndSetIfChanged(ref _phase, value); }
         }
 
+        bool _biasOn;
+        public bool BiasOn
+        {
+            get { return _biasOn; }
+            set { this.RaiseAndSetIfChanged(ref _biasOn, value); }
+        }
+
+        string _biasTitle;
+        public string BiasTitle
+        {
+            get { return _biasTitle; }
+            set { this.RaiseAndSetIfChanged(ref _biasTitle, value); }
+        }
+
         double _couplerFwd;
         public double CouplerFwd
         {
@@ -479,12 +572,12 @@ namespace RFenergyUI.ViewModels
             get { return _loopReadings; }
             set
             {
-                if (_m2view.TestTimer != null)
+                if (_testView.TestTimer != null)
                 {
                     if (value)
-                        _m2view.TestTimer.Start();
+                        _testView.TestTimer.Start();
                     else
-                        _m2view.TestTimer.Stop();
+                        _testView.TestTimer.Stop();
                 }
                 this.RaiseAndSetIfChanged(ref _loopReadings, value);
             }
@@ -496,17 +589,17 @@ namespace RFenergyUI.ViewModels
             get { return _loopDelayMs; }
             set
             {
-                if (_m2view.TestTimer != null)
+                if (_testView.TestTimer != null)
                 {
                     bool reset = false;
                     if (LoopReadings)
                     {
                         reset = true;
-                        _m2view.TestTimer.Stop();
+                        _testView.TestTimer.Stop();
                     }
-                    _m2view.TestTimer.Interval = new TimeSpan(0, 0, 0, 0, value);
+                    _testView.TestTimer.Interval = new TimeSpan(0, 0, 0, 0, value);
                     if (reset)
-                        _m2view.TestTimer.Start();
+                        _testView.TestTimer.Start();
                 }
                 this.RaiseAndSetIfChanged(ref _loopDelayMs, value);
             }
@@ -568,43 +661,73 @@ namespace RFenergyUI.ViewModels
 
         // commands
 
-        public ReactiveCommand<string> CmdClrFault { get; protected set; }
-        IObservable<string> CmdClrFaultRun()
+        // Called when any command finishes
+        void CmdDone(string result)
         {
-            return Observable.Create<string>(obs =>
+            if (result.Length > 0)
+                MainViewModel.MsgAppendLine(result);
+        }
+
+        // helpers to get button state updated on UI thread from background thread
+        readonly ObservableAsPropertyHelper<bool> _isBiasing;
+        public bool IsBiasing { get { return _isBiasing.Value; } }
+        public ReactiveCommand<string> CmdBias { get; protected set; }
+        IObservable<string> CmdBiasRun()
+        {
+            // Observable.Start() starts the worker thread
+            return Observable.Start(() =>
             {
-                bool stopEarly = false;
-                Task.Run(() =>
+                string result = "";
+                try
                 {
-                    try
-                    {
-                        if (MainViewModel.IDbg != null)
-                        {
-                            byte[] cmd = new byte[1];
-                            cmd[0] = M2TestModule.M2Cmd.CLR_STATUS;
-                            byte[] data = null;
-                            int status = MainViewModel.ICmd.RunCmd(cmd, ref data);
-                            if (status == 0)
-                                obs.OnNext("ClrFault Ok\n");
-                            else obs.OnNext(string.Format("ClrFault error:{0}", MainViewModel.IErr.ErrorDescription(status)));
-                        }
-                        else obs.OnNext("MainViewModel.IDbg interface is null, can't execute anything");
-                    }
-                    catch (Exception ex)
-                    {
-                        obs.OnNext(string.Format("ClrFault exception:{0}", ex.Message));
-                    }
-                    obs.OnCompleted();
-                });
-                return Disposable.Create(() => stopEarly = true);
+                    MainViewModel.ICmd.BiasEnable(!BiasOn);
+                }
+                catch (Exception ex)
+                {
+                    result = string.Format("{0} BIAS Exception:{1}", MainViewModel.SelectedSystemName, ex.Message);
+                }
+                return result;
             });
         }
 
+        readonly ObservableAsPropertyHelper<bool> _isClrFaulting;
+        public bool IsClrFaulting { get { return _isClrFaulting.Value; } }
+        public ReactiveCommand<string> CmdClrFault { get; protected set; }
+        IObservable<string> CmdClrFaultRun()
+        {
+            return Observable.Start(() =>
+            {
+                string result = "";
+                try
+                {
+                    // Fix this (hw independent)
+                    if (MainViewModel.IDbg != null)
+                    {
+                        byte[] cmd = new byte[1];
+                        cmd[0] = M2Cmd.CLR_STATUS;
+                        byte[] data = null;
+                        int status = MainViewModel.ICmd.RunCmd(cmd, ref data);
+                        if (status == 0)
+                            result = "ClrFault Ok\n";
+                        else result = string.Format("ClrFault error:{0}", MainViewModel.IErr.ErrorDescription(status));
+                    }
+                    else result = "MainViewModel.IDbg interface is null, can't execute anything";
+                }
+                catch (Exception ex)
+                {
+                    result = string.Format("ClrFault exception:{0}", ex.Message);
+                }
+                return result;
+            });
+        }
+
+        readonly ObservableAsPropertyHelper<bool> _isConnecting;
+        public bool IsConnecting { get { return _isConnecting.Value; } }
         public ReactiveCommand<string> CmdConnect { get; protected set; }
         IObservable<string> CmdConnectRun()
         {
-            //return Observable.Start(() =>
-            //{
+            return Observable.Start(() =>
+            {
                 string result = "";
                 try
                 {
@@ -613,8 +736,7 @@ namespace RFenergyUI.ViewModels
                         int status = MainViewModel.IDbg.Initialize(MainViewModel.MainLogFile);
                         if (status == 0)
                         {
-                            result = MainViewModel.SelectedSystemName + " hardware connected Ok";
-                            LoadValuesFromHardware(); // Fill-in panel with values from hardware
+                            result = MainViewModel.SelectedSystemName + STR_HW_CONNECT_OK;
                         }
                         else result = string.Format("{0} connect failed:{1}", MainViewModel.SelectedSystemName,
                                                                               MainViewModel.IErr.ErrorDescription(status));
@@ -625,109 +747,128 @@ namespace RFenergyUI.ViewModels
                 {
                     result = string.Format("Connect{0} Exception:{1}", MainViewModel.SelectedSystemName, ex.Message);
                 }
-                return Observable.Return(result);
-            //});
+                return result;
+            });
+        }
+        void CmdConnectDone(string result)
+        {
+            if(result.Contains(STR_HW_CONNECT_OK))
+                LoadValuesFromHardware(); // Fill-in panel with values from hardware
         }
 
+        readonly ObservableAsPropertyHelper<bool> _isDisconnecting;
+        public bool IsDisconnecting { get { return _isDisconnecting.Value; } }
         public ReactiveCommand<string> CmdDisconnect { get; protected set; }
         IObservable<string> CmdDisconnectRun()
         {
-            string result = "";
-            try
+            return Observable.Start(() =>
             {
-                if (MainViewModel.IDbg != null)
+                string result = "";
+                try
                 {
-                    if (MainViewModel.TestPanel.LoopReadings)
-                        MainViewModel.TestPanel.LoopReadings = false;
-                    MainViewModel.IDbg.Close();
-                    result = MainViewModel.SelectedSystemName + " hardware connection closed";
+                    if (MainViewModel.IDbg != null)
+                    {
+                        if (MainViewModel.TestPanel.LoopReadings)
+                            MainViewModel.TestPanel.LoopReadings = false;
+                        MainViewModel.IDbg.Close();
+                        result = MainViewModel.SelectedSystemName + " hardware connection closed";
+                    }
+                    else result = "MainViewModel.IDbg interface is null, can't execute anything";
                 }
-                else result = "MainViewModel.IDbg interface is null, can't execute anything";
-            }
-            catch (Exception ex)
-            {
-                result = string.Format("Disconnect{0} Exception:{1}", MainViewModel.SelectedSystemName, ex.Message);
-            }
-            return Observable.Return(result);
+                catch (Exception ex)
+                {
+                    result = string.Format("Disconnect{0} Exception:{1}", MainViewModel.SelectedSystemName, ex.Message);
+                }
+                return result;
+            });
         }
 
+        readonly ObservableAsPropertyHelper<bool> _isInfoing;
+        public bool IsInfoing { get { return _isInfoing.Value; } }
         public ReactiveCommand<string> CmdInfo { get; protected set; }
         IObservable<string> CmdInfoRun()
         {
-            string result = "";
-            try
+            return Observable.Start(() =>
             {
-                if (MainViewModel.ICmd != null)
+                string result = "";
+                try
                 {
-                    bool demoMode, hiresMode;
-                    demoMode = hiresMode = false;
-                    result = MainViewModel.ICmd.HardwareInfo(ref demoMode, ref hiresMode);
-                }
-                else result = "ICmd interface is null, can't execute anything";
-            }
-            catch (Exception ex)
-            {
-                result = string.Format("Exception reading device info:{0}", ex.Message);
-            }
-            return Observable.Return(result);
-        }
-
-        public ReactiveCommand<string> CmdFrequency { get; protected set; }
-        IObservable<string> CmdFrqRun(object text)
-        {
-            string result = "";
-            try
-            {
-                double value;
-                if (Double.TryParse(text.ToString(), out value))
-                {
-                    if (value < 2400.0 || value > 2500.0)
-                        return Observable.Return(string.Format("Power out of range({0}) must be between 30 and 65", value));
-                    Frequency = value;
-                    MainViewModel.CalPanel.Frequency = value;
                     if (MainViewModel.ICmd != null)
                     {
-                        int frq = (int)(Frequency * 65536.0);     // Q15.16 format
-                        byte[] rsp = new byte[512];
-                        rsp[0] = 0xFF;  // just flag error until fixup MMC returned status
-                        int status = MainViewModel.ICmd.SetFrequency(Frequency);
-                        // TBD fix this up...
-                        if (status == 0)
-                        {
-                            if (MainViewModel.SelectedSystemName.StartsWith("MMC"))
-                            {
-                                if (rsp[0] == 0x01)
-                                    result = " MMC Frequency Opcode Successful.";
-                                else
-                                    result = string.Format(" MMC Frequency Opcode failed:0x{0}", rsp[0]); // MainViewModel.IErr.ErrorDescription(status));
-
-                                List<string> results = new List<string>();
-                                string more = string.Format("  {0:x02} {1:x02} {2:x02} {3:x02} {4:x02} {5:x02} {6:x02} {7:x02}",
-                                                        rsp[0], rsp[1], rsp[2], rsp[3], rsp[4], rsp[5], rsp[6], rsp[7]);
-
-                                result += (", " + more);
-                                //results.Add(string.Format("  {0:x02} {1:x02} {2:x02} {3:x02} {4:x02} {5:x02} {6:x02} {7:x02}",
-                                //                        rsp[8], rsp[9], rsp[10], rsp[11], rsp[12], rsp[13], rsp[14], rsp[15]));
-
-                            }
-                            else
-                            {
-                                UpdateLastProgrammedDb();
-                                result = " Set frequency Ok";
-                            }
-                        }
-                        else result = string.Format(" Set Frequency failed:{0}", MainViewModel.IErr.ErrorDescription(status));
+                        bool demoMode, hiresMode;
+                        demoMode = hiresMode = false;
+                        result = MainViewModel.ICmd.HardwareInfo(ref demoMode, ref hiresMode);
                     }
                     else result = "ICmd interface is null, can't execute anything";
                 }
-                else
-                    return Observable.Return(string.Format("Error, cannot convert '{0}' to a double", text.ToString()));
-            }
-            catch (Exception ex)
+                catch (Exception ex)
+                {
+                    result = string.Format("Exception reading device info:{0}", ex.Message);
+                }
+                return result;
+            });
+        }
+
+        readonly ObservableAsPropertyHelper<bool> _isFrqing;
+        public bool IsFrqing { get { return _isFrqing.Value; } }
+        public ReactiveCommand<string> CmdFrequency { get; protected set; }
+        IObservable<string> CmdFrqRun(object text)
+        {
+            return Observable.Start(() =>
             {
-                result = string.Format("Set Frequency exception:{0}", ex.Message);
-            }
-            return Observable.Return(result);
+                string result = "";
+                try
+                {
+                    double value;
+                    if (Double.TryParse(text.ToString(), out value))
+                    {
+                        if (value < 2400.0 || value > 2500.0)
+
+                            return string.Format("Frequency out of range({0}) must be between 2400 and 2500", value);
+                        if (MainViewModel.ICmd != null)
+                        {
+                            int frq = (int)(value * 65536.0);     // Q15.16 format
+                            byte[] rsp = new byte[512];
+                            rsp[0] = 0xFF;  // just flag error until fixup MMC returned status
+                            int status = MainViewModel.ICmd.SetFrequency(value);
+                            // TBD fix this up...
+                            if (status == 0)
+                            {
+                                //if (MainViewModel.SelectedSystemName.StartsWith("MMC"))
+                                //{
+                                //    if (rsp[0] == 0x01)
+                                //        result = " MMC Frequency Opcode Successful.";
+                                //    else
+                                //        result = string.Format(" MMC Frequency Opcode failed:0x{0}", rsp[0]); // MainViewModel.IErr.ErrorDescription(status));
+
+                                //    List<string> results = new List<string>();
+                                //    string more = string.Format("  {0:x02} {1:x02} {2:x02} {3:x02} {4:x02} {5:x02} {6:x02} {7:x02}",
+                                //                            rsp[0], rsp[1], rsp[2], rsp[3], rsp[4], rsp[5], rsp[6], rsp[7]);
+
+                                //    result += (", " + more);
+                                //    //results.Add(string.Format("  {0:x02} {1:x02} {2:x02} {3:x02} {4:x02} {5:x02} {6:x02} {7:x02}",
+                                //    //                        rsp[8], rsp[9], rsp[10], rsp[11], rsp[12], rsp[13], rsp[14], rsp[15]));
+
+                                //}
+                                //else
+                                {
+                                    UpdateLastProgrammedDb();
+                                    result = " Set frequency Ok";
+                                }
+                            }
+                            else result = string.Format(" Set Frequency failed:{0}", MainViewModel.IErr.ErrorDescription(status));
+                        }
+                        else result = "ICmd interface is null, can't execute anything";
+                    }
+                    else
+                        result = string.Format("Error, cannot convert '{0}' to a double", text.ToString());
+                }
+                catch (Exception ex)
+                {
+                    result = string.Format("Set Frequency exception:{0}", ex.Message);
+                }
+                return result;
+            });
         }
         public ReactiveCommand<string> CmdFrqArrow { get; protected set; }
         IObservable<string> CmdFrqArrowRun(object arrow)
@@ -735,38 +876,47 @@ namespace RFenergyUI.ViewModels
             return Observable.Return("");
         }
 
+        readonly ObservableAsPropertyHelper<bool> _isPowering;
+        public bool IsPowering { get { return _isPowering.Value; } }
         public ReactiveCommand<string> CmdPower { get; protected set; }
         IObservable<string> CmdPwrRun(object text)
         {
-            string result = "";
-            try
+            return Observable.Start(() =>
             {
-                double value;
-                if (Double.TryParse(text.ToString(), out value))
+                string result = "";
+                try
                 {
-                    if (value < 30.0 || value > 65.0)
-                        return Observable.Return(string.Format("Power out of range({0}) must be between 30 and 65", value));
-                    Power = value;
-                    if (MainViewModel.ICmd != null)
+                    double value;
+                    if (Double.TryParse(text.ToString(), out value))
                     {
-                        int status = MainViewModel.ICmd.SetPower(Power);
-                        if (status == 0)
+                        if (value < 30.0 || value > 63.0)
                         {
-                            UpdateLastProgrammedDb();
-                            result = " Set power Ok";
+                            result = string.Format("Power out of range({0}) must be between 30 and 63", value);
                         }
-                        else result = string.Format(" Set power failed:{0}", MainViewModel.IErr.ErrorDescription(status));
+                        else
+                        {
+                            //Power = value;
+                            if (MainViewModel.ICmd != null)
+                            {
+                                int status = MainViewModel.ICmd.SetPower(value);
+                                if (status == 0)
+                                {
+                                    result = " Set power Ok";
+                                }
+                                else result = string.Format(" Set power failed:{0}", MainViewModel.IErr.ErrorDescription(status));
+                            }
+                            else result = "ICmd interface is null, can't execute anything";
+                        }
                     }
-                    else result = "ICmd interface is null, can't execute anything";
+                    else
+                        result = string.Format("Error, cannot convert '{0}' to a double", text.ToString());
                 }
-                else
-                    return Observable.Return(string.Format("Error, cannot convert '{0}' to a double", text.ToString()));
-            }
-            catch (Exception ex)
-            {
-                result = string.Format("Set Power exception:{0}", ex.Message);
-            }
-            return Observable.Return(result);
+                catch (Exception ex)
+                {
+                    result = string.Format("Set Power exception:{0}", ex.Message);
+                }
+                return result;
+            });
         }
         public ReactiveCommand<string> CmdPwrArrow { get; protected set; }
         IObservable<string> CmdPwrArrowRun(object arrow)
@@ -777,206 +927,230 @@ namespace RFenergyUI.ViewModels
         public ReactiveCommand<string> CmdLoadPtnFile { get; protected set; }
         IObservable<string> CmdLoadPtnRun(object text)
         {
-            string result = "";
-            try
+            return Observable.Start(() =>
             {
-                if (MainViewModel.ICmd != null)
+                string result = "";
+                try
                 {
-                    string rsp = "";
-                    int status = MainViewModel.ICmd.RunCmd(string.Format("loadpat {0}\n", text.ToString()), ref rsp);
-                    if (status == 0)
+                    if (MainViewModel.ICmd != null)
                     {
-                        result = " S4 loadpat:" + rsp;
+                        string rsp = "";
+                        int status = MainViewModel.ICmd.RunCmd(string.Format("loadpat {0} 0\n", PatternFile), ref rsp);
+                        if (status == 0)
+                        {
+                            result = " S4 loadpat:" + rsp;
+                        }
+                        else result = string.Format(" S4 loadpat failed:{0}", MainViewModel.IErr.ErrorDescription(status));
                     }
-                    else result = string.Format(" S4 loadpat failed:{0}", MainViewModel.IErr.ErrorDescription(status));
+                    else result = "ICmd interface is null, can't execute anything";
                 }
-                else result = "ICmd interface is null, can't execute anything";
-            }
-            catch (Exception ex)
-            {
-                result = string.Format("Load pattern file exception:{0}", ex.Message);
-            }
-            return Observable.Return(result);
+                catch (Exception ex)
+                {
+                    result = string.Format("Load pattern file exception:{0}", ex.Message);
+                }
+                return result;
+            });
         }
 
         public ReactiveCommand<string> CmdChoosePtnFile { get; protected set; }
         IObservable<string> CmdChoosePtnRun(object text)
         {
-            string result = "";
-            try
+            return Observable.Start(() =>
             {
-                if (MainViewModel.ICmd != null)
+                string result = "";
+                try
                 {
-                    string rsp = "";
-                    int status = MainViewModel.ICmd.RunCmd(string.Format("loadpat {0}\n"), ref rsp);
-                    if (status == 0)
+                    if (MainViewModel.ICmd != null)
                     {
-                        result = " S4 MCU DIR:" + rsp;
+                        string rsp = "";
+                        int status = MainViewModel.ICmd.RunCmd(string.Format("loadpat {0}\n"), ref rsp);
+                        if (status == 0)
+                        {
+                            result = " S4 MCU DIR:" + rsp;
+                        }
+                        else result = string.Format(" S4 DIR failed:{0}", MainViewModel.IErr.ErrorDescription(status));
                     }
-                    else result = string.Format(" S4 DIR failed:{0}", MainViewModel.IErr.ErrorDescription(status));
+                    else result = "ICmd interface is null, can't execute anything";
                 }
-                else result = "ICmd interface is null, can't execute anything";
-            }
-            catch (Exception ex)
-            {
-                result = string.Format("Choose pattern file exception:{0}", ex.Message);
-            }
-            return Observable.Return(result);
+                catch (Exception ex)
+                {
+                    result = string.Format("Choose pattern file exception:{0}", ex.Message);
+                }
+                return result;
+            });
         }
 
         public ReactiveCommand<string> CmdFwDir { get; protected set; }
         IObservable<string> CmdFwDirRun(object text)
         {
-            string result = "";
-            try
+            return Observable.Start(() =>
             {
-                if (MainViewModel.ICmd != null)
+                string result = "";
+                try
                 {
-                    string rsp = "";
-                    int status = MainViewModel.ICmd.RunCmd("dir\n", ref rsp);
-                    if (status == 0)
+                    if (MainViewModel.ICmd != null)
                     {
-                        result = " S4 MCU DIR:" + rsp;
+                        string rsp = "";
+                        int status = MainViewModel.ICmd.RunCmd("dir\n", ref rsp);
+                        if (status == 0)
+                        {
+                            result = " S4 MCU DIR:" + rsp;
+                        }
+                        else result = string.Format(" S4 DIR failed:{0}", MainViewModel.IErr.ErrorDescription(status));
                     }
-                    else result = string.Format(" S4 DIR failed:{0}", MainViewModel.IErr.ErrorDescription(status));
+                    else result = "ICmd interface is null, can't execute anything";
                 }
-                else result = "ICmd interface is null, can't execute anything";
-            }
-            catch (Exception ex)
-            {
-                result = string.Format("S4 filesystem DIR exception:{0}", ex.Message);
-            }
-            return Observable.Return(result);
+                catch (Exception ex)
+                {
+                    result = string.Format("S4 filesystem DIR exception:{0}", ex.Message);
+                }
+                return result;
+            });
         }
 
         public ReactiveCommand<string> CmdTrig { get; protected set; }
         IObservable<string> CmdTrigRun(object text)
         {
-            string result = "";
-            try
+            return Observable.Start(() =>
             {
-                if (MainViewModel.ICmd != null)
+                string result = "";
+                try
                 {
-                    string rsp = "";
-                    int status = MainViewModel.ICmd.RunCmd(text.ToString() + "\n", ref rsp);
-                    if (status == 0)
+                    if (MainViewModel.ICmd != null)
                     {
-                        result = string.Format(" S4 {0}:{1}", text.ToString(), rsp);
+                        string rsp = "";
+                        int status = MainViewModel.ICmd.RunCmd(text.ToString() + "\n", ref rsp);
+                        if (status == 0)
+                        {
+                            result = string.Format(" S4 {0}:{1}", text.ToString(), rsp);
+                        }
+                        else result = string.Format(" S4 {0} failed:{1}", text.ToString(), MainViewModel.IErr.ErrorDescription(status));
                     }
-                    else result = string.Format(" S4 {0} failed:{1}", text.ToString(), MainViewModel.IErr.ErrorDescription(status));
+                    else result = "ICmd interface is null, can't execute anything";
                 }
-                else result = "ICmd interface is null, can't execute anything";
-            }
-            catch (Exception ex)
-            {
-                result = string.Format("S4 trig command exception:{0}", ex.Message);
-            }
-            return Observable.Return(result);
+                catch (Exception ex)
+                {
+                    result = string.Format("S4 trig command exception:{0}", ex.Message);
+                }
+                return result;
+            });
         }
 
         public ReactiveCommand<string> CmdStopPtn { get; protected set; }
         IObservable<string> CmdStopPtnRun(object text)
         {
-            string result = "";
-            try
+            return Observable.Start(() =>
             {
-                if (MainViewModel.ICmd != null)
+                string result = "";
+                try
                 {
-                    string rsp = "";
-                    int status = MainViewModel.ICmd.RunCmd("trig ctrl 0x81\n", ref rsp);
-                    if (status == 0)
+                    if (MainViewModel.ICmd != null)
                     {
-                        result = string.Format(" S4 trig ctrl 0x81:{0}", rsp);
+                        string rsp = "";
+                        int status = MainViewModel.ICmd.RunCmd("trig ctrl 0x81\n", ref rsp);
+                        if (status == 0)
+                        {
+                            result = string.Format(" S4 trig ctrl 0x81:{0}", rsp);
+                        }
+                        else result = string.Format(" S4 trig ctrl 0x81 failed:{0}", MainViewModel.IErr.ErrorDescription(status));
                     }
-                    else result = string.Format(" S4 trig ctrl 0x81 failed:{0}", MainViewModel.IErr.ErrorDescription(status));
+                    else result = "ICmd interface is null, can't execute anything";
                 }
-                else result = "ICmd interface is null, can't execute anything";
-            }
-            catch (Exception ex)
-            {
-                result = string.Format("S4 stop ptn(trig ctrl 0x81) exception:{0}", ex.Message);
-            }
-            return Observable.Return(result);
+                catch (Exception ex)
+                {
+                    result = string.Format("S4 stop ptn(trig ctrl 0x81) exception:{0}", ex.Message);
+                }
+                return result;
+            });
         }
 
         public ReactiveCommand<string> CmdMeas { get; protected set; }
         IObservable<string> CmdMeasRun(object text)
         {
-            string result = "";
-            try
+            return Observable.Start(() =>
             {
-                if (MainViewModel.ICmd != null)
+                string result = "";
+                try
                 {
-                    string rsp = "";
-                    int status = MainViewModel.ICmd.RunCmd(text.ToString() + "\n", ref rsp);
-                    if (status == 0)
+                    if (MainViewModel.ICmd != null)
                     {
-                        result = string.Format(" S4 {0}:{1}", text.ToString(), rsp);
+                        string rsp = "";
+                        int status = MainViewModel.ICmd.RunCmd(text.ToString() + "\n", ref rsp);
+                        if (status == 0)
+                        {
+                            result = string.Format(" S4 {0}:{1}", text.ToString(), rsp);
+                        }
+                        else result = string.Format(" S4 {0} failed:{1}", text.ToString(), MainViewModel.IErr.ErrorDescription(status));
                     }
-                    else result = string.Format(" S4 {0} failed:{1}", text.ToString(), MainViewModel.IErr.ErrorDescription(status));
+                    else result = "ICmd interface is null, can't execute anything";
                 }
-                else result = "ICmd interface is null, can't execute anything";
-            }
-            catch (Exception ex)
-            {
-                result = string.Format("S4 MEAS exception:{0}", ex.Message);
-            }
-            return Observable.Return(result);
+                catch (Exception ex)
+                {
+                    result = string.Format("S4 MEAS exception:{0}", ex.Message);
+                }
+                return result;
+            });
         }
 
         public ReactiveCommand<string> CmdPwrInDb { get; protected set; }
         IObservable<string> CmdPwrInDbRun(object text)
         {
-            string result = "";
-            try
+            return Observable.Start(() =>
             {
-                double value;
-                if (Double.TryParse(text.ToString(), out value))
+                string result = "";
+                try
                 {
-                    if (value < 0.0 || value > 45.0)
-                        return Observable.Return(string.Format("Power out of range({0}) must be between 0 and 45 dB", value));
-                    PwrInDb = value;
-                    int status;
-                    if ((status = MainViewModel.CalPanel.SetCalPower(PwrInDb)) == 0)
-                        result = " Set PwrInDb Ok";
-                    else result = string.Format(" Set PwrInDb failed:{0}", MainViewModel.IErr.ErrorDescription(status));
+                    double value;
+                    if (Double.TryParse(text.ToString(), out value))
+                    {
+                        if (value < 0.0 || value > 45.0)
+                            result = string.Format("Power out of range({0}) must be between 0 and 45 dB", value);
+                        //PwrInDb = value;
+                        int status;
+                        if ((status = MainViewModel.CalPanel.SetCalPower(value)) == 0)
+                            result = " Set PwrInDb Ok";
+                        else result = string.Format(" Set PwrInDb failed:{0}", MainViewModel.IErr.ErrorDescription(status));
+                    }
+                    else
+                        result = string.Format("Error, cannot convert '{0}' to a double", text.ToString());
                 }
-                else
-                    return Observable.Return(string.Format("Error, cannot convert '{0}' to a double", text.ToString()));
-            }
-            catch (Exception ex)
-            {
-                result = string.Format("Set PwrInDb exception:{0}", ex.Message);
-            }
-            return Observable.Return(result);
+                catch (Exception ex)
+                {
+                    result = string.Format("Set PwrInDb exception:{0}", ex.Message);
+                }
+                return result;
+            });
         }
 
         public ReactiveCommand<string> CmdPhase { get; protected set; }
         IObservable<string> CmdPhsRun()
         {
-            string result = "";
-            try
+            return Observable.Start(() =>
             {
-                if (MainViewModel.ICmd != null)
+                string result = "";
+                try
                 {
-                    int pwr = (int)(Phase * 256.0);     // Q7.8 format
-                    byte[] cmd = new byte[3];
-                    cmd[0] = M2Cmd.PHASE;
-                    cmd[1] = (byte)(pwr & 0xff);
-                    cmd[2] = (byte)((pwr >> 8) & 0xff);
-                    byte[] rsp = null;
-                    int status = MainViewModel.ICmd.RunCmd(cmd, ref rsp);
-                    if (status == 0)
-                        result = " Set phase Ok";
-                    else result = string.Format(" Set phase failed:{0}", MainViewModel.IErr.ErrorDescription(status));
+                    if (MainViewModel.ICmd != null)
+                    {
+                        int pwr = (int)(Phase * 256.0);     // Q7.8 format
+                        byte[] cmd = new byte[3];
+                        cmd[0] = M2Cmd.PHASE;
+                        cmd[1] = (byte)(pwr & 0xff);
+                        cmd[2] = (byte)((pwr >> 8) & 0xff);
+                        byte[] rsp = null;
+                        int status = MainViewModel.ICmd.RunCmd(cmd, ref rsp);
+                        if (status == 0)
+                            result = " Set phase Ok";
+                        else result = string.Format(" Set phase failed:{0}", MainViewModel.IErr.ErrorDescription(status));
+                    }
+                    else result = "ICmd interface is null, can't execute anything";
                 }
-                else result = "ICmd interface is null, can't execute anything";
-            }
-            catch (Exception ex)
-            {
-                result = string.Format("Set Phase exception:{0}", ex.Message);
-            }
-            return Observable.Return(result);
+                catch (Exception ex)
+                {
+                    result = string.Format("Set Phase exception:{0}", ex.Message);
+                }
+                return result;
+            });
         }
         public ReactiveCommand<string> CmdPhsArrow { get; protected set; }
         IObservable<string> CmdPhsArrowRun(object arrow)
@@ -993,12 +1167,13 @@ namespace RFenergyUI.ViewModels
                 if (status == 0)
                 {
                     MainViewModel.DebugPanel.PwrInDb = dB;
+                    PwrInDb = dB;
                 }
-                else System.Diagnostics.Debug.WriteLine(string.Format(" UpdateLastDb error:{0}", MainViewModel.IErr.ErrorDescription(status)));
+                else MainViewModel.MsgAppendLine(string.Format(" UpdateLastDb error:{0}", MainViewModel.IErr.ErrorDescription(status)));
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine(string.Format(" UpdateLastDb exception:{0}", ex.Message));
+                MainViewModel.MsgAppendLine(string.Format(" UpdateLastDb exception:{0}", ex.Message));
             }
         }
 
@@ -1009,19 +1184,22 @@ namespace RFenergyUI.ViewModels
         /// <returns></returns>
         IObservable<string> DoPwm()
         {
-            string result = "";
-            if (MainViewModel.ICmd != null)
+            return Observable.Start(() =>
             {
-                int status = MainViewModel.ICmd.SetPwm(DutyCycle, PwmRate, DutyCycle != 0, ExternalPwm);
-                if (status == 0)
+                string result = "";
+                if (MainViewModel.ICmd != null)
                 {
-                    UpdateLastProgrammedDb();
-                    result = " Set PWM Ok";
+                    int status = MainViewModel.ICmd.SetPwm(DutyCycle, PwmRate, DutyCycle != 0, ExternalPwm);
+                    if (status == 0)
+                    {
+                        UpdateLastProgrammedDb();
+                        result = " Set PWM Ok";
+                    }
+                    else result = string.Format(" Set PWM failed:{0}", MainViewModel.IErr.ErrorDescription(status));
                 }
-                else result = string.Format(" Set PWM failed:{0}", MainViewModel.IErr.ErrorDescription(status));
-            }
-            else result = "ICmd interface is null, can't execute anything";
-            return Observable.Return(result);
+                else result = "ICmd interface is null, can't execute anything";
+                return result;
+            });
         }
         public ReactiveCommand<string> CmdDutyCycle { get; protected set; }
         IObservable<string> CmdDutyCycleRun(object text)
@@ -1190,7 +1368,6 @@ namespace RFenergyUI.ViewModels
             {
                 if (MainViewModel.ICmd != null)
                 {
-                    int status = 0;
                     if (PwrSweepRunning)
                     {
                         PwrSweepBtnTxt = STR_START_SWEEP;

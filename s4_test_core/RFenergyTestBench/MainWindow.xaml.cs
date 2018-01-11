@@ -20,11 +20,11 @@ namespace RFenergyUI
         public MainWindow()
         {
             _vm = new MainViewModel(this);
-            this.DataContext = _vm;     // Bindings
+            DataContext = _vm;     // Bindings
             InitializeComponent();
         }
 
-        private void Window_Loaded(object sender, RoutedEventArgs e)
+        void Window_Loaded(object sender, RoutedEventArgs e)
         {
             try
             {
@@ -38,10 +38,7 @@ namespace RFenergyUI
             }
             catch (Exception ex)
             {
-                if (_vm != null)
-                    _vm.AppendLine(string.Format("OnLoad exception:{0}", ex.Message));
-                else
-                    Debug.WriteLine(string.Format("OnLoad exception:{0}", ex.Message));
+                MainViewModel.MsgAppendLine(string.Format("OnLoad exception:{0}", ex.Message));
             }
         }
 
@@ -89,7 +86,7 @@ namespace RFenergyUI
 
         private void ListBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         {
-            if (_vm != null)
+            if (_vm != null && IsInitialized)
                 _vm.SystemSelectionChanged();
         }
 
