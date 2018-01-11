@@ -64,7 +64,7 @@ u 1.5 ms r 4000000 8; --Read response data from host adapter RAM
 u 2.0 ms w 4000000 04 12 01 95 0A 00 00 00 00 00 00 00; --Continuous trigger, 10ms 
 u 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
 -- load pattern is done, now run it & read response
---u 2.0 ms w 4000000 04 44 01 00 00 01 00 00 00 00 00 00; --PAT_CTRL[Run] 0x100 
+--u 2.0 ms w 4000000 04 44 01 00 00 00 00 00 00 00 00 00; --PAT_CTRL[Run] 
 --u 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
 u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
 u 0.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)

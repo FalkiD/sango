@@ -502,6 +502,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     else begin
                         if({fifo_dat_i[0], length[7:0]} == 0) begin
                             fifo_rd_en_o <= 0;              // don't read next byte, opcode has no data
+                            state <= `STATE_DATA;           // 11-Jan-2018 rearrangement after bugfix
                         end
                         else if(fifo_rd_en_o == 1'b0) begin
                             fifo_rd_en_o <= 1'b1;           // 11-Jan-2018 bugfix, can't get to STATE_DATA when RD line is OFF!
