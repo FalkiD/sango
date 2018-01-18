@@ -2,7 +2,9 @@
 ## To use it in a project:
 ## - uncomment the lines corresponding to used pins
 ## - rename the used ports (in each line, after get_ports) according to the top level signal names in the project
-
+##
+## 19-Jan-2018  Added multiboot support. Uncomment section for updated image build or 'golden' original
+##
 
 # ---------------------------------------------------------------------------
 # Master FPGA Clock Input
@@ -13,6 +15,23 @@
 #set_property -dict {PACKAGE_PIN D4 IOSTANDARD LVDS_25} [get_ports FPGA_CLK]
 #create_clock -period 10.000 -name FPGA_CLK_pin -waveform {0.000 5.000} -add [get_ports FPGA_CLK]
 #set_property -dict {PACKAGE_PIN C4 IOSTANDARD LVDS_25} [get_ports FPGA_CLKn]
+
+# ---------------------------------------------------------------------------
+# Multiboot config settings, updated image. Added 19-Jan-2018
+# This section for the golden image
+# ---------------------------------------------------------------------------
+#set_property BITSTREAM.CONFIG.CONFIGFALLBACK ENABLE [current_design]
+#set_property BITSTREAM.CONFIG.NEXT_CONFIG_ADDR 0x0800000 [current_design]
+#set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]
+#set_property BITSTREAM.CONFIG.SPI_BUSWIDTH 4 [current_design]
+
+# ---------------------------------------------------------------------------
+# Multiboot config settings, updated image. Added 19-Jan-2018
+# This section for the updated image
+# ---------------------------------------------------------------------------
+#set_property BITSTREAM.CONFIG.CONFIGFALLBACK ENABLE [current_design]
+#set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]
+#set_property BITSTREAM.CONFIG.SPI_BUSWIDTH 4 [current_design]
 
 # ---------------------------------------------------------------------------
 # MMC Interface I/Os
