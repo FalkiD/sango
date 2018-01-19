@@ -1,0 +1,42 @@
+
+20-Jan-2018
+Example multiboot tcl script output:
+
+source C:/work/github/master/FPGA/Coop/S4/write_multiboot.tcl
+# set PRJDIR [get_property DIRECTORY [current_project]]
+# set RUNDIR [get_property DIRECTORY [current_run]]
+# puts $PRJDIR
+C:/work/github/master/FPGA/Coop/S4
+# puts $RUNDIR
+C:/work/github/master/FPGA/Coop/S4/S4.runs/impl_1
+# set BITFILE $RUNDIR/s4.bit
+# puts $BITFILE
+C:/work/github/master/FPGA/Coop/S4/S4.runs/impl_1/s4.bit
+# file copy -force $BITFILE $PRJDIR/bin
+# set PRMFILE $PRJDIR/bin/*.prm
+# puts $PRMFILE
+C:/work/github/master/FPGA/Coop/S4/bin/*.prm
+# file delete -force $PRMFILE
+# write_cfgmem -format mcs -size 128 -interface SPIx4 -loadbit "up 0x00000000 $PRJDIR/../s4-golden/bin/s4-golden.bit up 0x0800000 $PRJDIR/bin/s4.bit" -force -file "$PRJDIR/bin/s4.mcs"
+Command: write_cfgmem -format mcs -size 128 -interface SPIx4 -loadbit {up 0x00000000 C:/work/github/master/FPGA/Coop/S4/../s4-golden/bin/s4-golden.bit up 0x0800000 C:/work/github/master/FPGA/Coop/S4/bin/s4.bit} -force -file C:/work/github/master/FPGA/Coop/S4/bin/s4.mcs
+Creating config memory files...
+Creating bitstream load up from address 0x00000000
+Loading bitfile C:/work/github/master/FPGA/Coop/S4/../s4-golden/bin/s4-golden.bit
+Creating bitstream load up from address 0x00800000
+Loading bitfile C:/work/github/master/FPGA/Coop/S4/bin/s4.bit
+Writing file C:/work/github/master/FPGA/Coop/S4/bin/s4.mcs
+Writing log file C:/work/github/master/FPGA/Coop/S4/bin/s4.prm
+===================================
+Configuration Memory information
+===================================
+File Format        MCS
+Interface          SPIX4
+Size               128M
+Start Address      0x00000000
+End Address        0x07FFFFFF
+
+Addr1         Addr2         Date                    File(s)
+0x00000000    0x0017B5F7    Jan 18 18:29:41 2018    C:/work/github/master/FPGA/Coop/S4/../s4-golden/bin/s4-golden.bit
+0x00800000    0x0097B5F7    Jan 19 08:35:10 2018    C:/work/github/master/FPGA/Coop/S4/bin/s4.bit
+0 Infos, 0 Warnings, 0 Critical Warnings and 0 Errors encountered.
+write_cfgmem completed successfully
