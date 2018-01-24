@@ -27,4 +27,4 @@ file copy -force $BITFILE $PRJDIR/bin
 set PRMFILE $PRJDIR/bin/*.prm
 puts $PRMFILE
 file delete -force $PRMFILE
-write_cfgmem -format mcs -size 128 -interface SPIx4 -loadbit "up 0x00000000 $PRJDIR/../s4-golden/bin/s4-golden.bit up 0x0800000 $PRJDIR/bin/s4.bit" -force -file "$PRJDIR/bin/s4.mcs"
+write_cfgmem -format mcs -size 128 -interface SPIx4 -loadbit "up 0x00000000 $PRJDIR/bin/s4-golden.bit up 0x0800000 $PRJDIR/bin/s4.bit" -force -file "$PRJDIR/bin/s4-multiboot.mcs"
