@@ -127,61 +127,64 @@ end component;
   signal MMC_DAT6      : std_logic;      --  T5    IO      
   signal MMC_DAT5      : std_logic;      --  T10   IO      
   signal MMC_DAT4      : std_logic;      --  T9    IO      
-  signal MMC_DAT3      : std_logic;                    --  T8    IO      
-  signal MMC_DAT2      : std_logic;                    --  T7    IO      
-  signal MMC_DAT1      : std_logic;                         --  R8    IO      
-  signal MMC_DAT0      : std_logic;                         --  P8    IO      
+  signal MMC_DAT3      : std_logic;      --  T8    IO      
+  signal MMC_DAT2      : std_logic;      --  T7    IO      
+  signal MMC_DAT1      : std_logic;      --  R8    IO      
+  signal MMC_DAT0      : std_logic;      --  P8    IO      
 
-  signal UART_RSP_o      : std_logic;                        --  N16   O        MMC UART
-  signal UART_CMD_i      : std_logic;                       --  P15   I        MMC UART
+  signal UART_RSP_o    : std_logic;      --  N16   O        MMC UART
+  signal UART_CMD_i    : std_logic;      --  P15   I        MMC UART
+
+  signal TRIG_IN       : std_logic;      -- External trigger input
 
                                          --     FPGA_MCLK is temporarily 102MHz LVCMOS33 FPGA Clk Input.  <JLC_TEMP_NO_L12>
   signal FPGA_MCLK     : std_logic;                        --  R13   I                       
                                          --     FPGA_M*   is HW DBG I/F
-  signal FPGA_MCU1     : std_logic := '0';                        --  P10   I 
-  signal FPGA_MCU2     : std_logic := '0';                       --  P11   O
+  signal FPGA_MCU1     : std_logic := '0';                --  P10   I 
+  signal FPGA_MCU2     : std_logic := '0';                --  P11   O
   signal FPGA_MCU3     : std_logic := '0';                --  R12   O    
   signal FPGA_MCU4     : std_logic := '0';                --  R13   O        
   signal MCU_TRIG      : std_logic := '0';                --  T13   I       
 
-  signal VGA_MOSI      : std_logic := '0';                 --  B7    O        RF Power Setting SPI
-  signal VGA_SCLK      : std_logic := '0';                 --  B6    O        I/F
-  signal VGA_SSn       : std_logic := '0';                  --  B5    O       
-  signal VGA_VSW       : std_logic := '0';                  --  A5    O       
-  signal VGA_VSWn      : std_logic := '0';                 --  A3    O       
+  signal VGA_MOSI      : std_logic := '0';                --  B7    O        RF Power Setting SPI
+  signal VGA_SCLK      : std_logic := '0';                --  B6    O        I/F
+  signal VGA_SSn       : std_logic := '0';                --  B5    O       
+  signal VGA_VSW       : std_logic := '0';                --  A5    O       
+  signal VGA_VSWn      : std_logic := '0';                --  A3    O       
 
-  signal SYN_MOSI      : std_logic := '0';                 --  B2    O        LTC6946 RF Synth SPI I/F
-  signal SYN_MISO      : std_logic := '0';                 --  A2    I       
-  signal SYN_SCLK      : std_logic := '0';                 --  C1    O       
-  signal SYN_SSn       : std_logic := '0';                  --  C1    O
-  signal SYN_STAT      : std_logic := '0';                 --  B1    O
-  signal SYN_MUTEn     : std_logic := '0';                 --  E2    O
+  signal SYN_MOSI      : std_logic := '0';                --  B2    O        LTC6946 RF Synth SPI I/F
+  signal SYN_MISO      : std_logic := '0';                --  A2    I       
+  signal SYN_SCLK      : std_logic := '0';                --  C1    O       
+  signal SYN_SSn       : std_logic := '0';                --  C1    O
+  signal SYN_STAT      : std_logic := '0';                --  B1    O
+  signal SYN_MUTEn     : std_logic := '0';                --  E2    O
 
-  signal DDS_MOSI      : std_logic := '0';                 --  F2    O        AD9954 DDS SPI+ I/F
-  signal DDS_MISO      : std_logic := '0';                 --  E1    I
-  signal DDS_SSn       : std_logic := '0';                  --  G2    O
-  signal DDS_SCLK      : std_logic := '0';                 --  G1    O       
+  signal DDS_MOSI      : std_logic := '0';                --  F2    O        AD9954 DDS SPI+ I/F
+  signal DDS_MISO      : std_logic := '0';                --  E1    I
+  signal DDS_SSn       : std_logic := '0';                --  G2    O
+  signal DDS_SCLK      : std_logic := '0';                --  G1    O       
   signal DDS_IORST     : std_logic := '0';                --  H2    O       
-  signal DDS_IOUP      : std_logic := '0';                 --  H1    O       
-  signal DDS_SYNC      : std_logic := '0';                  --  K1    O
-  signal DDS_PS0       : std_logic := '0';                  --  J1    O
-  signal DDS_PS1       : std_logic := '0';                  --  L2    O
+  signal DDS_IOUP      : std_logic := '0';                --  H1    O       
+  signal DDS_SYNC      : std_logic := '0';                --  K1    O
+  signal DDS_PS0       : std_logic := '0';                --  J1    O
+  signal DDS_PS1       : std_logic := '0';                --  L2    O
 
-  signal RF_GATE       : std_logic := '0';                  --  C2    O        RF On/Off Keying/Biasing
-  signal RF_GATE2      : std_logic := '0';                 --  C3    O       
-  signal DRV_BIAS_EN   : std_logic := '0';              --  A3    O                 
-  signal PA_BIAS_EN    : std_logic := '0';               --  K2    O                 
+  signal RF_GATE       : std_logic := '0';                --  C2    O        RF On/Off Keying/Biasing
+  signal RF_GATE2      : std_logic := '0';                --  C3    O       
+  signal DRV_BIAS_EN   : std_logic := '0';                --  A3    O                 
+  signal PA_BIAS_EN    : std_logic := '0';                --  K2    O                 
 
-  signal ZMON_EN       : std_logic := '0';                  --  T2    O        ZMon SPI Cnvrt & Read I/F
-  signal CONV          : std_logic := '0';                     --  M1    O
-  signal ADC_SCLK      : std_logic := '0';                 --  R1    O
-  signal ADCF_SDO      : std_logic := '0';                 --  N1    I
-  signal ADCR_SDO      : std_logic := '0';                 --  P1    I
-  signal ADCTRIG       : std_logic := '0';                  --  T12   I        CPU ZMon Req
+  signal ZMON_EN       : std_logic := '0';                --  T2    O        ZMon SPI Cnvrt & Read I/F
+  signal CONV          : std_logic := '0';                --  M1    O
+  signal ADC_SCLK      : std_logic := '0';                --  R1    O
+  signal ADCF_SDO      : std_logic := '0';                --  N1    I
+  signal ADCR_SDO      : std_logic := '0';                --  P1    I
+  signal ADCTRIG       : std_logic := '0';                --  T12   I        CPU ZMon Req
+
+  signal ck_rst        : std_logic := '0'; 
 
 -- uart_sim_control_port signals:
   signal CLK        : std_logic;
-  signal ck_rst     : std_logic;
 
 begin
 
@@ -225,13 +228,13 @@ begin
       MMC_DAT6    => MMC_DAT6,      --  T5    IO      
       MMC_DAT5    => MMC_DAT5,      --  T10   IO      
       MMC_DAT4    => MMC_DAT4,      --  T9    IO      
-      MMC_DAT3    => MMC_DAT3,                    --  T8    IO      
-      MMC_DAT2    => MMC_DAT2,                    --  T7    IO      
-      MMC_DAT1    => MMC_DAT1,                         --  R8    IO      
-      MMC_DAT0    => MMC_DAT0,                         --  P8    IO      
+      MMC_DAT3    => MMC_DAT3,      --  T8    IO      
+      MMC_DAT2    => MMC_DAT2,      --  T7    IO      
+      MMC_DAT1    => MMC_DAT1,      --  R8    IO      
+      MMC_DAT0    => MMC_DAT0,      --  P8    IO      
     
-      TRIG_OUT    => open,              --  M16   O       
-      TRIG_IN     => '0',              --  N13   I  
+      TRIG_OUT    => open,          --  M16   O       
+      TRIG_IN     => TRIG_IN,       --  N13   I  
     
       FPGA_TXD    => UART_RSP_o,             --  N16   O        MMC UART
       FPGA_RXD    => UART_CMD_i,           --  P15   I        MMC UART
@@ -311,6 +314,8 @@ pu10 : pullup1 port map(pin => MMC_DAT7);
     variable PS_PER_SECOND : real := 1.0E+12;
     variable half_period : time := integer(PS_PER_SECOND/(2.0*real(DUT_CLKRATE))) * 1 ps;
     variable counter : integer := 10;    -- assert MCU_TRIG for 5 clocks at startup
+    variable exttrig : integer := 100;   -- assert TRIG_IN every 100 clocks
+    variable extcount: integer := 100;   -- assert TRIG_IN every 100 clocks
   begin
      --wait for 1/2 of the clock period;
      wait for half_period;
@@ -324,6 +329,17 @@ pu10 : pullup1 port map(pin => MMC_DAT7);
      else
        MCU_TRIG <= '0';
      end if;
+     
+     if(counter <= 0) then
+       if(extcount > 0) then
+         extcount := extcount - 1;
+         TRIG_IN <= '0';
+       else
+         extcount := exttrig;   -- reset
+         TRIG_IN <= '1';
+       end if;
+     end if;
+     
   end process;
 
 --  -- Use MCU_TRIG as global reset

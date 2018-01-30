@@ -1104,6 +1104,7 @@ end
                                           
     .bias_enable_o              (bias_en),          // bias control
 
+    .extrig_i                   (TRIG_IN),          // external trigger input
     .trig_conf_o                (trig_config),      // triger config word
     .config_o                   (config_word),      // various config bits from CONFIG opcode
 

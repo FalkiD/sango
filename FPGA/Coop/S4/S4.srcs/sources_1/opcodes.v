@@ -115,6 +115,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 
     output reg         bias_enable_o,             // bias control
 
+    input wire         extrig_i,                  // external trigger input, rising edge
     output wire [31:0] trig_conf_o,               // trig_configuration word
     output reg  [31:0] config_o,                  // various configuration bits, CONFIG opcode
 
@@ -193,7 +194,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     localparam TICKS_PER_MS   = 18'd100000;
     reg  [8:0]   trig_ms;            // continuous trigger millisecond counter
     reg  [17:0]  trig_counter = 18'd0; // 100,000 ticks per millisecond, 18 bits
-
+    reg          extrigg;            // external trigger latch, detect rising edge
     reg  [15:0]  sync_conf;          // sync configuration, from sync_conf opcode
     
     // handle opcode integer argument data in a common way
@@ -287,20 +288,30 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 state <= `STATE_PTN_DATA1;            
             end
 
-            // Handle triggering options, continuous mode mostly
-            if(trig_conf[`TRGBIT_CONT] == 1'b1 && trig_conf[`TRGBIT_EN] == 1'b1) begin
-                if(trig_ms >= trig_conf[23:16]) begin
-                    // run pattern, reset counters
-                    start_pattern(ptn_addr);
-                    trig_ms <= 9'd0;
-                    trig_counter <= 18'd0;
+            // Handle triggering options if pattern processor is ready
+            if(trig_conf[`TRGBIT_EN] == 1'b1 && ptn_status_i == `SUCCESS) begin
+                if(trig_conf[`TRGBIT_CONT] == 1'b1) begin
+                    if(trig_ms >= trig_conf[23:16]) begin
+                        // run pattern, reset counters
+                         start_pattern(ptn_addr);
+                        trig_ms <= 9'd0;
+                        trig_counter <= 18'd0;
+                    end
+                    if(trig_counter >= TICKS_PER_MS) begin
+                        trig_ms <= trig_ms + 9'd1;
+                        trig_counter <= 18'd0;                    
+                    end
+                    else
+                        trig_counter <= trig_counter + 18'd1;
                 end
-                if(trig_counter >= TICKS_PER_MS) begin
-                    trig_ms <= trig_ms + 9'd1;
-                    trig_counter <= 18'd0;                    
+                else if(trig_conf[`TRGBIT_EXT] == 1'b1) begin
+                    if(extrig_i == 1'b1 && extrigg == 1'b0) begin
+                        // rising edge of TRIG_IN signal detected
+                        // Not checking for overrun yet...
+                        start_pattern(ptn_addr);
+                        extrigg <= 1'b1;    // Gets cleared by stop_pattern()
+                    end
                 end
-                else
-                    trig_counter <= trig_counter + 18'd1;
             end
 
             // Process opcodes from MMC fifo
@@ -626,7 +637,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     begin
         ptn_run_o <= 1'b0;              // stop pattern
         ptn_fifo_ren_o <= 1'b0;
-        operating_mode <= `OPCODE_NORMAL; 
+        operating_mode <= `OPCODE_NORMAL;
+        extrigg <= 1'b0;                // reset for next external trigger detection                 
     end
     endtask
 
@@ -650,10 +662,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             case(opcode)
             `CONFIG: begin
                 // byte 2, d0=1 for VGA high gain mode, 0 for default low gain mode
-                //adc_dly <= {16'd0, uinttmp[15:0]};
                 config_o <= uinttmp[31:0];              // various config bits
-                //vga_higain_o <= uinttmp[16];
-                //vga_dacctla_o <= uinttmp[17];          // d1, DAC control A bit. Normally fix A, control dac B
                 next_opcode();   
             end
             `STATUS:  begin
@@ -1162,10 +1171,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         zm_rq_gain <= 32'h0001_0000;      // zmon refl "Q" ADC gain, Q15.16 float
         zm_rq_offset <= 16'd0;            // zmon refl "Q" ADC offset, signed int
         
-        //adc_dly <= 5000;                  // default is 50us in 10ns ticks
         config_o <= 32'h0000_0001;        // defauly VGA hi gain mode, control only VGA DAC B, ZMonEn OFF
-        //vga_higain_o <= 1'b1;             // default high gain mode
-        //vga_dacctla_o <= 1'b0;            // default fix A, control dac B only
+        extrigg <= 1'b0;                  // external trigger latch, detect rising edge
     end
     endtask
 
@@ -1233,6 +1240,5 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     assign ptn_addr_o           = ptn_addr;
     assign pwr_caldata_o        = pwr_caldata;
     assign trig_conf_o          = trig_conf;
-    //assign adc_dly_o            = adc_dly;
 
 endmodule

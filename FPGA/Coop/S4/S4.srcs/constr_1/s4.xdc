@@ -27,9 +27,9 @@
 # ---------------------------------------------------------------------------
 # Multiboot config settings, updated image settings. Added 19-Jan-2018
 # ---------------------------------------------------------------------------
-set_property BITSTREAM.CONFIG.CONFIGFALLBACK ENABLE [current_design]
-set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]
-set_property BITSTREAM.CONFIG.SPI_BUSWIDTH 4 [current_design]
+#set_property BITSTREAM.CONFIG.CONFIGFALLBACK ENABLE [current_design]
+#set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]
+#set_property BITSTREAM.CONFIG.SPI_BUSWIDTH 4 [current_design]
 
 # ---------------------------------------------------------------------------
 # MMC Interface I/Os
