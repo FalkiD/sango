@@ -1,7 +1,0 @@
--- Simulation Input File
--- For "uart_ascii_control_port"
---
--- This set of commands is useful to exercise the module under test
-d  10 us;             -- Delay
-u 1.0 ms ;            -- <CR> (Allows autobaud to obtain lock on baud rate.)
-u 8.0 ms r 3000000 10; -- read MMC host registers
