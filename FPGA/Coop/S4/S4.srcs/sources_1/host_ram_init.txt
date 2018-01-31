@@ -1,7 +1,7 @@
-00000002 ; patadr, pattern address decimal 0
+00000002 ; patadr, pattern address decimal 1000 (0x3e8)
 00000042 ; 0x21 << 1
-00000000
-00000000
+000000E8
+00000003
 00000004 ; patclk, 0, redundant
 00000040 ; 0x20 << 1
 00000000

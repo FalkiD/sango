@@ -483,6 +483,9 @@ wire         adctrig;               // trigger on pattern start by default, or p
 wire         ptn_adctrig;           // default: trigger at start of pattern
 wire [31:0]  config_word;           // various config bits, default 0x00000001, VGA dac higain mode, ctl only dac B, ZMonEn off
 
+wire         ptn_rst_n;             // pattern engine reset, clears pattern RAM
+wire         ptn_rst_opc_n;         // pattern reset from PTN_CTL[RESET] opcode
+
 //------------------------------------------------------------------------
 // Start of logic
 
@@ -1024,7 +1027,7 @@ end
   ptn_processor 
   (
     .sys_clk            (sys_clk),
-    .sys_rst_n          (sys_rst_n),
+    .sys_rst_n          (ptn_rst_n),
   
     .ptn_en             (1'b1), //ptn_proc_en),
     
@@ -1120,6 +1123,7 @@ end
     .ptn_run_o                  (ptn_run),          // run pattern 
     .ptn_index_i                (ptn_index),        // index of pattern entry being run (for status only)
     .ptn_status_i               (ptn_status),       // pattern processor status
+    .ptn_rst_n_o                (ptn_rst_opc_n),    // pattern reset from PTN_CTL[RESET] opcode
                                                     
     .opcode_counter_o           (opc_count),        // count opcodes for status info   
                                                         
@@ -1623,6 +1627,9 @@ end
 
   assign ADCTRIG = trig_config[`TRGBIT_RFGT] ? RF_GATE : ptn_adctrig; 
   assign TRIG_OUT = trig_config[`TRGBIT_SRC] ? ADCTRIG : 1'bz;
+
+  // reset pattern processor on sys_rst_n or on ptn_rst_opc_n from opcode processor
+  assign ptn_rst_n = sys_rst_n && ptn_rst_opc_n;
  
   assign FPGA_MCU4 = CONV;      // DDS_MOSI; //MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.
   assign FPGA_MCU3 = ADC_SCLK;  // DDS_SCLK; //MMC_CMD; //count3[15];    // 200MHz div'd by 2^16.

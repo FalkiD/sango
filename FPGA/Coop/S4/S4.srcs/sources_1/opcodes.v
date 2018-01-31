@@ -132,6 +132,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     output reg                      ptn_run_o,    // run pattern 
     input  wire [PTN_FILL_BITS-1:0] ptn_index_i,  // index of pattern entry being run (for status only)
     input  wire [7:0]               ptn_status_i, // pattern processor status
+    output reg                      ptn_rst_n_o,  // pattern reset from PTN_CTL[RESET] opcode
 
     output reg  [31:0]   opcode_counter_o,        // count opcodes for status info                     
     output reg  [7:0]    status_o,                // NULL opcode terminates, done=0, or error code
@@ -198,7 +199,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     reg  [15:0]  sync_conf;          // sync configuration, from sync_conf opcode
     
     // handle opcode integer argument data in a common way
-    reg  [31:0]  shift = 0;          // tmp used building opcode data and returning measurements
+    reg  [31:0]  shift = 0;          // tmp used building opcode data and returning measurements, etc
     
     wire         pulse_busy;
     wire         pwr_busy;
@@ -602,11 +603,15 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 
                 // Clearing section of pattern RAM, when done, back to idle
                 `STATE_CLR_PTN1: begin
-                    state <= `STATE_CLR_PTN2;               // 1 clock until ptn_status_i is asserted
+                    if(shift == 32'h0000_0005)
+                        ptn_rst_n_o <= 1'b1;        // un-assert pattern reset                        
+                    else if(shift == 32'h0000_0000)
+                        state <= `STATE_CLR_PTN2;   // a few clocks to make sure pattern processor gets into PTN_CLEAR state
+                    shift <= shift - 32'h0000_0001;
                 end
                 `STATE_CLR_PTN2: begin
                     if(ptn_status_i == `SUCCESS) begin      // pattern processor status, SUCCESS when done clearing RAM section
-                        ptn_cmd_o <= `OPCODE_NORMAL;
+                        //ptn_cmd_o <= `OPCODE_NORMAL;
                         ptn_data_reg <= 0;
                         next_opcode();
                     end
@@ -952,11 +957,16 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     next_opcode(); 
                 end
                 `PTN_RST: begin
-                    // clear the space between pat_addr & the address specified in the arg
-                    // use pat_addr & ptn_data_reg, set ptn_cmd_o so pattern module clears RAM
-                    ptn_data_reg <= { 80'h0000_0000_0000_0000_0000, uinttmp[31:16] };
-                    ptn_cmd_o <= `PTNCMD_CLEAR;
-                    state <= `STATE_CLR_PTN1;
+//                    // clear the space between pat_addr & the address specified in the arg
+//                    // use pat_addr & ptn_data_reg, set ptn_cmd_o so pattern module clears RAM
+//                    ptn_data_reg <= { 80'h0000_0000_0000_0000_0000, uinttmp[31:16] };
+//                    ptn_cmd_o <= `PTNCMD_CLEAR;
+
+                    // Turn triggers OFF
+                    trig_conf[15:8] <= 8'h00;
+                    ptn_rst_n_o <= 1'b0;        // assert pattern reset
+                    shift <= 32'h0000_0005;     // wait a few clocks so pattern processor status is PTN_CLEAR
+                    state <= `STATE_CLR_PTN1;   // wait for pattern processor to finish RAM reset
                 end
                 endcase
             end
@@ -1138,7 +1148,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         ptn_clk <= 24'h00_0000;             // pattern clock tick to write, also used to clear RAM section
         ptn_run_o <= 1'b0;                  // Stop pattern processor 
         ptn_count <= 8'h00;                 // total patadr opcodes received(debugging only)
-        ptn_cmd_o <= `OPCODE_NORMAL;        // used to clear sections of pattern RAM. Other cmds not used yet
+        ptn_cmd_o <= `OPCODE_NORMAL;        // was initially used to clear sections of pattern RAM. No longer used for this(30-Jan-2018). Other cmds not used yet
         ptn_wen_o <= 1'b0;
         ptn_fifo_ren_o <= 1'b0;
         ptn_data_reg <= 0;                
@@ -1173,6 +1183,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         
         config_o <= 32'h0000_0001;        // defauly VGA hi gain mode, control only VGA DAC B, ZMonEn OFF
         extrigg <= 1'b0;                  // external trigger latch, detect rising edge
+        ptn_rst_n_o <= 1'b1;              // pattern reset from PTN_CTL[RESET] opcode
     end
     endtask
 

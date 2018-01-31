@@ -46,7 +46,7 @@ module patterns #(parameter PTN_DEPTH = 65536,
 
       // opcode processor writes into pattern RAM
       input  wire [PTN_BITS-1:0]  ptn_addr_i,         // Start of pattern address
-      input  wire [WR_WIDTH-1:0]  ptn_data_i,         // Write pattern data word from opcode processor, also used to clear ptn RAM
+      input  wire [WR_WIDTH-1:0]  ptn_data_i,         // Write pattern data word from opcode processor, also used to clear ptn RAM[not really, using ptn_rst to clear RAM]
       input  wire                 ptn_wen_i,          // Pattern RAM write enable
 
       // pattern processor(this instance) writes next pattern entry for opcode processor to run
@@ -155,18 +155,18 @@ module patterns #(parameter PTN_DEPTH = 65536,
             end
             endcase
         end
-        else if(ptn_cmdd == 1'b0 && ptn_cmd_i == `PTNCMD_CLEAR) begin
-            // pat_addr already set to starting address
-            // set end_addr from passed-in data
-            end_addr <= ptn_data_i[15:0];         // End of pattern address to clear
-            status_o <= `PTN_CLEAR_MODE;         
-            init_state <= INIT_IDLE;
-            ptn_state <= PTN_INIT_RAM;
-            ptn_cmdd <= 1'b1;                       // latch, only execute on rising edge of ptn_cmd_i
-        end
-        else if(ptn_cmd_i == `OPCODE_NORMAL && ptn_cmdd == 1'b1) begin
-            ptn_cmdd <= 1'b0;   // reset
-        end
+//        else if(ptn_cmdd == 1'b0 && ptn_cmd_i == `PTNCMD_CLEAR) begin
+//            // pat_addr already set to starting address
+//            // set end_addr from passed-in data
+//            end_addr <= ptn_data_i[15:0];         // End of pattern address to clear
+//            status_o <= `PTN_CLEAR_MODE;         
+//            init_state <= INIT_IDLE;
+//            ptn_state <= PTN_INIT_RAM;
+//            ptn_cmdd <= 1'b1;                       // latch, only execute on rising edge of ptn_cmd_i
+//        end
+//        else if(ptn_cmd_i == `OPCODE_NORMAL && ptn_cmdd == 1'b1) begin
+//            ptn_cmdd <= 1'b0;   // reset
+//        end
         else if(ptn_run_i) begin
             ptn_wen <= 1'b0;
             case(ptn_state)
