@@ -613,6 +613,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     if(ptn_status_i == `SUCCESS) begin      // pattern processor status, SUCCESS when done clearing RAM section
                         //ptn_cmd_o <= `OPCODE_NORMAL;
                         ptn_data_reg <= 0;
+                        ptn_count <= 8'h00;                 // cleared RAM
                         next_opcode();
                     end
                 end
@@ -632,8 +633,9 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     task start_pattern;
     input [15:0] address;    
     begin
-        ptn_addr <= address;            // address
-        operating_mode <= `PTNCMD_RUN;  // Opcode processor mode to run pattern data as soon as opcode processor is idle
+        ptn_addr <= address;                // address
+        if(ptn_count > 8'h00)               // don't run if nothing loaded
+            operating_mode <= `PTNCMD_RUN;  // Opcode processor mode to run pattern data as soon as opcode processor is idle
     end
     endtask
 
@@ -957,6 +959,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     next_opcode(); 
                 end
                 `PTN_RST: begin
+//                  31-Jan-2018 just clear the whole thing, fw writes all ptns at once anyway
 //                    // clear the space between pat_addr & the address specified in the arg
 //                    // use pat_addr & ptn_data_reg, set ptn_cmd_o so pattern module clears RAM
 //                    ptn_data_reg <= { 80'h0000_0000_0000_0000_0000, uinttmp[31:16] };
