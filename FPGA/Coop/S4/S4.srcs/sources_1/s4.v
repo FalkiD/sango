@@ -905,14 +905,13 @@ end
     .opc_rspf_cnt_o     (mmc_rspf_cnt),         // MMC response fifo fill level
 
     // Debugging, these go from 0300003F down
-    .opc_oc_cnt_i      (opc_count),                             // first_opcode__last_opcode__opcodes_procesed
+    .opc_oc_cnt_i      (opc_count),                             // opcodes_procesed
     .opc_status1_i     ({9'd0, opc_state, 8'd0, opc_status}),   // opc_state__opc_status
     .opc_status2_i     ({8'd0, mmc_rspf_cnt[7:0], 8'd0, mmc_fif_cnt[7:0]}), // rsp_fifo_count__opc_fifo_count
     .opc_status3_i     (dbg_opcodes),           // Upr16[OpcMode(8)__patadr_count(8)]____Lwr16[first_opcode__last_opcode]
     .sys_status4_i     (frequency),                             // system frequency setting in Hertz
     .sys_status5_i     ({15'h0, SYN_STAT, 4'd0, dbm_x10}),      // MS 16 bits=SYN_STAT pin,1=PLL_LOCK, 0=not locked. 16 LSB's=power(dBm x10) setting
-    .sys_status6_i     (dbg_ptndata)                            // Last pattern opcode after ptn run upper 16. Lower 16 measurement fifo count
-    //.sys_status6_i     ({16'd0, ptn_status, 7'd0, ptn_busy})    // LSB's: PTN_Status__PTN_Busy(running)
+    .sys_status6_i     (dbg_ptndata)                            // Last ptn opc after ptn run upper 8. Lower 24 measurement fifo count
     );
 
 
