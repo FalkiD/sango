@@ -280,6 +280,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             // 07-Feb refactor
             // If IDLE and MMC fifo is empty check for all other 
             // requests: start a pattern, run pattern opcode, trigger
+            extrigg <= 1'b0;    // 1-tick signal to catch rising edge of tigger
             if(state == `STATE_IDLE && fifo_rd_count_i == 0) begin
                 // 1) check for pattern start request if pattern not running
                 if(operating_mode == `PTNCMD_RUN && ptn_run_o == 1'b0) begin
@@ -292,9 +293,11 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     ptn_fifo_ren_o <= 1'b1;
                     state <= `STATE_PTN_DATA1;            
                 end
-                // 3) If trigger enabled & pattern not running check for requests
-                else if(trig_conf[`TRGBIT_EN] == 1'b1 && ptn_status_i == `SUCCESS 
-                                                    && pulse_busy_i == 1'b0) begin
+                // 3) If trigger enabled & (pattern & pulse) not running,
+                //    check for trigger requests
+                else if(trig_conf[`TRGBIT_EN] == 1'b1 && 
+                            operating_mode == `OPCODE_NORMAL && 
+                            pulse_busy_i == 1'b0) begin
                     // Handle triggering options if pattern processor 
                     // and pulse processor are ready
                     if(trig_conf[`TRGBIT_CONT] == 1'b1) begin
@@ -319,7 +322,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
               dbg2_o[15:0] <= dbg2_o[15:0] + 16'h0001;
                     
                            start_pattern(ptn_addr);
-                           extrigg <= 1'b1;    // Gets cleared by stop_pattern()
+                           extrigg <= 1'b1;    // 1-tick signal
                        end
                     end
                 end
@@ -654,7 +657,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         ptn_run_o <= 1'b0;              // stop pattern
         ptn_fifo_ren_o <= 1'b0;
         operating_mode <= `OPCODE_NORMAL;
-        extrigg <= 1'b0;                // reset for next external trigger detection                 
+        // change to 1-tick signal   extrigg <= 1'b0;                // reset for next external trigger detection                 
     end
     endtask
 

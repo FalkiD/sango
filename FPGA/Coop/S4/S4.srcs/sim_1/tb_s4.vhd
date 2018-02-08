@@ -314,8 +314,9 @@ pu10 : pullup1 port map(pin => MMC_DAT7);
     variable PS_PER_SECOND : real := 1.0E+12;
     variable half_period : time := integer(PS_PER_SECOND/(2.0*real(DUT_CLKRATE))) * 1 ps;
     variable counter : integer := 10;    -- assert MCU_TRIG for 5 clocks at startup
-    variable exttrig : integer := 100;   -- assert TRIG_IN every 100 clocks
-    variable extcount: integer := 100;   -- assert TRIG_IN every 100 clocks
+    variable exttrig : integer := 200;   -- assert TRIG_IN every 100 clocks(200 half clocks)
+    variable extcount: integer := 200;   -- assert TRIG_IN every 100 clocks
+    variable trgwidth: integer := 0;
   begin
      --wait for 1/2 of the clock period;
      wait for half_period;
@@ -331,13 +332,18 @@ pu10 : pullup1 port map(pin => MMC_DAT7);
      end if;
      
      if(counter <= 0) then
-       if(extcount > 0) then
          extcount := extcount - 1;
-         TRIG_IN <= '0';
-       else
-         extcount := exttrig;   -- reset
-         TRIG_IN <= '1';
-       end if;
+         if(extcount > 0) then
+           TRIG_IN <= '0';
+         elsif (extcount = 0) then
+           TRIG_IN <= '1';
+           trgwidth := 20;
+           extcount := -1;
+         elsif (trgwidth > 0) then
+            trgwidth := trgwidth - 1;
+         elsif (trgwidth = 0) then
+             extcount := exttrig;
+         end if;
      end if;
      
   end process;
