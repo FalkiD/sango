@@ -201,7 +201,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     // handle opcode integer argument data in a common way
     reg  [31:0]  shift = 0;          // tmp used building opcode data and returning measurements, etc
     
-    wire         pulse_busy;
+    //wire         pulse_busy;  just use pulse_busy_i
     wire         pwr_busy;
     wire         frq_busy;
 
@@ -268,55 +268,64 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         end
         else if(enable == 1) begin
 
-            dbg2_o <= {ptn_data_i[71:64], 11'd0, meas_fifo_cnt_i};
+            // 02-Feb-2018 use upper 8 bits to count external trigger pulses for dbg
+            //dbg2_o <= {ptn_data_i[71:64], 11'd0, meas_fifo_cnt_i};
             //dbg2_o <= {12'd0, pwrcal_mode, bytes_processed[15:0]};
             // 02-Oct bytes_processed added for debugging, may use to read 1 sector at a time.
             // value is incorrect though, double-counts twice. 512 byte sector comes to 0x202??
             dbg_opcodes_o[27:24] <= operating_mode;   // operating_mode to debugger
+        
+        dbg2_o[31:24] <= {7'b000_0000, extrigg};            
 
-            // Check for pattern run request, if true, run pattern as soon
-            // as opcode processor becomes idle
-            if(operating_mode == `PTNCMD_RUN && ptn_run_o == 1'b0) begin
-                // we haven't started it yet
-                if(state == `STATE_IDLE && fifo_rd_count_i == 0) begin
+            // 07-Feb refactor
+            // If IDLE and MMC fifo is empty check for all other 
+            // requests: start a pattern, run pattern opcode, trigger
+            if(state == `STATE_IDLE && fifo_rd_count_i == 0) begin
+                // 1) check for pattern start request if pattern not running
+                if(operating_mode == `PTNCMD_RUN && ptn_run_o == 1'b0) begin
+                    // we haven't started it yet
                     ptn_run_o <= 1'b1; // start pattern processor
                 end
-            end
-            if(state == `STATE_IDLE && !ptn_fifo_mt_i) begin
-                // execute the next pattern opcode from the pattern fifo
-                //  ** need this?init_response();    // begin_opcodes() has not been executed
-                ptn_fifo_ren_o <= 1'b1;
-                state <= `STATE_PTN_DATA1;            
-            end
-
-            // Handle triggering options if pattern processor is ready
-            if(trig_conf[`TRGBIT_EN] == 1'b1 && ptn_status_i == `SUCCESS) begin
-                if(trig_conf[`TRGBIT_CONT] == 1'b1) begin
-                    if(trig_ms >= trig_conf[23:16]) begin
-                        // run pattern, reset counters
-                         start_pattern(ptn_addr);
-                        trig_ms <= 9'd0;
-                        trig_counter <= 18'd0;
-                    end
-                    if(trig_counter >= TICKS_PER_MS) begin
-                        trig_ms <= trig_ms + 9'd1;
-                        trig_counter <= 18'd0;                    
-                    end
-                    else
-                        trig_counter <= trig_counter + 18'd1;
+                // 2) Check for pattern processor request to run opcode
+                else if(!ptn_fifo_mt_i) begin
+                    // execute the next pattern opcode from the pattern fifo
+                    ptn_fifo_ren_o <= 1'b1;
+                    state <= `STATE_PTN_DATA1;            
                 end
-                else if(trig_conf[`TRGBIT_EXT] == 1'b1) begin
-                    if(extrig_i == 1'b1 && extrigg == 1'b0) begin
-                        // rising edge of TRIG_IN signal detected
-                        // Not checking for overrun yet...
-                        start_pattern(ptn_addr);
-                        extrigg <= 1'b1;    // Gets cleared by stop_pattern()
+                // 3) If trigger enabled & pattern not running check for requests
+                else if(trig_conf[`TRGBIT_EN] == 1'b1 && ptn_status_i == `SUCCESS 
+                                                    && pulse_busy_i == 1'b0) begin
+                    // Handle triggering options if pattern processor 
+                    // and pulse processor are ready
+                    if(trig_conf[`TRGBIT_CONT] == 1'b1) begin
+                       if(trig_ms >= trig_conf[23:16]) begin
+                           // run pattern, reset counters
+                            start_pattern(ptn_addr);
+                           trig_ms <= 9'd0;
+                           trig_counter <= 18'd0;
+                       end
+                       if(trig_counter >= TICKS_PER_MS) begin
+                           trig_ms <= trig_ms + 9'd1;
+                           trig_counter <= 18'd0;                    
+                       end
+                       else
+                           trig_counter <= trig_counter + 18'd1;
+                    end
+                    else if(trig_conf[`TRGBIT_EXT] == 1'b1) begin
+                       if(extrig_i == 1'b1 && extrigg == 1'b0) begin
+                           // rising edge of TRIG_IN signal detected
+                           // Not checking for overrun yet...
+                    
+              dbg2_o[15:0] <= dbg2_o[15:0] + 16'h0001;
+                    
+                           start_pattern(ptn_addr);
+                           extrigg <= 1'b1;    // Gets cleared by stop_pattern()
+                       end
                     end
                 end
             end
-
-            // Process opcodes from MMC fifo
-            if((state == `STATE_IDLE && fifo_rd_count_i >= `MIN_OPCODE_SIZE) ||
+            // Process opcodes from MMC fifo and all other states
+            else if((state == `STATE_IDLE && fifo_rd_count_i >= `MIN_OPCODE_SIZE) ||
                     state != `STATE_IDLE) begin
                 // not IDLE or at least one opcode has been written to FIFO
                 case(state)
@@ -896,10 +905,13 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 //TRIG_EXTERN      = 8'h02;    // This box is trigger slave
                 //TRIG_ENABLE      = 8'h01;    // Enable triggering
                 //
-                // For trigger now, MCU already send pat_ctl[ADDR] which starts pattern                     
-                if(uinttmp[12] == 1'b1 && uinttmp[8] == 1'b1)
+                // For trigger now, MCU already sent pat_ctl[ADDR] which starts pattern                     
+                if(uinttmp[12] == 1'b1 && uinttmp[8] == 1'b1) begin
                     trig_ms <= 9'd0;        // reset continuous trigger ms counter
                     trig_counter <= 18'd0;  // reset continuous trigger tick counter
+                end
+                if(uinttmp[`TRGBIT_EXT == 1'b0])
+                    extrigg <= 1'b0;   // reset this sucker, gets stuck??
                 next_opcode();
             end
             `SYNCCONF: begin

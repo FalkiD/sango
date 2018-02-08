@@ -275,7 +275,7 @@ module patterns #(parameter PTN_DEPTH = 65536,
       end
       else begin
           ptn_runn <= ptn_run_i;
-          if(ptn_run_i && !ptn_runn) begin
+          if(ptn_run_i && !ptn_runn && ptn_state == PTN_IDLE) begin
               run_trigger <= 1'b1;
           end
             
