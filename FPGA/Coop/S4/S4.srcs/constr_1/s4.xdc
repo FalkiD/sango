@@ -19,10 +19,10 @@
 # ---------------------------------------------------------------------------
 # Multiboot config settings, golden image settings. Added 19-Jan-2018
 # ---------------------------------------------------------------------------
-#set_property BITSTREAM.CONFIG.CONFIGFALLBACK ENABLE [current_design]
-#set_property BITSTREAM.CONFIG.NEXT_CONFIG_ADDR 0x0800000 [current_design]
-#set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]
-#set_property BITSTREAM.CONFIG.SPI_BUSWIDTH 4 [current_design]
+set_property BITSTREAM.CONFIG.CONFIGFALLBACK ENABLE [current_design]
+set_property BITSTREAM.CONFIG.NEXT_CONFIG_ADDR 0x0800000 [current_design]
+set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]
+set_property BITSTREAM.CONFIG.SPI_BUSWIDTH 4 [current_design]
 
 # ---------------------------------------------------------------------------
 # Multiboot config settings, updated image settings. Added 19-Jan-2018
