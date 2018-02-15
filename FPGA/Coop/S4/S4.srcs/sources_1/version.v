@@ -1,5 +1,5 @@
 //------------------------------------------------------------------------------
-// (C) Copyright 2016, 2017 Ampleon Inc.
+// (C) Copyright 2016-2018 Ampleon Inc.
 //     All rights reserved.
 //
 // PROPRIETARY INFORMATION
@@ -41,8 +41,10 @@
 // Revision 1.01.0  11/01/2017 RMR ActiveLed fixes. STATUS returns correct last opcode run.
 // Revision 1.01.1  12/13/2017 RMR Refactor using TRGBIT_ definitions for clarity. 
 //                                 Bugfix, STATE_LENGTH went to STATE_DATA when rd_line OFF under
-//                                 certain 'input fifo length' related conditions.
+//                                 certain 'input fifo length' related conditions. Added EXTRIG.
+//				   Released 15-Feb-2018
+// Revision 1.01.2 now
 //
 //------------------------------------------------------------------------------
 
-`define VERSION 16'h1_01_1     // V.vv.r FPGA development revision
+`define VERSION 16'h1_01_2     // V.vv.r FPGA development revision
