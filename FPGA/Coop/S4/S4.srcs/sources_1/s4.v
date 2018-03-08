@@ -472,11 +472,8 @@ wire         synth_sclk;
 wire         synth_mosi;
 wire         synth_miso;
 wire         syn_synth_mute_n;      // SYN processor muting SYN
-wire         synth_doInit;          // asserted by dds_synth_doInit or dbg_synth_doInit
 // SYN/DDS shared signals
 wire         dds_synth_mute_n;      // DDS processor muting SYN
-wire         dds_synth_doInit;      // Init SYN when DDS init has completed
-wire         dds_synth_initing;     // SYN initializing
 
 wire [31:0]  trig_config;           // true if we're the trigger source
 wire         adctrig;               // trigger on pattern start by default, or pulse
@@ -1174,8 +1171,6 @@ end
       
       // DDS will drive SYN_MUTEn, 1=>RF; 0=>MUTE.
       .dds_synth_mute_n_o         (dds_synth_mute_n),     // mute SYN whilst changing frequency
-      .dds_synth_doInit_o         (dds_synth_doInit),     // Init SYN when DDS init has completed
-      .dds_synth_initing_o        (dds_synth_initing),    // Init SYN when DDS init has completed
 `ifdef XILINX_SIMULATOR
       .dds_synth_stat_i           (syn_synth_mute_n),     // Don't hang waiting for non-existent hardware signal
 `else
@@ -1204,7 +1199,7 @@ end
     (
       .clk_i                        (sys_clk),               // 
       .rst_i                        (!sys_rst_n),            // 
-      .doInit_i                     (synth_doInit),          // do an init sequence after DDS init has finished or on debug command h0020 
+      .dds_ioup_i                   (DDS_IOUP), //(synth_doInit),          // do an init sequence after DDS init has finished or on debug command h0020 
       .hwdbg_dat_i                  (12'd0),                 // hwdbg data input.
       .hwdbg_we_i                   (1'b0),                  // hwdbg we.
       .syn_fifo_full_o              (),                      // opcproc fifo full.
@@ -1585,9 +1580,9 @@ end
   assign SYN_MUTEn = dbg_spi_mode ? dbg_synth_mute_n : synth_mute_n;
 
   // Cause SYN Init on BIT_SYN_INIT assert
-  wire dbg_syn_doInit;
-  assign dbg_syn_doInit = ((dbg_enables & BIT_SYN_INIT) == BIT_SYN_INIT);
-  assign synth_doInit = (dbg_syn_doInit || dds_synth_doInit) ? 1'b1 : 1'b0;
+  //wire dbg_syn_doInit;
+  //assign dbg_syn_doInit = ((dbg_enables & BIT_SYN_INIT) == BIT_SYN_INIT);
+  //assign synth_doInit = (dbg_syn_doInit || dds_synth_doInit) ? 1'b1 : 1'b0;
   
   wire dbg_ddsiorst;
   assign dbg_ddsiorst = ((dbg_enables & BIT_DDS_IORST) == BIT_DDS_IORST); 

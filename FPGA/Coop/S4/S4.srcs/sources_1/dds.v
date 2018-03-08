@@ -23,6 +23,7 @@
 //
 //
 // ---------------------------------------------------------------------------------
+// 0.00.2  2018-03-08 (RMR) Cleanup SYN, removed SYN signals from this module
 // 0.00.1  2017-06-30 (JLC) Created.
 //
 //
@@ -56,8 +57,6 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
 
     // control SYN, initialize after DDS initialization completes
     output                 dds_synth_mute_n_o,       // DDS will drive SYN_MUTE, 1=>RF; 0=>MUTE.
-    output                 dds_synth_doInit_o,       // SYN doInit wire, pulse after DDS init finishes
-    output                 dds_synth_initing_o,      // SYN doInit wire, pulse after DDS init finishes
     input                  dds_synth_stat_i,         // DDS will mute synth until synth_stat_i (== synth PLL locked).
 
     output                 dbg0_o,                   // Utility debug output #0.
@@ -129,8 +128,6 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
    // changing frequency. Unmute when DDS SPI has finished and SYN_STAT
    // turns ON indicating PLL lock
    reg                            dds_synth_mute_n     = 1'b0;  // Mute synthesizer until DDS SPI finishes & SYN pll locked.
-   reg                            dds_synth_doInit     = 1'b0;  // Do SYN init when DDS init has finished
-   reg                            dds_synth_initing    = 1'b0;
    
    // Generate: dds_spi_sclk   (e.g. SPI_CLK_RATIO == 8)
    //           dds_spi_wtck
@@ -303,7 +300,6 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
          dds_interOpGap           <= 1'b0;
          dds_interOpGap_cnt       <= 5'b0_0000;
          dds_synth_mute_n         <= 1'b0;          // Mute synthesizer until DDS SPI finishes
-         dds_synth_doInit         <= 1'b0;          // Do SYN init when DDS init has finished
       end
       else begin
          // One-tick signals
@@ -314,8 +310,6 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
          dds_spi_ss               <= ~dds_spi_ss_k & (dds_spi_ss | dds_spi_ss_s);
          dds_spi_ss_k             <= (shftCnt == 6'b00_0000) & (dds_clk_cnt == 4'b0110) & (dds_spi_state == DDS_SPI_STATE_SHF0);
 
-         dds_synth_doInit         <= ~dds_spi_ioup & dds_spi_ioupr; // Asset on falling tick of dds_spi_ioup
-         
          // Do init sequence (kicked off by doInit_i == 1'b1).
          dds_doInitr              <= doInit_i;
          if (doInit_i & ~dds_doInitr) begin
@@ -327,7 +321,6 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
             dds_iorsting          <= 1'b1;
             dds_iorsting_cnt      <= 5'b0_0001;
             dds_synth_mute_n      <= 1'b0;  // Mute synthesizer
-            dds_synth_doInit      <= 1'b0;  // clear flag
          end
          if (dds_iorsting) begin
             if (dds_iorsting_cnt == 5'b0_1111) begin
@@ -411,21 +404,19 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
                dds_spi_ioup_ce    <= 1'b0;
                dds_spi_ioup_cnt   <= 5'b0_0000;
                dds_interOpGap     <= 1'b1;
-               dds_synth_doInit   <= 1'b1;  // Init SYN now that DDS init SPI has finished            
-               dds_synth_initing  <= 1'b1;  // Assert SYN initing flag            
-               dds_synth_mute_n   <= 1'b0;  // DDS is ready. After RESET SYN is not ready until SYN finishes init
+               dds_synth_mute_n   <= 1'b1;  // DDS is ready, release MUTE
             end
             endcase  // End of case (dds_spi_ioup_cnt)
          end
          dds_spi_ioup             <= ~(dds_spi_ioup_cnt == 5'b1_1111) & (dds_spi_ioup | (dds_spi_ioup_cnt == 5'b0_1111));
          dds_spi_ioupr            <= dds_spi_ioup; 
 
-         // Handle SYN initing status
-         if (dds_synth_stat_i) begin
-         // Can't use SYN_STAT until that's working...
-            dds_synth_initing <= 1'b0;  // Stop indicating synth init.
-            dds_synth_mute_n  <= 1'b1;  // Stop muting synth.
-         end
+//         // Handle SYN initing status
+//         if (dds_synth_stat_i) begin
+//         // Can't use SYN_STAT until that's working...
+//            dds_synth_initing <= 1'b0;  // Stop indicating synth init.
+//            dds_synth_mute_n  <= 1'b1;  // Stop muting synth.
+//         end
          
          // DDS SPI State Machine: state-by-state case statement
          case (dds_spi_state)
@@ -439,6 +430,7 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
          end //  End of DDS_SPI_STATE_IDLE: case.
          DDS_SPI_STATE_CS0: begin
             dds_spi_state         <= DDS_SPI_STATE_CS1;
+            dds_synth_mute_n      <= 1'b0;  // Mute SYN until SYN IO finishes
          end //  End of DDS_SPI_STATE_CS0: case.
          DDS_SPI_STATE_CS1: begin
             if (~dds_spi_wtckr) begin
@@ -514,8 +506,6 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
    assign  dds_initd_o            = dds_initd;
 
    assign  dds_synth_mute_n_o     = dds_synth_mute_n;
-   assign  dds_synth_doInit_o     = dds_synth_doInit;
-   assign  dds_synth_initing_o    = dds_synth_initing;
           
    assign  dbg0_o                 = dds_spi_ss;
    assign  dbg1_o                 = dds_ops_shftr[39];

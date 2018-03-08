@@ -23,6 +23,8 @@
 //
 //
 // ---------------------------------------------------------------------------------
+// 0.00.3  2018-03-07 (RMR) Refactor slightly, trigger from falling edge of DDS IOUP.
+//                          After initialized, send CAL only
 // 0.00.2  2017-08-31 (RMR) SCLK normally low. Added 10ns betwixt SCLK done & 
 //                          SYN_SSn de-assertion(kind of a hack, works though)
 // 0.00.1  2017-08-02 (JLC) Created.
@@ -38,7 +40,7 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
     // infrastructure, etc.
     input                  clk_i,                    // 
     input                  rst_i,                    // 
-    input                  doInit_i,                 // do an init sequence. 
+    input                  dds_ioup_i,               // 07-Mar-2018 refactor, DDS IOUP line, falling edge triggers SYN update 
     input        [11:0]    hwdbg_dat_i,              // hwdbg data input.
     input                  hwdbg_we_i,               // hwdbg we.
     output                 syn_fifo_full_o,          // opcproc full.
@@ -89,7 +91,6 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
    reg  [15:0]                    syn_ops_shftr        = 16'b0;
    reg  [5:0]                     shftCnt              = 5'b0_0000;
    
-   reg                            syn_doInitr          = 1'b0;
    reg                            syn_initing          = 1'b0;  // Load FIFO w/ init words.
    reg                            syn_init_shfting     = 1'b0;  // Load FIFO w/ init words.
    reg                            syn_init_loading     = 1'b0;
@@ -97,7 +98,9 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
    reg  [5:0]                     syn_init_op_cntr     = 6'b00_0000;
    reg                            syn_init_we          = 1'b0;
    reg  [11:0]                    syn_init_datr;
-   reg  [4:0]                     syn_init_done_cntr   = 5'b0_0000;
+   reg  [4:0]                     syn_init_done_cntr   = 5'b0_0001;
+   reg                            syn_cal_loading      = 1'b0;
+   reg                            syn_caling           = 1'b0;  // Load FIFO w/ cal words.
    
    reg                            syn_interOpGap       = 1'b0;
    reg  [4:0]                     syn_interOpGap_cnt   = 5'b0_0000; 
@@ -109,6 +112,8 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
                                                              ~syn_interOpGap);
    reg                            syn_spi_ss_k         = 1'b0;
    reg                            syn_ssn_onemore      = 1'b0;
+   
+   reg                            dds_ioupr            = 1'b0;
    
    // Generate: syn_spi_sclk   (e.g. SPI_CLK_RATIO == 8)
    //           syn_spi_wtck
@@ -278,9 +283,10 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
          syn_fifo_rdr             <= 1'b0;
          syn_fifo_rdrr            <= 1'b0;
          syn_fifo_dator           <= 12'b0;
-         syn_doInitr              <= 1'b0;
          syn_initing              <= 1'b0;
          syn_init_loading         <= 1'b0;
+         syn_cal_loading          <= 1'b0;
+         syn_caling               <= 1'b0;
          syn_init_shfting         <= 1'b0;
          syn_init_we              <= 1'b0;
          syn_init_datr            <= 12'b0;
@@ -302,19 +308,35 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
          syn_spi_ss               <= ~syn_spi_ss_k & (syn_spi_ss | syn_spi_ss_s);
          syn_spi_ss_k             <= (shftCnt == 5'b0_0000) & (syn_spi_clk_cnt == 4'b0110) & (syn_spi_state == SYN_SPI_STATE_SHF0);
 
-
          // Do init sequence (kicked off by doInit_i == 1'b1).
-         syn_doInitr              <= doInit_i;
-         if (doInit_i & ~syn_doInitr) begin
-            syn_spi_state         <= SYN_SPI_STATE_IDLE;
-            syn_init_loading      <= 1'b1;
-            syn_init_shfting      <= 1'b1;
-            syn_initing           <= 1'b1;
-            syn_initd             <= 1'b0;
-            syn_init_op_cntr      <= 6'b00_0000;
-            syn_mute_n_o          <= 1'b0;          // Mute until init done
+         // 07-Mar-2018 refactor, the input wire is DDS IOUP line.
+         // on falling edge, initialize if we haven't yet, otherwise
+         // just re-lock
+         dds_ioupr                <= dds_ioup_i;
+         if (~dds_ioup_i & dds_ioupr) begin
+            // falling edge of dds_ioup, do SYN io
+            if(~syn_initd) begin
+               syn_spi_state         <= SYN_SPI_STATE_IDLE;
+               syn_init_loading      <= 1'b1;
+               syn_init_shfting      <= 1'b1;
+               syn_initing           <= 1'b1;
+               syn_initd             <= 1'b0;
+               syn_init_op_cntr      <= 6'b00_0000;
+            end
+            else begin
+               syn_spi_state         <= SYN_SPI_STATE_IDLE;
+               syn_cal_loading       <= 1'b1;
+               syn_caling            <= 1'b1;
+               syn_init_shfting      <= 1'b1;
+               syn_init_op_cntr      <= 6'b00_0000;
+               syn_init_done_cntr    <= 5'b0_0001;
+            end
+            syn_mute_n_o          <= 1'b0;          // Mute until SYN io done
          end
-         
+
+         // 08-Mar-2018 note: loading is spaced a bit because fifo is smaller
+         // than the number of registers needed. Registers are written to while
+         // fifo is still loading          
          if (syn_init_loading & ~syn_fifo_full_w) begin
             if (syn_init_op_cntr != 6'b11_1111) begin
                syn_init_op_cntr <= syn_init_op_cntr + 6'b00_0001;
@@ -323,63 +345,83 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
             6'b00_0011: begin
                syn_init_datr   <= 12'h2_0A;
                syn_init_we     <= 1'b1;              // 1-tick signal
-               // syn_init_op_cntr<= syn_init_op_cntr + 5'b0_0001;
             end
             6'b00_0111: begin
                syn_init_datr   <= 12'h3_10;
                syn_init_we     <= 1'b1;              // 1-tick signal
-               // syn_init_op_cntr<= syn_init_op_cntr + 5'b0_0001;
             end
             6'b00_1011: begin
                syn_init_datr   <= 12'h4_01;
                syn_init_we     <= 1'b1;              // 1-tick signal
-               // syn_init_op_cntr<= syn_init_op_cntr + 5'b0_0001;
             end
             6'b00_1111: begin
                syn_init_datr   <= 12'h5_00;
                syn_init_we     <= 1'b1;              // 1-tick signal
-               // syn_init_op_cntr<= syn_init_op_cntr + 5'b0_0001;
             end
             6'b01_0011: begin
                syn_init_datr   <= 12'h6_E5;
                syn_init_we     <= 1'b1;              // 1-tick signal
-               // syn_init_op_cntr<= syn_init_op_cntr + 5'b0_0001;
             end
             6'b01_0111: begin
                syn_init_datr   <= 12'h7_83;
                syn_init_we     <= 1'b1;              // 1-tick signal
-               // syn_init_op_cntr<= syn_init_op_cntr + 5'b0_0001;
             end
             6'b01_1011: begin
                syn_init_datr   <= 12'h8_F9;
                syn_init_we     <= 1'b1;              // 1-tick signal
-               // syn_init_op_cntr<= syn_init_op_cntr + 5'b0_0001;
             end
             6'b01_1111: begin
                syn_init_datr   <= 12'h9_1A;
                syn_init_we     <= 1'b1;              // 1-tick signal
-               // syn_init_op_cntr<= syn_init_op_cntr + 5'b0_0001;
             end
             6'b10_0011: begin
                syn_init_datr   <= 12'hA_C0;
                syn_init_we     <= 1'b1;              // 1-tick signal
-               // syn_init_op_cntr<= syn_init_op_cntr + 5'b0_0001;
             end
             6'b10_0111: begin
                syn_init_datr   <= 12'h2_08;          // normally 8, 0 shows reference on pin 2 of device
                syn_init_we     <= 1'b1;              // 1-tick signal
-               // syn_init_op_cntr<= syn_init_op_cntr + 5'b0_0001;
             end
             6'b10_1011: begin
-//               syn_init_op_cntr<= 5'b1_1111;
+               syn_init_op_cntr <= 6'b11_1111;
             end
             6'b11_1111: begin
-               syn_init_loading<= 1'b0;
+               syn_init_loading <= 1'b0;
             end
             default: begin
             end
             endcase  // End of case (syn_init_op_cntr)
          end  // End of if (syn_init_loading)
+         // Load fifo with 3 registers to re-lock on any frequency change
+         // R2_MUTE, R7_CAL, R2_UNMUTE
+         else if (syn_cal_loading & ~syn_fifo_full_w) begin // Load fifo with 3 registers to CAL on any frequency change
+            // only 3 registers so delayed loading is not really needed here
+            if (syn_init_op_cntr != 6'b11_1111) begin
+               syn_init_op_cntr <= syn_init_op_cntr + 6'b00_0001;
+            end
+            case (syn_init_op_cntr)
+            6'b00_0011: begin
+               syn_init_datr   <= 12'h2_0A;          // MUTE SYN
+               syn_init_we     <= 1'b1;              // 1-tick signal
+            end
+            6'b00_0111: begin
+               syn_init_datr   <= 12'h7_83;          // CAL
+               syn_init_we     <= 1'b1;              // 1-tick signal
+            end
+            6'b00_1011: begin
+               syn_init_datr   <= 12'h2_08;          // UNMUTE, normally 8, 0 shows reference on pin 2 of device
+               syn_init_we     <= 1'b1;              // 1-tick signal
+            end
+            6'b00_1111: begin
+               syn_init_op_cntr <= 6'b11_1111;
+            end
+            6'b11_1111: begin
+               syn_cal_loading<= 1'b0;
+            end
+            default: begin
+            end
+            endcase  // End of case (syn_init_op_cntr)
+         end  // End of if (syn_cal_loading)
 
          if (syn_interOpGap) begin
             syn_interOpGap_cnt    <= syn_interOpGap_cnt + 5'b0_0001;
@@ -388,7 +430,6 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
                syn_interOpGap_cnt <= 5'b0_0000;
             end
          end
-
 
          // syn FIFO reads and shifting
          syn_fifo_rdr             <= syn_spi_ss_s;
@@ -448,11 +489,17 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
             end
          end //  End of SYN_SPI_STATE_SHF1: case.
          endcase //  End of case (syn_spi_state)
-         
+
+         // If SPI state machine has finished, reset some flags & MUTE line         
          if(syn_initing && (syn_init_done_cntr == 5'b0_1011)) begin
             syn_initing           <= 1'b0;
             syn_init_shfting      <= 1'b0;
             syn_initd             <= 1'b1;
+            syn_mute_n_o          <= 1'b1;  // Unmute
+         end
+         else if(syn_caling && (syn_init_done_cntr == 5'b0_0100)) begin
+            syn_caling            <= 1'b0;
+            syn_init_shfting      <= 1'b0;
             syn_mute_n_o          <= 1'b1;  // Unmute
          end
          

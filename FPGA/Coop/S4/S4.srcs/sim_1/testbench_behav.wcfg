@@ -27,14 +27,14 @@
    </db_ref_list>
    <zoom_setting>
       <ZoomStartTime time="0fs"></ZoomStartTime>
-      <ZoomEndTime time="286020000001fs"></ZoomEndTime>
+      <ZoomEndTime time="7088439176fs"></ZoomEndTime>
       <Cursor1Time time="0fs"></Cursor1Time>
    </zoom_setting>
    <column_width_setting>
       <NameColumnWidth column_width="102"></NameColumnWidth>
-      <ValueColumnWidth column_width="89"></ValueColumnWidth>
+      <ValueColumnWidth column_width="87"></ValueColumnWidth>
    </column_width_setting>
-   <WVObjectSize size="55" />
+   <WVObjectSize size="56" />
    <wvobject fp_name="/testbench/dut_clk" type="logic">
       <obj_property name="ElementShortName">dut_clk</obj_property>
       <obj_property name="ObjectShortName">dut_clk</obj_property>
@@ -174,6 +174,10 @@
    <wvobject fp_name="/testbench/SYN_SSn" type="logic">
       <obj_property name="ElementShortName">SYN_SSn</obj_property>
       <obj_property name="ObjectShortName">SYN_SSn</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/dut_0/syn_spi_io/doUpdate_i" type="logic">
+      <obj_property name="ElementShortName">doUpdate_i</obj_property>
+      <obj_property name="ObjectShortName">doUpdate_i</obj_property>
    </wvobject>
    <wvobject fp_name="/testbench/SYN_STAT" type="logic">
       <obj_property name="ElementShortName">SYN_STAT</obj_property>

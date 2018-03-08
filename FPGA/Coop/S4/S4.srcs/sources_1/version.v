@@ -15,7 +15,7 @@
 // File name:  version.v
 // Project:    s4
 // Authors:    Roger Williams <roger.williams@ampleon.com> (RAW)
-// Authors:    Rick  Ricgby   <rick.rigby@ampleon.com>
+// Authors:    Rick  Rigby   <rick.rigby@ampleon.com>
 // Purpose:    s4 board fpga.
 // -----------------------------------------------------------------------------
 // Revisions:
@@ -43,7 +43,8 @@
 //                                 Bugfix, STATE_LENGTH went to STATE_DATA when rd_line OFF under
 //                                 certain 'input fifo length' related conditions. Added EXTRIG.
 //				   Released 15-Feb-2018
-// Revision 1.01.2 now
+// Revision 1.01.2  03/10/2018 RMR Refactor SYN, triggers from falling edge of DDS IOUP. If initialized,
+//                                 only does re-lock.
 //
 //------------------------------------------------------------------------------
 
