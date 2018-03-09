@@ -14,6 +14,10 @@
 // Dependencies: 
 // 
 // Revision:
+//          0.02 - 08-Mar-2018 improvments:
+//                  After writing frequency tuning word, wait for DDS_SS to go low,
+//                  then high, wait for SYN_SS to go low, then high, wait up to xx ms
+//                  for SYN_LOCK to turn ON. If no SYN lock, set status to ERR code
 // Revision 0.01 - File Created
 // Additional Comments:  
 // 
@@ -32,7 +36,8 @@
 `include "opcodes.h"
 
 module freq_s4 #(parameter FILL_BITS = 6,
-                 parameter FRQ_BITS = 32)
+                 parameter FRQ_BITS = 32,
+                 parameter SYN_LOCK_TICKS = 1000000)    // default=10ms    
 (
   input  wire             sys_clk,
   input  wire             sys_rst_n,
@@ -51,6 +56,11 @@ module freq_s4 #(parameter FILL_BITS = 6,
 
   output wire [31:0]      frequency_o,       // System frequency(Hz) so all top-level modules can access
 
+  input  wire             dds_ss_i,          // DDS SPI SS signal
+  input  wire             syn_ss_i,          // SYN SPI SS signal
+  input  wire             syn_lock_i,        // SYN PLL lock signal
+  output reg              frq_mute_n_o,      // control SYN mute signal while waiting for PLL lock
+
   output reg  [7:0]       status_o           // 0=Busy, SUCCESS when done, or an error code
 );
 
@@ -65,6 +75,9 @@ module freq_s4 #(parameter FILL_BITS = 6,
   // Latency for multiply operation, Xilinx multiplier
   localparam MULTIPLIER_CLOCKS = 6'd6;
   reg  [5:0]       latency_counter;    // wait for multiplier & divider 
+
+  // SYN lock timeout counter
+  reg  [31:0]      synlock_counter = 32'h0000_0000;
 
   reg  [31:0]      K = 32'h30037BD4;    //32'h0C00DEF5 (*4 since using 100MHz instead of 400MHz);        // Tuning word scale
   wire [63:0]      FTW;                     // FTW calculated
@@ -91,14 +104,20 @@ module freq_s4 #(parameter FILL_BITS = 6,
   localparam FRQ_WRITE     = 6;
   localparam FRQ_FIFO_WRT  = 7;
   localparam FRQ_WAIT      = 8;
-    
+  localparam FRQ_DDS_SSON  = 9;     // wait for DDS SS ON
+  localparam FRQ_DDS_SSOFF = 10;    // wait for DDS SS OFF
+  localparam FRQ_SYN_SSON  = 11;    // wait for SYN SS ON
+  localparam FRQ_SYN_SSOFF = 12;    // wait for SYN SS OFF
+  localparam FRQ_SYN_LOCK  = 13;    // wait for SYN PLL lock
+      
   always @(posedge sys_clk)
   begin
     if(!sys_rst_n) begin
       state <= FRQ_IDLE;            
       frq_fifo_ren_o <= 0;
       ftw_o <= 32'd0;
-      ftw_wen_o = 1'b0;
+      ftw_wen_o <= 1'b0;
+      frq_mute_n_o <= 1'b1; 
       status_o <= `SUCCESS;
     end
     else if(freq_en == 1'b1) begin
@@ -144,10 +163,57 @@ module freq_s4 #(parameter FILL_BITS = 6,
         ftw_wen_o = 1'b1;
         state <= FRQ_FIFO_WRT;
       end
+//      FRQ_FIFO_WRT: begin
+//        ftw_wen_o = 1'b0;
+//        state <= FRQ_IDLE;
+//        status_o <= `SUCCESS;
+//      end
       FRQ_FIFO_WRT: begin
         ftw_wen_o = 1'b0;
-        state <= FRQ_IDLE;
-        status_o <= `SUCCESS;
+        state <= FRQ_DDS_SSON;
+      end
+      FRQ_DDS_SSON: begin
+        if(dds_ss_i == 1'b0) begin
+            frq_mute_n_o <= 1'b0;       // MUTE SYN while waiting
+            state <= FRQ_DDS_SSOFF;
+        end
+      end
+      FRQ_DDS_SSOFF: begin
+        if(dds_ss_i == 1'b1)
+            state <= FRQ_SYN_SSON;
+      end
+      FRQ_SYN_SSON: begin
+        if(syn_ss_i == 1'b0)
+            state <= FRQ_SYN_SSOFF;
+      end
+      FRQ_SYN_SSOFF: begin
+        if(syn_ss_i == 1'b1) begin
+            synlock_counter <= SYN_LOCK_TICKS;
+            state <= FRQ_SYN_LOCK;
+        end
+      end
+      FRQ_SYN_LOCK: begin               // Wait up to SYN_LOCK_MS for lock signal
+        if(syn_lock_i == 1'b1) begin
+            frq_mute_n_o <= 1'b1;       // Done, un-mute SYN
+            state <= FRQ_IDLE;
+            status_o <= `SUCCESS;
+        end
+        else begin
+    `ifdef XILINX_SIMULATOR
+            if(synlock_counter == 32'd800000) begin
+                frq_mute_n_o <= 1'b1;       // Done, un-mute SYN
+                state <= FRQ_IDLE;
+                status_o <= `SUCCESS;
+            end
+    `else
+            if(synlock_counter == 32'h0000_0000) begin
+                state <= FRQ_IDLE;
+                status_o <= `ERR_PLL_LOCK;      // timeout error
+            end
+    `endif
+            else
+                synlock_counter <= synlock_counter - 32'h0000_0001;
+        end
       end
       default: begin
         status_o <= `ERR_UNKNOWN_FRQ_STATE;

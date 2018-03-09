@@ -45,6 +45,7 @@
 //				   Released 15-Feb-2018
 // Revision 1.01.2  03/10/2018 RMR Refactor SYN, triggers from falling edge of DDS IOUP. If initialized,
 //                                 only does re-lock.
+//                                 -Freq processor waits for DDS & SYN SPI & SYN lock, else error code
 //
 //------------------------------------------------------------------------------
 

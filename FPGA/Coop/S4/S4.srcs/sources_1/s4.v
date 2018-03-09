@@ -365,13 +365,13 @@ wire         frq_fifo_mt;             // frequency fifo empty flag
 wire         frq_fifo_full;           // frequency fifo full flag
 wire [`PROCESSOR_FIFO_FILL_BITS-1:0]   frq_fifo_count;
 wire [7:0]   frq_status;              // frequency processor status
+wire         frq_mute_n;              // frequency processor controls SYN mute when changing frequencies
 // DDS processor wires
 wire [31:0]  ftw_fifo_dat_i; // = 32'h0000_0000;          // frequency tuning word fifo input(SPI data) from frequency processor.
 wire         ftw_fifo_wen; // = 1'b0;            // frequency tuning word fifo we.
 wire         ftw_fifo_full;           // ftw fifo full.
 wire         ftw_fifo_mt;             // ftw fifo empty.
 wire         hardware_init;           // pulse to do DDS/VGA init sequences
-wire         dds_init_done;           // pulse to do SYN init sequence after DDS has finished init
 
 // Power processor wires
 wire [38:0]  pwr_fifo_dat_i;          // to fifo from opc, power or cal value. 
@@ -934,6 +934,11 @@ end
     .ftw_wen_o          (ftw_fifo_wen),         // frequency tuning word fifo we.
 
     .frequency_o        (frequency),            // System frequency so all modules can access
+
+    .dds_ss_i           (DDS_SSn),              // DDS SPI SS signal
+    .syn_ss_i           (SYN_SSn),              // SYN SPI SS signal
+    .syn_lock_i         (SYN_STAT),             // SYN PLL lock signal
+    .frq_mute_n_o       (frq_mute_n),           // Mute the synthesizer while waiting for lock
 
     .status_o           (frq_status)            // 0=Busy, SUCCESS when done, or an error code
   );
@@ -1576,7 +1581,7 @@ end
   wire dbg_synth_mute_n;
   assign dbg_synth_mute_n = ((dbg_enables & BIT_SYN_MUTE) == BIT_SYN_MUTE);
   wire synth_mute_n;
-  assign synth_mute_n = (dds_synth_mute_n & syn_synth_mute_n);
+  assign synth_mute_n = (dds_synth_mute_n & syn_synth_mute_n & frq_mute_n);
   assign SYN_MUTEn = dbg_spi_mode ? dbg_synth_mute_n : synth_mute_n;
 
   // Cause SYN Init on BIT_SYN_INIT assert
@@ -1627,7 +1632,7 @@ end
  
   assign FPGA_MCU4 = CONV;      // DDS_MOSI; //MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.
   assign FPGA_MCU3 = ADC_SCLK;  // DDS_SCLK; //MMC_CMD; //count3[15];    // 200MHz div'd by 2^16.
-  assign FPGA_MCU2 = ADCF_SDO;  // VGA_MOSI;  //ZMON_EN;
+  assign FPGA_MCU2 = SYN_MUTEn; // ADCF_SDO;  // VGA_MOSI;  //ZMON_EN;
   assign FPGA_MCU1 = ADCR_SDO;  // VGA_SCLK;  //MMC_CMD;
 
   endmodule
