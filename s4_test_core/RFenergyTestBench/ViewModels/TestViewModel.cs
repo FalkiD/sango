@@ -150,7 +150,7 @@ namespace RFenergyUI.ViewModels
             //CmdTempComp = ReactiveCommand.CreateAsyncObservable(x => CmdTempCompRun(x));
             //CmdTempComp.Subscribe(result => MainViewModel.MsgAppendLine(result));
 
-            bool FactoryMode = MainViewModel.FactoryMode;
+            FactoryMode = MainViewModel.FactoryMode;
         }
 
         /// <summary>
@@ -640,24 +640,24 @@ namespace RFenergyUI.ViewModels
             set { this.RaiseAndSetIfChanged(ref _measCount, value); }
         }
 
-        // initialization
-        bool Initialized { get; set; }
-        public void Initialize()
-        {
-            try
-            {
-                if (!Initialized)
-                {
-                    Initialized = true; // Set it now since action is on another thread
-                    LoadValuesFromHardware();
-                    // You could unsubscribe event here.
-                }
-            }
-            catch (Exception ex)
-            {
-                MainViewModel.MsgAppendLine(string.Format("Exception initializing values:{0}", ex.Message));
-            }
-        }
+        //// initialization
+        //bool Initialized { get; set; }
+        //public void Initialize()
+        //{
+        //    try
+        //    {
+        //        if (!Initialized)
+        //        {
+        //            Initialized = true; // Set it now since action is on another thread
+        //            LoadValuesFromHardware();
+        //            // You could unsubscribe event here.
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        MainViewModel.MsgAppendLine(string.Format("Exception initializing values:{0}", ex.Message));
+        //    }
+        //}
 
         // commands
 
@@ -1626,13 +1626,13 @@ namespace RFenergyUI.ViewModels
                 //// Read the DAC's too
                 if (MainViewModel.DebugPanel != null)
                 {
-                    System.Threading.Thread.Sleep(150); // not too fast
+                    System.Threading.Thread.Sleep(250); // not too fast
                     MainViewModel.DebugPanel.CmdRead.Execute(null);
                 }
 
-                //_initializing = true;
-                //await CmdInfoRun();   // Update DemoMode, HiresMode
-                //_initializing = false;
+                // fill-in serial numbers for S4
+                if (MainViewModel.ICmd.HwType == InstrumentInfo.InstrumentType.S4)
+                    MainViewModel.CalPanel.CmdReadSNs.Execute(null);
             }
         }
         // Backgroud thread...

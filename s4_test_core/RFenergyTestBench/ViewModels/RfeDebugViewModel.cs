@@ -117,7 +117,7 @@ namespace RFenergyUI.ViewModels
         {
             for (int channel = 1; channel < MainViewModel.ICmd.PaChannels + 1; ++channel)
             {
-                ChannelVms.Add(new ChannelViewModel
+                ChannelViewModel chvm = new ChannelViewModel
                 {
                     Number = channel,
                     IsSelected = true,
@@ -149,7 +149,19 @@ namespace RFenergyUI.ViewModels
                         Channel = channel,
                         ShowChannel = false
                     }
-                });
+                };
+                if (MainViewModel.ICmd.HwType == InstrumentInfo.InstrumentType.S4)
+                {
+                    chvm.S4PaVm = new DacViewModel
+                    {
+                        Title = "S4 PA Bias",
+                        WhichDac = Dac.eS4Pa,
+                        Channel = 1,
+                        ShowChannel = false
+                    };
+                }
+                else chvm.S4PaVm = null;
+                ChannelVms.Add(chvm);
             }
 
             // setup Visibility flags based on hardware type
@@ -321,6 +333,26 @@ namespace RFenergyUI.ViewModels
                                 else results.Add(string.Format(" Channel {0} Dac read failed:{1}", channel, MainViewModel.IErr.ErrorDescription(status)));
                             }
                         }
+
+                        // For S4 read PA bias DAC too
+                        if (MainViewModel.ICmd.HwType == InstrumentInfo.InstrumentType.S4)
+                        {
+                            status = MainViewModel.IDbg.ReadI2C(channel, 0x61, null, data);
+                            if (status == 0)
+                            {
+                                if (data.Length == 24)
+                                {
+                                    int value = (data[2] | ((data[1] & 0xf) << 8)) & 0xfff;
+                                    ChannelVms[0].S4PaVm.DacValue = value * TestViewModel.VOLTS_PER_LSB;
+                                    ChannelVms[0].S4PaVm.DacBits = (ushort)value;
+                                    MainViewModel.TestPanel.ChannelVms[0].S4PaVm.DacValue = ChannelVms[0].S4PaVm.DacValue;
+                                    MainViewModel.TestPanel.ChannelVms[0].S4PaVm.DacBits = (ushort)value;
+                                }
+                                else results.Add(string.Format(" Channel {0} Read PA Dac failed to read 0x18 bytes, read:{1}", channel, data.Length));
+                            }
+                            else results.Add(string.Format(" Channel {0} PA Dac read failed:{1}", channel, MainViewModel.IErr.ErrorDescription(status)));
+                        }
+
                         if (channelsSelected == 0)
                             results.Add("Error, no channels selected");
                     }

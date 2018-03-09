@@ -69,7 +69,7 @@ namespace RFenergyUI.ViewModels
             CmdTriggerWidth.Subscribe(result => CmdDone(result));
             CmdTriggerWidth.ThrownExceptions.Subscribe(result => MainViewModel.MsgAppendLine(result.Message));
 
-            CmdReadSNs = ReactiveCommand.CreateAsyncObservable(x => CmdReadSNsRun(x));
+            CmdReadSNs = ReactiveCommand.CreateAsyncObservable(x => CmdReadSNsRun());
             CmdReadSNs.IsExecuting.ToProperty(this, x => x.IsExecuting, out _isExecuting);
             CmdReadSNs.Subscribe(result => CmdReadSNsDone(result));
             CmdReadSNs.ThrownExceptions.Subscribe(result => MainViewModel.MsgAppendLine(result.Message));
@@ -252,10 +252,11 @@ namespace RFenergyUI.ViewModels
 
             try
             {
+                int MEAS_DELAY = 250; // power measurement delay
                 bool inCompression = false;
                 double dBmTarget = TargetStart;
                 double tolerance = 0.05;
-                int MAX_ITERATIONS = 40;
+                int MAX_ITERATIONS = 80;
                 int MIN_ADJUST = 1;
                 double MAX_DBMOUT = 62.0;
                 double MAX_POWER = -1.0;    // keep track of max
@@ -268,6 +269,8 @@ namespace RFenergyUI.ViewModels
                 double lastValue = Double.NaN;
                 double gain = Double.NaN;
                 double maxGain = 0.0;
+                double stepsize = InputStepSize; // PowerStepSize;
+                double lastStepsize = stepsize;
                 while (PwrCalRunning && nextValue <= PowerStop
                         && !inCompression && !SkipCollectData)
                 {
@@ -279,24 +282,24 @@ namespace RFenergyUI.ViewModels
                         wrk.ReportProgress(0, result);
                         break;
                     }
-
+                    System.Threading.Thread.Sleep(MEAS_DELAY);
                     double externalPwr = ReadExternal(dBmTarget);
                     if (externalPwr > MAX_POWER)
                         MAX_POWER = externalPwr;
                     if (externalPwr > MAX_DBMOUT)
                         break;
 
-                    // half steps for iterations
-                    double stepsize = InputStepSize; // PowerStepSize;
                     int iterations = 0;
                     bool converged = false;
                     bool high = true;   // enter binary search from high side
                     MonitorPa[] results = null;
                     PowerCalData caldata = null;
-                    if (externalPwr > (dBmTarget - PowerStepSize / 2) ||   // get as close as possible
+                    //if (externalPwr > (dBmTarget - PowerStepSize / 2) ||   // get as close as possible
+                    if (externalPwr > dBmTarget ||   // get as close as possible
                         Math.Abs(externalPwr - dBmTarget) <= tolerance)
                     {
-                        if (dBmTarget > PowerStart)
+                        if (MainViewModel.ICmd.HwType == InstrumentInfo.InstrumentType.S4 &&
+                                    dBmTarget > PowerStart)
                             stepsize = InputStepSize / 2.0;
                         do
                         {
@@ -311,6 +314,7 @@ namespace RFenergyUI.ViewModels
                                                         tolerance, ref stepsize, ref gain,
                                                         ref maxGain, ref converged,
                                                         ref inCompression);
+                                lastStepsize = stepsize;    // save valid stepsize
                                 break; // done or next target
                             }
 
@@ -319,7 +323,7 @@ namespace RFenergyUI.ViewModels
                                        externalPwr, dBmTarget,
                                        lastTry, MIN_ADJUST);
                             status = SetCalPower(nextValue);
-                            System.Threading.Thread.Sleep(250);
+                            System.Threading.Thread.Sleep(MEAS_DELAY);
                             externalPwr = ReadExternal(dBmTarget);
                         } while (PwrCalRunning &&
                                     nextValue < PowerStop &&
@@ -356,6 +360,8 @@ namespace RFenergyUI.ViewModels
                             result += ", *ERROR*, exceeded max iterations";
                         wrk.ReportProgress(0, result);
                         WriteCalData(fout, result, MainViewModel.ICmd.DacFromDB(nextValue));
+                        //if(dBmTarget > 50.0)
+                        //    stepsize = lastStepsize;    // no convergence, restore last good stepsize
                     }
                     nextValue += stepsize;
                 }
@@ -588,10 +594,7 @@ namespace RFenergyUI.ViewModels
                 if (nextValue == lastTry)
                     nextValue -= MIN_ADJUST;
                 if (!high)
-                {
-                    stepsize /= 2.0;
                     high = true;
-                }
             }
             else
             {
@@ -599,11 +602,10 @@ namespace RFenergyUI.ViewModels
                 if (nextValue == lastTry)
                     nextValue += MIN_ADJUST;
                 if (high)
-                {
-                    stepsize /= 2.0;
                     high = false;
-                }
             }
+            if (stepsize > 0.05)
+                stepsize /= 2.0;
         }
 
         void WriteCalEntry(BackgroundWorker wrk, StreamWriter fout, bool compression,
@@ -1102,7 +1104,7 @@ namespace RFenergyUI.ViewModels
         }
 
         public ReactiveCommand<string> CmdReadSNs { get; protected set; }
-        IObservable<string> CmdReadSNsRun(object text)
+        IObservable<string> CmdReadSNsRun()
         {
             return Observable.Start(() =>
             {
@@ -1467,37 +1469,33 @@ namespace RFenergyUI.ViewModels
                 MainViewModel.TestPanel.BiasOn =
                     MainViewModel.ICmd.BiasEnable(false);
 
-                System.Threading.Thread.Sleep(150);
-                if ((status = MainViewModel.ICmd.RunCmd("fw 12 3 0 0 0\n", ref rsp)) != 0)
-                    result = "Error setting S4 VGA DAC mode:" + rsp;
-                else
+                // This mode is the default & probably won't be changed by a user
+                //
+                //System.Threading.Thread.Sleep(150);
+                //if ((status = MainViewModel.ICmd.RunCmd("fw 12 3 0 0 0\n", ref rsp)) != 0)
+                //    result = "Error setting S4 VGA DAC mode:" + rsp;
+                //else
                 {
                     System.Threading.Thread.Sleep(150);
                     if ((status = MainViewModel.ICmd.RunCmd(string.Format("calpwr 0x17{0:x3}0\n", dacAValue), ref rsp)) != 0)
                         result = "Error setting S4 VGA DAC's:" + rsp;
                     else
                     {
-                        //System.Threading.Thread.Sleep(150);
-                        //if ((status = MainViewModel.ICmd.RunCmd("fw 12 1 0 0 0\n", ref rsp)) != 0)
-                        //    result = "Error setting S4 VGA DAC mode to B only:" + rsp;
-                        //else
+                        System.Threading.Thread.Sleep(150);
+                        string cmdline = "use 1\n";     // cal20us.ptf must be set as profile 1
+                        if ((status = MainViewModel.ICmd.RunCmd(cmdline, ref rsp)) != 0)
+                            result = "Error loading calibration pattern:" + rsp;
+                        else
                         {
                             System.Threading.Thread.Sleep(150);
-                            string cmdline = string.Format("loadpat {0} 0\n", MainViewModel.TestPanel.PatternFile);
-                            if ((status = MainViewModel.ICmd.RunCmd(cmdline, ref rsp)) != 0)
-                                result = "Error loading calibration pattern:" + rsp;
+                            if ((status = MainViewModel.ICmd.RunCmd("trig ctrl 0x95 10\n", ref rsp)) != 0)
+                                result = "Error triggering pattern:" + rsp;
                             else
                             {
                                 System.Threading.Thread.Sleep(150);
-                                if ((status = MainViewModel.ICmd.RunCmd("trig ctrl 0x95 10\n", ref rsp)) != 0)
-                                    result = "Error triggering pattern:" + rsp;
-                                else
-                                {
-                                    System.Threading.Thread.Sleep(150);
-                                    MainViewModel.TestPanel.BiasOn =
-                                        MainViewModel.ICmd.BiasEnable(true);
-                                    result = "S4 ready for power calibration";
-                                }
+                                MainViewModel.TestPanel.BiasOn =
+                                    MainViewModel.ICmd.BiasEnable(true);
+                                result = "S4 ready for power calibration";
                             }
                         }
                     }
@@ -1636,7 +1634,7 @@ namespace RFenergyUI.ViewModels
         {
             try
             {
-                //System.Threading.Thread.Sleep(50);
+                //System.Threading.Thread.Sleep(MEAS_DELAY);
                 //return dBmTarget - 0.01;
                 if (MainViewModel.TestPanel.DutyCycle == 100)
                     return MainViewModel.IMeter.ReadCw(false);

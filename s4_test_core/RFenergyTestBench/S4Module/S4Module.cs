@@ -193,7 +193,7 @@ namespace S4TestModule
                         //                            channel == 1 ? "" : "pa",
                         //                            tmp[0], tmp[1],
                         //                            data[0], data[1]);
-                        cmd = string.Format("ir pa 0xc2 {0}");
+                        cmd = string.Format("ir pa 0xc2 {0}", data.Length);
                     }
                     string rsp = "";
                     int status = _s4hw.ExecuteCommand(cmd, ref rsp);
@@ -677,7 +677,7 @@ namespace S4TestModule
 
                     // Driver string only has 1 tab???
                     rgx = new Regex("[a-zA-Z ]*:[ ]*([0-9]*)\tCurrent[ ]*([0-9]*).([0-9]*)");
-                    match = rgx.Match(s4_data[2]);
+                    match = rgx.Match(s4_data[1]);
                     if (match.Success)
                     {
                         // Driver temperature is higher on the S4
