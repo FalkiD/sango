@@ -7,6 +7,7 @@ using System.Reactive.Linq;
 using ReactiveUI;
 using RFenergyUI.Views;
 using Newtonsoft.Json;
+using MathNet.Numerics;
 using M2TestModule;
 using Interfaces;
 
@@ -28,6 +29,8 @@ namespace RFenergyUI.ViewModels
         {
             _calview = view;
             MainViewModel.CalPanel = this;
+
+            //Object stuff = MathNet.Numerics.LinearRegression.MultipleRegression.
 
             CmdInit = ReactiveCommand.CreateAsyncObservable(x => CmdInitRun());
             CmdInit.IsExecuting.ToProperty(this, x => x.IsIniting, out _isIniting);
