@@ -392,6 +392,12 @@ wire         pwr_vsw;
 wire [11:0]  pwr_caldata;
 wire [11:0]  pwr_calidx;
 wire         pwr_calibrate;
+// Frequency interpolation debugging wires
+wire [11:0]  Y2;
+wire [11:0]  Y1;
+wire [31:0]  slope;
+wire [47:0]  intercept;
+wire [11:0]  interp_dac;
 
 // Pulse processor & fifo wires
 wire [63:0]  pls_fifo_dat_i;          // to pulse fifo from opc
@@ -979,7 +985,14 @@ end
     
     .dbmx10_o           (dbm_x10),              // present power setting for all top-level modules to access
 
-    .status_o           (pwr_status)            // 0=busy, SUCCESS when done, or an error code
+    .status_o           (pwr_status),           // 0=busy, SUCCESS when done, or an error code
+    
+    // Frequency interpolation debugging wires
+    .Y2_o               (Y2),
+    .Y1_o               (Y1),
+    .slope_o            (slope),
+    .intercept_o        (intercept),
+    .dac_o              (interp_dac)
   );
 
   // Pulse processor instance. 

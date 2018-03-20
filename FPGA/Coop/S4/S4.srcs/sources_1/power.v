@@ -20,14 +20,17 @@
 //      1           0       Low Gain Mode
 //      1           1       Undefined
 //
-//  We'll default to low-gain mode, 
+//  We'll default to high-gain mode, 
 //  datasheet figure 12 gives gain data(higain)
 //  at 2.6GHz while varying both VGAIN1 & VGAIN2
 //  Looks like 3.3v ~ -12dB, 0v ~ +2dB
+//
+//  Note: higain mode is controlled by input line from top level.
 // 
 // Dependencies: 
 // 
 // Revision:
+// Rev 0.02 - 19-Mar-2018, fix frequency interpolation.
 // Revision 0.01 - File Created
 // Additional Comments: Implement power calculations.
 // 
@@ -75,7 +78,14 @@ module power #(parameter FILL_BITS = 4)
   
   output reg  [11:0]    dbmx10_o,                 // present power setting for all top-level modules to access
   
-  output reg  [7:0]     status_o       // 0=busy, SUCCESS when done, or an error code
+  output reg  [7:0]     status_o,       // 0=busy, SUCCESS when done, or an error code
+
+  // Debugging interpolation registers
+  output reg  [11:0]    Y2_o,
+  output reg  [11:0]    Y1_o,
+  output reg  [31:0]    slope_o,
+  output reg  [47:0]    intercept_o,
+  output reg  [11:0]    dac_o
 );
 
   localparam DBM_OFFSET       = 24'd102400;  // 40.0 dBm * 256 * 10
@@ -120,7 +130,8 @@ module power #(parameter FILL_BITS = 4)
   // interpolation vars
   reg  [31:0]     slope;        // slope * 2**32
   reg             slope_is_neg; // flag if slope is negative
-  reg  [15:0]     intercept;
+  reg  [47:0]     intercept;
+  reg  [47:0]     result;
 
   // enable dbm x10 multiplier
   reg             multiply;
@@ -134,9 +145,6 @@ module power #(parameter FILL_BITS = 4)
   // 251 total entries covering 400 to 650 (40.0 to 65.0 dBm)
   // **entries are opposite from C, highest index first**
 
-  // power table initialized flag
-  reg             tbl_init = 1'b0;
-
   // power tables, initialized to linear values, written
   // at startup by MCU to calibrated values
   localparam TOP_INDEX = 12'd250;
@@ -145,6 +153,8 @@ module power #(parameter FILL_BITS = 4)
   reg [11:0]      dbmx10_2450 [0:250];
   reg [11:0]      dbmx10_2470 [0:250];
   reg [11:0]      dbmx10_2490 [0:250];
+  // power tables initialized flag
+  reg             tbl_init = 1'b0;
 
   // Xilinx multiplier to perform 16 bit multiplication, output is 32 bits
   ftw_mult dbm_multiplier (
@@ -208,24 +218,26 @@ module power #(parameter FILL_BITS = 4)
   localparam PWR_DBM2           = 6;
   localparam PWR_DBM3           = 7;
   localparam PWR_DBM4           = 8;
-  localparam PWR_VGA1           = 9;
-  localparam PWR_VGA2           = 10;
-  localparam PWR_VGA3           = 11;
-  localparam PWR_VGA4           = 12;
-  localparam PWR_VGA5           = 13;
-  localparam PWR_WAIT           = 14;
-  localparam WAIT_SPI           = 15;
-  localparam PWR_SLOPE1         = 16;
-  localparam PWR_SLOPE2         = 17;
-  localparam PWR_SLOPE3         = 18;
-  localparam PWR_INTCPT1        = 19;
-  localparam PWR_INTCPT2        = 20;
-  localparam PWR_INTCPT3        = 21;
-  localparam PWR_INTCPT4        = 22;
-  localparam PWR_INIT1          = 23;
-  localparam PWR_INIT2          = 24;
-  localparam PWR_TBL_INIT       = 25;
-  localparam PWR_TBL_CAL        = 26;
+  localparam PWR_DBM5           = 9;
+  localparam PWR_VGA1           = 10;
+  localparam PWR_VGA2           = 11;
+  localparam PWR_VGA3           = 12;
+  localparam PWR_VGA4           = 13;
+  localparam PWR_VGA5           = 14;
+  localparam PWR_WAIT           = 15;
+  localparam WAIT_SPI           = 16;
+  localparam PWR_SLOPE1         = 17;
+  localparam PWR_SLOPE2         = 18;
+  localparam PWR_SLOPE3         = 19;
+  localparam PWR_INTCPT1        = 20;
+  localparam PWR_INTCPT2        = 21;
+  localparam PWR_INTCPT3        = 22;
+  localparam PWR_INTCPT4        = 23;
+  localparam PWR_INTCPT5        = 24;
+  localparam PWR_INIT1          = 25;
+  localparam PWR_INIT2          = 26;
+  localparam PWR_TBL_INIT       = 27;
+  localparam PWR_TBL_CAL        = 28;
 
   localparam    DAC_WORD0       = 32'h00380000;     // Disable internal refs, Gain=1
   localparam    DAC_WORD1       = 32'h00300003;     // LDAC pin inactive DAC A & B
@@ -256,7 +268,8 @@ module power #(parameter FILL_BITS = 4)
       dbmx10_o <= INIT_DBMx10;  // present power setting for all top-level modules to access, dBm x10
       init_wordnum <= 3'd0;
       slope_is_neg <= 1'b0;
-      dac_control <= CTL_DACB_ONLY;        // defaults to B only, change w/CONFIG opcode
+      dac_control <= CTL_DACB_ONLY;     // defaults to B only, change w/CONFIG opcode
+      result <= 48'h0000_0000_0000;
     end
     else if(power_en == 1) begin
 
@@ -265,8 +278,8 @@ module power #(parameter FILL_BITS = 4)
       else if(!vga_dacctla_i && dac_control != CTL_DACB_ONLY)
         dac_control <= CTL_DACB_ONLY;
 
-      // calibrate is special case, overwrite teh values in the
-      // cal table from he opcode processor
+      // calibrate is special case, overwrite the values in the
+      // cal table from the opcode processor
       if(doCalibrate_i) begin
       
         if(frequency_i == FRQ1) begin
@@ -312,7 +325,7 @@ module power #(parameter FILL_BITS = 4)
         end
         PWR_TBL_INIT: begin
           // fill power table RAM with default values
-          // this will follow after PWR_INIT1 after sys_rst
+          // this will follow PWR_INIT1 after sys_rst
           if(dbm_idx == 0) begin
             dbmx10_2410[0] <= 12'hfff;
             dbmx10_2430[0] <= 12'hfff;
@@ -323,10 +336,10 @@ module power #(parameter FILL_BITS = 4)
           end
           else begin
             dbmx10_2410[dbm_idx] <= power[11:0];
-            dbmx10_2430[dbm_idx] <= power[11:0];
-            dbmx10_2450[dbm_idx] <= power[11:0];
-            dbmx10_2470[dbm_idx] <= power[11:0];
-            dbmx10_2490[dbm_idx] <= power[11:0];
+            dbmx10_2430[dbm_idx] <= power[11:0]+10;
+            dbmx10_2450[dbm_idx] <= power[11:0]+20;
+            dbmx10_2470[dbm_idx] <= power[11:0]+30;
+            dbmx10_2490[dbm_idx] <= power[11:0]+40;
             dbm_idx <= dbm_idx - 1;
             power[11:0] <= power[11:0] + 11'h010;
           end
@@ -449,85 +462,78 @@ module power #(parameter FILL_BITS = 4)
         end
         PWR_SLOPE1: begin
           // interpolate between power tables
-          
-          // 02-Oct-2017 Bypass interpolation to ship 1st article.
-          // interp functions but math isn't correct yet.
-
           // jump to state <= PWR_VGA2; once power variable is set
-
-          // interpolate between power tables
-          if(frequency_i <= FRQ1) begin
-              // 02-Oct set power & bypass interpolation
-              power <= {8'd0, dac_control, dbmx10_2410[dbm_idx], 4'd0};
-          end
-          else if(frequency_i <= FRQ2) begin
-          // slope = ((dbmx10_2410[dbm_idx] - dbmx10_2430[dbm_idx]))/(FRQ_DELTA);
+          if(frequency_i <= FRQ2) begin
+          // slope = ((dbmx10_2430[dbm_idx] - dbmx10_2410[dbm_idx]))/(FRQ_DELTA); // (Yb-Ya)/(Xb-Xa)
           // Using (slope * 2**32) ==> (1/FRQ_DELTA) * 2**32 = 214.74836 ~= 215
-          // slope * 2**32 ~= 215 * (dbmx10_2410[dbm_idx] - dbmx10_2430[dbm_idx]);
+          // slope * 2**32 ~= 215 * (dbmx10_2430[dbm_idx] - dbmx10_2410[dbm_idx]);
           //
-          // Then intercept = dbmx10_2430[dbm_idx] - ((slope*2**32)*frq2)/2**32;
-          //
+          // Then intercept*(2**32) = 2**32*(mX2) - 2**32*Y2 ==> ((slope*2**32)*frq2) - dbmx10_2430[dbm_idx]*2**32;
+          // intercept = intercept >> 32;
           // Assuming max delta between freq tables of 2048, 215*2048 = 440,320.
           // This requires 19 bits, use a 32 bit register.
-//            dbmA <= dbmx10_2410[dbm_idx] - dbmx10_2430[dbm_idx];            
-//            if(dbmx10_2410[dbm_idx] < dbmx10_2430[dbm_idx])
+            dbmA <= dbmx10_2430[dbm_idx] - dbmx10_2410[dbm_idx];            
+//            if(dbmx10_2430[dbm_idx] < dbmx10_2410[dbm_idx])
 //              slope_is_neg <= 1'b1;
-            // 02-Oct set power & bypass interpolation
-            power <= {8'd0, dac_control, dbmx10_2430[dbm_idx], 4'd0};
+            Y2_o <= dbmx10_2430[dbm_idx];
+            Y1_o <= dbmx10_2410[dbm_idx];
           end
           else if(frequency_i <= FRQ3) begin
-//            dbmA <= dbmx10_2430[dbm_idx] - dbmx10_2450[dbm_idx];    
-//            if(dbmx10_2430[dbm_idx] < dbmx10_2450[dbm_idx])
+            dbmA <= dbmx10_2450[dbm_idx] - dbmx10_2430[dbm_idx];    
+//            if(dbmx10_2450[dbm_idx] < dbmx10_2430[dbm_idx])
 //              slope_is_neg <= 1'b1;
-              // 02-Oct set power & bypass interpolation
-            power <= {8'd0, dac_control, dbmx10_2450[dbm_idx], 4'd0};
+            Y2_o <= dbmx10_2450[dbm_idx];
+            Y1_o <= dbmx10_2430[dbm_idx];
           end
           else if(frequency_i <= FRQ4) begin
-//            dbmA <= dbmx10_2450[dbm_idx] - dbmx10_2470[dbm_idx];           
-//            if(dbmx10_2450[dbm_idx] < dbmx10_2470[dbm_idx])
+            dbmA <= dbmx10_2470[dbm_idx] - dbmx10_2450[dbm_idx];           
+//            if(dbmx10_2470[dbm_idx] < dbmx10_2450[dbm_idx])
 //              slope_is_neg <= 1'b1;
-              // 02-Oct set power & bypass interpolation
-            power <= {8'd0, dac_control, dbmx10_2470[dbm_idx], 4'd0};
+            Y2_o <= dbmx10_2470[dbm_idx];
+            Y1_o <= dbmx10_2450[dbm_idx];
           end
           else begin
-//            dbmA <= dbmx10_2470[dbm_idx] - dbmx10_2490[dbm_idx];           
-//            if(dbmx10_2470[dbm_idx] < dbmx10_2490[dbm_idx])
+            dbmA <= dbmx10_2490[dbm_idx] - dbmx10_2470[dbm_idx];           
+//            if(dbmx10_2490[dbm_idx] < dbmx10_2470[dbm_idx])
 //              slope_is_neg <= 1'b1;
-            // 02-Oct set power & bypass interpolation
-            power <= {8'd0, dac_control, dbmx10_2490[dbm_idx], 4'd0};
+            Y2_o <= dbmx10_2490[dbm_idx];
+            Y1_o <= dbmx10_2470[dbm_idx];
           end
-          // Bypass interpolation for first article
-          state <= PWR_VGA2;        // write 1st byte of 3
-          VGA_SSn_o <= 1'b0;          
-          //interp1 <= {16'd0, K};
-          // bypass interpolation   state <= PWR_SLOPE2;
+          interp1 <= {16'd0, K};
+          state <= PWR_SLOPE2;
         end
         PWR_SLOPE2: begin
+          // Calculate (Y2-Y1) * [(1/(X2-X1)) * 2**32] where [] = 215 ==> K
           interp_mul <= 1'b1;
           latency_counter <= MULTIPLIER_CLOCKS;
           next_state <= PWR_SLOPE3;
           state <= PWR_WAIT;
         end
         PWR_SLOPE3: begin
+          // prod1 is 64 bit (slope * 2**32)
           interp_mul <= 1'b0;
-          slope <= prod1[31:0];     // save product, prod1 = (slope * 2**32)    
+          slope <= prod1[31:0];    
+          slope_o <= prod1[31:0];   // TBD dbg
           dbmA <= prod1[31:0];      // slope*2**32 into dbmA
-          // F2 into multiplicand
+          // Use slope and X2, Y2 to calculate intercept
+          // 2**32 * b = 2**32 * m * X2  -  2**32 * Y2
+          // X2(Frq2) into multiplicand, calculate (2**32*slope*X2)
+          // Y2 * 2**32 into intercept register for later step
           if(frequency_i <= FRQ2) begin
             interp1 <= FRQ2;
-            intercept <= {4'd0, dbmx10_2430[dbm_idx]};  // setup for later step
+            intercept <= {4'd0, dbmx10_2430[dbm_idx], 32'h0000_0000};  // setup for later step
           end
           else if(frequency_i <= FRQ3) begin
             interp1 <= FRQ3;            
-            intercept <= {4'd0, dbmx10_2450[dbm_idx]};  // setup for later step
+            intercept <= {4'h0, dbmx10_2450[dbm_idx], 32'h0000_0000};  // setup for later step
           end
           else if(frequency_i <= FRQ4) begin
             interp1 <= FRQ4;           
-            intercept <= {4'd0, dbmx10_2470[dbm_idx]};  // setup for later step
+            intercept <= {4'd0, dbmx10_2470[dbm_idx], 32'h0000_0000};  // setup for later step
           end
           else begin
             interp1 <= FRQ5;           
-            intercept <= {4'd0, dbmx10_2490[dbm_idx]};  // setup for later step
+            intercept <= {4'd0, dbmx10_2490[dbm_idx], 32'h0000_0000};  // setup for later step
           end
           state <= PWR_INTCPT1;
         end
@@ -538,54 +544,52 @@ module power #(parameter FILL_BITS = 4)
           state <= PWR_WAIT;
         end
         PWR_INTCPT2: begin
-          // prod1 is slope*FRQ2*2**32, intercept is upper 32 bits of prod1
-          // setup to use it in next state
+          // prod1 is 2**32 * m * X2, 48 bits
+          // intercept register contains Y2 * 2**32, to be subtracted from prod1,
+          // 2**32 * b = prod1 - intercept
           interp_mul <= 1'b0;
-          // prod1 still slope*FRQ2*2**32, intercept is upper 32 bits of prod1
-          if(slope_is_neg)
-            intercept <= intercept + prod1[47:32];
-          else
-            intercept <= intercept - prod1[47:32];
-          state <= PWR_INTCPT3;
-        end
-        PWR_INTCPT3: begin
-          if(prod1[31] == 1'b1)
-            intercept <= intercept + 16'd1;        
-          // we have (slope*2**32) & intercept, calculate our dac value
-          // dac <= (slope*frequency)/2**32 + intercept;          
-          // Load up for next multiply
+          intercept <= prod1[47:0] - intercept;
+
+          // we have m & b, setup for final dac calculation
+          // we have (slope*2**32) & intercept*2**32, calculate our dac value
+          // dac <= ((slope*2**32*frequency) + intercept*2**32) >> 32;          
           dbmA <= slope;
           interp1 <= frequency_i;        
+
           state <= PWR_DBM2;
         end
         PWR_DBM2: begin
+          // TBD debugging
+          intercept_o <= intercept;
+
           interp_mul <= 1'b1;
           latency_counter <= MULTIPLIER_CLOCKS;          
           next_state <= PWR_DBM3;
           state <= PWR_WAIT;
         end
         PWR_DBM3: begin
-          interp_mul <= 1'b0;        
-          // re-use 16 bits of slope register
-          if(prod1[31] == 1'b1)
-            slope[15:0] <= prod1[47:32] + intercept + 1;
-          else
-            slope[15:0] <= prod1[47:32] + intercept;
+          interp_mul <= 1'b0;
+          result <= prod1[47:0];
           state <= PWR_DBM4;
         end
         PWR_DBM4: begin
-          // 28-Oct-2017 Update:
-          // leave dac A fixed at full-scale, control only dac B
+          result <= result - intercept; // should be +, intercept has wrong sign somehow?
+          state <= PWR_DBM5;
+        end
+        PWR_DBM5: begin
+          //
+          // result register is interpolated dac value * 2**32
           //
           // Ready to send data to both DAC's. Use this FSM to do it, 
           // except value is not in input fifo. Set next_state to PWR_VGA2
           // and let it run.
-          power <= {8'd0, dac_control, slope[11:0], 4'd0}; 
+          dac_o <= result[43:32];
+          power <= {8'd0, dac_control, result[43:32], 4'd0}; 
           state <= PWR_VGA2;        // write 1st byte of 3
           VGA_SSn_o <= 1'b0;
         end
         default: begin
-          status_o = `ERR_UNKNOWN_PWR_STATE;
+          status_o <= `ERR_UNKNOWN_PWR_STATE;
           state <= PWR_IDLE;
         end
         endcase
