@@ -366,6 +366,7 @@ wire         frq_fifo_full;           // frequency fifo full flag
 wire [`PROCESSOR_FIFO_FILL_BITS-1:0]   frq_fifo_count;
 wire [7:0]   frq_status;              // frequency processor status
 wire         frq_mute_n;              // frequency processor controls SYN mute when changing frequencies
+wire         tweak_power;             // pulsed after successful frequency change so opcode processor will reset power 
 // DDS processor wires
 wire [31:0]  ftw_fifo_dat_i; // = 32'h0000_0000;          // frequency tuning word fifo input(SPI data) from frequency processor.
 wire         ftw_fifo_wen; // = 1'b0;            // frequency tuning word fifo we.
@@ -920,7 +921,10 @@ end
 
   // Frequency processor instance. 
   // Input:requested frequency in MHz in fifo
-  // Output:Programs DDS chip on DDS SPI
+  // Output:Frequency tuning word in FIFO starts
+  // DDS SPI instance. DDS_IOUP pulse when DDS is done
+  // starts SYN instance to re-calibrate SYN and
+  // check for PLL lock.
   freq_s4 #( 
     .FILL_BITS(`PROCESSOR_FIFO_FILL_BITS)
   ) freq_processor
@@ -945,6 +949,8 @@ end
     .syn_ss_i           (SYN_SSn),              // SYN SPI SS signal
     .syn_lock_i         (SYN_STAT),             // SYN PLL lock signal
     .frq_mute_n_o       (frq_mute_n),           // Mute the synthesizer while waiting for lock
+
+    .tweak_pwr_o        (tweak_power),          // pulsed after successful frequency change so power processor will reset power 
 
     .status_o           (frq_status)            // 0=Busy, SUCCESS when done, or an error code
   );
@@ -972,6 +978,8 @@ end
     .pwr_fifo_ren_o     (pwr_fifo_ren),         // power processor fifo read line
     .pwr_fifo_mt_i      (pwr_fifo_mt),          // power fifo empty flag
     .pwr_fifo_count_i   (pwr_fifo_count),       // power fifo count
+
+    .tweak_power_i      (tweak_power),          // pulsed when frequency changes, reset power level
     
     .vga_higain_i       (config_word[0]),       // default to 1, hi gain mode
     .vga_dacctla_i      (config_word[1]),       // DAC control bit. Normally fix A, control dac B

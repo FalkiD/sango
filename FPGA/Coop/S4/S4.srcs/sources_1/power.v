@@ -64,6 +64,8 @@ module power #(parameter FILL_BITS = 4)
   output reg            pwr_fifo_ren_o,           // fifo read line
   input  wire           pwr_fifo_mt_i,            // fifo empty flag
   input  wire [FILL_BITS-1:0] pwr_fifo_count_i,   // fifo count
+  
+  input  wire           tweak_power_i,            // one-tick pulse when frequency change finished, reset power
 
   input  wire           vga_higain_i,             // default to 1, high gain mode
   input  wire           vga_dacctla_i,            // DAC control A bit. Normally fix A, control dac B
@@ -120,6 +122,7 @@ module power #(parameter FILL_BITS = 4)
   reg  [1:0]      modifier;           // state modifer for host set power opcode and initialize DAC's
   reg  [2:0]      init_wordnum;       // count of initialization words sent. Initially 4 words to setup
   reg  [7:0]      dac_control;        // defaults to B only, change w/CONFIG opcode
+  reg             tweak_power;        // tweak power after frequency change has finished
   
   // interpolation multiplier vars
   reg  [31:0]     dbmA;
@@ -298,6 +301,11 @@ module power #(parameter FILL_BITS = 4)
             dbmx10_2490[calidx_i] <= caldata_i;
         end
       end
+
+      // Check for tweak power request, latch it & process it when idle
+      if(tweak_power_i == 1'b1 && tweak_power == 1'b0) begin
+        tweak_power <= 1'b1;
+      end
     
       case(state)
         PWR_WAIT: begin
@@ -319,6 +327,9 @@ module power #(parameter FILL_BITS = 4)
             state <= PWR_INIT1;
             init_wordnum <= 3'd0;
             modifier <= INIT_DACS;
+          end
+          else if(tweak_power == 1'b1) begin
+            state <= PWR_DBM1;    // jump into FSM using dbmx10_o for setting
           end
           else
             status_o <= `SUCCESS;
@@ -450,13 +461,24 @@ module power #(parameter FILL_BITS = 4)
           // min is 40dBm*256*10=102,400
           // max is 65dBm*256*10=166,400 => 0x28a00. Use 12 bits beginning at d8
           multiply <= 1'b0;
-          if(DBM_OFFSET[19:8] >= q7dot8x10[19:8])
-            dbm_idx <= 12'd0;
-          else if(q7dot8x10[19:8] >= DBM_MAX[19:8])
-            dbm_idx <= DBM_MAX_OFFSET;
-          else
-            dbm_idx <= q7dot8x10[19:8] - DBM_OFFSET[19:8]; // (/256.0) - 400, the array index for requested power
-          dbmx10_o <= q7dot8x10[19:8];  // present power setting for all top-level modules to access, dBm x10
+          if(tweak_power == 1'b1) begin
+              if(DBM_OFFSET[19:8] >= dbmx10_o)
+                dbm_idx <= 12'd0;
+              else if(dbmx10_o >= DBM_MAX[19:8])
+                dbm_idx <= DBM_MAX_OFFSET;
+              else
+                dbm_idx <= dbmx10_o - DBM_OFFSET[19:8]; // (/256.0) - 400, the array index for requested power
+              tweak_power <= 1'b0;
+          end
+          else begin
+              if(DBM_OFFSET[19:8] >= q7dot8x10[19:8])
+                dbm_idx <= 12'd0;
+              else if(q7dot8x10[19:8] >= DBM_MAX[19:8])
+                dbm_idx <= DBM_MAX_OFFSET;
+              else
+                dbm_idx <= q7dot8x10[19:8] - DBM_OFFSET[19:8]; // (/256.0) - 400, the array index for requested power
+              dbmx10_o <= q7dot8x10[19:8];  // present power setting for all top-level modules to access, dBm x10
+          end
           slope_is_neg <= 1'b0;         // clear a flag
           state <= PWR_SLOPE1;
         end

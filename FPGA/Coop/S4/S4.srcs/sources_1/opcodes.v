@@ -204,7 +204,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     //wire         pulse_busy;  just use pulse_busy_i
     wire         pwr_busy;
     wire         frq_busy;
-
+    
     reg  [3:0]   pwrcal_mode;
     reg  [11:0]  pwr_caldata;        // put together 12-bit word to write into power table
 
@@ -279,7 +279,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 
             // 07-Feb refactor
             // If IDLE and MMC fifo is empty check for all other 
-            // requests: start a pattern, run pattern opcode, trigger
+            // requests: start a pattern, run pattern opcode, trigger.
             extrigg <= 1'b0;    // 1-tick signal to catch rising edge of tigger
             if(state == `STATE_IDLE && fifo_rd_count_i == 0) begin
                 // 1) check for pattern start request if pattern not running

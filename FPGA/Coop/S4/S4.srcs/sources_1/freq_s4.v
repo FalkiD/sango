@@ -60,6 +60,8 @@ module freq_s4 #(parameter FILL_BITS = 6,
   input  wire             syn_ss_i,          // SYN SPI SS signal
   input  wire             syn_lock_i,        // SYN PLL lock signal
   output reg              frq_mute_n_o,      // control SYN mute signal while waiting for PLL lock
+  
+  output wire             tweak_pwr_o,       // pulse so power processor will reset power after successful frequency change
 
   output reg  [7:0]       status_o           // 0=Busy, SUCCESS when done, or an error code
 );
@@ -70,7 +72,6 @@ module freq_s4 #(parameter FILL_BITS = 6,
   reg [6:0]       next_spiwr_state;   // saved while waiting for SPI writes to finish before next request
 
   reg  [31:0]      frequency = 32'd0;
-  assign frequency_o = frequency;     // keep global frequency updated
   
   // Latency for multiply operation, Xilinx multiplier
   localparam MULTIPLIER_CLOCKS = 6'd6;
@@ -82,6 +83,8 @@ module freq_s4 #(parameter FILL_BITS = 6,
   reg  [31:0]      K = 32'h30037BD4;    //32'h0C00DEF5 (*4 since using 100MHz instead of 400MHz);        // Tuning word scale
   wire [63:0]      FTW;                     // FTW calculated
   reg              multiply;
+  
+  reg              tweak_power;         // one-tick pulse for power processor to reset power
 
   // Xilinx multiplier to perform 32 bit multiplication, output is 64 bits
   ftw_mult ftw_multiplier (
@@ -91,7 +94,7 @@ module freq_s4 #(parameter FILL_BITS = 6,
      .CE(multiply),
      .P(FTW)
   );      
-    
+
   /////////////////////////////////
   // Frequency state definitions //
   /////////////////////////////////
@@ -118,9 +121,13 @@ module freq_s4 #(parameter FILL_BITS = 6,
       ftw_o <= 32'd0;
       ftw_wen_o <= 1'b0;
       frq_mute_n_o <= 1'b1; 
+      tweak_power <= 1'b0;
       status_o <= `SUCCESS;
     end
     else if(freq_en == 1'b1) begin
+    
+      tweak_power <= 1'b0;      // one-tick pulse
+    
       if(frequency == 0) begin
         // FPGA was just powered ON, initialize all HW... TBD
         frequency <= 32'd2450000000;    // Hz
@@ -163,11 +170,6 @@ module freq_s4 #(parameter FILL_BITS = 6,
         ftw_wen_o = 1'b1;
         state <= FRQ_FIFO_WRT;
       end
-//      FRQ_FIFO_WRT: begin
-//        ftw_wen_o = 1'b0;
-//        state <= FRQ_IDLE;
-//        status_o <= `SUCCESS;
-//      end
       FRQ_FIFO_WRT: begin
         ftw_wen_o = 1'b0;
         state <= FRQ_DDS_SSON;
@@ -195,6 +197,7 @@ module freq_s4 #(parameter FILL_BITS = 6,
       FRQ_SYN_LOCK: begin               // Wait up to SYN_LOCK_MS for lock signal
         if(syn_lock_i == 1'b1) begin
             frq_mute_n_o <= 1'b1;       // Done, un-mute SYN
+            tweak_power <= 1'b1;        // one-tick pulse for power processor to reset power after frequency change
             state <= FRQ_IDLE;
             status_o <= `SUCCESS;
         end
@@ -202,6 +205,7 @@ module freq_s4 #(parameter FILL_BITS = 6,
     `ifdef XILINX_SIMULATOR
             if(synlock_counter == 32'd800000) begin
                 frq_mute_n_o <= 1'b1;       // Done, un-mute SYN
+                tweak_power <= 1'b1;        // one-tick pulse for power processor to reset power after frequency change
                 state <= FRQ_IDLE;
                 status_o <= `SUCCESS;
             end
@@ -222,5 +226,10 @@ module freq_s4 #(parameter FILL_BITS = 6,
       endcase
     end
   end
+  
+  // continuous assignments
+  assign frequency_o = frequency;     // keep global frequency updated
+  assign tweak_pwr_o = tweak_power;   // one-tick pulse for power processor to reset power
+  
 endmodule
     
