@@ -398,7 +398,7 @@ wire         pwr_calibrate;
 //wire [11:0]  Y1;
 //wire [31:0]  slope;
 //wire [47:0]  intercept;
-//wire [11:0]  interp_dac;
+wire [11:0]  interp_dac;
 
 // Pulse processor & fifo wires
 wire [63:0]  pls_fifo_dat_i;          // to pulse fifo from opc
@@ -914,7 +914,7 @@ end
     .opc_status2_i     ({8'd0, mmc_rspf_cnt[7:0], 8'd0, mmc_fif_cnt[7:0]}), // rsp_fifo_count__opc_fifo_count
     .opc_status3_i     (dbg_opcodes),           // Upr16[OpcMode(8)__patadr_count(8)]____Lwr16[first_opcode__last_opcode]
     .sys_status4_i     (frequency),                             // system frequency setting in Hertz
-    .sys_status5_i     ({15'h0, SYN_STAT, 4'd0, dbm_x10}),      // MS 16 bits=SYN_STAT pin,1=PLL_LOCK, 0=not locked. 16 LSB's=power(dBm x10) setting
+    .sys_status5_i     ({interp_dac, 3'h0, SYN_STAT, 4'd0, dbm_x10}), // Top 12 bits interp_dac, 4 bits=SYN_STAT(PLL_LOCK). 16 LSB's=power(dBm x10) setting
     .sys_status6_i     (dbg_ptndata)                            // Last ptn opc after ptn run upper 8. Lower 24 measurement fifo count
     );
 
@@ -993,14 +993,14 @@ end
     
     .dbmx10_o           (dbm_x10),              // present power setting for all top-level modules to access
 
-    .status_o           (pwr_status)            // 0=busy, SUCCESS when done, or an error code
+    .status_o           (pwr_status),            // 0=busy, SUCCESS when done, or an error code
     
     // Frequency interpolation debugging wires
 //    .Y2_o               (Y2),
 //    .Y1_o               (Y1),
 //    .slope_o            (slope),
 //    .intercept_o        (intercept),
-//    .dac_o              (interp_dac)
+    .dac_o              (interp_dac)
   );
 
   // Pulse processor instance. 

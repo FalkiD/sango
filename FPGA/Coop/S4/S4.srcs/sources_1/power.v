@@ -80,14 +80,14 @@ module power #(parameter FILL_BITS = 4)
   
   output reg  [11:0]    dbmx10_o,                 // present power setting for all top-level modules to access
   
-  output reg  [7:0]     status_o       // 0=busy, SUCCESS when done, or an error code
+  output reg  [7:0]     status_o,       // 0=busy, SUCCESS when done, or an error code
 
 //  // Debugging interpolation registers
 //  output reg  [11:0]    Y2_o,
 //  output reg  [11:0]    Y1_o,
 //  output reg  [31:0]    slope_o,
 //  output reg  [47:0]    intercept_o,
-//  output reg  [11:0]    dac_o
+  output reg  [11:0]    dac_o
 );
 
   localparam DBM_OFFSET       = 24'd102400;  // 40.0 dBm * 256 * 10
@@ -605,7 +605,7 @@ module power #(parameter FILL_BITS = 4)
           // Ready to send data to both DAC's. Use this FSM to do it, 
           // except value is not in input fifo. Set next_state to PWR_VGA2
           // and let it run.
-          // TBD dac_o <= result[43:32];
+          dac_o <= result[43:32];       // TBD debugging
           power <= {8'd0, dac_control, result[43:32], 4'd0}; 
           state <= PWR_VGA2;        // write 1st byte of 3
           VGA_SSn_o <= 1'b0;

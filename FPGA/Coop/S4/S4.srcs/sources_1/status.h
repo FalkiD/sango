@@ -61,6 +61,7 @@
 `define ERR_WR_PTN_RAM          8'h25
 `define ERR_MEAS_TYPE           8'h26
 `define ERR_PLL_LOCK            8'h27
+`define ERR_DUTY_CYCLE          8'h28
 
 `define ERR_PTN_FIFO_FULL       8'h30   // Pattern processor error, opcode fifo is full
 
