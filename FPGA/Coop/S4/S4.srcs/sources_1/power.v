@@ -273,6 +273,7 @@ module power #(parameter FILL_BITS = 4)
       slope_is_neg <= 1'b0;
       dac_control <= CTL_DACB_ONLY;     // defaults to B only, change w/CONFIG opcode
       result <= 48'h0000_0000_0000;
+      tweak_power <= 1'b0;
     end
     else if(power_en == 1) begin
 
@@ -605,7 +606,7 @@ module power #(parameter FILL_BITS = 4)
           // Ready to send data to both DAC's. Use this FSM to do it, 
           // except value is not in input fifo. Set next_state to PWR_VGA2
           // and let it run.
-          dac_o <= result[43:32];       // TBD debugging
+          dac_o <= result[43:32]; // TBD remove this
           power <= {8'd0, dac_control, result[43:32], 4'd0}; 
           state <= PWR_VGA2;        // write 1st byte of 3
           VGA_SSn_o <= 1'b0;
