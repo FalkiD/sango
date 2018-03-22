@@ -107,15 +107,15 @@
 
         <TextBlock Grid.Row="3" Text="Frequency(mHz):" HorizontalAlignment="Right"
                     Style="{StaticResource LabelH4}"/>
-        <TextBox Grid.Row="3" Grid.Column="1"
-                Text="{Binding Frequency, Converter={StaticResource frequencyConverter}}"
-                        Style="{StaticResource TextBoxH4}">
-            <TextBox.InputBindings>
+        <TextBlock Grid.Row="3" Grid.Column="1"
+                    Text="{Binding Frequency, Converter={StaticResource frequencyConverter}}"
+                    Style="{StaticResource LabelH4}">
+            <!--<TextBox.InputBindings>
                 <KeyBinding Gesture="Enter" 
                     Command="{Binding CmdFreq}"
                     CommandParameter="{Binding RelativeSource={RelativeSource FindAncestor,AncestorType={x:Type TextBox}},Path=Text}" />
-            </TextBox.InputBindings>
-        </TextBox>
+            </TextBox.InputBindings>-->
+        </TextBlock>
 
         <TextBlock Grid.Row="4" Text="Averages:" HorizontalAlignment="Right"
                     Style="{StaticResource LabelH4}"/>
@@ -170,16 +170,19 @@
                 Text="{Binding Compression, Converter={StaticResource powerConverter}}"
                 Style="{StaticResource TextBoxH4}">
         </TextBox>
+
+        <!--Re-use this button for now to save DAC values in readable format for interpolation debugging-->
+        <!--Content="JSON to Driver EEPROM"-->
         <Button Grid.Row="9" Grid.Column="2" 
-                Content="JSON to Driver EEPROM" 
-                Command="{Binding CmdJsonToDriver}"
+            Content="Write InterpDebug Data"
+            Command="{Binding CmdJsonToDriver}"
                 Focusable="True"
                 Style="{StaticResource ButtonKeyNormal}"/>
-        <Button Grid.Row="9" Grid.Column="3" 
+        <!--<Button Grid.Row="9" Grid.Column="3" 
                 Content="JSON from Driver EEPROM" 
                 Command="{Binding CmdJsonFromDriver}"
                 Focusable="True"
-                Style="{StaticResource ButtonKeyNormal}"/>
+                Style="{StaticResource ButtonKeyNormal}"/>-->
 
         <TextBlock Grid.Row="10" Text="Dac Start(hex):" HorizontalAlignment="Right"
                     Style="{StaticResource LabelH4}"

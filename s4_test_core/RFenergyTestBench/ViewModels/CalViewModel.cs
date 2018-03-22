@@ -759,6 +759,29 @@ namespace RFenergyUI.ViewModels
             }
         }
 
+        void ReadCalResults(string resultsFile, ref Collection<PowerCalData> data)
+        {
+            string filename = "";
+            try
+            {
+                filename = Environment.GetFolderPath(Environment.SpecialFolder.CommonDocuments) +
+                    "\\" + resultsFile;
+                if (File.Exists(filename) == false)
+                    return;
+                StreamReader fin = new StreamReader(filename);
+                if (fin != null)
+                {
+                    string json = fin.ReadToEnd();
+                    fin.Close();
+                    data = JsonConvert.DeserializeObject<Collection<PowerCalData>>(json);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new ApplicationException(string.Format("Exception reading CalResults from JSON file{0}:{1}", filename, ex.Message));
+            }
+        }
+
         void RestoreDriverGain(string driverFile, BackgroundWorker wnd)
         {
             string filename = "";
@@ -1171,6 +1194,8 @@ namespace RFenergyUI.ViewModels
         public ReactiveCommand<string> CmdJsonFromDriver { get; protected set; }
         IObservable<string> CmdJsonRun(bool toDriver)
         {
+            // For now comandeer this func to write cal entries to text file for interpolation
+            // verification/debugging
             return Observable.Start(() =>
             {
                 string result = "";
@@ -1181,33 +1206,73 @@ namespace RFenergyUI.ViewModels
                         string filename = "";
                         try
                         {
-                            if (DriverSN == "1")
-                                throw new ApplicationException("Driver serial number required, read tag 'drsn'");
-                            string driverFile = string.Format("PowerCalResults{0}_Driver_{1}.json", Frequency, DriverSN);
-                            filename = Environment.GetFolderPath(Environment.SpecialFolder.CommonDocuments) +
-                                "\\" + driverFile;
-                            if (File.Exists(filename))
+                            // Read in 5 frequency cal tables
+                            Collection<PowerCalData>[] caltables = new Collection<PowerCalData>[5];
+                            for (int k = 0; k < 5; ++k)
                             {
-                                StreamReader fin = new StreamReader(filename);
-                                if (fin != null)
-                                {
-                                    string json = fin.ReadToEnd();
-                                    fin.Close();
-                                    byte[] jsonData = System.Text.Encoding.ASCII.GetBytes(json);
-                                    int status = MainViewModel.ICmd.WriteDriverCalData(Frequency, jsonData, -1);
-                                    if (status == 0)
-                                        result = "Driver caldata written.";
-                                    else result = "DriverGain invalid or missing data";
-                                }
-                                else
-                                    result = string.Format("Error reading DriverGain JSON file{0}", filename);
+                                int frq = 2410 + (k*20);
+                                string resultsFile = string.Format("PowerCalResults{0}.json", frq);
+                                filename = Environment.GetFolderPath(Environment.SpecialFolder.CommonDocuments) +
+                                                                        "\\" + resultsFile;
+                                ReadCalResults(resultsFile, ref caltables[k]);
                             }
-                            else
-                                result = string.Format("DriverGain JSON file{0} not found", filename);
+                            // sanity check on data, 1st entry is 40.0dBm
+                            if (caltables[0][0].ExternaldBm < 39.6 ||
+                                caltables[0][0].ExternaldBm > 40.4)
+                            {
+                                result += string.Format("Unexpected 1st entry power level, expect 40.0dBm, 1st entry={0:f1}\r\n",
+                                                        caltables[0][0].ExternaldBm);
+                            }
+
+                            string dataFile = "CalSummary.csv";
+                            filename = Environment.GetFolderPath(Environment.SpecialFolder.CommonDocuments) +
+                                                                        "\\" + dataFile;
+                            StreamWriter fout = new StreamWriter(filename, false);
+                            if (fout != null)
+                            {
+                                // Show odd condition in file if detected
+                                if(result.Length > 0)
+                                    fout.WriteLine(result);
+
+                                fout.WriteLine("S4 CalResults; DAC value summary");
+                                fout.WriteLine("dBm,2410(hex),2430(hex),2450(hex),2470(hex),2490(hex),2410,2430,2450,2470,2490");
+                                for (int k = 0; k < 41; ++k)
+                                {
+                                    fout.WriteLine("\"{0:f1}\",\"{1:x03}\",\"{2:x03}\",\"{3:x03}\",\"{4:x03}\",\"{5:x03}\",\"{1}\",\"{2}\",\"{3}\",\"{4}\",\"{5}\"",
+                                                    caltables[0][k].ExternaldBm, caltables[0][k].IQDacMag,
+                                                    caltables[1][k].IQDacMag, caltables[2][k].IQDacMag,
+                                                    caltables[3][k].IQDacMag, caltables[4][k].IQDacMag);
+                                }
+                                fout.Close();
+                            }
+                            //if (DriverSN == "1")
+                            //    throw new ApplicationException("Driver serial number required, read tag 'drsn'");
+                            //string driverFile = string.Format("PowerCalResults{0}_Driver_{1}.json", Frequency, DriverSN);
+                            //filename = Environment.GetFolderPath(Environment.SpecialFolder.CommonDocuments) +
+                            //    "\\" + driverFile;
+                            //if (File.Exists(filename))
+                            //{
+                            //    StreamReader fin = new StreamReader(filename);
+                            //    if (fin != null)
+                            //    {
+                            //        string json = fin.ReadToEnd();
+                            //        fin.Close();
+                            //        byte[] jsonData = System.Text.Encoding.ASCII.GetBytes(json);
+                            //        int status = MainViewModel.ICmd.WriteDriverCalData(Frequency, jsonData, -1);
+                            //        if (status == 0)
+                            //            result = "Driver caldata written.";
+                            //        else result = "DriverGain invalid or missing data";
+                            //    }
+                            //    else
+                            //        result = string.Format("Error reading DriverGain JSON file{0}", filename);
+                            //}
+                            //else
+                            //    result = string.Format("DriverGain JSON file{0} not found", filename);
                         }
                         catch (Exception ex)
                         {
-                            result = string.Format("Exception reading DriverGain JSON file{0}:{1}", filename, ex.Message);
+                            //result = string.Format("Exception reading DriverGain JSON file{0}:{1}", filename, ex.Message);
+                            result = string.Format("Exception writing CalResults file{0}:{1}", filename, ex.Message);
                         }
                     }
                     else result = "MainViewModel.ICmd interface is null, can't execute anything";
