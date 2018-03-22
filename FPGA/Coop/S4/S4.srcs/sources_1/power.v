@@ -113,6 +113,7 @@ module power #(parameter FILL_BITS = 4)
   reg  [6:0]      state = 0;
   reg  [6:0]      next_state;          // saved while waiting for SPI writes
 
+  reg  [31:0]     frequency;          // copy frequency to use for calculations(global frq can change during calcs)
   reg  [31:0]     power = 0;          // 12 bits of dBm x10 (400 to 650) or Cal data
   reg  [38:0]     pwr_word;           // whole 39 bit word (32 bits cal data, 7 bits opcode)
   reg  [6:0]      pwr_opcode;         // which power opcode, user request or cal?
@@ -159,7 +160,9 @@ module power #(parameter FILL_BITS = 4)
   // power tables initialized flag
   reg             tbl_init = 1'b0;
 
-  // Xilinx multiplier to perform 16 bit multiplication, output is 32 bits
+  // Xilinx multiplier to perform 32 bit multiplication, output is 64 bits
+  // way overkill but uses same module as interpolation multiplier.
+  // Maybe create 16-bit unisgned multiplier for dBm X 10
   ftw_mult dbm_multiplier (
      .CLK(sys_clk),
      .A(power),
@@ -168,8 +171,9 @@ module power #(parameter FILL_BITS = 4)
      .P(q7dot8x10)
   );      
 
-  // Xilinx multiplier to perform 16 bit multiplication, output is 32 bits
-  // this one for interpolation between power tables
+  // Xilinx multiplier to perform 32 bit multiplication, output is 64 bits
+  // this one for interpolation between power tables, must be signed numbers
+  // (slope can be negative)
   ftw_mult interp_mult (
      .CLK(sys_clk),
      .A(dbmA),
@@ -344,6 +348,43 @@ module power #(parameter FILL_BITS = 4)
             dbmx10_2450[0] <= 12'hfff;
             dbmx10_2470[0] <= 12'hfff;
             dbmx10_2490[0] <= 12'hfff;
+            
+    `ifdef XILINX_SIMULATOR
+        dbmx10_2410[0] <= 12'hdcd;
+        dbmx10_2430[0] <= 12'hddb;
+        dbmx10_2450[0] <= 12'hdd1;
+        dbmx10_2470[0] <= 12'hdd3;
+        dbmx10_2490[0] <= 12'hdf6;
+
+        // 42.0 dBm
+        dbmx10_2410[20] <= 12'hdaa;
+        dbmx10_2430[20] <= 12'hdb5;
+        dbmx10_2450[20] <= 12'hda8;
+        dbmx10_2470[20] <= 12'hdac;
+        dbmx10_2490[20] <= 12'hdd1;
+
+        // 50.0 dBm
+        dbmx10_2410[100] <= 12'hd12;
+        dbmx10_2430[100] <= 12'hd0d;
+        dbmx10_2450[100] <= 12'hce3;
+        dbmx10_2470[100] <= 12'hcf4;
+        dbmx10_2490[100] <= 12'hdf1;
+
+        // 55.0dBm
+        dbmx10_2410[150] <= 12'hc8e;
+        dbmx10_2430[150] <= 12'hc75;
+        dbmx10_2450[150] <= 12'hc2e;
+        dbmx10_2470[150] <= 12'hc54;
+        dbmx10_2490[150] <= 12'hc8b;
+
+        // 60.0 dBm
+        dbmx10_2410[200] <= 12'hb23;
+        dbmx10_2430[200] <= 12'haec;
+        dbmx10_2450[200] <= 12'ha77;
+        dbmx10_2470[200] <= 12'ha86;
+        dbmx10_2490[200] <= 12'h60e;
+    `endif
+            
             state <= PWR_IDLE;
           end
           else begin
@@ -481,12 +522,13 @@ module power #(parameter FILL_BITS = 4)
               dbmx10_o <= q7dot8x10[19:8];  // present power setting for all top-level modules to access, dBm x10
           end
           slope_is_neg <= 1'b0;         // clear a flag
+          frequency <= frequency_i;     // save calculation frequency
           state <= PWR_SLOPE1;
         end
         PWR_SLOPE1: begin
           // interpolate between power tables
           // jump to state <= PWR_VGA2; once power variable is set
-          if(frequency_i <= FRQ2) begin
+          if(frequency <= FRQ2) begin
           // slope = ((dbmx10_2430[dbm_idx] - dbmx10_2410[dbm_idx]))/(FRQ_DELTA); // (Yb-Ya)/(Xb-Xa)
           // Using (slope * 2**32) ==> (1/FRQ_DELTA) * 2**32 = 214.74836 ~= 215
           // slope * 2**32 ~= 215 * (dbmx10_2430[dbm_idx] - dbmx10_2410[dbm_idx]);
@@ -501,14 +543,14 @@ module power #(parameter FILL_BITS = 4)
 //            Y2_o <= dbmx10_2430[dbm_idx];
 //            Y1_o <= dbmx10_2410[dbm_idx];
           end
-          else if(frequency_i <= FRQ3) begin
+          else if(frequency <= FRQ3) begin
             dbmA <= dbmx10_2450[dbm_idx] - dbmx10_2430[dbm_idx];    
 //            if(dbmx10_2450[dbm_idx] < dbmx10_2430[dbm_idx])
 //              slope_is_neg <= 1'b1;
 //            Y2_o <= dbmx10_2450[dbm_idx];
 //            Y1_o <= dbmx10_2430[dbm_idx];
           end
-          else if(frequency_i <= FRQ4) begin
+          else if(frequency <= FRQ4) begin
             dbmA <= dbmx10_2470[dbm_idx] - dbmx10_2450[dbm_idx];           
 //            if(dbmx10_2470[dbm_idx] < dbmx10_2450[dbm_idx])
 //              slope_is_neg <= 1'b1;
@@ -542,15 +584,15 @@ module power #(parameter FILL_BITS = 4)
           // 2**32 * b = 2**32 * m * X2  -  2**32 * Y2
           // X2(Frq2) into multiplicand, calculate (2**32*slope*X2)
           // Y2 * 2**32 into intercept register for later step
-          if(frequency_i <= FRQ2) begin
+          if(frequency <= FRQ2) begin
             interp1 <= FRQ2;
             intercept <= {4'd0, dbmx10_2430[dbm_idx], 32'h0000_0000};  // setup for later step
           end
-          else if(frequency_i <= FRQ3) begin
+          else if(frequency <= FRQ3) begin
             interp1 <= FRQ3;            
             intercept <= {4'h0, dbmx10_2450[dbm_idx], 32'h0000_0000};  // setup for later step
           end
-          else if(frequency_i <= FRQ4) begin
+          else if(frequency <= FRQ4) begin
             interp1 <= FRQ4;           
             intercept <= {4'd0, dbmx10_2470[dbm_idx], 32'h0000_0000};  // setup for later step
           end
@@ -577,7 +619,7 @@ module power #(parameter FILL_BITS = 4)
           // we have (slope*2**32) & intercept*2**32, calculate our dac value
           // dac <= ((slope*2**32*frequency) + intercept*2**32) >> 32;          
           dbmA <= slope;
-          interp1 <= frequency_i;        
+          interp1 <= frequency;        
 
           state <= PWR_DBM2;
         end

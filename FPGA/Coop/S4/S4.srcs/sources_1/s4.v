@@ -915,7 +915,6 @@ end
     .opc_status3_i     (dbg_opcodes),           // Upr16[OpcMode(8)__patadr_count(8)]____Lwr16[first_opcode__last_opcode]
     .sys_status4_i     (frequency),                             // system frequency setting in Hertz
     .sys_status5_i     ({interp_dac, 3'h0, SYN_STAT, 4'd0, dbm_x10}), // Top 12 bits interp_dac, 4 bits=SYN_STAT(PLL_LOCK). 16 LSB's=power(dBm x10) setting
-    //.sys_status5_i     ({15'h0, SYN_STAT, 4'd0, dbm_x10}),      // MS 16 bits=SYN_STAT pin,1=PLL_LOCK, 0=not locked. 16 LSB's=power(dBm x10) setting
     .sys_status6_i     (dbg_ptndata)                            // Last ptn opc after ptn run upper 8. Lower 24 measurement fifo count
     );
 

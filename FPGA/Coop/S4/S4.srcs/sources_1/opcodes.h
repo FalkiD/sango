@@ -20,6 +20,7 @@
 `define CALPWR              7'h0E
 `define CALPTBL             7'h0F
 `define CALZMON             7'h10
+`define CALVFY              7'h11
 // Change bad_opcode() task in opcodes.v when adding/changing opcode list
 
 // Patterns, 0x20 based

@@ -1,4 +1,4 @@
--- (c) Copyright 1995-2017 Xilinx, Inc. All rights reserved.
+-- (c) Copyright 1995-2018 Xilinx, Inc. All rights reserved.
 -- 
 -- This file contains confidential and proprietary information
 -- of Xilinx, Inc. and is protected under U.S. and
@@ -118,9 +118,9 @@ BEGIN
       C_HAS_SCLR => 0,
       C_LATENCY => 6,
       C_A_WIDTH => 32,
-      C_A_TYPE => 1,
+      C_A_TYPE => 0,
       C_B_WIDTH => 32,
-      C_B_TYPE => 1,
+      C_B_TYPE => 0,
       C_OUT_HIGH => 63,
       C_OUT_LOW => 0,
       C_MULT_TYPE => 1,

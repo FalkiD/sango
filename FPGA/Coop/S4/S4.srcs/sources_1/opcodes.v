@@ -1057,6 +1057,10 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     state <= `STATE_BEGIN_RESPONSE;                
                 end
             end
+            `CALVFY: begin  // return calibration table data for verification
+            
+            
+            end
             default: begin
                 status_o <= `ERR_INVALID_OPCODE;
                 rsp_length <= 0;
@@ -1252,7 +1256,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     function bad_opcode;
     input [6:0] opcode;    
     begin
-        if((opcode > `CALZMON && opcode < `PTN_PATCLK) ||
+        if((opcode > `CALVFY && opcode < `PTN_PATCLK) ||
            (opcode > `PTN_BRANCH && opcode < `MEAS_ZMSIZE) ||
            (opcode > `MEAS)) begin 
             bad_opcode = 1'b1;
