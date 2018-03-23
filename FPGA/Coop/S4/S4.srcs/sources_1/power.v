@@ -161,8 +161,8 @@ module power #(parameter FILL_BITS = 4)
   reg             tbl_init = 1'b0;
 
   // Xilinx multiplier to perform 32 bit multiplication, output is 64 bits
-  // way overkill but uses same module as interpolation multiplier.
-  // Maybe create 16-bit unisgned multiplier for dBm X 10
+  // way overkill but uses same module as frequency processor.
+  // Maybe create 16-bit unisgned multiplier for dBm X 10?
   ftw_mult dbm_multiplier (
      .CLK(sys_clk),
      .A(power),
@@ -172,9 +172,9 @@ module power #(parameter FILL_BITS = 4)
   );      
 
   // Xilinx multiplier to perform 32 bit multiplication, output is 64 bits
-  // this one for interpolation between power tables, must be signed numbers
+  // This instance, for interpolation between power tables, must be signed numbers
   // (slope can be negative)
-  ftw_mult interp_mult (
+  interp_mult freq_interpolation_mult (
      .CLK(sys_clk),
      .A(dbmA),
      .B(interp1),
