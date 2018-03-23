@@ -38,7 +38,7 @@ u 1.5 ms w 3000002 6 03B70200; -- Write CMD6 (SWITCH) set bus width 8 bits
 --u 1.0 ms w 300002c 0;
 
 --Frequency opcode
-u 2.0 ms w 4000000 04 06 01 00 00 37 04 04 80 AE A5 8F; --Set power 55.0 dBm, Set frequency 2410MHz 
+u 2.0 ms w 4000000 04 04 00 72 6f 91 00 00 00 00 00 00; --Set frequency 2440MHz, interpolate & tweak power 
 u 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
 u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
 u 0.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)

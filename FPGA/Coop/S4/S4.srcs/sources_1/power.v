@@ -348,43 +348,43 @@ module power #(parameter FILL_BITS = 4)
             dbmx10_2450[0] <= 12'hfff;
             dbmx10_2470[0] <= 12'hfff;
             dbmx10_2490[0] <= 12'hfff;
-            
-    `ifdef XILINX_SIMULATOR
-        dbmx10_2410[0] <= 12'hdcd;
-        dbmx10_2430[0] <= 12'hddb;
-        dbmx10_2450[0] <= 12'hdd1;
-        dbmx10_2470[0] <= 12'hdd3;
-        dbmx10_2490[0] <= 12'hdf6;
 
-        // 42.0 dBm
-        dbmx10_2410[20] <= 12'hdaa;
-        dbmx10_2430[20] <= 12'hdb5;
-        dbmx10_2450[20] <= 12'hda8;
-        dbmx10_2470[20] <= 12'hdac;
-        dbmx10_2490[20] <= 12'hdd1;
+// TBD Debugging, stuff in some real numbers for SIM
+//    `ifdef XILINX_SIMULATOR
+//        dbmx10_2410[0] <= 12'hdcd;
+//        dbmx10_2430[0] <= 12'hddb;
+//        dbmx10_2450[0] <= 12'hdd1;
+//        dbmx10_2470[0] <= 12'hdd3;
+//        dbmx10_2490[0] <= 12'hdf6;
 
-        // 50.0 dBm
-        dbmx10_2410[100] <= 12'hd12;
-        dbmx10_2430[100] <= 12'hd0d;
-        dbmx10_2450[100] <= 12'hce3;
-        dbmx10_2470[100] <= 12'hcf4;
-        dbmx10_2490[100] <= 12'hdf1;
+//        // 42.0 dBm
+//        dbmx10_2410[20] <= 12'hdaa;
+//        dbmx10_2430[20] <= 12'hdb5;
+//        dbmx10_2450[20] <= 12'hda8;
+//        dbmx10_2470[20] <= 12'hdac;
+//        dbmx10_2490[20] <= 12'hdd1;
 
-        // 55.0dBm
-        dbmx10_2410[150] <= 12'hc8e;
-        dbmx10_2430[150] <= 12'hc75;
-        dbmx10_2450[150] <= 12'hc2e;
-        dbmx10_2470[150] <= 12'hc54;
-        dbmx10_2490[150] <= 12'hc8b;
+//        // 50.0 dBm
+//        dbmx10_2410[100] <= 12'hd12;
+//        dbmx10_2430[100] <= 12'hd0d;
+//        dbmx10_2450[100] <= 12'hce3;
+//        dbmx10_2470[100] <= 12'hcf4;
+//        dbmx10_2490[100] <= 12'hdf1;
 
-        // 60.0 dBm
-        dbmx10_2410[200] <= 12'hb23;
-        dbmx10_2430[200] <= 12'haec;
-        dbmx10_2450[200] <= 12'ha77;
-        dbmx10_2470[200] <= 12'ha86;
-        dbmx10_2490[200] <= 12'h60e;
-    `endif
-            
+//        // 55.0dBm
+//        dbmx10_2410[150] <= 12'hc8e;
+//        dbmx10_2430[150] <= 12'hc75;
+//        dbmx10_2450[150] <= 12'hc2e;
+//        dbmx10_2470[150] <= 12'hc54;
+//        dbmx10_2490[150] <= 12'hc8b;
+
+//        // 60.0 dBm
+//        dbmx10_2410[200] <= 12'hb23;
+//        dbmx10_2430[200] <= 12'haec;
+//        dbmx10_2450[200] <= 12'ha77;
+//        dbmx10_2470[200] <= 12'ha86;
+//        dbmx10_2490[200] <= 12'h60e;
+//    `endif            
             state <= PWR_IDLE;
           end
           else begin

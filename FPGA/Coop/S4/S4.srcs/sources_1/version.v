@@ -43,9 +43,9 @@
 //                                 Bugfix, STATE_LENGTH went to STATE_DATA when rd_line OFF under
 //                                 certain 'input fifo length' related conditions. Added EXTRIG.
 //				   Released 15-Feb-2018
-// Revision 1.01.2  03/10/2018 RMR Refactor SYN, triggers from falling edge of DDS IOUP. If initialized,
-//                                 only does re-lock.
+// Revision 1.01.2  03/10/2018 RMR -Refactor SYN, triggers from falling edge of DDS IOUP. If initialized, only does re-lock.
 //                                 -Freq processor waits for DDS & SYN SPI & SYN lock, else error code
+//                                 -Freq interpolation works but requires power reset after (not automatic?) 
 //
 //------------------------------------------------------------------------------
 
