@@ -2,6 +2,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using RFenergyUI.ViewModels;
+using System.Reactive.Linq;
 
 namespace RFenergyUI.Views
 {
@@ -19,6 +20,14 @@ namespace RFenergyUI.Views
             DataContext = _vm;     // Bindings
             InitializeComponent();
             _initVm = true;
+
+            // setup observables for events
+            // if needed...
+            //var driverCalClick = Observable.FromEventPattern<EventArgs>(chkDriverCal, "Click");
+            //driverCalClick.Subscribe(evt =>
+            //{
+            //    _vm.OnDriverCalClick(evt.EventArgs)
+            //});
         }
 
         // startup operations after windows have been created

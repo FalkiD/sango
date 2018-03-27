@@ -216,7 +216,6 @@
                   Style="{StaticResource CheckBoxH4}"
                   IsChecked="{Binding DriverCal}"/>
 
-
         <Button Grid.Row="12" Grid.Column="0" 
                 Content="Coupler Offsets" 
                 Command="{Binding CmdCouplerOffsets}"

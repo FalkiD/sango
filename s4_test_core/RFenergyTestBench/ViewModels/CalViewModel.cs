@@ -22,6 +22,9 @@ namespace RFenergyUI.ViewModels
         const string STR_START_TMPCOEFF = "Temp Measure";
         const string STR_STOP_TMPCOEFF = "Stop Tmp Meas";
 
+        const double STARTING_TARGET_PA = 40.0;
+        const double STARTING_TARGET_DRV = 24.0;
+
         const int MAX_METER_BREAKPOINT = 2048;
         const int MIN_METER_BREAKPOINT = 0;
 
@@ -141,7 +144,7 @@ namespace RFenergyUI.ViewModels
             if (MainViewModel.ICmd.HwType == InstrumentInfo.InstrumentType.S4)
             {
                 Offsets = 44.0;
-                TargetStart = 40.0;
+                TargetStart = STARTING_TARGET_PA;
                 PowerStart = 20.0;
                 Compression = 3.0;
                 PowerStop = 50.0;
@@ -304,6 +307,7 @@ namespace RFenergyUI.ViewModels
                         if (MainViewModel.ICmd.HwType == InstrumentInfo.InstrumentType.S4 &&
                                     dBmTarget > PowerStart)
                             stepsize = InputStepSize / 2.0;
+                        // Enter binary search
                         do
                         {
                             if ((Math.Abs(externalPwr - dBmTarget) <= tolerance) ||
@@ -322,9 +326,13 @@ namespace RFenergyUI.ViewModels
                             }
 
                             double lastTry = nextValue;
-                            GetNextTry(ref nextValue, ref high, ref stepsize,
-                                       externalPwr, dBmTarget,
-                                       lastTry, MIN_ADJUST);
+                            if(GetNextTry(wrk, fout,
+                                           ref nextValue, ref high, ref stepsize,
+                                           externalPwr, dBmTarget,
+                                           lastTry, MIN_ADJUST) == false)
+                            {
+                                wrk.ReportProgress(0, "Delta < 1 LSB");
+                            }
                             status = SetCalPower(nextValue);
                             System.Threading.Thread.Sleep(MEAS_DELAY);
                             externalPwr = ReadExternal(dBmTarget);
@@ -583,14 +591,23 @@ namespace RFenergyUI.ViewModels
         /// Return 'nextValue' to try
         /// </summary>
         /// <returns>sets nextValue, dB in to try next
-        /// sets 'high' boolean</returns>
-        void GetNextTry(ref double nextValue, ref bool high,
+        /// sets 'high' boolean. Return true on success, false
+        /// if stepsize is less than one lsb.</returns>
+        bool GetNextTry(BackgroundWorker wrk, 
+                        StreamWriter fout,
+                        ref double nextValue, ref bool high,
                         ref double stepsize,
                         double externalPwr, 
                         double dBmTarget,
                         double lastTry, 
                         double MIN_ADJUST)
         {
+            // 23-Mar-2018 Make sure stepsize is >= 1 DAC LSB
+            ushort dacValue1 = MainViewModel.ICmd.DacFromDB(nextValue + stepsize);
+            ushort dacValue2 = MainViewModel.ICmd.DacFromDB(nextValue - stepsize);
+            ushort dacValue3 = MainViewModel.ICmd.DacFromDB(nextValue);
+            bool adjustStepsize = dacValue1 <= (dacValue3 + 1) &&
+                                    dacValue2 >= (dacValue3 - 1);
             if (externalPwr > dBmTarget)
             {
                 nextValue -= stepsize;
@@ -607,8 +624,16 @@ namespace RFenergyUI.ViewModels
                 if (high)
                     high = false;
             }
-            if (stepsize > 0.05)
+            //if (stepsize > 0.06)
+            //    stepsize /= 2.0;
+            if (adjustStepsize)
                 stepsize /= 2.0;
+            else
+            {
+                wrk.ReportProgress(0, "* Stepsize less than 1 LSB *");
+                return false;
+            }
+            return true;
         }
 
         void WriteCalEntry(BackgroundWorker wrk, StreamWriter fout, bool compression,
@@ -1914,7 +1939,14 @@ namespace RFenergyUI.ViewModels
         public bool DriverCal
         {
             get { return _driverCal; }
-            set { this.RaiseAndSetIfChanged(ref _driverCal, value); }
+            set
+            {
+                this.RaiseAndSetIfChanged(ref _driverCal, value);
+                if(value)
+                    TargetStart = STARTING_TARGET_DRV;
+                else
+                    TargetStart = STARTING_TARGET_PA;
+            }
         }
 
         bool _externalTrigger;
