@@ -944,9 +944,13 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     ptn_wen_o <= 1'b1; 
                     state <= `STATE_WR_PTN;
                 end
-                else
+                else begin
+                
+            dbg2_o[15:0] <= dbg2_o[15:0] + 16'h0001;            
+                
                     // pattern processor handles PTN_BRANCH, opcode processor does nothing in run mod
-                    next_opcode();                     
+                    next_opcode();
+                end
             end
             `PTN_PATCTL: begin
                 case(uinttmp[7:0])

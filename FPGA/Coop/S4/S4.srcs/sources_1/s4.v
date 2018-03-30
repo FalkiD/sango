@@ -187,8 +187,8 @@
 
 `define PATTERN_DEPTH               8192
 `define PATTERN_FILL_BITS           13
-`define PTN_TO_OPC_COUNT            16
-`define PTN_TO_OPC_BITS             4
+`define PTN_TO_OPC_COUNT            32
+`define PTN_TO_OPC_BITS             5
 `define PTN_CMD_BITS                4
 
 `define PROCESSOR_FIFO_DEPTH        8
@@ -489,6 +489,11 @@ wire [31:0]  config_word;           // various config bits, default 0x00000001, 
 
 wire         ptn_rst_n;             // pattern engine reset, clears pattern RAM
 wire         ptn_rst_opc_n;         // pattern reset from PTN_CTL[RESET] opcode
+
+// Debugging ptn branch opcode
+wire [15:0]     dbg_branch_count;     // debug, branch counter
+wire [15:0]     dbg_branch_opcs;      // debug, pattern branch opcode count
+wire [15:0]     dbg_branch_adr;       // debug, pattern branch address(tick)
 
 //------------------------------------------------------------------------
 // Start of logic
@@ -915,7 +920,8 @@ end
     .opc_status3_i     (dbg_opcodes),           // Upr16[OpcMode(8)__patadr_count(8)]____Lwr16[first_opcode__last_opcode]
     .sys_status4_i     (frequency),                             // system frequency setting in Hertz
     .sys_status5_i     ({interp_dac, 3'h0, SYN_STAT, 4'd0, dbm_x10}), // Top 12 bits interp_dac, 4 bits=SYN_STAT(PLL_LOCK). 16 LSB's=power(dBm x10) setting
-    .sys_status6_i     (dbg_ptndata)                            // Last ptn opc after ptn run upper 8. Lower 24 measurement fifo count
+//    .sys_status6_i     (dbg_ptndata)                            // Last ptn opc after ptn run upper 8. Lower 24 measurement fifo count
+    .sys_status6_i     ({dbg_branch_count[15:0], dbg_branch_opcs[7:0], dbg_branch_adr[7:0]}) // ptn branch info
     );
 
 
@@ -1067,6 +1073,10 @@ end
     .ptn_cmd_i          (ptn_cmd),              // Command/mode, used to clear sections of pattern RAM
 
     .trig_out_o         (ptn_adctrig),          // 10us pulse at start of pattern
+
+    .dbg_branch_o       (dbg_branch_count),     // debug, branch counter
+    .dbg_ptnbrs_o       (dbg_branch_opcs),      // debug, pattern branch opcode count
+    .dbg_brnadr_o       (dbg_branch_adr),       // debug, pattern branch address(tick)
 
     .status_o           (ptn_status)            // 0=busy, SUCCESS when done, or an error code
   );

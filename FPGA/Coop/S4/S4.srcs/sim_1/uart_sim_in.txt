@@ -64,7 +64,7 @@ u 2.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(W
 -- read opcode processor response
 u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
 u 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
-u 1.5 ms r 4000000 8; --Read response data from host adapter RAM  
+--u 1.5 ms r 4000000 8; --Read response data from host adapter RAM  
 
 --d 10 ms ; -- Wait to see 25ms blink end before starting pattern
 
@@ -95,7 +95,7 @@ u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
 u 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
 u 1.5 ms r 4000000 8; --Read response data from host adapter RAM  
 -- read status registers to get pattern processing status
---u 4.0 ms r 3000038 8; -- read debug registers
+u 4.0 ms r 3000038 8; -- read debug registers
 
 -- read measurement results, args are mode, unused, & 2-byte length, how many results to read.
 -- each result is 8 bytes, 16 bits each: FWDQ, FWDI, REFLQ, REFLI

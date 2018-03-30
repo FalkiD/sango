@@ -58,6 +58,10 @@ module patterns #(parameter PTN_DEPTH = 65536,
       input  wire [PCMD_BITS-1:0] ptn_cmd_i,          // Command/mode, used to clear sections of pattern RAM
 
       output wire                 trig_out_o,         // generate trigger at start of pattern
+      
+      output wire [15:0]          dbg_branch_o,     // debug, branch counter
+      output wire [15:0]          dbg_ptnbrs_o,     // debug, pattern branch opcode count
+      output wire [15:0]          dbg_brnadr_o,     // debug, pattern branch address(tick)
 
       output reg  [7:0]           status_o            // pattern processor status
   );
@@ -108,6 +112,12 @@ module patterns #(parameter PTN_DEPTH = 65536,
     .data_o         (ptn_data_rd)
   );
 
+  reg [15:0] ptnbr_count;
+  reg [15:0] branch_adr;
+  assign dbg_branch_o = branch_count;
+  assign dbg_ptnbrs_o = ptnbr_count;    // pattern branch opcodes
+  assign dbg_brnadr_o = branch_adr;
+
   // Logic
   always @(posedge sys_clk) begin
     if(!sys_rst_n) begin
@@ -121,6 +131,9 @@ module patterns #(parameter PTN_DEPTH = 65536,
         end_addr <= PTN_DEPTH-1;
         ptn_cmdd <= 1'b0;               // latch to detect rising edge only
         init_state <= INIT_IDLE;
+        
+        ptnbr_count <= 16'h0000;
+        branch_adr <= 16'hf00d;        
     end
     else begin
         if(ptn_state == PTN_INIT_RAM) begin
@@ -137,10 +150,6 @@ module patterns #(parameter PTN_DEPTH = 65536,
             end
             INIT2: begin
                 // Read is valid here
-//                if(ptn_data_rd != {59'd0, ptn_addr}) begin
-//                    status_o <= `ERR_WR_PTN_RAM;
-//                    ptn_state <= PTN_IDLE;
-//                end
                 if(ptn_addr < end_addr) begin
                     ptn_addr = ptn_addr + 1;
                     init_state <= INIT1;
@@ -155,18 +164,6 @@ module patterns #(parameter PTN_DEPTH = 65536,
             end
             endcase
         end
-//        else if(ptn_cmdd == 1'b0 && ptn_cmd_i == `PTNCMD_CLEAR) begin
-//            // pat_addr already set to starting address
-//            // set end_addr from passed-in data
-//            end_addr <= ptn_data_i[15:0];         // End of pattern address to clear
-//            status_o <= `PTN_CLEAR_MODE;         
-//            init_state <= INIT_IDLE;
-//            ptn_state <= PTN_INIT_RAM;
-//            ptn_cmdd <= 1'b1;                       // latch, only execute on rising edge of ptn_cmd_i
-//        end
-//        else if(ptn_cmd_i == `OPCODE_NORMAL && ptn_cmdd == 1'b1) begin
-//            ptn_cmdd <= 1'b0;   // reset
-//        end
         else if(ptn_run_i) begin
             ptn_wen <= 1'b0;
             case(ptn_state)
@@ -176,6 +173,9 @@ module patterns #(parameter PTN_DEPTH = 65536,
                 branch_count <= 16'hffff;
                 status_o <= 8'h00;              // busy           
                 ptn_state <= PTN_SPACER;
+
+              branch_adr <= 16'hf00d;        
+
             end
             PTN_SPACER: begin                   // takes one clock to set address for read
                 sys_counter <= sys_counter + 6'd1;
@@ -190,6 +190,9 @@ module patterns #(parameter PTN_DEPTH = 65536,
                 else if(ptn_data_rd[70:64] != 7'd0) begin
                     // if pat_branch, adjust counter & get opcode from new address
                     if(ptn_data_rd[70:64] == `PTN_BRANCH) begin
+                    
+                      ptnbr_count <= ptnbr_count + 16'h0001;
+                    
                         if(branch_count == 16'h0000) begin
                             branch_count <= 16'hffff;           // reset
                             sys_counter <= sys_counter + 6'd1;
@@ -202,6 +205,10 @@ module patterns #(parameter PTN_DEPTH = 65536,
                             else
                                 branch_count <= branch_count - 16'h0001;                                                    
                             ptn_addr <= ptn_data_rd[15:0] + ptn_addr_i;
+
+                        if(branch_adr == 16'hf00d)
+                            branch_adr <= ptn_data_rd[15:0] + ptn_addr_i;        
+
                             ptn_state <= PTN_SPACER; // immediately start next opcode, 1 clock late
                         end                        
                     end
