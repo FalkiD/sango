@@ -68,11 +68,10 @@ module pulse #(parameter FILL_BITS = 4)
     reg [23:0]      measure_at;             // measure at this tick, from pulse opcode   
     reg [23:0]      ticks;                  // pulse width tick counter while pulse ON
     reg [7:0]       sys_ticks;              // system (100MHz) ticks
-    localparam PULSE_TICKS = 10;            // 10 sys ticks per pulse tick
+    localparam PULSE_TICKS = 9;             // 10 0-based sys ticks per pulse tick
 
     reg             rf_gate;
     reg             rf_gate2;
-    //reg             zmon_en;
     reg             conv;
     reg             adc_sclk;
 
@@ -190,7 +189,6 @@ module pulse #(parameter FILL_BITS = 4)
                     rf_gate <= 1'b0;
                     rf_gate2 <= 1'b1;           // Initial release, always ON
                     conv <= 1'b0;
-                    //zmon_en <= 1'b0;
                     if(status_o == 8'h00)
                         status_o <= `SUCCESS;
                 end
@@ -208,8 +206,7 @@ module pulse #(parameter FILL_BITS = 4)
                 measure_at <= pls_fifo_dat_i[63:39] - 24'h00_0000_0001;   // meas offset 0-based 
                 pls_fifo_ren_o <= 0;
                 rf_gate <= pulse_en & rf_enable_i;   // on
-                //rf_gate2 <= pulse_en & rf_enable_i;
-                //zmon_en <= 1'b1;
+                //rf_gate2 <= pulse_en & rf_enable_i;   // this switch is too fast for PA, leave ON
                 if(pls_fifo_dat_i[32] == 1'b1 &&
                     pls_fifo_dat_i[63:39] - 24'h00_0000_0001 == 0)
                     conv <= 1'b1;   // measure at tick 0
@@ -217,12 +214,12 @@ module pulse #(parameter FILL_BITS = 4)
                 state <= PULSE_RUN;
             end
             PULSE_RUN: begin
-                if(ticks == pulse) begin
-                    state <= PULSE_DONE;
-                    rf_gate <= 1'b0;
-                    //rf_gate2 <= 1'b0;
-                    conv <= 1'b0;
-                end
+//                if(ticks == pulse) begin
+//                    state <= PULSE_DONE;
+//                    rf_gate <= 1'b0;
+//                    //rf_gate2 <= 1'b0;
+//                    conv <= 1'b0;
+//                end
                 if(measure) begin
                     if(ticks == measure_at)
                         conv <= 1'b1;           // Start ZMON conversion using conv line                    
@@ -230,9 +227,15 @@ module pulse #(parameter FILL_BITS = 4)
                         conv <= 1'b0;           // CONV OFF
                 end
                 //             
-                if(sys_ticks+1 == PULSE_TICKS) begin
+                if(sys_ticks == PULSE_TICKS) begin
                     ticks <= ticks + 1;
                     sys_ticks <= 8'h00;               
+                    if((ticks+1) == pulse) begin    // stop this puppy before an extra tick goes by
+                        state <= PULSE_DONE;
+                        rf_gate <= 1'b0;
+                        //rf_gate2 <= 1'b0;
+                        conv <= 1'b0;
+                    end
                 end
                 else
                     sys_ticks <= sys_ticks + 1;

@@ -49,4 +49,4 @@
 //
 //------------------------------------------------------------------------------
 
-`define VERSION 16'h1_01_5 // next is 3, others for debugging     // V.vv.r FPGA development revision
+`define VERSION 16'h1_01_4 // next is 3, others for debugging     // V.vv.r FPGA development revision
