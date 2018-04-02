@@ -144,7 +144,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 
     // STATUS command
     input  wire          syn_stat_i,              // SYN STAT pin, 1=PLL locked
-    input  wire [11:0]   dbm_x10_i                // dBm x10, system power level    
+    input  wire [11:0]   dbm_x10_i,               // dBm x10, system power level    
+    input  wire [11:0]   vgadac_i                 // VGA dac value for return with STATUS command
     );
 
     // opcodes with integer arguments have 8 bytes or less of data
@@ -687,6 +688,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             `STATUS:  begin
                 // return system status, 1st 4 bytes are standard, opcode status, last opcode, 2 length bytes.
                 // For status opcode, length = 26 bytes defined so far(9/21/2017):
+                // length = 32 bytes as of 02-Apr-2018, added extras for VGA DAC value and other debug junk as needed
                 // VERSION V.vv.r, 2 bytes
                 // opcodes processed, 4 bytes
                 // opcode processor status
@@ -701,7 +703,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 // pattern processor status
                 // pattern index(address being run), 2 bytes
                 // SYN_STAT
-                // pad byte for even number
+                // VGA dac value, 3 bytes
+                // 4 empty pad bytes
                 if(response_fifo_full_i) begin
                     status_o <= `ERR_RSP_FIFO_FULL;
                     state <= `STATE_BEGIN_RESPONSE;
@@ -808,8 +811,32 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                         rsp_data[rsp_index] <= {7'd0, syn_stat_i};          // SYN_STAT, 1 if PLL locked
                         rsp_index <= rsp_index + 1; 
                     end
-                    25:    begin
-                        rsp_data[rsp_index] <= 8'd0;                        // pad to even # of bytes
+                    25: begin
+                        rsp_data[rsp_index] <= vgadac_i[7:0];               // VGA dac value LS byte
+                        rsp_index <= rsp_index + 1; 
+                    end
+                    26: begin
+                        rsp_data[rsp_index] <= {4'b0000, vgadac_i[11:8]};   // VGA dac value, upper 4 bits
+                        rsp_index <= rsp_index + 1; 
+                    end
+                    27: begin
+                        rsp_data[rsp_index] <= 8'd0;                        // padding for extra space 
+                        rsp_index <= rsp_index + 1; 
+                    end
+                    28: begin
+                        rsp_data[rsp_index] <= 8'd0;                        // padding for extra space 
+                        rsp_index <= rsp_index + 1; 
+                    end
+                    29:    begin
+                        rsp_data[rsp_index] <= 8'd0;                        // padding for extra space 
+                        rsp_index <= rsp_index + 1; 
+                    end
+                    30: begin
+                        rsp_data[rsp_index] <= 8'd0;                        // padding for extra space 
+                        rsp_index <= rsp_index + 1; 
+                    end
+                    31:    begin
+                        rsp_data[rsp_index] <= 8'd0;                        // padding for extra space
                         rsp_index <= rsp_index + 1; 
                         rsp_length <= rsp_index + 2;
                         opcode_counter_o <= opcode_counter_o + 32'd1;

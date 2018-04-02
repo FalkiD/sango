@@ -87,7 +87,7 @@
 
 `define PWR_TBL_ENTRIES       12'd251
 
-`define STATUS_RESPONSE_SIZE    16'd26  // 26 bytes defined initially
+`define STATUS_RESPONSE_SIZE    16'd32  // 32 bytes defined initially, 28 used so far(02-Apr-2018)
 
 // Trigger bit definitions, shifted left 8 due to 1st
 // byte of opcode being channel #

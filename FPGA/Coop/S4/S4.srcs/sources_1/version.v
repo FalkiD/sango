@@ -46,7 +46,11 @@
 // Revision 1.01.2  03/10/2018 RMR -Refactor SYN, triggers from falling edge of DDS IOUP. If initialized, only does re-lock.
 //                                 -Freq processor waits for DDS & SYN SPI & SYN lock, else error code
 //                                 -Freq interpolation works but requires power reset after (not automatic?) 
+// Revision 1.01.3             RMR -Freq interpolation works
+//                                 -Pattern branch working, loop ~70 pulses. Loop 100 pulses overruns opc?
+//                                 -Pulse width fixed, no longer 10ns too wide
+//                                 -Pattern branch timing fixed, T no longer 2 ticks too long 
 //
 //------------------------------------------------------------------------------
 
-`define VERSION 16'h1_01_4 // next is 3, others for debugging     // V.vv.r FPGA development revision
+`define VERSION 16'h1_01_3 // next is 3, others for debugging     // V.vv.r FPGA development revision

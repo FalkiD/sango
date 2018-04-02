@@ -1167,7 +1167,8 @@ end
     
     // STATUS command
     .syn_stat_i                 (SYN_STAT),           // SYN STAT pin, 1=PLL locked
-    .dbm_x10_i                  (dbm_x10)             // dBm x10, system power level    
+    .dbm_x10_i                  (dbm_x10),             // dBm x10, system power level    
+    .vgadac_i                   (interp_dac)          // pass VGA dac value in for return with STATUS command
   );
 
 // ******************************************************************************
