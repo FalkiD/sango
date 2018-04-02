@@ -14,6 +14,7 @@
 // Dependencies: 
 // 
 // Revision:
+// 02-Apr-2018  Added lookahead so branch timing is correct
 // 11-Jan-2018  Clear RAM before writing new pattern data
 //
 // Revision 0.01 - File Created
@@ -76,19 +77,22 @@ module patterns #(parameter PTN_DEPTH = 65536,
   // pattern RAM registers
   wire  [RD_WIDTH-1:0]  ptn_data;                   // opcode and data payload into RAM
   reg   [PTN_BITS-1:0]  ptn_addr;                   // 
+  reg                   ptn_addr_lookahead;         // flag, looking for branch instructions a few clocks early
   reg   [5:0]           sys_counter;                // sys clock counter
   wire  [RD_WIDTH-1:0]  ptn_data_rd;
   reg                   ptn_wen;                    // write enable line
 
-  localparam PTN_IDLE       = 4'd1;
-  localparam PTN_LOAD       = 4'd2;
-  localparam PTN_NEXT       = 4'd3;
-  localparam PTN_RD_RAM     = 4'd4;
-  localparam PTN_SPACER     = 4'd5;
-  localparam PTN_WAIT_TICK  = 4'd6;
-  localparam PTN_OPCODE_GO  = 4'd7;
-  localparam PTN_INIT_RAM   = 4'd8; // clear RAM on reset
-  localparam PTN_STOP       = 4'd9;
+  localparam PTN_IDLE               = 4'd1;
+  localparam PTN_LOAD               = 4'd2;
+  localparam PTN_NEXT               = 4'd3;
+  localparam PTN_RD_RAM             = 4'd4;
+  localparam PTN_SPACER             = 4'd5;
+  localparam PTN_WAIT_TICK          = 4'd6;
+  localparam PTN_OPCODE_GO          = 4'd7;
+  localparam PTN_INIT_RAM           = 4'd8; // clear RAM on reset
+  localparam PTN_LOOKAHEAD_SPACER   = 4'd9; // clear RAM on reset
+  localparam PTN_LOOKAHEAD_RD       = 4'd10; // clear RAM on reset
+  localparam PTN_STOP               = 4'd11;
   
   localparam INIT_IDLE      = 4'd1;
   localparam INIT1          = 4'd2;
@@ -124,6 +128,7 @@ module patterns #(parameter PTN_DEPTH = 65536,
         status_o <= `SUCCESS;           // pattern processor status
         sys_counter <= 6'd0;
         ptn_addr <= 0;
+        ptn_addr_lookahead <= 1'b0;
         ptn_state <= PTN_INIT_RAM;
         ptn_wen <= 1'b0;
         opcptn_fif_wen_o <= 1'b0;
@@ -141,6 +146,7 @@ module patterns #(parameter PTN_DEPTH = 65536,
             INIT_IDLE: begin
                 ptn_wen <= 1'b1;
                 ptn_addr <= 0;
+                ptn_addr_lookahead <= 1'b0;
                 init_state <= INIT1;
                 status_o <= `PTN_CLEAR_MODE;         
             end
@@ -157,6 +163,7 @@ module patterns #(parameter PTN_DEPTH = 65536,
                 else begin
                     ptn_wen <= 1'b0;
                     ptn_addr <= 0;
+                    ptn_addr_lookahead <= 1'b0;
                     init_state <= INIT_IDLE;
                     ptn_state <= PTN_IDLE;         
                     status_o <= `SUCCESS;
@@ -169,6 +176,7 @@ module patterns #(parameter PTN_DEPTH = 65536,
             case(ptn_state)
             PTN_IDLE: begin
                 ptn_addr <= ptn_addr_i;         // init read index, absolute RAM index
+                ptn_addr_lookahead <= 1'b0;     // clear flag
                 sys_counter <= 6'd0;
                 branch_count <= 16'hffff;
                 status_o <= 8'h00;              // busy           
@@ -209,7 +217,7 @@ module patterns #(parameter PTN_DEPTH = 65536,
                         if(branch_adr == 16'hf00d)
                             branch_adr <= ptn_data_rd[15:0] + ptn_addr_i;        
 
-                            ptn_state <= PTN_SPACER; // immediately start next opcode, 1 clock late
+                            ptn_state <= PTN_SPACER; // immediately start next opcode
                         end                        
                     end
                     else begin
@@ -227,23 +235,40 @@ module patterns #(parameter PTN_DEPTH = 65536,
             PTN_OPCODE_GO: begin
                 opcptn_fif_wen_o <= 1'b0;
                 sys_counter <= sys_counter + 6'd1;
+                ptn_addr_lookahead <= 1'b1;     // flag we're looking ahead 1
+                ptn_addr <= ptn_addr + 1;       // look ahead one for branch instructions        
                 ptn_state <= PTN_WAIT_TICK;
             end
             PTN_WAIT_TICK: begin
-                if(sys_counter >= `SYSCLK_PER_PTN_CLK-1) begin
+                if(sys_counter >= `SYSCLK_PER_PTN_CLK) begin
                     sys_counter <= 6'd0;
                     if(ptn_addr < PTN_DEPTH-1) begin
-                        ptn_addr <= ptn_addr + 1;
+                        //ptn_addr <= ptn_addr + 1;     // lookahead already incremented addr
                         ptn_state <= PTN_SPACER;
                     end
                     else begin
                         ptn_addr <= 0;
+                        ptn_addr_lookahead <= 1'b0;
                         status_o <= `ERR_PATTERN_ADDR;
                         ptn_state <= PTN_STOP;
                     end
                 end
+                else begin
+                    if(ptn_addr_lookahead == 1'b1) begin
+                        //ptn_addr <= ptn_addr - 1;       // leave this alone, set for next read...                    
+                        ptn_addr_lookahead <= 1'b0;     // back to normal
+                        ptn_state <= PTN_LOOKAHEAD_SPACER;
+                    end
+                    sys_counter <= sys_counter + 6'd1;
+                end
+            end
+            PTN_LOOKAHEAD_SPACER: begin
+                if(ptn_data_rd[70:64] == `PTN_BRANCH) begin
+                    sys_counter <= sys_counter + 6'd3;      // Advance by 2 clocks so next entry fetch is early enough
+                end                            
                 else
                     sys_counter <= sys_counter + 6'd1;
+                ptn_state <= PTN_WAIT_TICK;
             end
             PTN_STOP: begin
                 // Just do nothing, opcode processor will turn OFF ptn_run_i,
@@ -260,6 +285,7 @@ module patterns #(parameter PTN_DEPTH = 65536,
             // use opcode processor inputs to write pattern RAM
             ptn_wen <= ptn_wen_i;
             ptn_addr <= ptn_data_i[95:72] + ptn_addr_i;
+            ptn_addr_lookahead <= 1'b0;
             if(status_o == 8'h00)
                 status_o <= `SUCCESS;           
             ptn_state <= PTN_IDLE;          // make sure pattern FSM is reset in case it just ran

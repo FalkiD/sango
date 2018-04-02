@@ -83,7 +83,7 @@
 
 `define PTNDATA_NONE        72'd0
 
-`define SYSCLK_PER_PTN_CLK  6'd10
+`define SYSCLK_PER_PTN_CLK  6'd9    // 0-based
 
 `define PWR_TBL_ENTRIES       12'd251
 
