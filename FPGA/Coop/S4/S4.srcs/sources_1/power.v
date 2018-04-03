@@ -308,9 +308,9 @@ module power #(parameter FILL_BITS = 4)
       end
 
       // Check for tweak power request, latch it & process it when idle
-      if(tweak_power_i == 1'b1 && tweak_power == 1'b0) begin
-        tweak_power <= 1'b1;
-      end
+//      if(tweak_power_i == 1'b1 && tweak_power == 1'b0) begin
+//        tweak_power <= 1'b1;
+//      end
     
       case(state)
         PWR_WAIT: begin

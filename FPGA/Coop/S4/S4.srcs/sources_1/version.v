@@ -49,8 +49,9 @@
 // Revision 1.01.3             RMR -Freq interpolation works
 //                                 -Pattern branch working, loop ~70 pulses. Loop 100 pulses overruns opc?
 //                                 -Pulse width fixed, no longer 10ns too wide
-//                                 -Pattern branch timing fixed, T no longer 2 ticks too long 
+//                                 -Pattern branch timing fixed, T no longer 2 ticks too long
+// Revision 1.01.6             RMR -Disabled tweak power, causes cal tables not to load at startup?? 
 //
 //------------------------------------------------------------------------------
 
-`define VERSION 16'h1_01_4 // next is 3, others for debugging     // V.vv.r FPGA development revision
+`define VERSION 16'h1_01_6     // V.vv.r FPGA development revision
