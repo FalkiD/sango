@@ -1662,9 +1662,9 @@ end
   // reset pattern processor on sys_rst_n or on ptn_rst_opc_n from opcode processor
   assign ptn_rst_n = sys_rst_n && ptn_rst_opc_n;
  
-  assign FPGA_MCU4 = CONV;      // DDS_MOSI; //MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.
-  assign FPGA_MCU3 = ADC_SCLK;  // DDS_SCLK; //MMC_CMD; //count3[15];    // 200MHz div'd by 2^16.
+  assign FPGA_MCU4 = SYN_SCLK; //CONV; DDS_MOSI; //MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.
+  assign FPGA_MCU3 = DDS_SCLK; //MMC_CMD; //count3[15];    // 200MHz div'd by 2^16.
   assign FPGA_MCU2 = SYN_MUTEn; // ADCF_SDO;  // VGA_MOSI;  //ZMON_EN;
-  assign FPGA_MCU1 = ADCR_SDO;  // VGA_SCLK;  //MMC_CMD;
+  assign FPGA_MCU1 = VGA_SCLK;  //MMC_CMD;
 
   endmodule
