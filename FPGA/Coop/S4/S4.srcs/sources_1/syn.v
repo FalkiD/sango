@@ -322,6 +322,7 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
                syn_initing           <= 1'b1;
                syn_initd             <= 1'b0;
                syn_init_op_cntr      <= 6'b00_0000;
+               syn_mute_n_o          <= 1'b0;          // Mute until SYN io done, during INIT only
             end
             else begin
                syn_spi_state         <= SYN_SPI_STATE_IDLE;
@@ -331,7 +332,6 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
                syn_init_op_cntr      <= 6'b00_0000;
                syn_init_done_cntr    <= 5'b0_0001;
             end
-            syn_mute_n_o          <= 1'b0;          // Mute until SYN io done
          end
 
          // 08-Mar-2018 note: loading is spaced a bit because fifo is smaller
@@ -500,7 +500,7 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
          else if(syn_caling && (syn_init_done_cntr == 5'b0_0100)) begin
             syn_caling            <= 1'b0;
             syn_init_shfting      <= 1'b0;
-            syn_mute_n_o          <= 1'b1;  // Unmute
+            syn_mute_n_o          <= 1'b1;  // Unmute  Shouldn't be muted here 
          end
          
       end  // End of always @(posedge clk_i)  ... SYN SPI State Machine ...

@@ -37,15 +37,19 @@ u 1.5 ms w 3000002 6 03B70200; -- Write CMD6 (SWITCH) set bus width 8 bits
 --u 1.0 ms w 300002c 02000; -- DDS init wire
 --u 1.0 ms w 300002c 0;
 
+--Power opcode
+--u 2.0 ms w 4000000 04 06 01 00 00 32 00 00 00 00 00 00; --POWER 50.0dBm 
 --Frequency opcode
---u 2.0 ms w 4000000 04 04 00 72 6f 91 00 00 00 00 00 00; --Set frequency 2440MHz, interpolate & tweak power 
---u 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
---u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
---u 0.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+u 2.0 ms w 4000000 04 04 00 72 6f 91 00 00 00 00 00 00; --Set frequency 2440MHz, interpolate & tweak power 
+u 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+u 0.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
 -- read opcode processor response
---u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
---u 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
---u 1.5 ms r 4000000 8; --Read response data from host adapter RAM  
+u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+u 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+u 1.5 ms r 4000000 8; --Read response data from host adapter RAM  
+-- read debugging status registers
+u 4.0 ms r 3000038 8; -- read debug registers
 
 --Change VGA gain mode with CONFIG opcode
 --u 2.0 ms w 4000000 04 18 88 13 03 00 00 00 00 00 00 00; --VGA higain, 50ua ADLY, DAC_A control also 

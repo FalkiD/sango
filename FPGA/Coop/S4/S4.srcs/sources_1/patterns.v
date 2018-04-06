@@ -209,7 +209,8 @@ module patterns #(parameter PTN_DEPTH = 65536,
                         else begin
                             if(branch_count == 16'hffff)
                                 // starting loop
-                                branch_count <= ptn_data_rd[31:16];                         
+                                // checking at end of loop, count not set until 2nd loop
+                                branch_count <= ptn_data_rd[31:16] - 16'h0002;                         
                             else
                                 branch_count <= branch_count - 16'h0001;                                                    
                             ptn_addr <= ptn_data_rd[15:0] + ptn_addr_i;

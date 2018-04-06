@@ -1613,7 +1613,7 @@ end
   wire dbg_synth_mute_n;
   assign dbg_synth_mute_n = ((dbg_enables & BIT_SYN_MUTE) == BIT_SYN_MUTE);
   wire synth_mute_n;
-  assign synth_mute_n = (dds_synth_mute_n & syn_synth_mute_n & frq_mute_n);
+  assign synth_mute_n = (dds_synth_mute_n & syn_synth_mute_n);
   assign SYN_MUTEn = dbg_spi_mode ? dbg_synth_mute_n : synth_mute_n;
 
   // Cause SYN Init on BIT_SYN_INIT assert

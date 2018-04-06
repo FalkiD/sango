@@ -50,8 +50,10 @@
 //                                 -Pattern branch working, loop ~70 pulses. Loop 100 pulses overruns opc?
 //                                 -Pulse width fixed, no longer 10ns too wide
 //                                 -Pattern branch timing fixed, T no longer 2 ticks too long
-// Revision 1.01.6             RMR -Disabled tweak power, causes cal tables not to load at startup?? 
+// Revision 1.01.4  04/06/2018 RMR -Disabled tweak power, causes cal tables not to load at startup??
+//                                 -Fixed PTN_BRANCH loop counter
+//                                 -Don't mute synthesizer except during initialization 
 //
 //------------------------------------------------------------------------------
 
-`define VERSION 16'h1_01_6     // V.vv.r FPGA development revision
+`define VERSION 16'h1_01_4     // V.vv.r FPGA development revision

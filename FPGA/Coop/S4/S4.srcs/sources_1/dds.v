@@ -124,6 +124,7 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
    wire                           dds_spi_ss_s         = (~dds_fifo_empty_w & dds_spi_wtck &
                                                             (dds_spi_state == DDS_SPI_STATE_IDLE) & ~dds_init_loading & ~dds_interOpGap & ~dds_spi_ioup);
 
+   // 06-Apr MUTE during INIT only
    // DDS will drive SYN_MUTEn, 1=>RF; 0=>MUTE. Mute when initializing or
    // changing frequency. Unmute when DDS SPI has finished and SYN_STAT
    // turns ON indicating PLL lock
@@ -411,13 +412,6 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
          dds_spi_ioup             <= ~(dds_spi_ioup_cnt == 5'b1_1111) & (dds_spi_ioup | (dds_spi_ioup_cnt == 5'b0_1111));
          dds_spi_ioupr            <= dds_spi_ioup; 
 
-//         // Handle SYN initing status
-//         if (dds_synth_stat_i) begin
-//         // Can't use SYN_STAT until that's working...
-//            dds_synth_initing <= 1'b0;  // Stop indicating synth init.
-//            dds_synth_mute_n  <= 1'b1;  // Stop muting synth.
-//         end
-         
          // DDS SPI State Machine: state-by-state case statement
          case (dds_spi_state)
          DDS_SPI_STATE_IDLE: begin
@@ -430,7 +424,7 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
          end //  End of DDS_SPI_STATE_IDLE: case.
          DDS_SPI_STATE_CS0: begin
             dds_spi_state         <= DDS_SPI_STATE_CS1;
-            dds_synth_mute_n      <= 1'b0;  // Mute SYN until SYN IO finishes
+            //dds_synth_mute_n      <= 1'b0;  // Mute SYN until SYN IO finishes
          end //  End of DDS_SPI_STATE_CS0: case.
          DDS_SPI_STATE_CS1: begin
             if (~dds_spi_wtckr) begin
