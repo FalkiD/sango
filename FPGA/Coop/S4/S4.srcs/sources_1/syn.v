@@ -23,6 +23,7 @@
 //
 //
 // ---------------------------------------------------------------------------------
+// 0.00.4  2018-04-06 (RMR) Don't mute on re-cal
 // 0.00.3  2018-03-07 (RMR) Refactor slightly, trigger from falling edge of DDS IOUP.
 //                          After initialized, send CAL only
 // 0.00.2  2017-08-31 (RMR) SCLK normally low. Added 10ns betwixt SCLK done & 
@@ -392,27 +393,20 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
             end
             endcase  // End of case (syn_init_op_cntr)
          end  // End of if (syn_init_loading)
-         // Load fifo with 3 registers to re-lock on any frequency change
-         // R2_MUTE, R7_CAL, R2_UNMUTE
-         else if (syn_cal_loading & ~syn_fifo_full_w) begin // Load fifo with 3 registers to CAL on any frequency change
+         // 06-Apr-2018 Don't mute while changing, need continuous RF for plasma
+         // Load fifo with CAL register to re-lock on any frequency change
+         // R7_CAL
+         else if (syn_cal_loading & ~syn_fifo_full_w) begin // Load fifo with 1 register to CAL on any frequency change
             // only 3 registers so delayed loading is not really needed here
             if (syn_init_op_cntr != 6'b11_1111) begin
                syn_init_op_cntr <= syn_init_op_cntr + 6'b00_0001;
             end
             case (syn_init_op_cntr)
-            6'b00_0011: begin
-               syn_init_datr   <= 12'h2_0A;          // MUTE SYN
-               syn_init_we     <= 1'b1;              // 1-tick signal
-            end
-            6'b00_0111: begin
+            6'b00_0001: begin
                syn_init_datr   <= 12'h7_83;          // CAL
                syn_init_we     <= 1'b1;              // 1-tick signal
             end
-            6'b00_1011: begin
-               syn_init_datr   <= 12'h2_08;          // UNMUTE, normally 8, 0 shows reference on pin 2 of device
-               syn_init_we     <= 1'b1;              // 1-tick signal
-            end
-            6'b00_1111: begin
+            6'b00_0010: begin
                syn_init_op_cntr <= 6'b11_1111;
             end
             6'b11_1111: begin
