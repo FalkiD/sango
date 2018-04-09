@@ -52,7 +52,8 @@
 //                                 -Pattern branch timing fixed, T no longer 2 ticks too long
 // Revision 1.01.4  04/06/2018 RMR -Disabled tweak power, causes cal tables not to load at startup??
 //                                 -Fixed PTN_BRANCH loop counter
-//                                 -Don't mute synthesizer except during initialization 
+//                                 -Don't mute synthesizer except during initialization(SYN_MUTE pin & registers removed)
+//                                 -DDS SPI 12.5MHz now (was 6.25MHz)  
 //
 //------------------------------------------------------------------------------
 

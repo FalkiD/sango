@@ -131,6 +131,7 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
    reg                            dds_synth_mute_n     = 1'b0;  // Mute synthesizer until DDS SPI finishes & SYN pll locked.
    
    // Generate: dds_spi_sclk   (e.g. SPI_CLK_RATIO == 8)
+   // 09-Apr-2018 This should run at 25MHz, up it to 12.5MHz for now, need to fix this
    //           dds_spi_wtck
    //           dds_spi_rtck
    // N = Fclk_i / Fspi_clk
@@ -169,16 +170,16 @@ module dds_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
          dds_clk_cnt              <= dds_clk_cnt + 4'b0001;
 
          case(dds_clk_cnt) 
-         4'b0110: begin
+         4'b0010: begin
             dds_spi_wtck       <= 1'b1;              // dds_spi_rtck to be high during last tck
          end                                         //     before falling edge of dds_spi_sclk.
-         4'b0111: begin
+         4'b0011: begin
             dds_spi_sclk       <= 1'b0;              // falling edge of dds_spi_sclk next tick.
          end                                         //
-         4'b1110: begin
+         4'b0110: begin
             dds_spi_rtck       <= 1'b1;              // dds_spi_rtck rising edge last tck
          end
-         4'b1111: begin
+         4'b0111: begin
             dds_spi_sclk       <= 1'b1;              // dds_spi_sclk starts out as high.
             dds_clk_cnt        <= 4'b0000;           // rising  edge of dds_spi_sclk next tick.
          end
