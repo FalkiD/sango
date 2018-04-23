@@ -226,25 +226,26 @@ module power #(parameter FILL_BITS = 4)
   localparam PWR_DBM3           = 7;
   localparam PWR_DBM4           = 8;
   localparam PWR_DBM5           = 9;
-  localparam PWR_VGA1           = 10;
-  localparam PWR_VGA2           = 11;
-  localparam PWR_VGA3           = 12;
-  localparam PWR_VGA4           = 13;
-  localparam PWR_VGA5           = 14;
-  localparam PWR_WAIT           = 15;
-  localparam WAIT_SPI           = 16;
-  localparam PWR_SLOPE1         = 17;
-  localparam PWR_SLOPE2         = 18;
-  localparam PWR_SLOPE3         = 19;
-  localparam PWR_INTCPT1        = 20;
-  localparam PWR_INTCPT2        = 21;
-  localparam PWR_INTCPT3        = 22;
-  localparam PWR_INTCPT4        = 23;
-  localparam PWR_INTCPT5        = 24;
-  localparam PWR_INIT1          = 25;
-  localparam PWR_INIT2          = 26;
-  localparam PWR_TBL_INIT       = 27;
-  localparam PWR_TBL_CAL        = 28;
+  localparam PWR_DBM6           = 10;
+  localparam PWR_VGA1           = 11;
+  localparam PWR_VGA2           = 12;
+  localparam PWR_VGA3           = 13;
+  localparam PWR_VGA4           = 14;
+  localparam PWR_VGA5           = 15;
+  localparam PWR_WAIT           = 16;
+  localparam WAIT_SPI           = 17;
+  localparam PWR_SLOPE1         = 18;
+  localparam PWR_SLOPE2         = 19;
+  localparam PWR_SLOPE3         = 20;
+  localparam PWR_INTCPT1        = 21;
+  localparam PWR_INTCPT2        = 22;
+  localparam PWR_INTCPT3        = 23;
+  localparam PWR_INTCPT4        = 24;
+  localparam PWR_INTCPT5        = 25;
+  localparam PWR_INIT1          = 26;
+  localparam PWR_INIT2          = 27;
+  localparam PWR_TBL_INIT       = 28;
+  localparam PWR_TBL_CAL        = 29;
 
   localparam    DAC_WORD0       = 32'h00380000;     // Disable internal refs, Gain=1
   localparam    DAC_WORD1       = 32'h00300003;     // LDAC pin inactive DAC A & B
@@ -306,11 +307,10 @@ module power #(parameter FILL_BITS = 4)
             dbmx10_2490[calidx_i] <= caldata_i;
         end
       end
-
       // Check for tweak power request, latch it & process it when idle
-//      if(tweak_power_i == 1'b1 && tweak_power == 1'b0) begin
-//        tweak_power <= 1'b1;
-//      end
+      else if(tweak_power_i == 1'b1 && tweak_power == 1'b0) begin
+        tweak_power <= 1'b1;
+      end
     
       case(state)
         PWR_WAIT: begin
@@ -349,7 +349,7 @@ module power #(parameter FILL_BITS = 4)
             dbmx10_2470[0] <= 12'hfff;
             dbmx10_2490[0] <= 12'hfff;
 
-// TBD Debugging, stuff in some real numbers for SIM
+// //TBD Debugging, stuff in some real numbers for SIM
 //    `ifdef XILINX_SIMULATOR
 //        dbmx10_2410[0] <= 12'hdcd;
 //        dbmx10_2430[0] <= 12'hddb;
@@ -379,8 +379,8 @@ module power #(parameter FILL_BITS = 4)
 //        dbmx10_2490[150] <= 12'hc8b;
 
 //        // 60.0 dBm
-//        dbmx10_2410[200] <= 12'hb23;
-//        dbmx10_2430[200] <= 12'haec;
+//        dbmx10_2410[200] <= 12'h000;
+//        dbmx10_2430[200] <= 12'h200;
 //        dbmx10_2450[200] <= 12'ha77;
 //        dbmx10_2470[200] <= 12'ha86;
 //        dbmx10_2490[200] <= 12'h60e;
@@ -642,6 +642,11 @@ module power #(parameter FILL_BITS = 4)
           state <= PWR_DBM5;
         end
         PWR_DBM5: begin
+          if(result[47] == 1'b1)            // dac value < 0 
+            result <= 48'h0064_0000_0000;   // bottom out at 0x100 for VGA dac
+          state <= PWR_DBM6;
+        end
+        PWR_DBM6: begin
           //
           // result register is interpolated dac value * 2**32
           //

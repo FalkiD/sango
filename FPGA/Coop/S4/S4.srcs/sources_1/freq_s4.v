@@ -203,7 +203,9 @@ module freq_s4 #(parameter FILL_BITS = 6,
         end
         else begin
     `ifdef XILINX_SIMULATOR
-            if(synlock_counter == 32'd20000) begin  // ~20us
+            if(synlock_counter == SYN_LOCK_TICKS)
+                synlock_counter <= 32'h0000_0004;
+            else if(synlock_counter == 32'h0000_0000) begin
                 frq_mute_n_o <= 1'b1;       // Done, un-mute SYN
                 tweak_power <= 1'b1;        // one-tick pulse for power processor to reset power after frequency change
                 state <= FRQ_IDLE;

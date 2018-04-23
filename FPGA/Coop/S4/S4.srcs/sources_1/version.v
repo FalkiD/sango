@@ -53,8 +53,12 @@
 // Revision 1.01.4  04/06/2018 RMR -Disabled tweak power, causes cal tables not to load at startup??
 //                                 -Fixed PTN_BRANCH loop counter
 //                                 -Don't mute synthesizer except during initialization(SYN_MUTE pin & registers removed)
-//                                 -DDS SPI 12.5MHz now (was 6.25MHz)  
+//                                 -Ferrari demo version 
+// Revision 1.01.5             RMR -DDS SPI 12.5MHz now (was 6.25MHz)
+//                                 -Added d3 config_word bit to enable tweak power after frequency.
+//                                  After firmware startup loads cal tables, enable this bit. (If enabled during
+//                                  entire startup sequence there's a problem loading the cal tables)
 //
 //------------------------------------------------------------------------------
 
-`define VERSION 16'h1_01_4     // V.vv.r FPGA development revision
+`define VERSION 16'h1_01_7     // V.vv.r FPGA development revision

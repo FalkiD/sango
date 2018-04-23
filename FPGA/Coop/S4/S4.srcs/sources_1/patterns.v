@@ -14,6 +14,8 @@
 // Dependencies: 
 // 
 // Revision:
+// 11-Apr-2018  Added override mode.
+//              Save 1st 10 occurences of FREQ & POWER opcodes to support override mode
 // 02-Apr-2018  Added lookahead so branch timing is correct
 // 11-Jan-2018  Clear RAM before writing new pattern data
 //
@@ -59,7 +61,7 @@ module patterns #(parameter PTN_DEPTH = 65536,
       input  wire [PCMD_BITS-1:0] ptn_cmd_i,          // Command/mode, used to clear sections of pattern RAM
 
       output wire                 trig_out_o,         // generate trigger at start of pattern
-      
+
       output wire [15:0]          dbg_branch_o,     // debug, branch counter
       output wire [15:0]          dbg_ptnbrs_o,     // debug, pattern branch opcode count
       output wire [15:0]          dbg_brnadr_o,     // debug, pattern branch address(tick)
@@ -89,10 +91,10 @@ module patterns #(parameter PTN_DEPTH = 65536,
   localparam PTN_SPACER             = 4'd5;
   localparam PTN_WAIT_TICK          = 4'd6;
   localparam PTN_OPCODE_GO          = 4'd7;
-  localparam PTN_INIT_RAM           = 4'd8; // clear RAM on reset
-  localparam PTN_LOOKAHEAD_SPACER   = 4'd9; // clear RAM on reset
-  localparam PTN_LOOKAHEAD_RD       = 4'd10; // clear RAM on reset
-  localparam PTN_STOP               = 4'd11;
+  localparam PTN_INIT_RAM           = 4'd8;     // clear RAM on reset
+  localparam PTN_LOOKAHEAD_SPACER   = 4'd9;     
+  localparam PTN_LOOKAHEAD_RD       = 4'd10;    
+  localparam PTN_STOP               = 4'd12;
   
   localparam INIT_IDLE      = 4'd1;
   localparam INIT1          = 4'd2;
@@ -141,6 +143,7 @@ module patterns #(parameter PTN_DEPTH = 65536,
         branch_adr <= 16'hf00d;        
     end
     else begin
+    
         if(ptn_state == PTN_INIT_RAM) begin
             case(init_state)
             INIT_IDLE: begin
@@ -282,14 +285,15 @@ module patterns #(parameter PTN_DEPTH = 65536,
             endcase        
         end
         else begin
-            // not initializing RAM, clearing RAM, or running a pattern, 
-            // use opcode processor inputs to write pattern RAM
+            // not initializing RAM, clearing RAM, or running a pattern.
+            // Handle other tasks: 
+            // -Use opcode processor inputs to write pattern RAM, 
             ptn_wen <= ptn_wen_i;
-            ptn_addr <= ptn_data_i[95:72] + ptn_addr_i;
+            ptn_addr <= ptn_data_i[95:72] + ptn_addr_i; // ptn_addr + ptn_clk
             ptn_addr_lookahead <= 1'b0;
             if(status_o == 8'h00)
                 status_o <= `SUCCESS;           
-            ptn_state <= PTN_IDLE;          // make sure pattern FSM is reset in case it just ran
+                ptn_state <= PTN_IDLE;          // make sure pattern FSM is reset in case it just ran
         end
     end
   end
@@ -330,8 +334,8 @@ module patterns #(parameter PTN_DEPTH = 65536,
       end
   end
 
-  assign ptn_data     = ptn_state == PTN_INIT_RAM ? 72'd0 : ptn_data_i[71:0]; 
-  assign ptn_index_o  = ptn_addr;    // address of pattern entry in use for status/debug
-  assign trig_out_o   = trig_out;
+  assign ptn_data           = ptn_state == PTN_INIT_RAM ? 72'd0 : ptn_data_i[71:0]; 
+  assign ptn_index_o        = ptn_addr;         // address of pattern entry in use for status/debug
+  assign trig_out_o         = trig_out;
   
 endmodule

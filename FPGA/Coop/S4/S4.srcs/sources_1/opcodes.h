@@ -20,6 +20,9 @@
 `define CALPWR              7'h0E
 `define CALPTBL             7'h0F
 `define CALZMON             7'h10
+`define CALVFY              7'h11
+`define ALARMS              7'h12
+`define OVRD                7'h13
 // Change bad_opcode() task in opcodes.v when adding/changing opcode list
 
 // Patterns, 0x20 based
@@ -82,6 +85,8 @@
 `define PATTERN_RD_WORD     72      // 8 bytes data, 1 byte opcode
 
 `define PTNDATA_NONE        72'd0
+
+`define PTNOVRD_OFF         4'hf    // 0-9 are valid indexes, 0xf means override OFF, normal mode
 
 `define SYSCLK_PER_PTN_CLK  6'd9    // 0-based
 

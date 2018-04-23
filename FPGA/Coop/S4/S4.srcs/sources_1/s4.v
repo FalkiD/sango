@@ -366,7 +366,8 @@ wire         frq_fifo_full;           // frequency fifo full flag
 wire [`PROCESSOR_FIFO_FILL_BITS-1:0]   frq_fifo_count;
 wire [7:0]   frq_status;              // frequency processor status
 wire         frq_mute_n;              // frequency processor controls SYN mute when changing frequencies
-wire         tweak_power;             // pulsed after successful frequency change so opcode processor will reset power 
+wire         freq_done;               // pulsed after successful frequency change
+wire         tweak_power;             // power processor will reset power if freq_done & config_word[3] 
 // DDS processor wires
 wire [31:0]  ftw_fifo_dat_i; // = 32'h0000_0000;          // frequency tuning word fifo input(SPI data) from frequency processor.
 wire         ftw_fifo_wen; // = 1'b0;            // frequency tuning word fifo we.
@@ -956,7 +957,7 @@ end
     .syn_lock_i         (SYN_STAT),             // SYN PLL lock signal
     .frq_mute_n_o       (frq_mute_n),           // Mute the synthesizer while waiting for lock
 
-    .tweak_pwr_o        (tweak_power),          // pulsed after successful frequency change so power processor will reset power 
+    .tweak_pwr_o        (freq_done),            // pulsed after successful frequency change so power processor will reset power 
 
     .status_o           (frq_status)            // 0=Busy, SUCCESS when done, or an error code
   );
@@ -988,7 +989,7 @@ end
     .tweak_power_i      (tweak_power),          // pulsed when frequency changes, reset power level
     
     .vga_higain_i       (config_word[0]),       // default to 1, hi gain mode
-    .vga_dacctla_i      (config_word[1]),       // DAC control bit. Normally fix A, control dac B
+    .vga_dacctla_i      (config_word[1]),       // DAC control bit. 1=control A & B
 
     .VGA_MOSI_o         (pwr_mosi),
     .VGA_SCLK_o         (pwr_sclk),
@@ -1661,6 +1662,10 @@ end
 
   // reset pattern processor on sys_rst_n or on ptn_rst_opc_n from opcode processor
   assign ptn_rst_n = sys_rst_n && ptn_rst_opc_n;
+ 
+  // freq_done is 1-tick pulse from frequency processor after FREQ opcode if SYN_LOCK is ON
+  // if config_word[3] is ON, pulse tweak_power
+  assign tweak_power = freq_done & config_word[3]; 
  
   assign FPGA_MCU4 = SYN_SCLK; //CONV; DDS_MOSI; //MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.
   assign FPGA_MCU3 = DDS_SCLK; //MMC_CMD; //count3[15];    // 200MHz div'd by 2^16.

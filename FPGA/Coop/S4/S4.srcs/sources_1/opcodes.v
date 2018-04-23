@@ -13,6 +13,12 @@
 // Dependencies: 
 // 
 // Revision:
+// 11-Apr-2018
+// -Added pattern override mode for frequency & power overrides
+//  override requires passing override index with opcode. Changed
+//  freq opcode to be 6 bytes of data. Index, unused, then frequency.
+// -Enabled tweak_power from config_word d3
+//
 // Revision 0.01 - File Created
 // Additional Comments: Integration with MMC core, 17-Feb-2017
 //
@@ -46,16 +52,18 @@
 `define STATE_RSP_OPCODE            7'h0f
 `define STATE_WRITE_RESPONSE        7'h10
 `define STATE_WR_PTN                7'h11
-`define STATE_PTN_DATA2             7'h12
-`define STATE_CLR_PTN1              7'h13
-`define STATE_CLR_PTN2              7'h14
-`define STATE_RD_MEAS1              7'h15
-`define STATE_RD_MEAS2              7'h16
-`define STATE_RD_MEAS3              7'h17
-`define STATE_RD_MEAS4              7'h18
-`define STATE_RD_MEAS5              7'h19
-`define STATE_RD_SPACER             7'h1a
-`define STATE_DBG3                  7'h1b
+`define STATE_WR_PTN_OVRD1          7'h12
+`define STATE_WR_PTN_OVRD2          7'h13
+`define STATE_PTN_DATA2             7'h14
+`define STATE_CLR_PTN1              7'h15
+`define STATE_CLR_PTN2              7'h16
+`define STATE_RD_MEAS1              7'h17
+`define STATE_RD_MEAS2              7'h18
+`define STATE_RD_MEAS3              7'h19
+`define STATE_RD_MEAS4              7'h1a
+`define STATE_RD_MEAS5              7'h1b
+`define STATE_RD_SPACER             7'h1c
+`define STATE_DBG3                  7'h1d
 
 /*
     Opcode block MUST be terminated by a NULL opcode
@@ -186,11 +194,21 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     reg  [1:0]                      rsp_source;         // 0=general array, 1=measurement fifo
 
     // Pattern data registers
-    reg  [PTN_FILL_BITS-1:0]        ptn_addr;           // pattern address to write
+    reg  [PTN_FILL_BITS-1:0]        ptn_addr;           // pattern address to write pattern RAM, run patterns
+    reg  [PTN_FILL_BITS-1:0]        ptn_addr_copy;      // to restore after override
     reg  [23:0]                     ptn_clk;            // pattern clock tick to write
     reg  [PTN_WR_WORD-1:0]          ptn_data_reg;       // pattern data written to pattern RAM
     reg  [7:0]                      ptn_latch_count;    // Clocks to latch data into RAM
     reg  [7:0]                      ptn_count;
+    // save 1st 10 FREQ & POWER opcode addresses to support override mode
+    localparam OVRD_MAX = 4'd10;
+    reg  [3:0]                      ovrd_index;         // pattern override index
+    reg  [3:0]                      frq_ovrd_count;             // count as pattern is loaded
+    reg  [3:0]                      pwr_ovrd_count;             // ditto
+    reg  [15:0]                     freq_addr_list[0:9];  
+    reg  [15:0]                     power_addr_list[0:9];     
+    wire [15:0]                     ovrd_freq_addr;     // 0 or selected index frequency override address, absolute address.
+    wire [15:0]                     ovrd_power_addr;    // 0 or selected index power override address, absolute address.
 
     reg  [31:0]  trig_conf;          // trigger configuration, from trig_conf opcode
     localparam TICKS_PER_MS   = 18'd100000;
@@ -330,7 +348,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             end
             // Process opcodes from MMC fifo and all other states
             else if((state == `STATE_IDLE && fifo_rd_count_i >= `MIN_OPCODE_SIZE) ||
-                    state != `STATE_IDLE) begin
+                     state != `STATE_IDLE) begin
                 // not IDLE or at least one opcode has been written to FIFO
                 case(state)
                 `STATE_IDLE: begin
@@ -614,6 +632,28 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                         ptn_latch_count = ptn_latch_count - 1;
                 end
 
+                // Overwrite pattern RAM at saved address
+                // MUST clear override index in saved opcode so it will run, not just
+                // keep overwriting pattern RAM
+                `STATE_WR_PTN_OVRD1: begin
+                    if(opcode == `FREQ) begin
+                        ptn_addr <= freq_addr_list[ovrd_index];
+                        ptn_data_reg <= {25'b00000000_00000000_00000000_0, opcode, uinttmp[63:16], 16'h0000};                
+                    end
+                    else begin
+                        ptn_addr <= power_addr_list[ovrd_index];                    
+                        ptn_data_reg <= {25'b00000000_00000000_00000000_0, opcode, 32'h0000_0000, uinttmp[31:16], 8'h00, uinttmp[7:0]};                
+                    end
+                    ptn_wen_o <= 1'b1;  // Write the entry to RAM
+                    state <= `STATE_WR_PTN_OVRD2;
+                end
+                // Overwrote pattern RAM, reset ptn_addr, back to idle
+                `STATE_WR_PTN_OVRD2: begin
+                    ptn_addr <= ptn_addr_copy;
+                    ptn_wen_o <= 1'b0;          // end write pulse 
+                    next_opcode();
+                end
+
                 // Clearing section of pattern RAM, when done, back to idle
                 `STATE_CLR_PTN1: begin
                     if(shift == 32'h0000_0005)
@@ -647,6 +687,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     input [15:0] address;    
     begin
         ptn_addr <= address;                // address
+        ptn_addr_copy <= address;           // keep copy to restore from override
         if(ptn_count > 8'h00)               // don't run if nothing loaded
             operating_mode <= `PTNCMD_RUN;  // Opcode processor mode to run pattern data as soon as opcode processor is idle
     end
@@ -808,7 +849,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                         rsp_index <= rsp_index + 1; 
                     end
                     24: begin
-                        rsp_data[rsp_index] <= {7'd0, syn_stat_i};          // SYN_STAT, 1 if PLL locked
+                        rsp_data[rsp_index] <= {ovrd_index, 3'd0, syn_stat_i}; // d7:4==>Pattern Override Index(normal=0xf), d0==>SYN_STAT, 1 if PLL locked
                         rsp_index <= rsp_index + 1; 
                     end
                     25: begin
@@ -820,19 +861,19 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                         rsp_index <= rsp_index + 1; 
                     end
                     27: begin
-                        rsp_data[rsp_index] <= 8'd0;                        // padding for extra space 
+                        rsp_data[rsp_index] <= ovrd_freq_addr[7:0]; //8'd0;                        // padding for extra space 
                         rsp_index <= rsp_index + 1; 
                     end
                     28: begin
-                        rsp_data[rsp_index] <= 8'd0;                        // padding for extra space 
+                        rsp_data[rsp_index] <= ovrd_freq_addr[15:8]; //8'd0;                        // padding for extra space 
                         rsp_index <= rsp_index + 1; 
                     end
                     29:    begin
-                        rsp_data[rsp_index] <= 8'd0;                        // padding for extra space 
+                        rsp_data[rsp_index] <= ovrd_power_addr[7:0]; //8'd0;                        // padding for extra space 
                         rsp_index <= rsp_index + 1; 
                     end
                     30: begin
-                        rsp_data[rsp_index] <= 8'd0;                        // padding for extra space 
+                        rsp_data[rsp_index] <= ovrd_power_addr[15:8]; //8'd0;                        // padding for extra space 
                         rsp_index <= rsp_index + 1; 
                     end
                     31:    begin
@@ -847,13 +888,23 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             end
             `FREQ: begin
                 if(operating_mode == `PTNCMD_LOAD) begin // Write pattern mode
+                    if(frq_ovrd_count < OVRD_MAX) begin
+                        freq_addr_list[frq_ovrd_count] <= (ptn_addr+ptn_clk);
+                        frq_ovrd_count <= frq_ovrd_count + 4'd1;
+                    end  
                     // 12 bytes, 3 bytes patClk tick, 1 byte opcode, 8 bytes for left-justified opcode data
+                    // 16 lsb's (override index) must be 0. Might want to force this.
                     ptn_data_reg <= {ptn_clk, 1'b0, opcode, uinttmp};
                     ptn_wen_o <= 1'b1;  // Write the entry 
                     state <= `STATE_WR_PTN;
                 end
+                else if(uinttmp[3:0] != 4'h0) begin // 4 lsbs are 1-based override index if non-0
+                    // this must only happen from MMC opcode, never while running pattern.
+                    ovrd_index <= uinttmp[3:0] - 4'h1;
+                    state <= `STATE_WR_PTN_OVRD1;
+                end
                 else begin
-                    frequency_o <= uinttmp[31:0];
+                    frequency_o <= uinttmp[47:16]; // 2 ls bytes are override index
                     frq_wr_en_o <= 1;   // enable write frequency FIFO
                     // Don't process anymore opcodes until fifo is written (1-tick)
                     state <= `STATE_FIFO_WRITE;
@@ -861,10 +912,20 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             end
             `POWER: begin
                 if(operating_mode == `PTNCMD_LOAD) begin // Write pattern mode
+                    if(pwr_ovrd_count < OVRD_MAX) begin
+                        power_addr_list[pwr_ovrd_count] <= (ptn_addr+ptn_clk);
+                        pwr_ovrd_count <= pwr_ovrd_count + 4'd1;
+                    end  
                     // 12 bytes, 3 bytes patClk tick, 1 byte opcode, 8 bytes of opcode data
                     ptn_data_reg <= {ptn_clk, 1'b0, opcode, uinttmp};
                     ptn_wen_o <= 1'b1;  // Write the entry 
                     state <= `STATE_WR_PTN;
+                end
+                else if(uinttmp[11:8] != 4'h0) begin
+                    // Override index is non-0
+                    // this must only happen from MMC opcode, never while running pattern.
+                    ovrd_index <= uinttmp[11:8] - 4'h1;
+                    state <= `STATE_WR_PTN_OVRD1;
                 end
                 else begin
                     power_o <= {opcode[6:0], uinttmp[31:0]};
@@ -948,12 +1009,15 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 sync_conf <= uinttmp[15:0];
                 next_opcode();
             end
-    //                        `PAINTFCFG:
-    //                            begin
-    //                            end
             `PTN_PATADR: begin
+                // Write a single pattern to RAM. Firmware will do pattern processor reset,
+                // which clears RAM and saved OVRD indices. Firmware will then write each pattern
+                // beginning with PTN_ADDR opcode. Anytime a user loads a pattern the firmware
+                // repeats the whole process, loading all patterns from in-use profiles.
                 operating_mode <= `PTNCMD_LOAD;     // Write pattern mode
+                ovrd_index <= `PTNOVRD_OFF;
                 ptn_addr <= uinttmp[15:0];          // address
+                ptn_addr_copy <= uinttmp[15:0];     // keep a copy
                 ptn_clk <= 24'd0;                   // reset, use as offset to load entries
                 ptn_count <= ptn_count + 8'h01;     // total PTN_PATADR opcodes written(total patterns loaded)
                 dbg_opcodes_o[23:16] <= ptn_count + 8'h01;     // total PTN_PATADR opcodes written(total patterns loaded)
@@ -996,7 +1060,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     end
                 end
                 `PTN_RUN: begin
-                    ptn_addr <= uinttmp[31:16]; // save for ccontinuous trigger mode
                     start_pattern(uinttmp[31:16]);
                     next_opcode(); 
                 end
@@ -1088,6 +1151,21 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     state <= `STATE_BEGIN_RESPONSE;                
                 end
             end
+            `CALVFY: begin
+                status_o <= `ERR_OPC_NOT_SUPPORTED;
+                rsp_length <= 0;
+                state <= `STATE_BEGIN_RESPONSE;
+            end
+            `ALARMS: begin
+                status_o <= `ERR_OPC_NOT_SUPPORTED;
+                rsp_length <= 0;
+                state <= `STATE_BEGIN_RESPONSE;
+            end
+            `OVRD: begin
+                // index set with opcode
+                //ovrd_index <= uinttmp[11:8]; // override index, normal mode is 0x000f, else 0-9 to override running pattern
+                next_opcode(); 
+            end
             default: begin
                 status_o <= `ERR_INVALID_OPCODE;
                 rsp_length <= 0;
@@ -1133,7 +1211,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     pwrcal_mode <= PWRCAL2;
                 end
                 else begin
-                    pwrcal_mode <= PWRCAL1;
+                    pwrcal_mode <= PWRCAL1;                         // done, reset for next CALPTBL opcode
                     next_opcode();
                 end
             end
@@ -1194,6 +1272,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         blk_rsp_done <= 1'b0;               // Ready
         operating_mode <= `OPCODE_NORMAL;
         ptn_addr <= 16'h0000;               // pattern address to write
+        ptn_addr_copy <= 16'h0000;          // to restore after override
         ptn_clk <= 24'h00_0000;             // pattern clock tick to write, also used to clear RAM section
         ptn_run_o <= 1'b0;                  // Stop pattern processor 
         ptn_count <= 8'h00;                 // total patadr opcodes received(debugging only)
@@ -1230,9 +1309,34 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         zm_rq_gain <= 32'h0001_0000;      // zmon refl "Q" ADC gain, Q15.16 float
         zm_rq_offset <= 16'd0;            // zmon refl "Q" ADC offset, signed int
         
-        config_o <= 32'h0000_0001;        // defauly VGA hi gain mode, control only VGA DAC B, ZMonEn OFF
+        config_o <= 32'h0000_0003;        // default VGA hi gain mode, control VGA DAC A & B, ZMonEn OFF, Tweak Power OFF
         extrigg <= 1'b0;                  // external trigger latch, detect rising edge
         ptn_rst_n_o <= 1'b1;              // pattern reset from PTN_CTL[RESET] opcode
+        
+        ovrd_index <= `PTNOVRD_OFF;     // override index, normal mode is 0x000f, else 0-9 to override running pattern
+        frq_ovrd_count <= 4'h0;         // count as pattern is loaded
+        pwr_ovrd_count <= 4'h0;         // ditto
+        freq_addr_list[0] <= 16'h0000;  
+        freq_addr_list[1] <= 16'h0000;  
+        freq_addr_list[2] <= 16'h0000;  
+        freq_addr_list[3] <= 16'h0000;  
+        freq_addr_list[4] <= 16'h0000;  
+        freq_addr_list[5] <= 16'h0000;  
+        freq_addr_list[6] <= 16'h0000;  
+        freq_addr_list[7] <= 16'h0000;  
+        freq_addr_list[8] <= 16'h0000;  
+        freq_addr_list[9] <= 16'h0000;  
+
+        power_addr_list[0] <= 16'h0000;     
+        power_addr_list[1] <= 16'h0000;     
+        power_addr_list[2] <= 16'h0000;     
+        power_addr_list[3] <= 16'h0000;     
+        power_addr_list[4] <= 16'h0000;     
+        power_addr_list[5] <= 16'h0000;     
+        power_addr_list[6] <= 16'h0000;     
+        power_addr_list[7] <= 16'h0000;     
+        power_addr_list[8] <= 16'h0000;     
+        power_addr_list[9] <= 16'h0000;     
     end
     endtask
 
@@ -1283,7 +1387,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     function bad_opcode;
     input [6:0] opcode;    
     begin
-        if((opcode > `CALZMON && opcode < `PTN_PATCLK) ||
+        if((opcode > `OVRD && opcode < `PTN_PATCLK) ||
            (opcode > `PTN_BRANCH && opcode < `MEAS_ZMSIZE) ||
            (opcode > `MEAS)) begin 
             bad_opcode = 1'b1;
@@ -1300,5 +1404,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     assign ptn_addr_o           = ptn_addr;
     assign pwr_caldata_o        = pwr_caldata;
     assign trig_conf_o          = trig_conf;
+    assign ovrd_freq_addr       = freq_addr_list[ovrd_index];     // 0 or selected index frequency override address, absolute address.
+    assign ovrd_power_addr      = power_addr_list[ovrd_index];    // 0 or selected index power override address, absolute address.
 
 endmodule
