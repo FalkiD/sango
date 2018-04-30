@@ -58,7 +58,9 @@
 //                                 -Added d3 config_word bit to enable tweak power after frequency.
 //                                  After firmware startup loads cal tables, enable this bit. (If enabled during
 //                                  entire startup sequence there's a problem loading the cal tables)
+//                                 -Override mode works, frequency & power. Need way to back out(restore original ptn value)
+//                                 -Bugfix, 3 bits missing from returned FREQ value in status command.
 //
 //------------------------------------------------------------------------------
 
-`define VERSION 16'h1_01_7     // V.vv.r FPGA development revision
+`define VERSION 16'h1_01_5     // V.vv.r FPGA development revision

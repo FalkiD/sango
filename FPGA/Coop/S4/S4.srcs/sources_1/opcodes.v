@@ -817,7 +817,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                         rsp_index <= rsp_index + 1; 
                     end
                     16: begin
-                        rsp_data[rsp_index] <= frequency_o[12:8];
+                        rsp_data[rsp_index] <= frequency_o[15:8];
                         rsp_index <= rsp_index + 1; 
                     end
                     17: begin
