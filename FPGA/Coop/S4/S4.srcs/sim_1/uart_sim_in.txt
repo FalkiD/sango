@@ -76,24 +76,24 @@ u 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
 -- load pattern is done, run using trigger every 1ms for testing
 -- trigconf opcode is 0x09,
 -- bits 0x95 for arm, continuous, source, enable
-u 2.0 ms w 4000000 04 12 01 95 01 00 00 00 00 00 00 00; --Continuous trigger, 1ms for testing 
-u 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
-u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
-u 0.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+--u 2.0 ms w 4000000 04 12 01 95 01 00 00 00 00 00 00 00; --Continuous trigger, 1ms for testing 
+--u 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+--u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--u 0.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
 -- read opcode processor response
-u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
-u 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+--u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--u 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
 
-d 1.0 ms ; -- Wait to let it run once or twice
+--d 1.0 ms ; -- Wait to let it run once or twice
 
 -- override freq & power values in pattern
-u 2.0 ms w 4000000 06 04 02 00 00 18 0D 8F 00 00 00 00; --Override frequency @ index 1
+--u 2.0 ms w 4000000 06 04 02 00 00 18 0D 8F 00 00 00 00; --Override frequency @ index 1
 --u 2.0 ms w 400000C 04 06 01 00 00 3C 00 00 00 00 00 00; --Override frequency & power mode, index 0 
-u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
-u 0.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+--u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--u 0.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
 -- read opcode processor response
-u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
-u 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+--u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--u 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
 
 --d 10 ms ; -- Wait to see 25ms blink end before starting pattern
 
@@ -104,12 +104,13 @@ u 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
 -- load pattern is done, test external trigger
 -- trigconf opcode is 0x09,
 -- bits 0x83 for arm, external, enable
---u 2.0 ms w 4000000 04 12 01 83 00 00 00 00 00 00 00 00; --External trigger 
---u 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+-- test 0xA3 for arm, external, enable, invert
+u 2.0 ms w 4000000 04 12 01 A3 00 00 00 00 00 00 00 00; --External trigger 
+u 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
 
 -- load pattern is done, now run it & read response
-u 2.0 ms w 4000000 04 44 01 00 00 00 00 00 00 00 00 00; --PAT_CTRL[Run] 
-u 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+--u 2.0 ms w 4000000 04 44 01 00 00 00 00 00 00 00 00 00; --PAT_CTRL[Run] 
+--u 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
 -- write opcode block(sector) to MMC
 u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
 u 0.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
@@ -118,7 +119,7 @@ u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
 u 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
 u 1.5 ms r 4000000 8; --Read response data from host adapter RAM  
 -- read status registers to get pattern processing status
-u 4.0 ms r 3000038 8; -- read debug registers
+--u 4.0 ms r 3000038 8; -- read debug registers
 
 -- read measurement results, args are mode, unused, & 2-byte length, how many results to read.
 -- each result is 8 bytes, 16 bits each: FWDQ, FWDI, REFLQ, REFLI

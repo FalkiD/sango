@@ -101,16 +101,43 @@
 `define TRIG_SRC            16'h0400
 `define TRIG_RFGT           16'h0800
 `define TRIG_CONT           16'h1000
-`define TRIG_NOW            16'h2000
-`define TRIG_ABRT           16'h4000
+`define TRIG_INVERT         16'h2000
 `define TRIG_ARM            16'h8000
 `define TRGBIT_EN           8
 `define TRGBIT_EXT          9
 `define TRGBIT_SRC          10
 `define TRGBIT_RFGT         11
 `define TRGBIT_CONT         12
-`define TRGBIT_NOW          13
-`define TRGBIT_ABRT         14
+`define TRGBIT_INVERT       13
 `define TRGBIT_ARM          15
+
+// Alarm condition bit numbers in the 32-bit word
+// OPower, UPower, OFreq, UFreq, PllLock, Temp, PlsWid, DCycle
+`define ENA_OVER_POWER		7
+`define ENA_UNDER_POWER     6
+`define ENA_OVER_FREQ       5
+`define ENA_UNDER_FREQ      4
+`define ENA_PLL_LOCK        3
+`define ENA_TEMPERATURE     2
+`define ENA_PULSE_WIDTH     1
+`define ENA_DUTY_CYCLE		0        
+
+`define RD_OVER_POWER		15
+`define RD_UNDER_POWER		14
+`define RD_OVER_FREQ		13
+`define RD_UNDER_FREQ		12
+`define RD_PLL_LOCK         11
+`define RD_OPC_ERROR        10
+`define RD_PULSE_WIDTH      9
+`define RD_DUTY_CYCLE		8
+
+`define LATCH_OVER_POWER	23
+`define LATCH_UNDER_POWER	22
+`define LATCH_OVER_FREQ		21
+`define LATCH_UNDER_FREQ	20
+`define LATCH_PLL_LOCK      19
+`define LATCH_OPC_ERROR     18
+`define LATCH_PULSE_WIDTH   17
+`define LATCH_DUTY_CYCLE	16
 
 `endif

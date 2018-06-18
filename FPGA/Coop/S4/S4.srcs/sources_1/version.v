@@ -60,7 +60,10 @@
 //                                  entire startup sequence there's a problem loading the cal tables)
 //                                 -Override mode works, frequency & power. Need way to back out(restore original ptn value)
 //                                 -Bugfix, 3 bits missing from returned FREQ value in status command.
+// Revision 1.01.6  4/30/2018   RMR -Restore overridden FREQ/POWER properly
+// Revision 1.01.8  5/20/2018   RMR -Added INVERT TRIGGER support
+//									 (Version 1.01.7 was an interim build)
 //
 //------------------------------------------------------------------------------
 
-`define VERSION 16'h1_01_5     // V.vv.r FPGA development revision
+`define VERSION 16'h1_01_8     // V.vv.r FPGA development revision

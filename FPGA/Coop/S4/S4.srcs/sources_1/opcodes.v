@@ -54,22 +54,23 @@
 `define STATE_WR_PTN                7'h11
 `define STATE_WR_PTN_OVRD1          7'h12
 `define STATE_WR_PTN_OVRD2          7'h13
-`define STATE_PTN_DATA2             7'h14
-`define STATE_CLR_PTN1              7'h15
-`define STATE_CLR_PTN2              7'h16
-`define STATE_RD_MEAS1              7'h17
-`define STATE_RD_MEAS2              7'h18
-`define STATE_RD_MEAS3              7'h19
-`define STATE_RD_MEAS4              7'h1a
-`define STATE_RD_MEAS5              7'h1b
-`define STATE_RD_SPACER             7'h1c
-`define STATE_DBG3                  7'h1d
+`define STATE_PTN_RST_OVRD1         7'h14
+`define STATE_PTN_RST_OVRD2         7'h15
+`define STATE_PTN_DATA2             7'h16
+`define STATE_CLR_PTN1              7'h17
+`define STATE_CLR_PTN2              7'h18
+`define STATE_RD_MEAS1              7'h19
+`define STATE_RD_MEAS2              7'h1a
+`define STATE_RD_MEAS3              7'h1b
+`define STATE_RD_MEAS4              7'h1c
+`define STATE_RD_MEAS5              7'h1d
+`define STATE_RD_SPACER             7'h1e
+`define STATE_DBG3                  7'h1f
 
 /*
     Opcode block MUST be terminated by a NULL opcode
-    Later: Fix this requirement, opcode processor must sit & wait 
-    for next byte. MMC clock and this module's SYS_CLK are different. 
-    Normal to wait for next byte.
+    Note: MMC clock and this module's SYS_CLK are different. 
+    i.e it's normal to wait for bytes to accumuate.
 */
 module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                  parameter PCMD_BITS = 4,
@@ -145,6 +146,11 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     output reg  [31:0]   opcode_counter_o,        // count opcodes for status info                     
     output reg  [7:0]    status_o,                // NULL opcode terminates, done=0, or error code
     output wire [6:0]    state_o,                 // For debugger display
+
+                                                  // Naw, put all the alarm processing in opcode processor.
+                                                  // Just add status registers from all processors
+                                                  // ...But we must assert MCU_TRIG, use a 1-tick pulse out of here to s6.v
+	output reg			 mcu_alarm_o,	          // Alarm register for top level to
     
     // Debugging
     output reg  [31:0]   dbg_opcodes_o,           // Upr16[OpcMode(8)__patadr_count(8)]____Lwr16[first_opcode__last_opcode]
@@ -207,6 +213,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     reg  [3:0]                      pwr_ovrd_count;             // ditto
     reg  [15:0]                     freq_addr_list[0:9];  
     reg  [15:0]                     power_addr_list[0:9];     
+    reg  [63:0]                     freq_save_list[0:9];        // saved original values  
+    reg  [63:0]                     power_save_list[0:9];       // saved original values
     wire [15:0]                     ovrd_freq_addr;     // 0 or selected index frequency override address, absolute address.
     wire [15:0]                     ovrd_power_addr;    // 0 or selected index power override address, absolute address.
 
@@ -214,9 +222,13 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     localparam TICKS_PER_MS   = 18'd100000;
     reg  [8:0]   trig_ms;            // continuous trigger millisecond counter
     reg  [17:0]  trig_counter = 18'd0; // 100,000 ticks per millisecond, 18 bits
+	wire         extrig;			 // extrig_i XOR'd with INVERT trigger bit. (ON if (INV bit OFF & EXTRIG ON) || (INV bit ON & EXTRIG OFF))
     reg          extrigg;            // external trigger latch, detect rising edge
     reg  [15:0]  sync_conf;          // sync configuration, from sync_conf opcode
     
+	reg  [7:0]   ena_alarms;		 // Alarm enabe bits from ALARM opcode, 1st byte
+	wire [16:0]	 alarms;			 // alarm register, realtime & latched
+	
     // handle opcode integer argument data in a common way
     reg  [31:0]  shift = 0;          // tmp used building opcode data and returning measurements, etc
     
@@ -299,7 +311,10 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             // 07-Feb refactor
             // If IDLE and MMC fifo is empty check for all other 
             // requests: start a pattern, run pattern opcode, trigger.
-            extrigg <= 1'b0;    // 1-tick signal to catch rising edge of tigger
+            
+            //extrigg <= 1'b0;    // 1-tick signal to catch rising edge of tigger
+            // this can't be 1-tick, has to be reset after TRIG_IN goes to OFF state
+            
             if(state == `STATE_IDLE && fifo_rd_count_i == 0) begin
                 // 1) check for pattern start request if pattern not running
                 if(operating_mode == `PTNCMD_RUN && ptn_run_o == 1'b0) begin
@@ -334,15 +349,17 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                            trig_counter <= trig_counter + 18'd1;
                     end
                     else if(trig_conf[`TRGBIT_EXT] == 1'b1) begin
-                       if(extrig_i == 1'b1 && extrigg == 1'b0) begin
+                       if(extrig == 1'b1 && extrigg == 1'b0) begin
                            // rising edge of TRIG_IN signal detected
                            // Not checking for overrun yet...
                     
               dbg2_o[15:0] <= dbg2_o[15:0] + 16'h0001;
                     
                            start_pattern(ptn_addr);
-                           extrigg <= 1'b1;    // 1-tick signal
+                           extrigg <= 1'b1;
                        end
+                       else if(extrig == 1'b0)
+                           extrigg <= 1'b0;     // Reset when TRIG_IN goes OFF
                     end
                 end
             end
@@ -618,7 +635,24 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                   frq_wr_en_o <= 0;   // All off until next opcode ready
                   pwr_wr_en_o <= 0;
                   pulse_wr_en_o <= 0;
-                  next_opcode();
+                  // Need test for Not Running Pattern && ovrd_index was non-0 but is now 0,
+                  // in this case, must overwrite pattern RAM using saved original value after
+                  // frequency has been written to frequency processor.
+                  if(operating_mode == `OPCODE_NORMAL && ovrd_index != `PTNOVRD_OFF && uinttmp[3:0] == 4'h0) begin
+                      // Special case, done overriding FREQ or POWER. Reset original pattern RAM value
+                      if(opcode == `FREQ) begin
+                          ptn_addr <= freq_addr_list[ovrd_index];
+                          ptn_data_reg <= {25'b00000000_00000000_00000000_0, opcode, freq_save_list[ovrd_index]};                
+                      end
+                      else begin
+                          ptn_addr <= power_addr_list[ovrd_index];
+                          ptn_data_reg <= {25'b00000000_00000000_00000000_0, opcode, 32'h0000_0000, power_save_list[ovrd_index]};                
+                      end
+                      ptn_wen_o <= 1'b1;  // Write the entry to RAM
+                      state <= `STATE_PTN_RST_OVRD1;
+                  end
+                  else 
+                      next_opcode();
                 end
 
                 // Saved pattern entry to pattern RAM, increment address, back to idle
@@ -635,6 +669,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 // Overwrite pattern RAM at saved address
                 // MUST clear override index in saved opcode so it will run, not just
                 // keep overwriting pattern RAM
+                // Later: save value being overridden first time in
                 `STATE_WR_PTN_OVRD1: begin
                     if(opcode == `FREQ) begin
                         ptn_addr <= freq_addr_list[ovrd_index];
@@ -651,6 +686,14 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 `STATE_WR_PTN_OVRD2: begin
                     ptn_addr <= ptn_addr_copy;
                     ptn_wen_o <= 1'b0;          // end write pulse 
+                    next_opcode();
+                end
+
+                // Done ressetting pattern RAM to original saved FREQ/POWER
+                `STATE_PTN_RST_OVRD1: begin
+                    ptn_addr <= ptn_addr_copy;
+                    ptn_wen_o <= 1'b0;          // end write pulse 
+                    ovrd_index <= `PTNOVRD_OFF;
                     next_opcode();
                 end
 
@@ -681,6 +724,74 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             end // if((state=IDLE & at least 1 opcode)
         end // if(enable == 1) block
     end // always block    
+
+// ******************************************************************************
+// * Alarm processing based on alarms register and status from all              *
+// * processor instances.                                                       *
+// * On alarm condition, generate a 1us pulse on mcu_trig line                  *
+// ******************************************************************************
+
+    reg         mcu_trig;
+    reg  [3:0]	alarm_processor_state;
+    `define		ALM_PROC_IDLE		4'h0
+    `define		ALM_PROC_SIGNAL		4'h1		// signal MCU there's an error
+
+//    // something like:
+//    assign alarms[`RD_DUTY_CYCLE] = (pls_status == `ERR_DUTY_CYCLE) ? 1'b1 : 1'b0;
+//    // can I set something to itself, probably not, or does it get synthesized as do nothing?
+//    assign alarms[`LATCH_DUTY_CYCLE] = (alarms[`LATCH_DUTY_CYCLE] == 1'b0 && alarms[`RD_DUTY_CYCLE]) ? 1'b1 : alarms[`LATCH_DUTY_CYCLE];
+
+//    assign alarms[`RD_PULSE_WIDTH] = (pls_status == `ERR_PULSE_WIDTH) ? 1'b1 : 1'b0;
+//    assign alarms[`LATCH_PULSE_WIDTH] = (alarms[`LATCH_PULSE_WIDTH] == 1'b0 && alarms[`RD_PULSE_WIDTH]) ? 1'b1 : alarms[`LATCH_PULSE_WIDTH];
+
+//    assign alarms[`RD_OPC_ERROR] = (opc_status > 1) ? 1'b1 : 1'b0;
+//    assign alarms[`LATCH_OPC_ERROR] = (alarms[`LATCH_OPC_ERROR] == 1'b0 && alarms[`RD_OPC_ERROR]) ? 1'b1 : alarms[`LATCH_OPC_ERROR];
+
+//    assign alarms[`RD_PLL_LOCK] = (frq_status == `ERR_PLL_LOCK) ? 1'b1 : 1'b0;
+//    assign alarms[`LATCH_PLL_LOCK] = (alarms[`LATCH_PLL_LOCK] == 1'b0 && frq_status == `ERR_PLL_LOCK && alarms[`LATCH_PLL_LOCK]) ? 1'b1 : 1'b0;
+
+//    assign alarms[`RD_UNDER_FREQ] = (frq_status == `ERR_UNDER_FREQ) ? 1'b1 : 1'b0;
+//    assign alarms[`LATCH_UNDER_FREQ] = (alarms[`LATCH_UNDER_FREQ] == 1'b0 && frq_status == `ERR_UNDER_FREQ && alarms[`LATCH_UNDER_FREQ]) ? 1'b1 : 1'b0;
+
+//    assign alarms[`RD_OVER_FREQ] = (frq_status == `ERR_OVER_FREQ) ? 1'b1 : 1'b0;
+//    assign alarms[`LATCH_OVER_FREQ] = (alarms[`LATCH_OVER_FREQ] == 1'b0 && frq_status == `ERR_OVER_FREQ && alarms[`LATCH_OVER_FREQ]) ? 1'b1 : 1'b0;
+
+//    assign alarms[`RD_UNDER_POWER] = (pwr_status == `ERR_UNDER_POWER) ? 1'b1 : 1'b0;
+//    assign alarms[`LATCH_UNDER_POWER] = (alarms[`LATCH_UNDER_POWER] == 1'b0 && pwr_status == `ERR_UNDER_POWER && alarms[`LATCH_UNDER_POWER]) ? 1'b1 : 1'b0;
+
+//    assign alarms[`RD_OVER_POWER] = (pwr_status == `ERR_OVER_POWER) ? 1'b1 : 1'b0;
+//    assign alarms[`LATCH_OVER_POWER] = (alarms[`LATCH_OVER_POWER] == 1'b0 && pwr_status == `ERR_OVER_POWER && alarms[`LATCH_OVER_POWER]) ? 1'b1 : 1'b0;
+
+//    assign mcu_alarm_o = mcu_trig;
+
+//    // pulse mcu_trig when an enabled alarm condition occurs
+//    always @(posedge sys_clk) begin
+//        if(sys_rst_n == 1'b0) begin
+//            alarm_processor_state <= `ALM_PROC_IDLE;
+//	        mcu_trig <= 1'b0;    
+//        end
+//        else begin
+//            mcu_trig <= 1'b0;   // 1-tick signal
+//	        case(alarm_processor_state)
+//	        `ALM_PROC_IDLE: begin
+//	            if(alarms[7:0] & alarms[15:8] != 8'h0) begin
+//	               alarm_processor_state <= `ALM_PROC_SIGNAL;  // wait until opcode clears
+//	               mcu_trig <= 1'b1;
+//	            end
+//	        end
+//	        `ALM_PROC_SIGNAL: begin
+//	           if(alm_clear == 1'b1) begin
+//                    alarm_processor_state <= `ALM_PROC_IDLE;	           
+//	           end
+//	        end
+//	        endcase
+//        end
+//    end
+
+
+	//
+	// tasks
+	//
 
     // start running pattern
     task start_pattern;
@@ -845,7 +956,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                         rsp_index <= rsp_index + 1; 
                     end
                     23: begin
-                        rsp_data[rsp_index] <= ptn_index_i[12:8];
+                        rsp_data[rsp_index] <= ptn_index_i[PTN_FILL_BITS-1:8];
                         rsp_index <= rsp_index + 1; 
                     end
                     24: begin
@@ -890,6 +1001,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 if(operating_mode == `PTNCMD_LOAD) begin // Write pattern mode
                     if(frq_ovrd_count < OVRD_MAX) begin
                         freq_addr_list[frq_ovrd_count] <= (ptn_addr+ptn_clk);
+                        freq_save_list[frq_ovrd_count] <= uinttmp;
                         frq_ovrd_count <= frq_ovrd_count + 4'd1;
                     end  
                     // 12 bytes, 3 bytes patClk tick, 1 byte opcode, 8 bytes for left-justified opcode data
@@ -900,6 +1012,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 end
                 else if(uinttmp[3:0] != 4'h0) begin // 4 lsbs are 1-based override index if non-0
                     // this must only happen from MMC opcode, never while running pattern.
+                    // Saves RAM entry being overwritten if first time
                     ovrd_index <= uinttmp[3:0] - 4'h1;
                     state <= `STATE_WR_PTN_OVRD1;
                 end
@@ -914,6 +1027,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 if(operating_mode == `PTNCMD_LOAD) begin // Write pattern mode
                     if(pwr_ovrd_count < OVRD_MAX) begin
                         power_addr_list[pwr_ovrd_count] <= (ptn_addr+ptn_clk);
+                        power_save_list[pwr_ovrd_count] <= uinttmp;
                         pwr_ovrd_count <= pwr_ovrd_count + 4'd1;
                     end  
                     // 12 bytes, 3 bytes patClk tick, 1 byte opcode, 8 bytes of opcode data
@@ -990,13 +1104,13 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 // Trigger bits are in 2nd byte:
                 //TRIG_ARM         = 8'h80;    // Arm trigger
                 //TRIG_ABORT       = 8'h40;    // Abort triggering
-                //TRIG_NOW         = 8'h20;    // Run pattern now
+                //TRIG_INVERT      = 8'h20;    // Trigger on falling edge
                 //TRIG_CONTINUOUS  = 8'h10;    // Continuous mode, every N ms, N was user-programmed
                 //TRIG_SOURCE      = 8'h04;    // This box is trigger source
                 //TRIG_EXTERN      = 8'h02;    // This box is trigger slave
                 //TRIG_ENABLE      = 8'h01;    // Enable triggering
                 //
-                // For trigger now, MCU already sent pat_ctl[ADDR] which starts pattern                     
+                // For trigger continuous, MCU already sent pat_ctl[ADDR] which starts pattern                     
                 if(uinttmp[12] == 1'b1 && uinttmp[8] == 1'b1) begin
                     trig_ms <= 9'd0;        // reset continuous trigger ms counter
                     trig_counter <= 18'd0;  // reset continuous trigger tick counter
@@ -1016,6 +1130,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 // repeats the whole process, loading all patterns from in-use profiles.
                 operating_mode <= `PTNCMD_LOAD;     // Write pattern mode
                 ovrd_index <= `PTNOVRD_OFF;
+                reset_ovrd_registers();
                 ptn_addr <= uinttmp[15:0];          // address
                 ptn_addr_copy <= uinttmp[15:0];     // keep a copy
                 ptn_clk <= 24'd0;                   // reset, use as offset to load entries
@@ -1157,9 +1272,31 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 state <= `STATE_BEGIN_RESPONSE;
             end
             `ALARMS: begin
-                status_o <= `ERR_OPC_NOT_SUPPORTED;
-                rsp_length <= 0;
-                state <= `STATE_BEGIN_RESPONSE;
+                // Enables in 1st byte
+                // OPower, UPower, OFreq, UFreq, PllLock, Opc, PlsWid, DCycle
+				ena_alarms <= uinttmp[7:0];
+				// return present state of alarms, 32-bits
+                case(rsp_index)
+                0: begin
+                    rsp_data[rsp_index] <= uinttmp[7:0];	// enables, echo what was just sent
+                    rsp_index <= rsp_index + 1; 
+                end
+                1: begin
+                    rsp_data[rsp_index] <= alarms[7:0];		// real-time state
+                    rsp_index <= rsp_index + 1; 
+                end
+                2: begin
+                    rsp_data[rsp_index] <= alarms[15:8];   // latched
+                    rsp_index <= rsp_index + 1; 
+                end
+                3: begin
+                    rsp_data[rsp_index] <= 0;				// unused upper byte
+                    rsp_index <= rsp_index + 1; 
+                    rsp_length <= rsp_index + 2;
+                    opcode_counter_o <= opcode_counter_o + 32'd1;
+                    state <= `STATE_BEGIN_RESPONSE;
+                end
+                endcase
             end
             `OVRD: begin
                 // index set with opcode
@@ -1313,7 +1450,15 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         extrigg <= 1'b0;                  // external trigger latch, detect rising edge
         ptn_rst_n_o <= 1'b1;              // pattern reset from PTN_CTL[RESET] opcode
         
+		//alarms <= 32'h0000_0000;		  // alarms register
+
         ovrd_index <= `PTNOVRD_OFF;     // override index, normal mode is 0x000f, else 0-9 to override running pattern
+        reset_ovrd_registers();
+    end
+    endtask
+
+    task reset_ovrd_registers;
+    begin
         frq_ovrd_count <= 4'h0;         // count as pattern is loaded
         pwr_ovrd_count <= 4'h0;         // ditto
         freq_addr_list[0] <= 16'h0000;  
@@ -1326,7 +1471,18 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         freq_addr_list[7] <= 16'h0000;  
         freq_addr_list[8] <= 16'h0000;  
         freq_addr_list[9] <= 16'h0000;  
-
+    
+        freq_save_list[0] <= 32'h0000_0000;
+        freq_save_list[1] <= 32'h0000_0000;
+        freq_save_list[2] <= 32'h0000_0000;
+        freq_save_list[3] <= 32'h0000_0000;
+        freq_save_list[4] <= 32'h0000_0000;
+        freq_save_list[5] <= 32'h0000_0000;
+        freq_save_list[6] <= 32'h0000_0000;
+        freq_save_list[7] <= 32'h0000_0000;
+        freq_save_list[8] <= 32'h0000_0000;
+        freq_save_list[9] <= 32'h0000_0000;
+    
         power_addr_list[0] <= 16'h0000;     
         power_addr_list[1] <= 16'h0000;     
         power_addr_list[2] <= 16'h0000;     
@@ -1337,6 +1493,17 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         power_addr_list[7] <= 16'h0000;     
         power_addr_list[8] <= 16'h0000;     
         power_addr_list[9] <= 16'h0000;     
+    
+        power_save_list[0] <= 32'h0000_0000;
+        power_save_list[1] <= 32'h0000_0000;
+        power_save_list[2] <= 32'h0000_0000;
+        power_save_list[3] <= 32'h0000_0000;
+        power_save_list[4] <= 32'h0000_0000;
+        power_save_list[5] <= 32'h0000_0000;
+        power_save_list[6] <= 32'h0000_0000;
+        power_save_list[7] <= 32'h0000_0000;
+        power_save_list[8] <= 32'h0000_0000;
+        power_save_list[9] <= 32'h0000_0000;
     end
     endtask
 
@@ -1404,6 +1571,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     assign ptn_addr_o           = ptn_addr;
     assign pwr_caldata_o        = pwr_caldata;
     assign trig_conf_o          = trig_conf;
+    assign extrig               = extrig_i ^ trig_conf[`TRGBIT_INVERT];
     assign ovrd_freq_addr       = freq_addr_list[ovrd_index];     // 0 or selected index frequency override address, absolute address.
     assign ovrd_power_addr      = power_addr_list[ovrd_index];    // 0 or selected index power override address, absolute address.
 

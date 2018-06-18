@@ -1,8 +1,8 @@
 // Copyright 1986-2016 Xilinx, Inc. All Rights Reserved.
 // --------------------------------------------------------------------------------
 // Tool Version: Vivado v.2016.4 (win64) Build 1756540 Mon Jan 23 19:11:23 MST 2017
-// Date        : Thu Mar 08 12:52:04 2018
-// Host        : Beastly running 64-bit Service Pack 1  (build 7601)
+// Date        : Tue Apr 03 14:51:46 2018
+// Host        : ANA00075 running 64-bit major release  (build 9200)
 // Command     : write_verilog -force -mode synth_stub -rename_top ftw_mult -prefix
 //               ftw_mult_ ftw_mult_stub.v
 // Design      : ftw_mult

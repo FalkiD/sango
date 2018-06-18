@@ -224,7 +224,6 @@ module s4
   output             FPGA_TXD,           //  N16   O        MMC UART
   input              FPGA_RXD,           //  P15   I        MMC UART
 
-                                         //     FPGA_MCLK is temporarily 102MHz LVCMOS33 FPGA Clk Input.  <JLC_TEMP_NO_L12>
   input              FPGA_MCLK,          //  R13   I                       
                                          //     FPGA_M*   is HW DBG I/F
   output             FPGA_MCU1,          //  P10   I 
@@ -313,8 +312,10 @@ wire         mmcm_rst_i;
 wire         mmcm_pwrdn_i;
 wire         mmcm_locked_o;
 
+// trigger MCU on hardware error
+wire		 mcu_trig;
+
 // MMC tester
-wire         mmc_clk;
 wire         mmc_clk_oe;
 wire         mmc_cmd;
 wire         mmc_cmd_oe;
@@ -1405,7 +1406,6 @@ end
 //      end
 
 
-
 // ******************************************************************************
 // * RMR Debug SPI                                                              *
 // *                                                                            *
@@ -1656,6 +1656,8 @@ end
   assign dbg_opc_rfgate = ((sys_mode[15:0] & BIT_RF_GATE) == BIT_RF_GATE);
  
   assign ACTIVE_LEDn = active_led;
+
+  assign MCU_TRIG = mcu_trig;
 
   assign ADCTRIG = trig_config[`TRGBIT_RFGT] ? RF_GATE : ptn_adctrig; 
   assign TRIG_OUT = trig_config[`TRGBIT_SRC] ? ADCTRIG : 1'bz;
