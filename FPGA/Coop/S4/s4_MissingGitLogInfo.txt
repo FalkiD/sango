@@ -1,0 +1,21 @@
+
+18-Jun-2018
+
+S4 checkins got fouled up April/May, here's some local info
+
+
+
+2018_04_02_BrHW+ Pattern processor and branch timing good in HW
+
+2018_04_02_BrTim+ Added lookahead to pattern processor, corrected branch timing
+
+2018_04_03_TwkPwr- Disabled tweak power, causes cal table restore error at startup?
+
+2018_04_06_Plasma1 SYN cal required. Removed SYN Mute except initialization
+
+2018_04_07_Plasma2 Removed MUTE register programming from SYN lock. Fixed branch count
+
+2018_04_23_Ovrd+ Freq, Power override working. Tweak power working. Needs hw test
+
+2018_04_30_Ovrd+ Ovrd mode works. Tweak power after startup Ok
+
