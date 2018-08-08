@@ -208,6 +208,7 @@ module s4
   inout              MMC_CLK,            //  N11   I        MCU<-->MMC-Slave I/F
   output             MMC_IRQn,           //  P8    O        MCU SDIO_SD pin; low=MMC_Card_Present.
   inout              MMC_CMD,            //  R7    I       
+  output             MMC_TRIG,           //  N6    O        Used to interrupt MCU on error (1.01.12 & up)       
 
   inout              MMC_DAT7,           //  R6    IO      
   inout              MMC_DAT6,           //  T5    IO      
@@ -230,7 +231,7 @@ module s4
   output             FPGA_MCU2,          //  P11   O
   output             FPGA_MCU3,          //  R12   O    
   output             FPGA_MCU4,          //  R13   O        
-  input              MCU_TRIG,           //  T13   I       
+  input              MCU_TRIG,           //  T13   I       Used as system reset by MCU
 
   output             VGA_MOSI,           //  B7    O        RF Power Setting SPI
   output             VGA_SCLK,           //  B6    O        I/F
@@ -293,6 +294,8 @@ reg  [15:0]  sys_state = 0;             // s4 system state (e.g. running a patte
 wire         pulse_busy;
 wire         ptn_busy;
 wire [31:0]  sys_mode;                  // MODE opcode can set system-wide flags
+wire         zm_not_cal;                // 0 to calibrate ZMon offset, measure with RFGATE OFF during pulse
+                                        // 1 is normal operation. Set from d3 of config opcode
 
 // Use 0x4000 if dbg_enables to turn ON SPI debugger mode
 // Otherwise SPI outputs are driven by various processor modules
@@ -312,8 +315,8 @@ wire         mmcm_rst_i;
 wire         mmcm_pwrdn_i;
 wire         mmcm_locked_o;
 
-// trigger MCU on hardware error
-wire		 mcu_trig;
+// interrupt MCU on hardware error
+wire		 mmc_trig;
 
 // MMC tester
 wire         mmc_clk_oe;
@@ -635,6 +638,7 @@ assign sys_rst_n = MCU_TRIG ? 1'b0 : dbg_sys_rst_n;
 assign opc_fifo_enable = 1'b1;
 assign opc_fifo_rst = 1'b0;
 assign opc_enable = 1'b1;
+assign mmc_trig = 1'b0;     // MCU interrupt not implemented yet
 
 // Initialize things after reset pulse
 always @(posedge sys_clk) begin
@@ -1033,6 +1037,8 @@ end
     .rf_gate_o          (pls_rfgate),           // RF_GATE line
     .rf_gate2_o         (pls_rfgate2),          // RF_GATE2 line
     .dbg_rf_gate_i      (dbg_opc_rfgate),       // Debug mode assert RF_GATE lines
+    .zm_normal_i        (zm_not_cal),           // 0 to calibrate ZMon offset, measure with RFGATE OFF during pulse
+                                                // 1 is normal operation
 
     //.zmon_en_o          (pls_zmonen),           // Enable ZMON  controlled by opcode
     .conv_o             (CONV),                 // CONV pulse
@@ -1043,6 +1049,7 @@ end
     // output ZMON ADC data fifo
     .adc_fifo_dat_o     (meas_fifo_dat_i),      // 32 bits of FWD REFL ADC data written to output fifo
     .adc_fifo_wen_o     (meas_fifo_wen),        // ADC results fifo write enable
+    .adc_fifo_full_i    (meas_fifo_full),       // ADC FIFO full
 
     .status_o           (pls_status)            // 0=busy, SUCCESS when done, or an error code
   );
@@ -1606,6 +1613,9 @@ end
   assign dbg_rfgate2 = ((dbg_enables & BIT_RF_GATE2) == BIT_RF_GATE2);  
   assign RF_GATE2 = dbg_spi_mode ? dbg_rfgate2 : pls_rfgate2;
 
+  assign zm_not_cal = !config_word[`CFGBIT_ZOFST_CAL];   // 0 to cal ZMon offset (measure with RFGATE OFF during pulse)
+                                                         // normally zm_not_cal is 1'b1
+
   wire dbg_bias;
   assign dbg_bias = ((dbg_enables & BIT_PA_BIAS_EN) == BIT_PA_BIAS_EN);  
   assign DRV_BIAS_EN = dbg_spi_mode ? dbg_bias : bias_en;
@@ -1657,7 +1667,7 @@ end
  
   assign ACTIVE_LEDn = active_led;
 
-  assign MCU_TRIG = mcu_trig;
+  assign MMC_TRIG = mmc_trig;
 
   assign ADCTRIG = trig_config[`TRGBIT_RFGT] ? RF_GATE : ptn_adctrig; 
   assign TRIG_OUT = trig_config[`TRGBIT_SRC] ? ADCTRIG : 1'bz;
@@ -1669,9 +1679,9 @@ end
   // if config_word[3] is ON, pulse tweak_power
   assign tweak_power = freq_done & config_word[3]; 
  
-  assign FPGA_MCU4 = SYN_SCLK; //CONV; DDS_MOSI; //MMC_CLK; //count4[15];    //  50MHz div'd by 2^16.
-  assign FPGA_MCU3 = DDS_SCLK; //MMC_CMD; //count3[15];    // 200MHz div'd by 2^16.
-  assign FPGA_MCU2 = SYN_MUTEn; // ADCF_SDO;  // VGA_MOSI;  //ZMON_EN;
+  assign FPGA_MCU4 = MMC_CLK; //SYN_SCLK; //CONV; DDS_MOSI; //count4[15];    //  50MHz div'd by 2^16.
+  assign FPGA_MCU3 = MMC_CMD; //DDS_SCLK; //count3[15];    // 200MHz div'd by 2^16.
+  assign FPGA_MCU2 = MMC_DAT0;  //SYN_MUTEn; // ADCF_SDO;  // VGA_MOSI;  //ZMON_EN;
   assign FPGA_MCU1 = VGA_SCLK;  //MMC_CMD;
 
   endmodule

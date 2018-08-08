@@ -1,5 +1,5 @@
 //------------------------------------------------------------------------------
-// (C) Copyright 2016-2018 Ampleon Inc.
+// (C) Copyright 3D RF Energy Corp.
 //     All rights reserved.
 //
 // PROPRIETARY INFORMATION
@@ -61,9 +61,21 @@
 //                                 -Override mode works, frequency & power. Need way to back out(restore original ptn value)
 //                                 -Bugfix, 3 bits missing from returned FREQ value in status command.
 // Revision 1.01.6  4/30/2018   RMR -Restore overridden FREQ/POWER properly
-// Revision 1.01.8  5/20/2018   RMR -Added INVERT TRIGGER support
+// Revision 1.01.9  5/20/2018   RMR -Added INVERT TRIGGER support
 //									 (Version 1.01.7 was an interim build)
-//
+// Revision 1.01.A  7/05/2018   RMR -Added MMC_TRIG line for MCU interrupt
+//									 Bring out MMC signals to scope timing constraint before/after
+// Revision 1.01.B  7/05/2018   RMR -Added MMC constraints in XDC file
+// Revision 1.01.C  7/06/2018   RMR -Golden image created, MMC_TRIG wired but not implemented
+//                                   Still using Vivado V2016.4, V2018.1 gives wrong # args error on constraints, need to fix.
+// Revision 1.01.D  7/27/2018   RMR -Added ZM_OFST_CAL bit to config word to measure during pulse with RF_GATE off.
+//                                   Needed to mease ZMON offsets for calibration
+// Revision 1.01.E  7/31/2018   RMR -Added CONFIG register to STATUS opcode, STATUS 48 bytes now
+//                                   Don't keep writing MEAS fifo's when they're full
+//                                   ZMon ADC values have been shifted left 2, 16-bit 2's complement values
+// Revision 1.01.F  8/01/2018   RMR -Fixup ZMon read voltages.
+// Revision 1.02.0  8/06/2018   RMR -ZMon read voltages good in SIM? retest on hw
+//                                   Added volts to dBm table                       
 //------------------------------------------------------------------------------
 
-`define VERSION 16'h1_01_8     // V.vv.r FPGA development revision
+`define VERSION 16'h1_02_0     // V.vv.r FPGA development revision

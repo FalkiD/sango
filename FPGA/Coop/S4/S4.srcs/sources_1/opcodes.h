@@ -66,6 +66,11 @@
 //`define DBG_MBWSPI			7'h4A
 //`define DBG_READREG			7'h4B
 
+`define CFGBIT_0            0
+`define CFGBIT_1            1
+`define CFGBIT_2            2
+`define CFGBIT_ZOFST_CAL    3
+
 // Opcodes/Responses are written in 1-sector minimum chunks
 `define SECTOR_SIZE         512
 
@@ -92,7 +97,9 @@
 
 `define PWR_TBL_ENTRIES       12'd251
 
-`define STATUS_RESPONSE_SIZE    16'd32  // 32 bytes defined initially, 28 used so far(02-Apr-2018)
+`define STATUS_RESPONSE_SIZE    16'd48  // 32 bytes used 01-Aug-2018, was 32, 28 used so far(02-Apr-2018)
+
+`define CALZM_LEN           24          // CAL ZMON opcode data length
 
 // Trigger bit definitions, shifted left 8 due to 1st
 // byte of opcode being channel #

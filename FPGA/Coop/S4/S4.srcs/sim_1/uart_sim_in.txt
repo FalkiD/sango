@@ -64,14 +64,26 @@ u 1.5 ms w 3000002 6 03B70200; -- Write CMD6 (SWITCH) set bus width 8 bits
 --u 1.5 ms r 4000000 8; --Read response data from host adapter RAM  
 
 --Run opcode block from host_init_ram.txt (load looping pattern)
--- Check saving of FREQ & POWER opcode addresses for override mode
-u 0.5 ms w 300000E 0; -- Set host DMA address at 0x00
+--u 0.5 ms w 300000E 0; -- Set host DMA address at 0x00
+--u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--u 2.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+-- read opcode processor response
+--u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--u 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+--u 1.5 ms r 4000000 8; --Read response data from host adapter RAM  
+
+--d 1 ms ; -- Wait for pattern to be loaded
+
+--CALZMON opcode, write directly & check concurrent assignments
+-- gain 0.02 in Q15.16 is 1310, 0x51e
+u 2.0 ms w 4000000 18 20 1e 05 00 00 f0 ff 1e 05 00 00; --FIgain=0.02, FIoffset=-15, FQgain=0.02 
+u 2.0 ms w 400000C f0 ff 1e 05 00 00 f2 ff 1e 05 00 00; --FQoffset=-15, RIgain=0.02, RIoffset=-15, RQgain=0.02  
+u 2.0 ms w 4000018 fc ff 00 00 00 00 00 00 00 00 00 00; --RQoffset=-4, Null terminator 
 u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
-u 2.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+u 0.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
 -- read opcode processor response
 u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
 u 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
---u 1.5 ms r 4000000 8; --Read response data from host adapter RAM  
 
 -- load pattern is done, run using trigger every 1ms for testing
 -- trigconf opcode is 0x09,
@@ -105,36 +117,35 @@ u 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
 -- trigconf opcode is 0x09,
 -- bits 0x83 for arm, external, enable
 -- test 0xA3 for arm, external, enable, invert
-u 2.0 ms w 4000000 04 12 01 A3 00 00 00 00 00 00 00 00; --External trigger 
-u 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+--u 2.0 ms w 4000000 04 12 01 A3 00 00 00 00 00 00 00 00; --External trigger 
+--u 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
 
 -- load pattern is done, now run it & read response
 --u 2.0 ms w 4000000 04 44 01 00 00 00 00 00 00 00 00 00; --PAT_CTRL[Run] 
 --u 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
 -- write opcode block(sector) to MMC
-u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
-u 0.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+--u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--u 0.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
 -- read opcode processor response
-u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
-u 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
-u 1.5 ms r 4000000 8; --Read response data from host adapter RAM  
+--u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--u 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+--u 1.5 ms r 4000000 8; --Read response data from host adapter RAM  
 -- read status registers to get pattern processing status
 --u 4.0 ms r 3000038 8; -- read debug registers
 
 -- read measurement results, args are mode, unused, & 2-byte length, how many results to read.
--- each result is 8 bytes, 16 bits each: FWDQ, FWDI, REFLQ, REFLI
---u 2.0 ms w 4000000 04 64 02 00 40 00 00 00 00 00 00 00; --Read 64 sets of raw ADC results 
---u 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
---u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
---u 2.0 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+-- each raw adc result is 8 bytes, 16 bits each: FWDQ, FWDI, REFLQ, REFLI
+-- testing Volts, each result 16 bytes, 4 Q15.16 numbers
+u 2.0 ms w 4000000 04 64 04 00 32 00 00 00 00 00 00 00; --Read 5 sets of 'Volts' results 
+u 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+u 2.0 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
 -- read opcode processor response
---u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
---u 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
---u 4.0 ms r 4000000 28; --Read response data from host adapter RAM  
+u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+u 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+u 4.0 ms r 4000000 28; --Read response data from host adapter RAM  
 -- read status registers to get pattern processing status
---u 4.0 ms r 3000038 8; -- read debug registers
-
-
+--u 4.0 ms r 3000038 10; -- read debug registers
 
 --repeat run pattern & read results
 --u 2.0 ms w 4000000 04 44 01 00 00 01 00 00 00 00 00 00; --PAT_CTRL[Run] 0x100 
@@ -156,20 +167,6 @@ u 1.5 ms r 4000000 8; --Read response data from host adapter RAM
 --u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
 --u 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
 --u 4.0 ms r 4000000 28; --Read response data from host adapter RAM  
--- read status registers to get pattern processing status
---u 4.0 ms r 3000038 8; -- read debug registers
-
-
---CALZMON opcode, write directly
---u 2.0 ms w 4000000 04 20 00 00 02 00 ff ff 00 00 03 00; --FIgain=2, FIoffset=-1, FQgain=3 
---u 2.0 ms w 4000000 ff fe 00 00 02 00 ff fd 00 00 01 00; --FQoffset=-2, RIgain=2, RIoffset=-3, RQgain=1  
---u 2.0 ms w 400000C ff fc 00 00 00 00 00 00 00 00 00 00; --RQoffset=-4, Null terminator 
---u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
---u 0.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
--- read opcode processor response
---u 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
---u 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
---u 1.5 ms r 4000000 8; --Read response data from host adapter RAM  
 -- read status registers to get pattern processing status
 --u 4.0 ms r 3000038 8; -- read debug registers
 

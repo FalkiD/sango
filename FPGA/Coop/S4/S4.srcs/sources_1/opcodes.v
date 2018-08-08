@@ -193,7 +193,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     reg          response_ready;     // flag when response ready
     reg  [MMC_FILL_LEVEL_BITS-1:0]  response_length;    // length of response data
     reg  [MMC_FILL_LEVEL_BITS-1:0]  rsp_length;         // length tmp var
-    reg  [7:0]   rsp_data [`STATUS_RESPONSE_SIZE-1:0];  // 26 byte array of response bytes for status
+    reg  [7:0]   rsp_data [`STATUS_RESPONSE_SIZE-1:0];  // 48 byte array of response bytes for status
     reg  [MMC_FILL_LEVEL_BITS-1:0]  rsp_index;          // response array index
     localparam GENERAL_ARR  = 2'b00;
     localparam MEAS_FIFO    = 2'b01;
@@ -839,7 +839,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             end
             `STATUS:  begin
                 // return system status, 1st 4 bytes are standard, opcode status, last opcode, 2 length bytes.
-                // For status opcode, length = 26 bytes defined so far(9/21/2017):
+                // For status opcode, length = 48 bytes 01-Aug-2018, 26 bytes defined so far(9/21/2017):
                 // length = 32 bytes as of 02-Apr-2018, added extras for VGA DAC value and other debug junk as needed
                 // VERSION V.vv.r, 2 bytes
                 // opcodes processed, 4 bytes
@@ -856,7 +856,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 // pattern index(address being run), 2 bytes
                 // SYN_STAT
                 // VGA dac value, 3 bytes
-                // 4 empty pad bytes
+                // 4 pattern override index, freq override addr, power override addr
+                // CONFIG register
                 if(response_fifo_full_i) begin
                     status_o <= `ERR_RSP_FIFO_FULL;
                     state <= `STATE_BEGIN_RESPONSE;
@@ -972,23 +973,88 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                         rsp_index <= rsp_index + 1; 
                     end
                     27: begin
-                        rsp_data[rsp_index] <= ovrd_freq_addr[7:0]; //8'd0;                        // padding for extra space 
+                        rsp_data[rsp_index] <= ovrd_freq_addr[7:0]; 
                         rsp_index <= rsp_index + 1; 
                     end
                     28: begin
-                        rsp_data[rsp_index] <= ovrd_freq_addr[15:8]; //8'd0;                        // padding for extra space 
+                        rsp_data[rsp_index] <= ovrd_freq_addr[15:8]; 
                         rsp_index <= rsp_index + 1; 
                     end
                     29:    begin
-                        rsp_data[rsp_index] <= ovrd_power_addr[7:0]; //8'd0;                        // padding for extra space 
+                        rsp_data[rsp_index] <= ovrd_power_addr[7:0]; 
                         rsp_index <= rsp_index + 1; 
                     end
                     30: begin
-                        rsp_data[rsp_index] <= ovrd_power_addr[15:8]; //8'd0;                        // padding for extra space 
+                        rsp_data[rsp_index] <= ovrd_power_addr[15:8]; 
                         rsp_index <= rsp_index + 1; 
                     end
-                    31:    begin
-                        rsp_data[rsp_index] <= 8'd0;                        // padding for extra space
+                    31: begin
+                        rsp_data[rsp_index] <= config_o[7:0]; 
+                        rsp_index <= rsp_index + 1; 
+                    end
+                    32: begin
+                        rsp_data[rsp_index] <= config_o[15:8]; 
+                        rsp_index <= rsp_index + 1; 
+                    end
+                    33: begin
+                        rsp_data[rsp_index] <= config_o[23:16]; 
+                        rsp_index <= rsp_index + 1; 
+                    end
+                    34: begin
+                        rsp_data[rsp_index] <= config_o[31:24]; 
+                        rsp_index <= rsp_index + 1; 
+                    end
+                    // ZMon cal debugging junk
+                    35: begin
+                        rsp_data[rsp_index] <= zm_fi_gain[7:0]; 
+                        rsp_index <= rsp_index + 1; 
+                    end
+                    36: begin
+                        rsp_data[rsp_index] <= zm_fi_gain[15:8]; 
+                        rsp_index <= rsp_index + 1; 
+                    end
+                    37: begin
+                        rsp_data[rsp_index] <= zm_fi_offset[7:0]; 
+                        rsp_index <= rsp_index + 1; 
+                    end
+                    38: begin
+                        rsp_data[rsp_index] <= zm_fi_offset[15:8]; 
+                        rsp_index <= rsp_index + 1; 
+                    end
+                    39: begin
+                        rsp_data[rsp_index] <= zm_fq_gain[7:0]; 
+                        rsp_index <= rsp_index + 1; 
+                    end
+                    40: begin
+                        rsp_data[rsp_index] <= zm_fq_gain[15:8]; 
+                        rsp_index <= rsp_index + 1; 
+                    end
+                    41: begin
+                        rsp_data[rsp_index] <= zm_fq_offset[7:0]; 
+                        rsp_index <= rsp_index + 1; 
+                    end
+                    42: begin
+                        rsp_data[rsp_index] <= zm_fq_offset[15:8]; 
+                        rsp_index <= rsp_index + 1; 
+                    end
+                    43: begin
+                        rsp_data[rsp_index] <= 8'h00; 
+                        rsp_index <= rsp_index + 1; 
+                    end
+                    44: begin
+                        rsp_data[rsp_index] <= 8'h00; 
+                        rsp_index <= rsp_index + 1; 
+                    end
+                    45: begin
+                        rsp_data[rsp_index] <= 8'h00; 
+                        rsp_index <= rsp_index + 1; 
+                    end
+                    46: begin
+                        rsp_data[rsp_index] <= 8'h00; 
+                        rsp_index <= rsp_index + 1; 
+                    end
+                    47: begin
+                        rsp_data[rsp_index] <= 0;
                         rsp_index <= rsp_index + 1; 
                         rsp_length <= rsp_index + 2;
                         opcode_counter_o <= opcode_counter_o + 32'd1;
@@ -1372,7 +1438,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 next_opcode();
             end
             else begin
-                rsp_data[24-length] <= fifo_dat_i;
+                rsp_data[`CALZM_LEN-length] <= fifo_dat_i;
                 if(length == 2)             // Turn OFF with 2 clocks left. 1=last read
                     fifo_rd_en_o <= 0;      // pause opcode fifo reads
                 length <= length - 1;
@@ -1436,14 +1502,14 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         run_calcs <= 1'b0;
         meas_ops <= 1'b0;        
         
-        zm_fi_gain <= 32'h0001_0000;      // zmon fwd "I" ADC gain, Q15.16 float
+        zm_fi_gain <= 32'h0000_051e;      // zmon fwd "I" ADC gain, Q15.16 float, 0.02 default
         zm_fi_offset <= 16'd0;            // zmon fwd "I" ADC offset, signed int
-        zm_fq_gain <= 32'h0001_0000;      // zmon fwd "Q" ADC gain, Q15.16 float
+        zm_fq_gain <= 32'h0000_051e;      // zmon fwd "Q" ADC gain, Q15.16 float
         zm_fq_offset <= 16'd0;            // zmon fwd "Q" ADC offset, signed int
         
-        zm_ri_gain <= 32'h0001_0000;      // zmon refl "I" ADC gain, Q15.16 float
+        zm_ri_gain <= 32'h0000_051e;      // zmon refl "I" ADC gain, Q15.16 float, 0.02 default
         zm_ri_offset <= 16'd0;            // zmon refl "I" ADC offset, signed int
-        zm_rq_gain <= 32'h0001_0000;      // zmon refl "Q" ADC gain, Q15.16 float
+        zm_rq_gain <= 32'h0000_051e;      // zmon refl "Q" ADC gain, Q15.16 float
         zm_rq_offset <= 16'd0;            // zmon refl "Q" ADC offset, signed int
         
         config_o <= 32'h0000_0003;        // default VGA hi gain mode, control VGA DAC A & B, ZMonEn OFF, Tweak Power OFF

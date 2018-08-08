@@ -41,6 +41,8 @@ module pulse #(parameter FILL_BITS = 4)
     output wire         rf_gate_o,          // RF_GATE line
     output wire         rf_gate2_o,         // RF_GATE2 line, initial release always ON
     input  wire         dbg_rf_gate_i,      // Debug mode assert RF_GATE lines
+    input  wire         zm_normal_i,        // 0 to calibrate ZMon offset, measure with RFGATE OFF during pulse
+                                            // 1 is normal operation
 
     // controlled by opcode output wire         zmon_en_o,          // Enable ZMON
     output wire         conv_o,             // CONV pulse
@@ -50,6 +52,7 @@ module pulse #(parameter FILL_BITS = 4)
 
     output reg  [31:0]  adc_fifo_dat_o,     // 32 bits of FWD REFL ADC data written to output fifo
     output reg          adc_fifo_wen_o,     // ADC results fifo write enable
+    input  wire         adc_fifo_full_i,    // ADC FIFO full
 
     output reg  [7:0]   status_o            // Pulse status, 0=Busy, SUCCESS when done, or an error code
     );
@@ -82,9 +85,12 @@ module pulse #(parameter FILL_BITS = 4)
     assign adc_sclk_o = adc_sclk;
     assign conv_o = conv;
 
+// debugging
+//reg [7:0] mtbl_idx;
+
     // ZMON ADC variables, processing
     // LTC1407A ADC state machine
-    localparam AIdle = 3'd0, ASckOn = 3'd1, ASckOnWait = 3'd2, ASckOff = 3'd3, ADone = 3'd4, ADone2 = 3'd5, SckOnStretch = 3'd2;
+    localparam AIdle = 3'd0, ASckOn = 3'd1, ASckOnWait = 3'd2, ASckOff = 3'd3, ADone = 3'd4, ADone2 = 3'd5, SckOnStretch = 3'd2, DbgInit = 3'd6;
     reg [2:0]       astate = AIdle;
     reg [31:0]      adcf_dat = 32'b0;
     reg [31:0]      adcr_dat = 32'b0;
@@ -93,12 +99,428 @@ module pulse #(parameter FILL_BITS = 4)
     // Assumes 100MHz clock, /6 = 16.67MHz for LTC1407A's
     always @(posedge sys_clk)    // 100MHz, 6 clocks per T = 16.667MHz 'SPI'
         if(!sys_rst_n) begin
+//`ifdef XILINX_SIMULATOR
+//            astate <= DbgInit; //AIdle;            
+//            mtbl_idx <= 8'h00;
+//`endif            
             astate <= AIdle;
             adc_fifo_wen_o <= 0;
             adc_sclk <= 1'b0;
         end
         else begin
             case (astate)
+//`ifdef XILINX_SIMULATOR
+//            DbgInit: begin
+//// Debug, fill MEAS fifo with real data to debug reads.
+//                adc_fifo_wen_o <= 0;
+//                if(mtbl_idx < 100)
+//                    mtbl_idx <= mtbl_idx + 8'h01;
+//                else
+//                    astate <= AIdle;
+//                case(mtbl_idx)
+//                0: begin    // 50.0dBm in Q15.16 volts across 50 ohm load
+//                    adc_fifo_dat_o <= {16'd15000, 16'd14900};  // [FWDQ 00] ]FQDI 00]
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                1: begin
+//                    adc_fifo_dat_o <= {16'd21000, 16'd20000};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                2: begin
+//                    adc_fifo_dat_o <= {16'd14400, 16'd14448};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                3: begin
+//                    adc_fifo_dat_o <= {16'd14000, 16'd14100};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                4: begin                
+//                    adc_fifo_dat_o <= {16'd14250, 16'd14200};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                5: begin
+//                    adc_fifo_dat_o <= {16'd15050, 16'd15200};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                6: begin
+//                    adc_fifo_dat_o <= {16'd13916, 16'd14200};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                7: begin
+//                    adc_fifo_dat_o <= {16'd13999, 16'd14000};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                8: begin
+//                    adc_fifo_dat_o <= {16'd13692, 16'd13700};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                9: begin
+//                    adc_fifo_dat_o <= {16'd13380, 16'd13750};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                10: begin   // 51.0
+//                    adc_fifo_dat_o <= {16'd13200, 16'd13220};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                11: begin
+//                    adc_fifo_dat_o <= {16'd13240, 16'd13220};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                12: begin
+//                    adc_fifo_dat_o <= {16'd13004, 16'd13104};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                13: begin
+//                    adc_fifo_dat_o <= {16'd13014, 16'd13114};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                14: begin
+//                    adc_fifo_dat_o <= {16'd13004, 16'd13104};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                15: begin
+//                    adc_fifo_dat_o <= {16'd12908, 16'd13004};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                16: begin
+//                    adc_fifo_dat_o <= {16'd13008, 16'd13018};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                17: begin
+//                    adc_fifo_dat_o <= {16'd12632, 16'd13000};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                18: begin
+//                    adc_fifo_dat_o <= {16'd12344, 16'd12340};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                19: begin
+//                    adc_fifo_dat_o <= {16'd12333, 16'd12330};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                20: begin   // 52.0
+//                    adc_fifo_dat_o <= {16'd12296, 16'd12297};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                21: begin
+//                    adc_fifo_dat_o <= {16'd12337, 16'd12290};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                22: begin
+//                    adc_fifo_dat_o <= {16'd12168, 16'd12267};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                23: begin
+//                    adc_fifo_dat_o <= {16'd12260, 16'd12258};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                24: begin
+//                    adc_fifo_dat_o <= {16'd11960, 16'd11980};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                25: begin
+//                    adc_fifo_dat_o <= {16'd11950, 16'd11990};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                26: begin
+//                    adc_fifo_dat_o <= {16'd11756, 16'd11758};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                27: begin
+//                    adc_fifo_dat_o <= {16'd11788, 16'd11800};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                28: begin
+//                    adc_fifo_dat_o <= {16'd11596, 16'd11600};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                29: begin
+//                    adc_fifo_dat_o <= {16'd11618, 16'd11590};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                30: begin   // 53.0
+//                    adc_fifo_dat_o <= {16'd11512, 16'd11510};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                31: begin
+//                    adc_fifo_dat_o <= {16'd11498, 16'd11507};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                32: begin
+//                    adc_fifo_dat_o <= {16'd11360, 16'd11357};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                33: begin
+//                    adc_fifo_dat_o <= {16'd11368, 16'd11366};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                34: begin
+//                    adc_fifo_dat_o <= {16'd11292, 16'd11290};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                35: begin
+//                    adc_fifo_dat_o <= {16'd11288, 16'd11297};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                36: begin                
+//                    adc_fifo_dat_o <= {16'd11056, 16'd11050};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                37: begin
+//                    adc_fifo_dat_o <= {16'd11048, 16'd11051};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                38: begin
+//                    adc_fifo_dat_o <= {16'd10964, 16'd10960};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                39: begin
+//                    adc_fifo_dat_o <= {16'd11000, 16'd10970};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                40: begin   // 54.0
+//                    adc_fifo_dat_o <= {16'd10924, 16'd10920};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                41: begin
+//                    adc_fifo_dat_o <= {16'd10940, 16'd10930};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                42: begin
+//                    adc_fifo_dat_o <= {16'd10816, 16'd10810};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                43: begin
+//                    adc_fifo_dat_o <= {16'd10820, 16'd10800};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                44: begin
+//                    adc_fifo_dat_o <= {16'd10740, 16'd10730};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                45: begin
+//                    adc_fifo_dat_o <= {16'd10737, 16'd10732};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                46: begin
+//                    adc_fifo_dat_o <= {16'd10488, 16'd10489};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                47: begin
+//                    adc_fifo_dat_o <= {16'd10490, 16'd10477};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                48: begin
+//                    adc_fifo_dat_o <= {16'd10452, 16'd10450};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                49: begin
+//                    adc_fifo_dat_o <= {16'd10448, 16'd10460};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                50: begin
+//                    adc_fifo_dat_o <= {16'd10472, 16'd10470};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                51: begin
+//                    adc_fifo_dat_o <= {16'd10478, 16'd10468};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                52: begin
+//                    adc_fifo_dat_o <= {16'd10420, 16'd10425};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                53: begin
+//                    adc_fifo_dat_o <= {16'd10422, 16'd10421};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                54: begin
+//                    adc_fifo_dat_o <= {16'd10332, 16'd10330};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                55: begin
+//                    adc_fifo_dat_o <= {16'd10335, 16'd10327};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                56: begin
+//                    adc_fifo_dat_o <= {16'd10144, 16'd10140};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                57: begin
+//                    adc_fifo_dat_o <= {16'd10146, 16'd10141};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                58: begin
+//                    adc_fifo_dat_o <= {16'd10184, 16'd10186};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                59: begin
+//                    adc_fifo_dat_o <= {16'd10180, 16'd10179};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                60: begin   // 56.0
+//                    adc_fifo_dat_o <= {16'd10152, 16'd10150};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                61: begin
+//                    adc_fifo_dat_o <= {16'd10157, 16'd10155};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                62: begin
+//                    adc_fifo_dat_o <= {16'd10052, 16'd10055};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                63: begin
+//                    adc_fifo_dat_o <= {16'd10050, 16'd10057};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                64: begin
+//                    adc_fifo_dat_o <= {16'd9950, 16'd9955};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                65: begin
+//                    adc_fifo_dat_o <= {16'd9948, 16'd9978};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                66: begin
+//                    adc_fifo_dat_o <= {16'd10104, 16'd10100};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                67: begin
+//                    adc_fifo_dat_o <= {16'd10050, 16'd9999};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                68: begin
+//                    adc_fifo_dat_o <= {16'd10076, 16'd10080};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                69: begin
+//                    adc_fifo_dat_o <= {16'd10070, 16'd10100};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                70: begin   // 57.0
+//                    adc_fifo_dat_o <= {16'd10072, 16'd10080};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                71: begin
+//                    adc_fifo_dat_o <= {16'd10068, 16'd10091};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                72: begin
+//                    adc_fifo_dat_o <= {16'd9956, 16'd9957};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                73: begin
+//                    adc_fifo_dat_o <= {16'd9959, 16'd9958};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                74: begin
+//                    adc_fifo_dat_o <= {16'd9984, 16'd9980};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                75: begin
+//                    adc_fifo_dat_o <= {16'd9979, 16'd9974};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                76: begin
+//                    adc_fifo_dat_o <= {16'd9979, 16'd9974};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                77: begin
+//                    adc_fifo_dat_o <= {16'd9979, 16'd9974};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                78: begin
+//                    adc_fifo_dat_o <= {16'd9979, 16'd9974};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                79: begin
+//                    adc_fifo_dat_o <= {16'd9979, 16'd9974};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                80: begin   // 58.0
+//                    adc_fifo_dat_o <= {16'd9979, 16'd9974};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                81: begin
+//                    adc_fifo_dat_o <= {16'd9979, 16'd9974};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                82: begin
+//                    adc_fifo_dat_o <= {16'd9979, 16'd9974};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                83: begin
+//                    adc_fifo_dat_o <= {16'd9979, 16'd9974};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                84: begin
+//                    adc_fifo_dat_o <= {16'd9979, 16'd9974};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                85: begin
+//                    adc_fifo_dat_o <= {16'd9979, 16'd9974};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                86: begin
+//                    adc_fifo_dat_o <= {16'd9979, 16'd9974};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                87: begin
+//                    adc_fifo_dat_o <= {16'd9979, 16'd9974};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                88: begin
+//                    adc_fifo_dat_o <= {16'd9979, 16'd9974};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                89: begin
+//                    adc_fifo_dat_o <= {16'd9979, 16'd9974};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                90: begin   // 59.0
+//                    adc_fifo_dat_o <= {16'd9979, 16'd9974};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                91: begin
+//                    adc_fifo_dat_o <= {16'd9979, 16'd9974};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                92: begin
+//                    adc_fifo_dat_o <= {16'd9979, 16'd9974};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                93: begin
+//                    adc_fifo_dat_o <= {16'd9979, 16'd9974};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                94: begin
+//                    adc_fifo_dat_o <= {16'd9979, 16'd9974};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                95: begin
+//                    adc_fifo_dat_o <= {16'd9979, 16'd9974};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                96: begin
+//                    adc_fifo_dat_o <= {16'd9979, 16'd9974};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                97: begin
+//                    adc_fifo_dat_o <= {16'd9979, 16'd9974};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                98: begin
+//                    adc_fifo_dat_o <= {16'd9979, 16'd9974};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                99: begin
+//                    adc_fifo_dat_o <= {16'd9979, 16'd9974};
+//                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+//                end
+//                endcase            
+//            end
+//`endif            
             AIdle: begin
                 adc_fifo_wen_o <= 0;
                 if (conv) begin
@@ -128,19 +550,21 @@ module pulse #(parameter FILL_BITS = 4)
                     astate <= ASckOn;
                 end
             ADone: begin
-                //adc_fifo_dat_o <= {adcf_dat[15:2], 2'b0, adcf_dat[31:18], 2'b0};
-                // use 'normal' justification
-                adc_fifo_dat_o <= {2'b0, adcf_dat[15:2], 2'b0, adcf_dat[31:18]};
-                // test:adc_fifo_dat_o <= {2'b0, 14'h1000, 2'b0, 14'h1fff};                
-                adc_fifo_wen_o <= 1'b1;                // write ADCF data
+                if(adc_fifo_full_i == 1'b0) begin
+                    adc_fifo_dat_o <= {adcf_dat[15:2], 2'b0, adcf_dat[31:18], 2'b0};
+                    // RMR, use shifted 16-bit #'s above  adc_fifo_dat_o <= {2'b0, adcf_dat[15:2], 2'b0, adcf_dat[31:18]};
+                    // test:adc_fifo_dat_o <= {2'b0, 14'h1000, 2'b0, 14'h1fff};                
+                    adc_fifo_wen_o <= 1'b1;                // write ADCF data
+                end
                 astate <= ADone2;
             end
             ADone2: begin
-                //adc_fifo_dat_o <= {adcr_dat[15:2], 2'b0, adcr_dat[31:18], 2'b0};
-                // use 'normal' justification
-                adc_fifo_dat_o <= {2'b0, adcr_dat[15:2], 2'b0, adcr_dat[31:18]};
-                // test:adc_fifo_dat_o <= {2'b0, 14'h2000, 2'b0, 14'h3000};
-                adc_fifo_wen_o <= 1'b1;                // write ADCR data
+                if(adc_fifo_full_i == 1'b0) begin
+                    adc_fifo_dat_o <= {adcr_dat[15:2], 2'b0, adcr_dat[31:18], 2'b0};
+                    //adc_fifo_dat_o <= {2'b0, adcr_dat[15:2], 2'b0, adcr_dat[31:18]};
+                    // test:adc_fifo_dat_o <= {2'b0, 14'h2000, 2'b0, 14'h3000};
+                    adc_fifo_wen_o <= 1'b1;                // write ADCR data
+                end
                 astate <= AIdle;
             end
             endcase // case (astate)
@@ -205,7 +629,7 @@ module pulse #(parameter FILL_BITS = 4)
                 measure <= pls_fifo_dat_i[32];
                 measure_at <= pls_fifo_dat_i[63:39] - 24'h00_0000_0001;   // meas offset 0-based 
                 pls_fifo_ren_o <= 0;
-                rf_gate <= pulse_en & rf_enable_i;   // on
+                rf_gate <= pulse_en & rf_enable_i & zm_normal_i;   // on
                 //rf_gate2 <= pulse_en & rf_enable_i;   // this switch is too fast for PA, leave ON
                 if(pls_fifo_dat_i[32] == 1'b1 &&
                     pls_fifo_dat_i[63:39] - 24'h00_0000_0001 == 0)
