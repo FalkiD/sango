@@ -70,6 +70,7 @@
 `define CFGBIT_1            1
 `define CFGBIT_2            2
 `define CFGBIT_ZOFST_CAL    3
+`define CFGBIT_INTR_TEST    4   // generate MCU_TRIG interrupt for testing
 
 // Opcodes/Responses are written in 1-sector minimum chunks
 `define SECTOR_SIZE         512
@@ -146,5 +147,12 @@
 `define LATCH_OPC_ERROR     18
 `define LATCH_PULSE_WIDTH   17
 `define LATCH_DUTY_CYCLE	16
+
+// Debug SPI state globals
+`define SPI_IDLE            4'd0
+`define SPI_FETCH_DEVICE    4'd1
+`define SPI_START_WAIT      4'd2
+`define SPI_WRITING         4'd3
+`define SPI_SSN_OFF         4'd4
 
 `endif

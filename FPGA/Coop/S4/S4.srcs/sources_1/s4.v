@@ -141,7 +141,7 @@
 `include "status.h"
 `include "timescale.v"
 `include "opcodes.h"
-
+`include "s4.h"
 // -----------------------------------------------------------------------------
 // `define's
 // -----------------------------------------------------------------------------
@@ -182,20 +182,8 @@
 // (fixed so MCU generated FPGA clk is 100MHz)
 //`define CLKFB_FACTOR_BRD 10.000        //  "       "        "      "
 //`define CLKFB_FACTOR_MCU 10.000         //  "       "        "      "
-`define GLBL_MMC_FILL_LEVEL         2048
-`define GLBL_MMC_FILL_LEVEL_BITS    11
-
-`define PATTERN_DEPTH               8192
-`define PATTERN_FILL_BITS           13
-`define PTN_TO_OPC_COUNT            32
-`define PTN_TO_OPC_BITS             5
-`define PTN_CMD_BITS                4
-
-`define PROCESSOR_FIFO_DEPTH        8
-`define PROCESSOR_FIFO_FILL_BITS    3
 
 // -----------------------------------------------------------------------------
-
 module s4  
 (
 `ifndef USE_FPGA_MCLK
@@ -315,10 +303,8 @@ wire         mmcm_rst_i;
 wire         mmcm_pwrdn_i;
 wire         mmcm_locked_o;
 
-// interrupt MCU on hardware error
-wire		 mmc_trig;
-
 // MMC tester
+wire         mmc_clk;       // missing definition all this time???
 wire         mmc_clk_oe;
 wire         mmc_cmd;
 wire         mmc_cmd_oe;
@@ -464,9 +450,12 @@ wire [3:0]   dbg_spi_bytes;      // bytes to send
 reg  [3:0]   dbg_spi_count;      // down counter
 wire         dbg_spi_start;
 wire         dbg_spi_busy;
-reg          dbg_spi_done;
-wire [2:0]   dbg_spi_device;       // 1=VGA, 2=SYN, 3=DDS, 4=ZMON
+wire [2:0]   dbg_spi_device;        // 1=VGA, 2=SYN, 3=DDS, 4=ZMON
 wire [15:0]  dbg_enables; // = 1'b0;          // toggle various enables/wires
+wire [3:0]   dbg_spi_state;         // spi processor state
+
+// MCU interrupt test, config_word[4] generates test interrupt
+wire         intrpt_test;
 
 // DDS/SYN lines
 wire         addds_sclk;
@@ -638,7 +627,6 @@ assign sys_rst_n = MCU_TRIG ? 1'b0 : dbg_sys_rst_n;
 assign opc_fifo_enable = 1'b1;
 assign opc_fifo_rst = 1'b0;
 assign opc_enable = 1'b1;
-assign mmc_trig = 1'b0;     // MCU interrupt not implemented yet
 
 // Initialize things after reset pulse
 always @(posedge sys_clk) begin
@@ -1145,6 +1133,7 @@ end
     .meas_fifo_dat_i            (meas_fifo_dat_o),  // measurement fifo from pulse opcode
     .meas_fifo_ren_o            (meas_fifo_ren),    // measurement fifo read enable
     .meas_fifo_cnt_i            (meas_fifo_count),  // measurements in fifo after pulse/pattern
+    .meas_fifo_full_i           (meas_fifo_full),   // meas FIFO full
                                           
     .bias_enable_o              (bias_en),          // bias control
 
@@ -1171,6 +1160,8 @@ end
     // Debugging
     .status_o                   (opc_status),         // NULL opcode terminates, done=0, or error code
     .state_o                    (opc_state),          // For debugger display
+    .mcu_alarm_o                (),                   // Alarm register for top level to
+
     .dbg_opcodes_o              (dbg_opcodes),        // first ocode__last_opcode
     .dbg2_o                     (dbg_ptndata),        // last pattern data read while running pattern
     
@@ -1412,98 +1403,47 @@ end
 //          end
 //      end
 
-
-// ******************************************************************************
-// * RMR Debug SPI                                                              *
-// *                                                                            *
-// *  spi:  Initial SPI instance for debugging s4 HW                            *
-// *        31-Mar-2017 Add SPI instances to debug on s4                        *
-// *        We'll run at 12.5MHz (100MHz/8), CPOL=0, CPHA=0                     *
-// *                                                                            *
-// ******************************************************************************
-
-  reg         SPI_MISO;
+  // Debug SPI instance
+  // SPI signals muxed to selected SPI device when debug is enabled
+  wire        SPI_MISO;
   wire        SPI_MOSI;
   wire        SPI_SCLK;
-  reg         SPI_SSn;
+  wire        SPI_SSn;
+  dbg_utils #(
+      .PERIOD                     (32'd100000000),  // make it very infrequent(once/second)
+      .PULSE_WIDTH                (32'd1000)
+    ) dbg_spi
+    (
+    .sys_clk                    (sys_clk),
+    .sys_rst_n                  (sys_rst_n),
   
-  reg         spi_run = 0;
-  reg  [7:0]  spi_write;
-  wire [7:0]  spi_read;
-  wire        spi_busy;         // 'each byte' busy
-  wire        spi_done_byte;    // 1=done with a byte, data is valid
-  spi #(.CLK_DIV(3)) debug_spi 
-  (
-      .clk(sys_clk),
-      .rst(!sys_rst_n),
-      .miso(SPI_MISO),
-      .mosi(SPI_MOSI),
-      .sck(SPI_SCLK),
-      .start(spi_run),
-      .data_in(spi_write),
-      .data_out(spi_read),
-      .busy(spi_busy),
-      .new_data(spi_done_byte)     // 1=signal, data_out is valid
+    .pulse_en_i                 (intrpt_test),
+    .pulse_o                    (MMC_TRIG), 
+  
+    .spi_byte0_i                (arr_spi_bytes[0]),
+    .spi_byte1_i                (arr_spi_bytes[1]),
+    .spi_byte2_i                (arr_spi_bytes[2]),
+    .spi_byte3_i                (arr_spi_bytes[3]),
+    .spi_byte4_i                (arr_spi_bytes[4]),
+    .spi_byte5_i                (arr_spi_bytes[5]),
+    .spi_byte6_i                (arr_spi_bytes[6]),
+    .spi_byte7_i                (arr_spi_bytes[7]),
+    .spi_byte8_i                (arr_spi_bytes[8]),
+    .spi_byte9_i                (arr_spi_bytes[9]),
+    .spi_byte10_i               (arr_spi_bytes[10]),
+    .spi_byte11_i               (arr_spi_bytes[11]),
+    .spi_byte12_i               (arr_spi_bytes[12]),
+    .spi_byte13_i               (arr_spi_bytes[13]),
+  
+    .spi_bytes_i                (dbg_spi_bytes),
+    .spi_start_i                (dbg_spi_start),
+    .spi_state_o                (dbg_spi_state),    
+  
+    .SPI_MISO_i                 (SPI_MISO),
+    .SPI_MOSI_o                 (SPI_MOSI),
+    .SPI_SCLK_o                 (SPI_SCLK),
+    .SPI_SSn_o                  (SPI_SSn)
   );
-  
-  // Run the debug SPI instance
-  `define SPI_IDLE            4'd0
-  `define SPI_FETCH_DEVICE    4'd1
-  `define SPI_START_WAIT      4'd2
-  `define SPI_WRITING         4'd3
-  `define SPI_SSN_OFF         4'd4
-  
-  reg [3:0]   spi_state    = `SPI_IDLE;    
-  
-  always @(posedge sys_clk) begin
-    if(sys_rst_n == 1'b0) begin
-      SPI_SSn <= 1'b1;
-      spi_state <= `SPI_IDLE;    
-    end
-    else begin
-      case(spi_state)
-      `SPI_IDLE: begin
-        if(dbg_spi_start) begin
-          spi_run <= 1'b1;
-          dbg_spi_count <= 0;
-          spi_write <= arr_spi_bytes[0];
-          spi_state <= `SPI_START_WAIT;
-          SPI_SSn <= 1'b0;
-        end
-        else
-          SPI_SSn = 1'b1;
-      end
-      `SPI_FETCH_DEVICE: begin
-      end
-      `SPI_START_WAIT: begin
-        if(spi_busy == 1'b1) begin
-          dbg_spi_count <= dbg_spi_count + 1;
-          spi_state <= `SPI_WRITING;
-        end
-      end
-      `SPI_WRITING: begin
-        if(spi_done_byte == 1'b1) begin
-          // ready for next byte 
-          if(dbg_spi_count == dbg_spi_bytes) begin
-            spi_run <= 1'b0;
-            dbg_spi_done <= 1'b1;        
-            spi_state <= `SPI_SSN_OFF;
-          end
-          else begin
-            spi_write <= arr_spi_bytes[dbg_spi_count];
-            spi_state <= `SPI_START_WAIT;
-          end
-        end
-      end
-      `SPI_SSN_OFF: begin
-        if(spi_busy == 1'b0) begin
-          SPI_SSn <= 1'b1;
-          spi_state <= `SPI_IDLE;
-        end
-      end
-      endcase
-    end
-  end
 
   /////////////////////////////////
   // Concurrent assignments
@@ -1562,7 +1502,7 @@ end
   // ** debug mode. Otherwise SPI outputs are driven by  **
   // ** various processor modules.                       **
   // ******************************************************     
-  assign dbg_spi_busy = (spi_state == `SPI_IDLE) ? 1'b0 : 1'b1;  
+  assign dbg_spi_busy = (dbg_spi_state == `SPI_IDLE) ? 1'b0 : 1'b1;  
   // Connect SPI to wires based on which device is selected.
   localparam SPI_VGA = 4'd1, SPI_SYN = 4'd2, SPI_DDS = 4'd3, SPI_ZMON = 4'd4;
 
@@ -1667,8 +1607,6 @@ end
  
   assign ACTIVE_LEDn = active_led;
 
-  assign MMC_TRIG = mmc_trig;
-
   assign ADCTRIG = trig_config[`TRGBIT_RFGT] ? RF_GATE : ptn_adctrig; 
   assign TRIG_OUT = trig_config[`TRGBIT_SRC] ? ADCTRIG : 1'bz;
 
@@ -1677,7 +1615,9 @@ end
  
   // freq_done is 1-tick pulse from frequency processor after FREQ opcode if SYN_LOCK is ON
   // if config_word[3] is ON, pulse tweak_power
-  assign tweak_power = freq_done & config_word[3]; 
+  assign tweak_power = freq_done & config_word[3];
+  
+  assign intrpt_test = config_word[`CFGBIT_INTR_TEST]; 
  
   assign FPGA_MCU4 = MMC_CLK; //SYN_SCLK; //CONV; DDS_MOSI; //count4[15];    //  50MHz div'd by 2^16.
   assign FPGA_MCU3 = MMC_CMD; //DDS_SCLK; //count3[15];    // 200MHz div'd by 2^16.

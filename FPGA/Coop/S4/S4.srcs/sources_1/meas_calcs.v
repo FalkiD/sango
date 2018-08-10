@@ -81,7 +81,7 @@ module meas_calcs(
     // Build a table of power in watts entries at 0.1dBm steps between 50.0 and 61.0
     reg  [31:0]     volts_to_dbm [0:110];   // 111 entries, voltage value for each 0.1dBm step into 50 ohm load
     reg  [6:0]      ptbl_idx;               // power table index
-    localparam  CAL_TBL_MAX = 7'd111;
+    localparam  CAL_TBL_MAX = 7'd110;
 
     // Calibration definitions, registers
     localparam CAL_IDLE = 4'd0; // idle state
@@ -613,13 +613,14 @@ module meas_calcs(
                 109: begin
                     volts_to_dbm[109] <= 32'h00f804df;
                 end
-                110: begin      // 61.0
+                CAL_TBL_MAX: begin      // 61.0
                     volts_to_dbm[110] <= 32'h00fae415;
-                end
-                CAL_TBL_MAX: begin  // 61.1
-                    volts_to_dbm[111] <= 32'h00fdcbcf;
                     cal_state <= CAL_IDLE;                
                 end
+//                CAL_TBL_MAX: begin  // 61.1
+//                    volts_to_dbm[111] <= 32'h00fdcbcf;
+//                    cal_state <= CAL_IDLE;                
+//                end
                 endcase
                 ptbl_idx <= ptbl_idx + 7'b000_0001;
             end

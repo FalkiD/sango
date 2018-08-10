@@ -76,6 +76,7 @@
 // Revision 1.01.F  8/01/2018   RMR -Fixup ZMon read voltages.
 // Revision 1.02.0  8/06/2018   RMR -ZMon read voltages good in SIM? retest on hw
 //                                   Added volts to dBm table                       
+// Revision 1.02.1  8/08/2018   RMR -Fix # of measurements(1 more bit required)                       
 //------------------------------------------------------------------------------
 
-`define VERSION 16'h1_02_0     // V.vv.r FPGA development revision
+`define VERSION 16'h1_02_1     // V.vv.r FPGA development revision

@@ -36,7 +36,8 @@
 `include "version.v"
 `include "status.h"
 `include "opcodes.h"
-
+//`include "s6.h"
+`include "s4.h"
 `define STATE_IDLE                  7'h01
 `define STATE_FETCH_FIRST           7'h02   // 1 extra clock after assert rd_en   
 `define STATE_FETCH                 7'h03
@@ -121,6 +122,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     input  wire [31:0] meas_fifo_dat_i,           // measurement fifo from pulse opcode
     output reg         meas_fifo_ren_o,           // measurement fifo read enable
     input  wire [PTN_FILL_BITS-1:0] meas_fifo_cnt_i, // measurements in fifo after pulse/pattern
+    input  wire        meas_fifo_full_i,          // meas FIFO full
 
     output reg         bias_enable_o,             // bias control
 
@@ -240,6 +242,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     reg  [11:0]  pwr_caldata;        // put together 12-bit word to write into power table
 
     reg  [15:0]  version = `VERSION;
+
+    wire [PTN_FILL_BITS:0] meas_fifo_count; // measurements in fifo, 16-bits to handle full fifo
 
     // Zmon (MEAS) calibration registers
     reg  [31:0]  zm_fi_gain;         // zmon fwd "I" ADC gain, Q15.16 float
@@ -917,11 +921,11 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                         rsp_index <= rsp_index + 1; 
                     end
                     13: begin
-                        rsp_data[rsp_index] <= meas_fifo_cnt_i[8:1];  // Divide by 2, 2 entries=one measurement set. response_fifo_count_i[7:0];  // measurement results available count, 2 bytes. Was opcode response fifo count, 2 bytes
+                        rsp_data[rsp_index] <= meas_fifo_count[8:1];  // Divide by 2, 2 entries=one measurement set. response_fifo_count_i[7:0];  // measurement results available count, 2 bytes. Was opcode response fifo count, 2 bytes
                         rsp_index <= rsp_index + 1; 
                     end
                     14: begin
-                        rsp_data[rsp_index] <= {5'd0, meas_fifo_cnt_i[PTN_FILL_BITS-1:9]}; //response_fifo_count_i[10:8]}; // measurement results available count, ms byte. Was opcode response fifo count, 2 bytes       
+                        rsp_data[rsp_index] <= {1'd0, meas_fifo_count[PTN_FILL_BITS:9]}; //response_fifo_count_i[10:8]}; // measurement results available count, ms byte. Was opcode response fifo count, 2 bytes       
                         rsp_index <= rsp_index + 1; 
                     end
                     15: begin
@@ -1640,5 +1644,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     assign extrig               = extrig_i ^ trig_conf[`TRGBIT_INVERT];
     assign ovrd_freq_addr       = freq_addr_list[ovrd_index];     // 0 or selected index frequency override address, absolute address.
     assign ovrd_power_addr      = power_addr_list[ovrd_index];    // 0 or selected index power override address, absolute address.
+    assign meas_fifo_count      = meas_fifo_full_i ? `PATTERN_DEPTH : {1'b0, meas_fifo_cnt_i}; // measurements in fifo 16-bits to handle full fifo
 
 endmodule
