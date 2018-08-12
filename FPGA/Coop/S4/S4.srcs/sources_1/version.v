@@ -76,7 +76,11 @@
 // Revision 1.01.F  8/01/2018   RMR -Fixup ZMon read voltages.
 // Revision 1.02.0  8/06/2018   RMR -ZMon read voltages good in SIM? retest on hw
 //                                   Added volts to dBm table                       
-// Revision 1.02.1  8/08/2018   RMR -Fix # of measurements(1 more bit required)                       
+// Revision 1.02.2  8/08/2018   RMR -Fix # of measurements(1 more bit required)
+//                                  -Connected MMC_TRIG to pulse generator, enable via d4 of CONFIG, works                       
+// Revision 1.02.3  8/10/2018   RMR -Refactor global defines as top-level parameters.
+//                                   Override PATTERN_DEPTH & PATTERN_BITS for S6 from S6 project
+//                                   Default values are S4 values. (removed s6.h/s4.h from projects)
 //------------------------------------------------------------------------------
 
-`define VERSION 16'h1_02_1     // V.vv.r FPGA development revision
+`define VERSION 16'h1_02_3     // V.vv.r FPGA development revision

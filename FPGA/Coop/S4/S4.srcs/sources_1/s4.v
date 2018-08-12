@@ -141,7 +141,7 @@
 `include "status.h"
 `include "timescale.v"
 `include "opcodes.h"
-`include "s4.h"
+
 // -----------------------------------------------------------------------------
 // `define's
 // -----------------------------------------------------------------------------
@@ -184,7 +184,34 @@
 //`define CLKFB_FACTOR_MCU 10.000         //  "       "        "      "
 
 // -----------------------------------------------------------------------------
-module s4  
+// 12-Aug-2018 Use top-level parameters. Override values from Xilinx project for S6
+// MMC, pattern, and measurement fifo sizes, etc
+//`define GLBL_MMC_FILL_LEVEL         2048
+//`define GLBL_MMC_FILL_LEVEL_BITS    11
+
+//`define PATTERN_DEPTH               32768
+//`define PATTERN_FILL_BITS           15
+//`define PTN_TO_OPC_COUNT            16
+//`define PTN_TO_OPC_BITS             4
+//`define PTN_CMD_BITS                4
+
+//`define PROCESSOR_FIFO_DEPTH        8
+//`define PROCESSOR_FIFO_FILL_BITS    3
+
+module s4 #(parameter GLBL_MMC_FILL_LEVEL = 2048,
+            parameter GLBL_MMC_FILL_LEVEL_BITS = 11,
+
+            // pattern block RAM            
+            parameter PATTERN_DEPTH = 8192,             // S4 default
+            parameter PATTERN_FILL_BITS = 13,           // S4 default
+
+            // pattern processor to opcode processor fifo's
+            // (these should all be changed to registers, no need for fifo's?)
+            parameter PTN_TO_OPC_COUNT = 16,
+            parameter PTN_TO_OPC_BITS = 4,
+            parameter PTN_CMD_BITS = 4,            
+            parameter PROCESSOR_FIFO_DEPTH = 8,
+            parameter PROCESSOR_FIFO_FILL_BITS = 3)
 (
 `ifndef USE_FPGA_MCLK
   input              FPGA_CLK,           //  P10   I        + Diff FPGA CLK From S4 Board U34/Si53307
@@ -335,16 +362,16 @@ wire         opc_fifo_rst;       // reset for opcode processor fifo's
 wire  [7:0]  mmc_fif_dat;        // MMC read fifo into opcode processor 
 wire         mmc_fif_ren;        // MMC read enable, out of opcode processor into mmc_tester
 wire         mmc_fif_mt;         // MMC read fifo empty
-wire  [`GLBL_MMC_FILL_LEVEL_BITS-1:0]  mmc_fif_cnt;    // MMC read fifo count
+wire  [GLBL_MMC_FILL_LEVEL_BITS-1:0]  mmc_fif_cnt;    // MMC read fifo count
 wire         mmc_inpf_rst;       // opcode processor can reset input fifo
 
 wire  [7:0]  mmc_rspf_dat;       // MMC write fifo, out of opcode processor into mmc_tester 
 wire         mmc_rspf_wen;       // MMC write enable 
 wire         mmc_rspf_mt;        // MMC write fifo empty 
 wire         mmc_rspf_fl;        // MMC write fifo full
-wire  [`GLBL_MMC_FILL_LEVEL_BITS-1:0]  mmc_rspf_cnt;   // MMC write fifo count
+wire  [GLBL_MMC_FILL_LEVEL_BITS-1:0]  mmc_rspf_cnt;   // MMC write fifo count
 wire         mmc_rsp_rdy;        // Response ready
-wire  [`GLBL_MMC_FILL_LEVEL_BITS-1:0]  mmc_rsp_len;    // Response length written by opcode processor
+wire  [GLBL_MMC_FILL_LEVEL_BITS-1:0]  mmc_rsp_len;    // Response length written by opcode processor
 
 // Frequency processor wires
 wire [31:0]  frq_fifo_dat_i;          // to fifo from opc, frequency output in MHz
@@ -353,7 +380,7 @@ wire [31:0]  frq_fifo_dat_o;          // to frequency processor
 wire         frq_fifo_ren;            // frequency fifo read enable
 wire         frq_fifo_mt;             // frequency fifo empty flag
 wire         frq_fifo_full;           // frequency fifo full flag
-wire [`PROCESSOR_FIFO_FILL_BITS-1:0]   frq_fifo_count;
+wire [PROCESSOR_FIFO_FILL_BITS-1:0]   frq_fifo_count;
 wire [7:0]   frq_status;              // frequency processor status
 wire         frq_mute_n;              // frequency processor controls SYN mute when changing frequencies
 wire         freq_done;               // pulsed after successful frequency change
@@ -374,7 +401,7 @@ wire         pwr_fifo_ren;            // power fifo read enable
 wire         pwr_fifo_mt;             // power fifo empty flag
 wire         pwr_fifo_full;           // power fifo full flag
 wire [7:0]   pwr_status;              // power processor status
-wire [`PROCESSOR_FIFO_FILL_BITS-1:0]   pwr_fifo_count;
+wire [PROCESSOR_FIFO_FILL_BITS-1:0]   pwr_fifo_count;
 // power processor outputs, mux'd to main outputs
 wire         pwr_mosi;
 wire         pwr_sclk;
@@ -399,7 +426,7 @@ wire         pls_fifo_ren;            // pulse fifo read enable
 wire         pls_fifo_mt;             // pulse fifo empty flag
 wire         pls_fifo_full;           // pulse fifo full flag
 wire [7:0]   pls_status;              // pulse processor status
-wire [`PROCESSOR_FIFO_FILL_BITS-1:0]   pls_fifo_count;
+wire [PROCESSOR_FIFO_FILL_BITS-1:0]   pls_fifo_count;
 wire         pls_rfgate;              // from pulse processor to RF_GATE
 wire         pls_rfgate2;             // Initial release, always ON. from pulse processor to RF_GATE2
 
@@ -410,20 +437,20 @@ wire [31:0]  meas_fifo_dat_o;          // from meas fifo to opc response fifo
 wire         meas_fifo_ren;            // meas fifo read enable
 wire         meas_fifo_mt;             // meas fifo empty flag
 wire         meas_fifo_full;           // meas fifo full flag
-wire [`PATTERN_FILL_BITS-1:0]   meas_fifo_count;
+wire [PATTERN_FILL_BITS-1:0]   meas_fifo_count;
 
 // Bias enable wire
 wire         bias_en;                 // bias control
 
 // Pattern processor wires.
 wire                            ptn_wen;         // opcode processor saves pattern opcodes to pattern RAM 
-wire [`PATTERN_FILL_BITS-1:0]   ptn_addr;        // address
+wire [PATTERN_FILL_BITS-1:0]   ptn_addr;        // address
 wire [23:0]                     ptn_clk;         // patclk, pattern tick, tick=100ns
 wire [`PATTERN_WR_WORD-1:0]     ptn_data;        // 12 bytes, 3 bytes patClk tick, 9 bytes for opcode, length, and data   
 wire                            ptn_run;         // Run pattern processor 
-wire [`PATTERN_FILL_BITS-1:0]   ptn_index;       // address of pattern entry to run (for status) 
+wire [PATTERN_FILL_BITS-1:0]    ptn_index;       // address of pattern entry to run (for status) 
 wire [7:0]                      ptn_status;      // status from pattern processor 
-wire [`PTN_CMD_BITS-1:0]        ptn_cmd;         // Command/mode, used to clear sections of pattern RAM
+wire [PTN_CMD_BITS-1:0]         ptn_cmd;         // Command/mode, used to clear sections of pattern RAM
 // Fifo from pattern processor to opcode processor (to run pattern)
 wire [`PATTERN_RD_WORD-1:0]     opcptn_fifo_dat_i;  // pattern processor to opcode processor, run next entry
 wire                            opcptn_fifo_wen;    // ptn to opc fifo write enable
@@ -431,7 +458,7 @@ wire [`PATTERN_RD_WORD-1:0]     opcptn_fifo_dat_o;  // opc read from ptn process
 wire                            opcptn_fifo_ren;    // opc ptn fifo read enable
 wire                            opcptn_fifo_mt;     // pattern to opcode processor fifo empty flag
 wire                            opcptn_fifo_full;   // pattern to opcode processor fifo full flag
-wire [`PTN_TO_OPC_BITS:0]       opcptn_fifo_count;
+wire [PTN_TO_OPC_BITS:0]        opcptn_fifo_count;
 
 // Opcode processing statistics
 wire [31:0]  opc_count;               // count opcodes for status info                     
@@ -652,8 +679,8 @@ end
   swiss_army_fifo #(
     .USE_BRAM(1),
     .WIDTH(32),
-    .DEPTH(`PROCESSOR_FIFO_DEPTH),
-    .FILL_LEVEL_BITS(`PROCESSOR_FIFO_FILL_BITS),
+    .DEPTH(PROCESSOR_FIFO_DEPTH),
+    .FILL_LEVEL_BITS(PROCESSOR_FIFO_FILL_BITS),
     .PF_FULL_POINT(7),
     .PF_FLAG_POINT(4),
     .PF_EMPTY_POINT(1)
@@ -689,8 +716,8 @@ end
     swiss_army_fifo #(
       .USE_BRAM(1),
       .WIDTH(39),
-      .DEPTH(`PROCESSOR_FIFO_DEPTH),
-      .FILL_LEVEL_BITS(`PROCESSOR_FIFO_FILL_BITS),
+      .DEPTH(PROCESSOR_FIFO_DEPTH),
+      .FILL_LEVEL_BITS(PROCESSOR_FIFO_FILL_BITS),
       .PF_FULL_POINT(7),
       .PF_FLAG_POINT(4),
       .PF_EMPTY_POINT(1)
@@ -723,8 +750,8 @@ end
     swiss_army_fifo #(
       .USE_BRAM(1),
       .WIDTH(64),
-      .DEPTH(`PROCESSOR_FIFO_DEPTH),
-      .FILL_LEVEL_BITS(`PROCESSOR_FIFO_FILL_BITS),
+      .DEPTH(PROCESSOR_FIFO_DEPTH),
+      .FILL_LEVEL_BITS(PROCESSOR_FIFO_FILL_BITS),
       .PF_FULL_POINT(7),
       .PF_FLAG_POINT(4),
       .PF_EMPTY_POINT(1)
@@ -756,10 +783,10 @@ end
     swiss_army_fifo #(
       .USE_BRAM(1),
       .WIDTH(32),
-      .DEPTH(`PATTERN_DEPTH),
-      .FILL_LEVEL_BITS(`PATTERN_FILL_BITS),
-      .PF_FULL_POINT(`PATTERN_FILL_BITS-1),
-      .PF_FLAG_POINT(`PATTERN_FILL_BITS>>1),
+      .DEPTH(PATTERN_DEPTH),
+      .FILL_LEVEL_BITS(PATTERN_FILL_BITS),
+      .PF_FULL_POINT(PATTERN_FILL_BITS-1),
+      .PF_FLAG_POINT(PATTERN_FILL_BITS>>1),
       .PF_EMPTY_POINT(1)
     ) results_fifo(
         .sys_rst_n(sys_rst_n),
@@ -789,10 +816,10 @@ end
     swiss_army_fifo #(
       .USE_BRAM(1),
       .WIDTH(`PATTERN_RD_WORD),
-      .DEPTH(`PTN_TO_OPC_COUNT),
-      .FILL_LEVEL_BITS(`PTN_TO_OPC_BITS+1),
-      .PF_FULL_POINT(`PTN_TO_OPC_BITS-1),
-      .PF_FLAG_POINT(`PTN_TO_OPC_BITS>>1),
+      .DEPTH(PTN_TO_OPC_COUNT),
+      .FILL_LEVEL_BITS(PTN_TO_OPC_BITS+1),
+      .PF_FULL_POINT(PTN_TO_OPC_BITS-1),
+      .PF_FLAG_POINT(PTN_TO_OPC_BITS>>1),
       .PF_EMPTY_POINT(1)
     ) ptn_to_opc_fifo(
         .sys_rst_n(sys_rst_n),
@@ -827,8 +854,8 @@ end
     .SYS_SWITCHES         (8),     // <TBD> Eventually these need to go away.
     .EXT_CSD_INIT_FILE    ("ext_csd_init.txt"), // Initial contents of EXT_CSD
     .HOST_RAM_ADR_BITS    (14), // Determines amount of BRAM in MMC host
-    .MMC_FIFO_DEPTH       (`GLBL_MMC_FILL_LEVEL), // (2048),
-    .MMC_FILL_LEVEL_BITS  (`GLBL_MMC_FILL_LEVEL_BITS),    // (16),
+    .MMC_FIFO_DEPTH       (GLBL_MMC_FILL_LEVEL), // (2048),
+    .MMC_FILL_LEVEL_BITS  (GLBL_MMC_FILL_LEVEL_BITS),    // (16),
     .MMC_RAM_ADR_BITS     (9)      // 512 bytes, 1st sector (17)
   ) mmc_tester_0 (
 
@@ -926,7 +953,7 @@ end
   // starts SYN instance to re-calibrate SYN and
   // check for PLL lock.
   freq_s4 #( 
-    .FILL_BITS(`PROCESSOR_FIFO_FILL_BITS)
+    .FILL_BITS(PROCESSOR_FIFO_FILL_BITS)
   ) freq_processor
   (
     .sys_clk            (sys_clk),
@@ -959,7 +986,7 @@ end
   // Input:requested power in dBm or a cal value in fifo
   // Output:Programs DAC7563 chip on VGA SPI
   power #(
-    .FILL_BITS(`PROCESSOR_FIFO_FILL_BITS)
+    .FILL_BITS(PROCESSOR_FIFO_FILL_BITS)
   )
   pwr_processor 
   (
@@ -1007,7 +1034,7 @@ end
   // Input:pulse data in fifo
   // Output:Programs RFGATE and does ZMON measurements
   pulse #(
-    .FILL_BITS(`PROCESSOR_FIFO_FILL_BITS)
+    .FILL_BITS(PROCESSOR_FIFO_FILL_BITS)
   )
   pls_processor 
   (
@@ -1043,9 +1070,9 @@ end
   );
 
   patterns #(
-        .PTN_DEPTH(`PATTERN_DEPTH),
-        .PTN_BITS(`PATTERN_FILL_BITS),
-        .PCMD_BITS(`PTN_CMD_BITS),
+        .PTN_DEPTH(PATTERN_DEPTH),
+        .PTN_BITS(PATTERN_FILL_BITS),
+        .PCMD_BITS(PTN_CMD_BITS),
         .WR_WIDTH(`PATTERN_WR_WORD),
         .RD_WIDTH(`PATTERN_RD_WORD)
   )
@@ -1086,9 +1113,10 @@ end
 // ******************************************************************************
 
   opcodes #(
-     .MMC_FILL_LEVEL_BITS(`GLBL_MMC_FILL_LEVEL_BITS),
-     .PCMD_BITS(`PTN_CMD_BITS),
-     .PTN_FILL_BITS(`PATTERN_FILL_BITS),
+     .MMC_FILL_LEVEL_BITS(GLBL_MMC_FILL_LEVEL_BITS),
+     .PTN_DEPTH(PATTERN_DEPTH),
+     .PCMD_BITS(PTN_CMD_BITS),
+     .PTN_FILL_BITS(PATTERN_FILL_BITS),
      .PTN_WR_WORD(`PATTERN_WR_WORD),
      .PTN_RD_WORD(`PATTERN_RD_WORD)
   ) opcode_processor (
@@ -1253,6 +1281,48 @@ end
       .dbg3_o                       ()                       // syn_initing
     );
 
+  // Debug SPI instance
+  // SPI signals muxed to selected SPI device when debug is enabled
+  wire        SPI_MISO;
+  wire        SPI_MOSI;
+  wire        SPI_SCLK;
+  wire        SPI_SSn;
+  dbg_utils #(
+      .PERIOD                     (32'd100000000),  // make it very infrequent(once/second)
+      .PULSE_WIDTH                (32'd1000)
+    ) dbg_spi
+    (
+    .sys_clk                    (sys_clk),
+    .sys_rst_n                  (sys_rst_n),
+  
+    .pulse_en_i                 (intrpt_test),
+    .pulse_o                    (MMC_TRIG), 
+  
+    .spi_byte0_i                (arr_spi_bytes[0]),
+    .spi_byte1_i                (arr_spi_bytes[1]),
+    .spi_byte2_i                (arr_spi_bytes[2]),
+    .spi_byte3_i                (arr_spi_bytes[3]),
+    .spi_byte4_i                (arr_spi_bytes[4]),
+    .spi_byte5_i                (arr_spi_bytes[5]),
+    .spi_byte6_i                (arr_spi_bytes[6]),
+    .spi_byte7_i                (arr_spi_bytes[7]),
+    .spi_byte8_i                (arr_spi_bytes[8]),
+    .spi_byte9_i                (arr_spi_bytes[9]),
+    .spi_byte10_i               (arr_spi_bytes[10]),
+    .spi_byte11_i               (arr_spi_bytes[11]),
+    .spi_byte12_i               (arr_spi_bytes[12]),
+    .spi_byte13_i               (arr_spi_bytes[13]),
+  
+    .spi_bytes_i                (dbg_spi_bytes),
+    .spi_start_i                (dbg_spi_start),
+    .spi_state_o                (dbg_spi_state),    
+  
+    .SPI_MISO_i                 (SPI_MISO),
+    .SPI_MOSI_o                 (SPI_MOSI),
+    .SPI_SCLK_o                 (SPI_SCLK),
+    .SPI_SSn_o                  (SPI_SSn)
+  );
+
 
   // Manage the blue ACTIVE_LEDn signal.
   // ON when a pattern is running for at least 50 or 100ms so a user can see it.
@@ -1402,48 +1472,6 @@ end
 //              active_led <= 1'b1;                            
 //          end
 //      end
-
-  // Debug SPI instance
-  // SPI signals muxed to selected SPI device when debug is enabled
-  wire        SPI_MISO;
-  wire        SPI_MOSI;
-  wire        SPI_SCLK;
-  wire        SPI_SSn;
-  dbg_utils #(
-      .PERIOD                     (32'd100000000),  // make it very infrequent(once/second)
-      .PULSE_WIDTH                (32'd1000)
-    ) dbg_spi
-    (
-    .sys_clk                    (sys_clk),
-    .sys_rst_n                  (sys_rst_n),
-  
-    .pulse_en_i                 (intrpt_test),
-    .pulse_o                    (MMC_TRIG), 
-  
-    .spi_byte0_i                (arr_spi_bytes[0]),
-    .spi_byte1_i                (arr_spi_bytes[1]),
-    .spi_byte2_i                (arr_spi_bytes[2]),
-    .spi_byte3_i                (arr_spi_bytes[3]),
-    .spi_byte4_i                (arr_spi_bytes[4]),
-    .spi_byte5_i                (arr_spi_bytes[5]),
-    .spi_byte6_i                (arr_spi_bytes[6]),
-    .spi_byte7_i                (arr_spi_bytes[7]),
-    .spi_byte8_i                (arr_spi_bytes[8]),
-    .spi_byte9_i                (arr_spi_bytes[9]),
-    .spi_byte10_i               (arr_spi_bytes[10]),
-    .spi_byte11_i               (arr_spi_bytes[11]),
-    .spi_byte12_i               (arr_spi_bytes[12]),
-    .spi_byte13_i               (arr_spi_bytes[13]),
-  
-    .spi_bytes_i                (dbg_spi_bytes),
-    .spi_start_i                (dbg_spi_start),
-    .spi_state_o                (dbg_spi_state),    
-  
-    .SPI_MISO_i                 (SPI_MISO),
-    .SPI_MOSI_o                 (SPI_MOSI),
-    .SPI_SCLK_o                 (SPI_SCLK),
-    .SPI_SSn_o                  (SPI_SSn)
-  );
 
   /////////////////////////////////
   // Concurrent assignments

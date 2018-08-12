@@ -36,8 +36,7 @@
 `include "version.v"
 `include "status.h"
 `include "opcodes.h"
-//`include "s6.h"
-`include "s4.h"
+
 `define STATE_IDLE                  7'h01
 `define STATE_FETCH_FIRST           7'h02   // 1 extra clock after assert rd_en   
 `define STATE_FETCH                 7'h03
@@ -74,6 +73,7 @@
     i.e it's normal to wait for bytes to accumuate.
 */
 module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
+                 parameter PTN_DEPTH = 8192,            // S4 default
                  parameter PCMD_BITS = 4,
                  parameter PTN_FILL_BITS = 16,
                  parameter PTN_WR_WORD = 96,
@@ -1644,6 +1644,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     assign extrig               = extrig_i ^ trig_conf[`TRGBIT_INVERT];
     assign ovrd_freq_addr       = freq_addr_list[ovrd_index];     // 0 or selected index frequency override address, absolute address.
     assign ovrd_power_addr      = power_addr_list[ovrd_index];    // 0 or selected index power override address, absolute address.
-    assign meas_fifo_count      = meas_fifo_full_i ? `PATTERN_DEPTH : {1'b0, meas_fifo_cnt_i}; // measurements in fifo 16-bits to handle full fifo
+    assign meas_fifo_count      = meas_fifo_full_i ? PTN_DEPTH : {1'b0, meas_fifo_cnt_i}; // measurements in fifo 16-bits to handle full fifo
 
 endmodule
