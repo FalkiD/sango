@@ -65,7 +65,11 @@
 `define STATE_RD_MEAS4              7'h1c
 `define STATE_RD_MEAS5              7'h1d
 `define STATE_RD_SPACER             7'h1e
-`define STATE_DBG3                  7'h1f
+// V1.02.14 solution, V1.02.15 is better general case solution, don't process MMC opcodes while in PTN_RUN mode
+//`define STATE_PROCESS_MEAS          7'h1f   // process waiting MEAS request after pattern runs
+//`define STATE_PENDING_MEAS1         7'h20   // pending measurement, clear input FIFO without generating response
+//`define STATE_PENDING_MEAS2         7'h21   // pending measurement, clear input FIFO without generating response
+`define STATE_DBG3                  7'h22
 
 /*
     Opcode block MUST be terminated by a NULL opcode
@@ -78,8 +82,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                  parameter PTN_FILL_BITS = 16,
                  parameter PTN_WR_WORD = 96,
                  parameter PTN_RD_WORD = 72,
-                 parameter HUNDRED_MS = 10000000,    // 10e6 ticks per 100ms
-                 parameter TWOFIFTY_MS = 50000000     // 25e6 ticks per 250ms
+                 parameter ALARM_US = 1000,             // 10us alarm pulse in 10ns ticks
+                 parameter ALARM_MIN_SPACE = 50000      // 500us minimum delay between interrupts
   )
   (
     input  wire          sys_clk,
@@ -123,6 +127,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     output reg         meas_fifo_ren_o,           // measurement fifo read enable
     input  wire [PTN_FILL_BITS-1:0] meas_fifo_cnt_i, // measurements in fifo after pulse/pattern
     input  wire        meas_fifo_full_i,          // meas FIFO full
+    output reg         meas_fifo_rst_o,           // meas fifo clear/reset
+    output reg         meas_enable_o,             // enable measurements during pattern(pulse) run
 
     output reg         bias_enable_o,             // bias control
 
@@ -140,20 +146,15 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     input  wire [PTN_RD_WORD-1:0]   ptn_data_i,   // next pattern opcode to run, 0 if nothing to do
     output reg                      ptn_fifo_ren_o, // read enable pattern fifo  
     input  wire                     ptn_fifo_mt_i,  // pattern fifo empty flag
-    output reg                      ptn_run_o,    // run pattern 
+    output reg                      ptn_run_o,    // run pattern
     input  wire [PTN_FILL_BITS-1:0] ptn_index_i,  // index of pattern entry being run (for status only)
     input  wire [7:0]               ptn_status_i, // pattern processor status
     output reg                      ptn_rst_n_o,  // pattern reset from PTN_CTL[RESET] opcode
 
     output reg  [31:0]   opcode_counter_o,        // count opcodes for status info                     
     output reg  [7:0]    status_o,                // NULL opcode terminates, done=0, or error code
-    output wire [6:0]    state_o,                 // For debugger display
+    output wire [6:0]    state_o,                 // returned with STATUS for debugging
 
-                                                  // Naw, put all the alarm processing in opcode processor.
-                                                  // Just add status registers from all processors
-                                                  // ...But we must assert MCU_TRIG, use a 1-tick pulse out of here to s6.v
-	output reg			 mcu_alarm_o,	          // Alarm register for top level to
-    
     // Debugging
     output reg  [31:0]   dbg_opcodes_o,           // Upr16[OpcMode(8)__patadr_count(8)]____Lwr16[first_opcode__last_opcode]
     output reg  [31:0]   dbg2_o,                  // debugging patterns
@@ -161,7 +162,18 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     // STATUS command
     input  wire          syn_stat_i,              // SYN STAT pin, 1=PLL locked
     input  wire [11:0]   dbm_x10_i,               // dBm x10, system power level    
-    input  wire [11:0]   vgadac_i                 // VGA dac value for return with STATUS command
+    input  wire [11:0]   vgadac_i,                // VGA dac value for return with STATUS command
+
+    // Alarm support
+    input  wire [7:0]    pls_status_i,            // pulse processor status
+    output wire          pls_status_ack_o,
+    input  wire [7:0]    pwr_status_i,            // power processor status
+    output wire          pwr_status_ack_o,
+    input  wire [7:0]    frq_status_i,            // frequency processor status
+    output wire          frq_status_ack_o,
+    output wire          ptn_status_ack_o,
+    
+    output wire          mcu_alarm_o              // signal MCU on error
     );
 
     // opcodes with integer arguments have 8 bytes or less of data
@@ -199,7 +211,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     reg  [MMC_FILL_LEVEL_BITS-1:0]  rsp_index;          // response array index
     localparam GENERAL_ARR  = 2'b00;
     localparam MEAS_FIFO    = 2'b01;
-    reg  [1:0]                      rsp_source;         // 0=general array, 1=measurement fifo
+    localparam MEAS_ZMSIZE  = 2'b10;
+    reg  [1:0]                      rsp_source;         // 0=general array, 1=measurement fifo, 2=meas fifo
 
     // Pattern data registers
     reg  [PTN_FILL_BITS-1:0]        ptn_addr;           // pattern address to write pattern RAM, run patterns
@@ -228,8 +241,10 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     reg          extrigg;            // external trigger latch, detect rising edge
     reg  [15:0]  sync_conf;          // sync configuration, from sync_conf opcode
     
-	reg  [7:0]   ena_alarms;		 // Alarm enabe bits from ALARM opcode, 1st byte
-	wire [16:0]	 alarms;			 // alarm register, realtime & latched
+	reg  [15:0]  ena_alarms;		 // Alarm enable bits from ALARM opcode
+	wire [15:0]	 alarms;			 // alarm register, realtime & latched
+    reg  [15:0]  irq;                // latch when irq is sent(avoid multiples)
+    reg  [15:0]  reset_latched_alms; // one-tick bitmask to reset latched alarms
 	
     // handle opcode integer argument data in a common way
     reg  [31:0]  shift = 0;          // tmp used building opcode data and returning measurements, etc
@@ -255,14 +270,22 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     reg  [15:0]  zm_ri_offset;       // zmon refl "I" ADC offset, signed int
     reg  [31:0]  zm_rq_gain;         // zmon refl "Q" ADC gain, Q15.16 float
     reg  [15:0]  zm_rq_offset;       // zmon refl "Q" ADC offset, signed int
-    
-    reg  [7:0]   meas_ops;           // which operations
+
+    // alarm ack registers
+    reg          pls_status_ack;
+    reg          pwr_status_ack;
+    reg          frq_status_ack;
+    reg          ptn_status_ack;
+
+    reg          mcu_alarm;         // MMC_TRIG signal follows this wire, 10us pulse on alarm
+
+    reg  [31:0]  meas_ops;           // MEAS request, raw ADC, Volts, dBm(dBm not supported)
     reg          run_calcs;          // run meas_calcs instance, process one measurement
     wire         calc_done;          // done flag    
     reg  [31:0]  adcf_raw;           // meas_calcs input raw data
     reg  [31:0]  adcr_raw;           // meas_calcs input raw data
-    wire [31:0]  adcf_dat;           // meas_calcs output, FWDQ FWDI ADC or Q15.16 FWDI volts
-    wire [31:0]  adcr_dat;           // meas_calcs output, RFLQ RFLI ADC or Q15.16 RFLI volts
+    wire [31:0]  adcf_dat;           // meas_calcs output, FWDQ FWDI ADC, Q15.16 FWDI volts, Q7.8 FWD dBm
+    wire [31:0]  adcr_dat;           // meas_calcs output, RFLQ RFLI ADC, Q15.16 RFLI volts, Q7.8 RFL dBm
     wire [31:0]  adcfq_volts;        // meas_calcs output, Q15.16 FWDQ volts
     wire [31:0]  adcrq_volts;        // meas_calcs output, Q15.16 RFLQ volts
     // Measurement calculation, calibration instance
@@ -271,7 +294,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         .sys_clk            (sys_clk),
         .sys_rst_n          (sys_rst_n),
   
-        .ops_i              (meas_ops),             // which operation(s)
+        .ops_i              (meas_ops[7:0]),        // which operation(s)
         .run_i              (run_calcs),            // do it
         .done_o             (calc_done),            // calculation(s) done
 
@@ -303,14 +326,21 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         end
         else if(enable == 1) begin
 
+            // 15-Aug-2018 reset one-tick status_ack signals
+            pls_status_ack <= 1'b0;
+            pwr_status_ack <= 1'b0;
+            frq_status_ack <= 1'b0;
+            ptn_status_ack <= 1'b0;
+            //clr_latched_alms <= 1'b0;
+            reset_latched_alms <= 16'h0000;     // one-tick bitmask to reset latched alarms
+            meas_fifo_rst_o <= 1'b0;            // one-tick fifo reset signal
+
             // 02-Feb-2018 use upper 8 bits to count external trigger pulses for dbg
             //dbg2_o <= {ptn_data_i[71:64], 11'd0, meas_fifo_cnt_i};
             //dbg2_o <= {12'd0, pwrcal_mode, bytes_processed[15:0]};
             // 02-Oct bytes_processed added for debugging, may use to read 1 sector at a time.
             // value is incorrect though, double-counts twice. 512 byte sector comes to 0x202??
             dbg_opcodes_o[27:24] <= operating_mode;   // operating_mode to debugger
-        
-        dbg2_o[31:24] <= {7'b000_0000, extrigg};            
 
             // 07-Feb refactor
             // If IDLE and MMC fifo is empty check for all other 
@@ -319,7 +349,20 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             //extrigg <= 1'b0;    // 1-tick signal to catch rising edge of tigger
             // this can't be 1-tick, has to be reset after TRIG_IN goes to OFF state
             
-            if(state == `STATE_IDLE && fifo_rd_count_i == 0) begin
+            // if continuous trigger, increment counters
+            if(trig_conf[`TRGBIT_CONT] == 1'b1) begin
+               if(trig_counter >= TICKS_PER_MS) begin
+                   trig_ms <= trig_ms + 9'd1;
+                   trig_counter <= 18'd0;                    
+               end
+               else
+                   trig_counter <= trig_counter + 18'd1;
+            end
+            
+            // If IDLE and running a pattern, or no MMC commands,
+            // look for pattern actions or triggers
+            if(state == `STATE_IDLE && 
+               (operating_mode == `PTNCMD_RUN || fifo_rd_count_i == 0)) begin
                 // 1) check for pattern start request if pattern not running
                 if(operating_mode == `PTNCMD_RUN && ptn_run_o == 1'b0) begin
                     // we haven't started it yet
@@ -341,24 +384,15 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     if(trig_conf[`TRGBIT_CONT] == 1'b1) begin
                        if(trig_ms >= trig_conf[23:16]) begin
                            // run pattern, reset counters
-                            start_pattern(ptn_addr);
+                           start_pattern(ptn_addr);
                            trig_ms <= 9'd0;
                            trig_counter <= 18'd0;
                        end
-                       if(trig_counter >= TICKS_PER_MS) begin
-                           trig_ms <= trig_ms + 9'd1;
-                           trig_counter <= 18'd0;                    
-                       end
-                       else
-                           trig_counter <= trig_counter + 18'd1;
                     end
                     else if(trig_conf[`TRGBIT_EXT] == 1'b1) begin
                        if(extrig == 1'b1 && extrigg == 1'b0) begin
                            // rising edge of TRIG_IN signal detected
                            // Not checking for overrun yet...
-                    
-              dbg2_o[15:0] <= dbg2_o[15:0] + 16'h0001;
-                    
                            start_pattern(ptn_addr);
                            extrigg <= 1'b1;
                        end
@@ -393,7 +427,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     //dbg2_o <= {ptn_data_i[71:64], 11'd0, meas_fifo_cnt_i};
                     opcode <= ptn_data_i[70:64];
                     length <= 0;                        // jump into processing uinttmp
-                    uinttmp <= ptn_data_i[63:0];
+                    uinttmp <= ptn_data_i[63:0];                    
                     ptn_fifo_ren_o <= 1'b0;
                     state <= `STATE_DATA;               // process the parsed opcode
                 end
@@ -433,6 +467,12 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                             meas_fifo_ren_o <= 1'b1;        // start reading measurement fifo                        
                             uinttmp <= 64'd0;
                             state <= `STATE_RD_SPACER;
+                        end
+                        else if(rsp_source == MEAS_ZMSIZE) begin    // returning MEAS fifo # of readings available
+                            response_o <= uinttmp[7:0];
+                            rsp_length <= rsp_length - 1;
+                            rsp_index <= rsp_index + 1;
+                            uinttmp <= {8'h00, uinttmp[63:8]};
                         end
                         else begin
                             response_o <= rsp_data[rsp_index];
@@ -474,10 +514,15 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                         if(meas_ops[1] == 1'b1) begin
                             uinttmp <= {adcr_dat, adcf_dat};
                         end
-                        else if(meas_ops[2])
+                        else if(meas_ops[2]) begin
                             // volts needs 16 bytes, uses 2 sets of registers,
                             // here we're always on a 16-byte boundary, use the 1st set of registers
                             uinttmp <= {adcfq_volts, adcf_dat};
+                        end
+                        else if(meas_ops[3]) begin
+                            // dBm needs 4 bytes
+                            uinttmp <= {32'h0000_0000, adcr_dat[15:0], adcf_dat[15:0]};
+                        end
                         state <= `STATE_RD_MEAS5;                    
                     end
                 end
@@ -507,6 +552,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 
                     // Done?
                     if(rsp_length == 0) begin
+                        meas_ops <= 32'h0000_0000;  // done, clear request for MEAS results
+                        
                         // Note: we have already completed response, set the flag to
                         // prevent null opcodes from generating another response
                         response_wr_en_o <= 1'b0;
@@ -541,6 +588,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     state <= `STATE_LENGTH;   // Part 1 of length, get length msb & get opcode next
                 end
                 `STATE_LENGTH: begin
+                    bytes_processed <= bytes_processed + 32'h0000_0001;
                     length <= {fifo_dat_i[0], length[7:0]};
                     rsp_index <= 16'h0000;                  // index for multi-byte data blocks
                     opcode <= fifo_dat_i[7:1];              // got opcode, start reading data
@@ -548,7 +596,9 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                         state <= `STATE_IDLE;
                     end
                     // length tests
-                    else if({fifo_dat_i[0], length[7:0]} > (fifo_rd_count_i-1)) begin
+                    // 28-Aug-2018 bug: fifo_rd_count 0 here fouls up the math, check for it                    
+                    else if((fifo_rd_count_i == 0 && {fifo_dat_i[0], length[7:0]} > 0) || 
+                            {fifo_dat_i[0], length[7:0]} > (fifo_rd_count_i-1)) begin
                         // need more data, wait for it if valid request
                         if((fifo_dat_i[7:1] != `CALPTBL && fifo_dat_i[7:1] != `CALZMON)
                                  && length > INT_ARG_BYTES) begin
@@ -576,14 +626,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     end
                 end
                 `STATE_WAIT_DATA: begin // Wait for asynch FIFO to receive all our data
-
-      //dbg2_o <= {5'd0, fifo_rd_count_i, 6'd0, length};
-
                     if(fifo_rd_count_i >= length) begin
                         fifo_rd_en_o <= 1;                  // start reading again
-
-      //dbg2_o <= {5'd0, fifo_rd_count_i, 6'd0, length};
-
                         state <= `STATE_READ_SPACER;
                     end
                 end
@@ -594,10 +638,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     if(dbg_opcodes_o[14:8] == 7'b0000000)
                         dbg_opcodes_o[14:8] <= opcode;
                         
-                    // 02-Oct bytes_processed added for debugging, may use to read 1 sector at a time.
-                    // value is incorrect though, double-counts twice. 512 byte sector comes to 0x202??
-                    bytes_processed <= bytes_processed + 32'h0000_0001;
-
                     // Look for special opcodes, RESET & NULL Terminator
                     // On NULL, check for response data available. If measurement data is in the fifo
                     // send it. Make sure the pulse & pattern processors are idle(done) first.
@@ -616,6 +656,8 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                         end
                     end
                     else if(opcode == `RESET) begin
+                        // 22-Sep-2018 move this here from STATE_DATA, don't increment once STATE_DATA begins executing opcode
+                        bytes_processed <= bytes_processed + 32'h0000_0001;
                         reset_opcode_processor();
                     end
                     else begin
@@ -642,15 +684,15 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                   // Need test for Not Running Pattern && ovrd_index was non-0 but is now 0,
                   // in this case, must overwrite pattern RAM using saved original value after
                   // frequency has been written to frequency processor.
-                  if(operating_mode == `OPCODE_NORMAL && ovrd_index != `PTNOVRD_OFF && uinttmp[3:0] == 4'h0) begin
+                  if(operating_mode == `OPCODE_NORMAL && ovrd_index != `PTNOVRD_OFF) begin
                       // Special case, done overriding FREQ or POWER. Reset original pattern RAM value
-                      if(opcode == `FREQ) begin
+                      if(opcode == `FREQ && uinttmp[3:0] == 4'h0) begin
                           ptn_addr <= freq_addr_list[ovrd_index];
                           ptn_data_reg <= {25'b00000000_00000000_00000000_0, opcode, freq_save_list[ovrd_index]};                
                       end
-                      else begin
+                      else if(opcode == `POWER && uinttmp[11:8] == 4'h0) begin
                           ptn_addr <= power_addr_list[ovrd_index];
-                          ptn_data_reg <= {25'b00000000_00000000_00000000_0, opcode, 32'h0000_0000, power_save_list[ovrd_index]};                
+                          ptn_data_reg <= {25'b00000000_00000000_00000000_0, opcode, power_save_list[ovrd_index]};                
                       end
                       ptn_wen_o <= 1'b1;  // Write the entry to RAM
                       state <= `STATE_PTN_RST_OVRD1;
@@ -677,7 +719,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 `STATE_WR_PTN_OVRD1: begin
                     if(opcode == `FREQ) begin
                         ptn_addr <= freq_addr_list[ovrd_index];
-                        ptn_data_reg <= {25'b00000000_00000000_00000000_0, opcode, uinttmp[63:16], 16'h0000};                
+                        ptn_data_reg <= {25'b00000000_00000000_00000000_0, opcode, uinttmp[63:16], 16'h0000};
                     end
                     else begin
                         ptn_addr <= power_addr_list[ovrd_index];                    
@@ -732,66 +774,115 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 // ******************************************************************************
 // * Alarm processing based on alarms register and status from all              *
 // * processor instances.                                                       *
-// * On alarm condition, generate a 1us pulse on mcu_trig line                  *
+// * On alarm condition, generate a 10us pulse on mmc_trig line                  *
 // ******************************************************************************
 
-    reg         mcu_trig;
+    reg         mmc_trig;
     reg  [3:0]	alarm_processor_state;
     `define		ALM_PROC_IDLE		4'h0
-    `define		ALM_PROC_SIGNAL		4'h1		// signal MCU there's an error
+    `define		ALM_PROC_PULSE		4'h1		// signal MCU there's an error
+    `define		ALM_PROC_WAIT		4'h2		// wait for alm to clear
 
-//    // something like:
-//    assign alarms[`RD_DUTY_CYCLE] = (pls_status == `ERR_DUTY_CYCLE) ? 1'b1 : 1'b0;
-//    // can I set something to itself, probably not, or does it get synthesized as do nothing?
-//    assign alarms[`LATCH_DUTY_CYCLE] = (alarms[`LATCH_DUTY_CYCLE] == 1'b0 && alarms[`RD_DUTY_CYCLE]) ? 1'b1 : alarms[`LATCH_DUTY_CYCLE];
+    assign mcu_alarm_o = mmc_trig;
+    assign alarms[`RD_PLL_LOCK] = (frq_status_i == `ERR_PLL_LOCK) ? 1'b1 : 1'b0;
+    assign alarms[`LATCH_PLL_LOCK] = irq[`LATCH_PLL_LOCK];
 
-//    assign alarms[`RD_PULSE_WIDTH] = (pls_status == `ERR_PULSE_WIDTH) ? 1'b1 : 1'b0;
-//    assign alarms[`LATCH_PULSE_WIDTH] = (alarms[`LATCH_PULSE_WIDTH] == 1'b0 && alarms[`RD_PULSE_WIDTH]) ? 1'b1 : alarms[`LATCH_PULSE_WIDTH];
+    assign alarms[`RD_UNDER_FREQ] = (frq_status_i == `ERR_UNDER_FREQ) ? 1'b1 : 1'b0;
+    assign alarms[`LATCH_UNDER_FREQ] = irq[`LATCH_UNDER_FREQ];
 
-//    assign alarms[`RD_OPC_ERROR] = (opc_status > 1) ? 1'b1 : 1'b0;
-//    assign alarms[`LATCH_OPC_ERROR] = (alarms[`LATCH_OPC_ERROR] == 1'b0 && alarms[`RD_OPC_ERROR]) ? 1'b1 : alarms[`LATCH_OPC_ERROR];
+    assign alarms[`RD_OVER_FREQ] = (frq_status_i == `ERR_OVER_FREQ) ? 1'b1 : 1'b0;
+    assign alarms[`LATCH_OVER_FREQ] = irq[`LATCH_OVER_FREQ];
 
-//    assign alarms[`RD_PLL_LOCK] = (frq_status == `ERR_PLL_LOCK) ? 1'b1 : 1'b0;
-//    assign alarms[`LATCH_PLL_LOCK] = (alarms[`LATCH_PLL_LOCK] == 1'b0 && frq_status == `ERR_PLL_LOCK && alarms[`LATCH_PLL_LOCK]) ? 1'b1 : 1'b0;
+    assign alarms[`RD_PULSE_WIDTH] = (pls_status_i == `ERR_PULSE_WIDTH) ? 1'b1 : 1'b0;
+    assign alarms[`LATCH_PULSE_WIDTH] = irq[`LATCH_PULSE_WIDTH];
+    
+    assign alarms[`RD_DUTY_CYCLE] = (pls_status_i == `ERR_DUTY_CYCLE) ? 1'b1 : 1'b0;
+    assign alarms[`LATCH_DUTY_CYCLE] = irq[`LATCH_DUTY_CYCLE];
 
-//    assign alarms[`RD_UNDER_FREQ] = (frq_status == `ERR_UNDER_FREQ) ? 1'b1 : 1'b0;
-//    assign alarms[`LATCH_UNDER_FREQ] = (alarms[`LATCH_UNDER_FREQ] == 1'b0 && frq_status == `ERR_UNDER_FREQ && alarms[`LATCH_UNDER_FREQ]) ? 1'b1 : 1'b0;
+    assign alarms[`RD_UNDER_POWER] = (pwr_status_i == `ERR_UNDER_POWER) ? 1'b1 : 1'b0;
+    assign alarms[`LATCH_UNDER_POWER] = irq[`LATCH_UNDER_POWER];
+    
+    assign alarms[`RD_OVER_POWER] = (pwr_status_i == `ERR_OVER_POWER) ? 1'b1 : 1'b0;
+    assign alarms[`LATCH_OVER_POWER] = irq[`LATCH_OVER_POWER];
+    
+    assign alarms[`RD_OPC_ERROR] = (status_o > `SUCCESS) ? 1'b1 : 1'b0;
+    assign alarms[`LATCH_OPC_ERROR] = irq[`LATCH_OPC_ERROR];
 
-//    assign alarms[`RD_OVER_FREQ] = (frq_status == `ERR_OVER_FREQ) ? 1'b1 : 1'b0;
-//    assign alarms[`LATCH_OVER_FREQ] = (alarms[`LATCH_OVER_FREQ] == 1'b0 && frq_status == `ERR_OVER_FREQ && alarms[`LATCH_OVER_FREQ]) ? 1'b1 : 1'b0;
-
-//    assign alarms[`RD_UNDER_POWER] = (pwr_status == `ERR_UNDER_POWER) ? 1'b1 : 1'b0;
-//    assign alarms[`LATCH_UNDER_POWER] = (alarms[`LATCH_UNDER_POWER] == 1'b0 && pwr_status == `ERR_UNDER_POWER && alarms[`LATCH_UNDER_POWER]) ? 1'b1 : 1'b0;
-
-//    assign alarms[`RD_OVER_POWER] = (pwr_status == `ERR_OVER_POWER) ? 1'b1 : 1'b0;
-//    assign alarms[`LATCH_OVER_POWER] = (alarms[`LATCH_OVER_POWER] == 1'b0 && pwr_status == `ERR_OVER_POWER && alarms[`LATCH_OVER_POWER]) ? 1'b1 : 1'b0;
-
-//    assign mcu_alarm_o = mcu_trig;
-
-//    // pulse mcu_trig when an enabled alarm condition occurs
-//    always @(posedge sys_clk) begin
-//        if(sys_rst_n == 1'b0) begin
-//            alarm_processor_state <= `ALM_PROC_IDLE;
-//	        mcu_trig <= 1'b0;    
-//        end
-//        else begin
-//            mcu_trig <= 1'b0;   // 1-tick signal
-//	        case(alarm_processor_state)
-//	        `ALM_PROC_IDLE: begin
-//	            if(alarms[7:0] & alarms[15:8] != 8'h0) begin
-//	               alarm_processor_state <= `ALM_PROC_SIGNAL;  // wait until opcode clears
-//	               mcu_trig <= 1'b1;
-//	            end
-//	        end
-//	        `ALM_PROC_SIGNAL: begin
-//	           if(alm_clear == 1'b1) begin
-//                    alarm_processor_state <= `ALM_PROC_IDLE;	           
-//	           end
-//	        end
-//	        endcase
-//        end
-//    end
-
+    reg   [31:0] last_interrupt;    // don't interrupt MCU too often
+    reg   [31:0] alm_dly_ticks;
+    reg   [31:0] alm_pulse_ticks;
+    // pulse mmc_trig when an enabled alarm condition occurs
+    always @(posedge sys_clk) begin
+        if(sys_rst_n == 1'b0) begin
+            alarm_processor_state <= `ALM_PROC_IDLE;
+            irq <= 16'h0000;
+	        mmc_trig <= 1'b0;
+            last_interrupt <= 32'h0000_0000;
+            alm_dly_ticks <= 32'h0000_0000;
+        end
+        else begin
+            if(last_interrupt > 32'h0000_0000)
+                last_interrupt <= last_interrupt - 32'h0000_0001;
+        
+            if(reset_latched_alms != 16'h0000)
+                irq <= reset_latched_alms;
+            else begin                
+                case(alarm_processor_state)
+                `ALM_PROC_IDLE: begin
+                    // If an alarm is ON but not latched, latch it & send the MCU a pulse
+                    if(ena_alarms[`RD_PLL_LOCK] && alarms[`RD_PLL_LOCK] && !alarms[`LATCH_PLL_LOCK]) begin
+                        irq[`LATCH_PLL_LOCK] <= 1'b1;
+                        alarm_processor_state <= `ALM_PROC_WAIT;
+                    end
+                    else if(ena_alarms[`RD_UNDER_FREQ] && alarms[`RD_UNDER_FREQ] && !alarms[`LATCH_UNDER_FREQ]) begin
+                        irq[`LATCH_UNDER_FREQ] <= 1'b1;
+                        alarm_processor_state <= `ALM_PROC_WAIT;
+                    end
+                    else if(ena_alarms[`RD_OVER_FREQ] && alarms[`RD_OVER_FREQ] && !alarms[`LATCH_OVER_FREQ]) begin
+                        irq[`LATCH_OVER_FREQ] <= 1'b1;
+                        alarm_processor_state <= `ALM_PROC_WAIT;
+                    end
+                    else if(ena_alarms[`RD_PULSE_WIDTH] && alarms[`RD_PULSE_WIDTH] && !alarms[`LATCH_PULSE_WIDTH]) begin
+                        irq[`LATCH_PULSE_WIDTH] <= 1'b1;
+                        alarm_processor_state <= `ALM_PROC_WAIT;
+                    end
+                    else if(ena_alarms[`RD_DUTY_CYCLE] && alarms[`RD_DUTY_CYCLE] && !alarms[`LATCH_DUTY_CYCLE]) begin
+                        irq[`LATCH_DUTY_CYCLE] <= 1'b1;
+                        alarm_processor_state <= `ALM_PROC_WAIT;
+                    end
+                    else if(ena_alarms[`RD_UNDER_POWER] && alarms[`RD_UNDER_POWER] && !alarms[`LATCH_UNDER_POWER]) begin
+                        irq[`LATCH_UNDER_POWER] <= 1'b1;
+                        alarm_processor_state <= `ALM_PROC_WAIT;
+                    end
+                    else if(ena_alarms[`RD_OVER_POWER] && alarms[`RD_OVER_POWER] && !alarms[`LATCH_OVER_POWER]) begin
+                        irq[`LATCH_OVER_POWER] <= 1'b1;
+                        alarm_processor_state <= `ALM_PROC_WAIT;
+                    end
+                    else if(ena_alarms[`RD_OPC_ERROR] && alarms[`RD_OPC_ERROR] && !alarms[`LATCH_OPC_ERROR]) begin
+                        irq[`LATCH_OPC_ERROR] <= 1'b1;
+                        alarm_processor_state <= `ALM_PROC_WAIT;
+                    end
+                end
+                `ALM_PROC_WAIT: begin
+                    // wait if necessary so we don't flood MCU w/interrupts                
+                    if(last_interrupt == 32'h0000_0000) begin
+                        mmc_trig <= 1'b1;
+                        alm_pulse_ticks <= ALARM_US;    
+                        alarm_processor_state <= `ALM_PROC_PULSE;  
+                    end 
+                end
+                `ALM_PROC_PULSE: begin
+                    if(alm_pulse_ticks == 32'h0000_0000) begin
+                      mmc_trig <= 1'b0;
+                      last_interrupt <= ALARM_MIN_SPACE;
+                      alarm_processor_state <= `ALM_PROC_IDLE;	           
+                    end
+                    alm_pulse_ticks <= alm_pulse_ticks - 32'h0000_0001;
+                end
+                endcase
+	        end
+        end
+    end
 
 	//
 	// tasks
@@ -814,7 +905,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         ptn_run_o <= 1'b0;              // stop pattern
         ptn_fifo_ren_o <= 1'b0;
         operating_mode <= `OPCODE_NORMAL;
-        // change to 1-tick signal   extrigg <= 1'b0;                // reset for next external trigger detection                 
     end
     endtask
 
@@ -1042,15 +1132,15 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                         rsp_index <= rsp_index + 1; 
                     end
                     43: begin
-                        rsp_data[rsp_index] <= 8'h00; 
+                        rsp_data[rsp_index] <= frq_status_i; 
                         rsp_index <= rsp_index + 1; 
                     end
                     44: begin
-                        rsp_data[rsp_index] <= 8'h00; 
+                        rsp_data[rsp_index] <= pwr_status_i; 
                         rsp_index <= rsp_index + 1; 
                     end
                     45: begin
-                        rsp_data[rsp_index] <= 8'h00; 
+                        rsp_data[rsp_index] <= pls_status_i; 
                         rsp_index <= rsp_index + 1; 
                     end
                     46: begin
@@ -1080,7 +1170,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     ptn_wen_o <= 1'b1;  // Write the entry 
                     state <= `STATE_WR_PTN;
                 end
-                else if(uinttmp[3:0] != 4'h0) begin // 4 lsbs are 1-based override index if non-0
+                else if(uinttmp[3:0] != 4'h0) begin // 4 flsbs are 1-based override index if non-0
                     // this must only happen from MMC opcode, never while running pattern.
                     // Saves RAM entry being overwritten if first time
                     ovrd_index <= uinttmp[3:0] - 4'h1;
@@ -1221,9 +1311,6 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     state <= `STATE_WR_PTN;
                 end
                 else begin
-                
-            dbg2_o[15:0] <= dbg2_o[15:0] + 16'h0001;            
-                
                     // pattern processor handles PTN_BRANCH, opcode processor does nothing in run mod
                     next_opcode();
                 end
@@ -1268,19 +1355,25 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 endcase
             end
             `MEAS_ZMSIZE: begin
-                status_o <= `ERR_OPC_NOT_SUPPORTED;
-                rsp_length <= 0;
+                uinttmp <= { 48'h0000_0000_0000, meas_fifo_count[PTN_FILL_BITS:1]}; 
+                rsp_source <= MEAS_ZMSIZE;
+                rsp_length <= 2;
                 state <= `STATE_BEGIN_RESPONSE;
             end
             `MEAS_ZMCTL: begin
-                status_o <= `ERR_OPC_NOT_SUPPORTED;
+                if(uinttmp[0] && meas_fifo_count > 0) begin
+                    // clear measurement fifo
+                    meas_fifo_rst_o <= 1'b1;    // a 1-tick signal
+                end
+                meas_enable_o <= uinttmp[1];
+                status_o <= `SUCCESS;
                 rsp_length <= 0;
                 state <= `STATE_BEGIN_RESPONSE;
             end            
             `MEAS:  begin
                 // return measurements, 1st 4 bytes are standard, opcode status, last opcode, 2 length bytes.
                 // args: byte 0 is operations, bitmask,
-                // d3 = dBm
+                // d3 = dBm (not really necessary, not supported)
                 // d2 =	Volts
                 // d1 = Adc counts
                 // d0 = Calibrated
@@ -1296,7 +1389,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 // Returned size depends on format, each result is returned as:
                 // d1, Adc counts, 8 bytes, 4 signed 16-bit ints
                 // d2, Volts, 16 bytes, 4 Q15.16 values
-                // d3, dBm, 4 bytes, 2 Q7.8 values
+                // d3, dBm, 4 bytes, 2 Q7.8 values  NOT SUPPORTED, not really necessary
                 //
                 if(uinttmp[3:1] == 3'd0) begin
                     status_o <= `ERR_MEAS_TYPE;
@@ -1304,8 +1397,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                     state <= `STATE_BEGIN_RESPONSE;
                 end
                 else begin 
-                    meas_ops <= uinttmp[7:0];   // save this
-                    //
+                    meas_ops <= uinttmp[31:0];   // save this
                     // if more data available than can be sent at once
                     // including the 4 bytes of rsp header, cut down the length
                     //
@@ -1325,6 +1417,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                         else
                             rsp_length <= {uinttmp[27:16], 4'b0000}; // requested measurements times 16 bytes per
                     end
+                    // Note: dBm not finished, not really needed
                     else if(uinttmp[3]) begin   // Power, 4 bytes per reading, Q7.8, same as raw meas fifo count
                         if({uinttmp[29:16], 2'b00}  > ((1 << MMC_FILL_LEVEL_BITS)-4))
                         //if( ({2'd0, meas_fifo_cnt_i, 1'b0}) > ((1 << MMC_FILL_LEVEL_BITS)-4))
@@ -1333,7 +1426,7 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                             rsp_length <= {uinttmp[29:16], 2'b00};   // dBm, requested measurements times 4 bytes per
                     end
                     rsp_source <= MEAS_FIFO;
-                    state <= `STATE_BEGIN_RESPONSE;                
+                    state <= `STATE_BEGIN_RESPONSE;
                 end
             end
             `CALVFY: begin
@@ -1342,29 +1435,92 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
                 state <= `STATE_BEGIN_RESPONSE;
             end
             `ALARMS: begin
-                // Enables in 1st byte
-                // OPower, UPower, OFreq, UFreq, PllLock, Opc, PlsWid, DCycle
-				ena_alarms <= uinttmp[7:0];
-				// return present state of alarms, 32-bits
+				// return present state of alarms, 8-bits mask(enable), 8 bits realtime alms, 8-bits latched
+				// 16-bit words are:
+				// Enables
+				// Real time state
+				// Latched
+				// Reset latched
+				//   followed by 8-bit status codes
+				// Frequency processor
+				// Power processor
+				// Pulse processor
+				// Pattern processor
+				// Opcode processor
                 case(rsp_index)
                 0: begin
                     rsp_data[rsp_index] <= uinttmp[7:0];	// enables, echo what was just sent
                     rsp_index <= rsp_index + 1; 
                 end
                 1: begin
-                    rsp_data[rsp_index] <= alarms[7:0];		// real-time state
+                    rsp_data[rsp_index] <= uinttmp[15:8];   // echo enables
                     rsp_index <= rsp_index + 1; 
                 end
                 2: begin
-                    rsp_data[rsp_index] <= alarms[15:8];   // latched
+                    rsp_data[rsp_index] <= alarms[7:0];		// real-time state
                     rsp_index <= rsp_index + 1; 
                 end
                 3: begin
-                    rsp_data[rsp_index] <= 0;				// unused upper byte
+                    rsp_data[rsp_index] <= 0;
+                    rsp_index <= rsp_index + 1; 
+                end
+                4: begin
+                    rsp_data[rsp_index] <= alarms[15:8];   // latched
+                    rsp_index <= rsp_index + 1; 
+                end
+                5: begin
+                    rsp_data[rsp_index] <= 0;
+                    rsp_index <= rsp_index + 1; 
+                end
+                // This word is 0 purely to make written opcode data layout the same as response data layout
+                6: begin
+                    rsp_data[rsp_index] <= 0;
+                    rsp_index <= rsp_index + 1; 
+                end
+                7: begin
+                    rsp_data[rsp_index] <= 0;
+                    rsp_index <= rsp_index + 1; 
+                end
+                8: begin
+                    rsp_data[rsp_index] <= frq_status_i;
+                    rsp_index <= rsp_index + 1; 
+                end
+                9: begin
+                    rsp_data[rsp_index] <= pwr_status_i;
+                    rsp_index <= rsp_index + 1; 
+                end
+                10: begin
+                    rsp_data[rsp_index] <= pls_status_i;
+                    rsp_index <= rsp_index + 1; 
+                end
+                11: begin
+                    rsp_data[rsp_index] <= ptn_status_i;
+                    rsp_index <= rsp_index + 1; 
+                end
+                12: begin
+                    rsp_data[rsp_index] <= status_o;
                     rsp_index <= rsp_index + 1; 
                     rsp_length <= rsp_index + 2;
                     opcode_counter_o <= opcode_counter_o + 32'd1;
                     state <= `STATE_BEGIN_RESPONSE;
+
+                    // process alarm opcode data before exiting
+                    
+                    // Enables in 1st byte
+                    // OPower, UPower, OFreq, UFreq, PllLock, Opc, PlsWid, DCycle
+                    ena_alarms <= {8'h00, uinttmp[7:0]};
+    
+                    // reset latched alarms from 3rd byte of opcode data
+                    reset_latched_alms <= uinttmp[31:16];                
+    //  1<<`RD_OPC_ERROR
+                    if(uinttmp[31:16] & ((1<<`RD_OVER_FREQ) | (1<<`RD_UNDER_FREQ) | (1<<`RD_PLL_LOCK)))
+                        frq_status_ack <= 1'b1;
+                    if(uinttmp[31:16] & ((1<<`RD_OVER_POWER) | (1<<`RD_UNDER_POWER)))
+                        pwr_status_ack <= 1'b0;
+                    if(uinttmp[31:16] & (1<<`RD_PULSE_WIDTH))
+                        pls_status_ack <= 1'b1;
+                    if(uinttmp[31:16] & (1<<`RD_DUTY_CYCLE))
+                        ptn_status_ack <= 1'b1;
                 end
                 endcase
             end
@@ -1381,6 +1537,11 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
             endcase
         end // if(length == 0) block
         else begin  // integer argument, 2 to 8 bytes in length
+            // 22-Sep-2018 move this here from STATE_DATA, don't increment once STATE_DATA begins executing opcode
+            // 02-Oct bytes_processed added for debugging, may use to read 1 sector at a time.
+            // value is incorrect though, double-counts twice. 512 byte sector comes to 0x202??
+            bytes_processed <= bytes_processed + 32'h0000_0001;
+                   
             uinttmp <= uinttmp | (fifo_dat_i << shift);
             if(length == 2)             // Turn OFF with 2 clocks left. 1=last read, 0=begin write fifo
                 fifo_rd_en_o <= 0;      // pause opcode fifo reads
@@ -1392,6 +1553,11 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
 
     task opcodes_byte_arg;
     begin
+        // 22-Sep-2018 move this here from STATE_DATA, don't increment once STATE_DATA begins executing opcode
+        // 02-Oct bytes_processed added for debugging, may use to read 1 sector at a time.
+        // value is incorrect though, double-counts twice. 512 byte sector comes to 0x202??
+        bytes_processed <= bytes_processed + 32'h0000_0001;
+    
         // argument data is a block of bytes, save the data as needed
         case(opcode)
         // For power cal;, write the frequency opcode to set frequency, then
@@ -1504,24 +1670,26 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
         fifo_rst_o <= 1'b0;
 
         run_calcs <= 1'b0;
-        meas_ops <= 1'b0;        
+        meas_ops <= 32'h0000_0000;        
+        meas_enable_o <= 1'b1;            // default is MEAS enabled during pulse
         
-        zm_fi_gain <= 32'h0000_051e;      // zmon fwd "I" ADC gain, Q15.16 float, 0.02 default
-        zm_fi_offset <= 16'd0;            // zmon fwd "I" ADC offset, signed int
-        zm_fq_gain <= 32'h0000_051e;      // zmon fwd "Q" ADC gain, Q15.16 float
-        zm_fq_offset <= 16'd0;            // zmon fwd "Q" ADC offset, signed int
+        zm_fi_gain <= 32'h0000_01f3;      // zmon fwd "I" ADC gain, Q15.16 float, 0.005 default
+        zm_fi_offset <= 16'hfff6;         // zmon fwd "I" ADC offset, signed int, 1 default
+        zm_fq_gain <= 32'h0000_01f3;      // zmon fwd "Q" ADC gain, Q15.16 float
+        zm_fq_offset <= 16'hfff3;         // zmon fwd "Q" ADC offset, signed int, -23 default
         
-        zm_ri_gain <= 32'h0000_051e;      // zmon refl "I" ADC gain, Q15.16 float, 0.02 default
-        zm_ri_offset <= 16'd0;            // zmon refl "I" ADC offset, signed int
-        zm_rq_gain <= 32'h0000_051e;      // zmon refl "Q" ADC gain, Q15.16 float
-        zm_rq_offset <= 16'd0;            // zmon refl "Q" ADC offset, signed int
+        zm_ri_gain <= 32'h0000_018d;      // zmon refl "I" ADC gain, Q15.16 float, 0.008 default
+        zm_ri_offset <= 16'hfff3;         // zmon refl "I" ADC offset, signed int, 223 default
+        zm_rq_gain <= 32'h0000_018d;      // zmon refl "Q" ADC gain, Q15.16 float
+        zm_rq_offset <= 16'h00f9;         // zmon refl "Q" ADC offset, signed int, 2 default
         
         config_o <= 32'h0000_0003;        // default VGA hi gain mode, control VGA DAC A & B, ZMonEn OFF, Tweak Power OFF
         extrigg <= 1'b0;                  // external trigger latch, detect rising edge
         ptn_rst_n_o <= 1'b1;              // pattern reset from PTN_CTL[RESET] opcode
         
 		//alarms <= 32'h0000_0000;		  // alarms register
-
+        ena_alarms <= 16'h0000;
+        
         ovrd_index <= `PTNOVRD_OFF;     // override index, normal mode is 0x000f, else 0-9 to override running pattern
         reset_ovrd_registers();
     end
@@ -1645,5 +1813,10 @@ module opcodes #(parameter MMC_FILL_LEVEL_BITS = 16,
     assign ovrd_freq_addr       = freq_addr_list[ovrd_index];     // 0 or selected index frequency override address, absolute address.
     assign ovrd_power_addr      = power_addr_list[ovrd_index];    // 0 or selected index power override address, absolute address.
     assign meas_fifo_count      = meas_fifo_full_i ? PTN_DEPTH : {1'b0, meas_fifo_cnt_i}; // measurements in fifo 16-bits to handle full fifo
+    // alarms:
+    assign pls_status_ack_o = pls_status_ack;
+    assign pwr_status_ack_o = pwr_status_ack;
+    assign frq_status_ack_o = frq_status_ack;
+    assign ptn_status_ack_o = ptn_status_ack;
 
 endmodule

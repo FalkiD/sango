@@ -81,6 +81,29 @@
 // Revision 1.02.3  8/10/2018   RMR -Refactor global defines as top-level parameters.
 //                                   Override PATTERN_DEPTH & PATTERN_BITS for S6 from S6 project
 //                                   Default values are S4 values. (removed s6.h/s4.h from projects)
+// Revision 1.02.4  8/16/2018   RMR -Added alarm interrupt processing. frq,pwr,ptn_status added to
+//                                   STATUS opcode.
+// Revision 1.02.5  8/28/2018   RMR -Lightweight(released) MMC works(Ovrd, Meas, etc)
+//                                   opcode processor bugfix when mmc fifo count=0 in LENGTH state
+//                                   (Yesterday:SIM does not work yet, opcode data all 0's?)
+// Revision 1.02.6  8/29/2018   RMR -Finish ALARM opcode handling, reset alarms, etc.
+//                                  -32k MMC fifo working
+//                                  -(SIM working with lightweight MMC core)
+// Revision 1.02.7  9/05/2018   RMR -ZMon voltage can be negative, used signed multiplier.
+//                                  -Resurrect sign extension for adc values into multiplier(16 to 32-bit sign extend)
+// Revision 1.02.8  9/06/2018   RMR -Implemented Zmon power values
+//                                  -Simplified sign-extend for faster synthesis.
+// Revision 1.02.9  9/07/2018   RMR -Debug dBm calculations in SIM. Calibrated voltage reads working.
+// Revision 1.02.A  9/10/2018   RMR -Freq override missing bits was firmware bug. 
+//                                  -Remove dBm Zmon code, not needed.
+//                                  -Moved debug SPI out of top level module.
+// Revision 1.02.B  9/12/2018   RMR -Added ZM_CTRL, ZM_SIZE opcode support for use by ZMonUi app
+// Revision 1.02.C  9/12/2018   RMR -Added d1 'Enable' bit to ZM_CTRL opcode
+// Revision 1.02.D  9/16/2018   RMR -Bugfix, defer MEAS processing until immediately after pattern run
+// Revision 1.02.E  9/18/2018   RMR -More work on deferred MEAS processing. 1.02.D wasn't complete
+// Revision 1.02.F  9/18/2018   RMR -1.02.E dramatically better but not perfect. Use better solution, no MMC while ptn running. Works well.
+// Revision 1.03.0  9/24/2018   RMR -Fixed 'bytes_processed to be accurate. Bugfix in power override reset.
+//
 //------------------------------------------------------------------------------
 
-`define VERSION 16'h1_02_3     // V.vv.r FPGA development revision
+`define VERSION 16'h1_03_0     // V.vv.r FPGA development revision

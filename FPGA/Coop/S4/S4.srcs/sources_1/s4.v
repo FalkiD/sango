@@ -22,8 +22,7 @@
 // Module Name:     s4
 // Project Name:    Sango s4
 // Target Devices:  xc7a35ticsg324-1L (debug Arty7)
-//                  xc7a35tlftg256-2L (actual s4 HW)
-// Tool Versions:   Vivado 2015.4 (RMR) & 2016.2 & 2016.4 (JLC)
+//                  xc7a35tlftg256-2L (actual s4 HW)// Tool Versions:   Vivado 2015.4 (RMR) & 2016.2 & 2016.4 (JLC)
 // Description:     10ns CLK
 //                  Previous versions of the s4 HDL were based on either simulation
 //                  testbenches or the Digilent Arty7 evaluation board.  Beginning
@@ -40,7 +39,7 @@
 //
 // Hierarchy:                                                         Scope:
 // ----------------------------------------------------------------   -----------------------------------------------------------
-//    s4.v                                                            (s4 )    
+//    s6.v                                                            (s6 )    
 //        version.v                                                   (NOTE: included by most/every non-ip *.v)
 // 
 //        
@@ -119,6 +118,10 @@
 // Revision 1.00.6  07/10/2017 JLC #1: uart.v got HWDBG ext'd fifo write updates.
 // Revision 1.00.7  07/10/2017 JLC #2:
 // See version.v    07/26/2017 RMR Merged Coop & Rick
+//                  04/11/2018 JEC Created mmc_interface to replace mmc_tester and do the same
+//                                 useful functions, while eliminating the parts which were not
+//                                 being used.  This frees up BRAM tiles, so we can expand the
+//                                 size of the pattern RAM.
 //
 // Additional Comments: General structure/sequence:
 //   Fifo's at top level for: opcodes and opcode processor output
@@ -220,7 +223,7 @@ module s4 #(parameter GLBL_MMC_FILL_LEVEL = 2048,
 
   output             ACTIVE_LEDn,        //  T14   O       
 
-  inout              MMC_CLK,            //  N11   I        MCU<-->MMC-Slave I/F
+  input              MMC_CLK,            //  N11   I        2018-09-14 was inout with mmc_tester   MCU<-->MMC-Slave I/F
   output             MMC_IRQn,           //  P8    O        MCU SDIO_SD pin; low=MMC_Card_Present.
   inout              MMC_CMD,            //  R7    I       
   output             MMC_TRIG,           //  N6    O        Used to interrupt MCU on error (1.01.12 & up)       
@@ -315,7 +318,6 @@ wire         zm_not_cal;                // 0 to calibrate ZMon offset, measure w
 // Use 0x4000 if dbg_enables to turn ON SPI debugger mode
 // Otherwise SPI outputs are driven by various processor modules
 wire         dbg_spi_mode;
-
 wire         dbg_sys_rst_i;
 reg  [9:0]   dbg_sys_rst_sr   = 0; //10'b0;
 reg          dbg_sys_rst_n    = 1'b1;
@@ -330,9 +332,9 @@ wire         mmcm_rst_i;
 wire         mmcm_pwrdn_i;
 wire         mmcm_locked_o;
 
-// MMC tester
+// MMC interface replaced mmc tester 27-Aug-218
 wire         mmc_clk;       // missing definition all this time???
-wire         mmc_clk_oe;
+//wire         mmc_clk_oe;
 wire         mmc_cmd;
 wire         mmc_cmd_oe;
 wire         mmc_cmd_zzz;
@@ -345,7 +347,7 @@ reg   [7:0]  mmc_dat_choice3;
 wire         mmc_od_mode;
 wire         mmc_dat_oe;
 wire  [1:0]  mmc_dat_siz;
-wire         mmc_tlm;
+//wire         mmc_tlm;
 
 // MMC card I/O proxy signals
 wire  [7:0]  MMC_DAT_i;
@@ -382,6 +384,7 @@ wire         frq_fifo_mt;             // frequency fifo empty flag
 wire         frq_fifo_full;           // frequency fifo full flag
 wire [PROCESSOR_FIFO_FILL_BITS-1:0]   frq_fifo_count;
 wire [7:0]   frq_status;              // frequency processor status
+wire         frq_status_ack;          // acknowledge frq error, reset frq_status
 wire         frq_mute_n;              // frequency processor controls SYN mute when changing frequencies
 wire         freq_done;               // pulsed after successful frequency change
 wire         tweak_power;             // power processor will reset power if freq_done & config_word[3] 
@@ -401,6 +404,7 @@ wire         pwr_fifo_ren;            // power fifo read enable
 wire         pwr_fifo_mt;             // power fifo empty flag
 wire         pwr_fifo_full;           // power fifo full flag
 wire [7:0]   pwr_status;              // power processor status
+wire         pwr_status_ack;          // acknowledge pwr error, reset pwr_status
 wire [PROCESSOR_FIFO_FILL_BITS-1:0]   pwr_fifo_count;
 // power processor outputs, mux'd to main outputs
 wire         pwr_mosi;
@@ -426,6 +430,7 @@ wire         pls_fifo_ren;            // pulse fifo read enable
 wire         pls_fifo_mt;             // pulse fifo empty flag
 wire         pls_fifo_full;           // pulse fifo full flag
 wire [7:0]   pls_status;              // pulse processor status
+wire         pls_status_ack;          // acknowledge pulse error, reset pls_status
 wire [PROCESSOR_FIFO_FILL_BITS-1:0]   pls_fifo_count;
 wire         pls_rfgate;              // from pulse processor to RF_GATE
 wire         pls_rfgate2;             // Initial release, always ON. from pulse processor to RF_GATE2
@@ -438,18 +443,21 @@ wire         meas_fifo_ren;            // meas fifo read enable
 wire         meas_fifo_mt;             // meas fifo empty flag
 wire         meas_fifo_full;           // meas fifo full flag
 wire [PATTERN_FILL_BITS-1:0]   meas_fifo_count;
+wire         meas_fifo_rst;            // meas fifo clear/reset
+wire         meas_enable;              // enable/disable measurements during pattern run
 
 // Bias enable wire
 wire         bias_en;                 // bias control
 
 // Pattern processor wires.
 wire                            ptn_wen;         // opcode processor saves pattern opcodes to pattern RAM 
-wire [PATTERN_FILL_BITS-1:0]   ptn_addr;        // address
+wire [PATTERN_FILL_BITS-1:0]    ptn_addr;        // address
 wire [23:0]                     ptn_clk;         // patclk, pattern tick, tick=100ns
 wire [`PATTERN_WR_WORD-1:0]     ptn_data;        // 12 bytes, 3 bytes patClk tick, 9 bytes for opcode, length, and data   
 wire                            ptn_run;         // Run pattern processor 
 wire [PATTERN_FILL_BITS-1:0]    ptn_index;       // address of pattern entry to run (for status) 
 wire [7:0]                      ptn_status;      // status from pattern processor 
+wire                            ptn_status_ack;  // acknowledge pattern error, reset ptn_status
 wire [PTN_CMD_BITS-1:0]         ptn_cmd;         // Command/mode, used to clear sections of pattern RAM
 // Fifo from pattern processor to opcode processor (to run pattern)
 wire [`PATTERN_RD_WORD-1:0]     opcptn_fifo_dat_i;  // pattern processor to opcode processor, run next entry
@@ -474,15 +482,11 @@ wire         dbg_opc_rfgate;          // Driven by RF_GATE bit of sys_mode, MODE
 // Write up to 14 byte to SPI device
 wire [7:0]   arr_spi_bytes [13:0];
 wire [3:0]   dbg_spi_bytes;      // bytes to send
-reg  [3:0]   dbg_spi_count;      // down counter
 wire         dbg_spi_start;
 wire         dbg_spi_busy;
 wire [2:0]   dbg_spi_device;        // 1=VGA, 2=SYN, 3=DDS, 4=ZMON
-wire [15:0]  dbg_enables; // = 1'b0;          // toggle various enables/wires
+wire [15:0]  dbg_enables;           // toggle various enables/wires
 wire [3:0]   dbg_spi_state;         // spi processor state
-
-// MCU interrupt test, config_word[4] generates test interrupt
-wire         intrpt_test;
 
 // DDS/SYN lines
 wire         addds_sclk;
@@ -793,7 +797,7 @@ end
         .sys_clk(sys_clk),
         .sys_clk_en(opc_fifo_enable),
         
-        .reset_i(opc_fifo_rst),
+        .reset_i(meas_fifo_rst),
         
         .fifo_wr_i(meas_fifo_wen),
         .fifo_din(meas_fifo_dat_i),
@@ -843,107 +847,185 @@ end
     );
 
                 
-// ******************************************************************************
-// *                                                                            *
-// *  mmc_tester:  The MMC Slave + Related Debug/Test HW                        *
-// *                                                                            *
-// ******************************************************************************
-  mmc_tester #(
-    .SYS_CLK_RATE         (`GLBL_CLK_FREQ),
-    .SYS_LEDS             (16),    // <TBD> Eventually these need to go away.
-    .SYS_SWITCHES         (8),     // <TBD> Eventually these need to go away.
-    .EXT_CSD_INIT_FILE    ("ext_csd_init.txt"), // Initial contents of EXT_CSD
-    .HOST_RAM_ADR_BITS    (14), // Determines amount of BRAM in MMC host
-    .MMC_FIFO_DEPTH       (GLBL_MMC_FILL_LEVEL), // (2048),
-    .MMC_FILL_LEVEL_BITS  (GLBL_MMC_FILL_LEVEL_BITS),    // (16),
-    .MMC_RAM_ADR_BITS     (9)      // 512 bytes, 1st sector (17)
-  ) mmc_tester_0 (
-
-    // Asynchronous reset
-    .sys_rst_n         (sys_rst_n),
-    .sys_clk           (sys_clk),
-
-    // Asynchronous serial interface
-    .cmd_i             (syscon_rxd),
-    .resp_o            (syscon_txd),
-
-    // Board related
-    .switch_i          (8'b0),
-    .led_o             (),
-
-    // Interface for SD/MMC traffic logging
-    // via asynchronous serial transmission
-    .tlm_send_i        (1'b0),
-    .tlm_o             (mmc_tlm),
-
-    // Tester Function Enables
-    .slave_en_i        (1'b1),
-`ifdef XILINX_SIMULATOR
-    .host_en_i         (1'b1),
-`else
-    .host_en_i         (1'b0),
-`endif
-
-    // SD/MMC card signals
-    .mmc_clk_i         (MMC_CLK),
-    .mmc_clk_o         (mmc_clk),
-    .mmc_clk_oe_o      (mmc_clk_oe),
-    .mmc_cmd_i         (MMC_CMD),
-    .mmc_cmd_o         (mmc_cmd),
-    .mmc_cmd_oe_o      (mmc_cmd_oe),
-    .mmc_dat_i         (MMC_DAT_i),
-    .mmc_dat_o         (mmc_dat),
-    .mmc_dat_oe_o      (mmc_dat_oe),
-    .mmc_od_mode_o     (mmc_od_mode),  // open drain mode, applies to sd_cmd_o and sd_dat_o
-    .mmc_dat_siz_o     (mmc_dat_siz),
+    // ******************************************************************************
+    // *                                                                            *
+    // *  mmc_interface:  The MMC slave + Related Debug/Test HW                     *
+    // *                                                                            *
+    // ******************************************************************************
+    mmc_interface #(
+        .SYS_CLK_RATE         (`GLBL_CLK_FREQ),
+        .EXT_CSD_INIT_FILE    ("ext_csd_init.txt"), // Initial contents of EXT_CSD
+        .MMC_FIFO_DEPTH       (GLBL_MMC_FILL_LEVEL), // (2048),
+        .MMC_FILL_LEVEL_BITS  (GLBL_MMC_FILL_LEVEL_BITS),    // (16),
+        .MMC_RAM_ADR_BITS     (9)      // 512 bytes, 1st sector (17)
+    ) mmc_interface_0 (
     
-    // 31-Mar RMR added a crapload of debug signals
-    // signals for spi debug data written to MMC debug terminal (03000040 X Y Z...)
-    .dbg_spi_data0_o    (arr_spi_bytes[0]),
-    .dbg_spi_data1_o    (arr_spi_bytes[1]),
-    .dbg_spi_data2_o    (arr_spi_bytes[2]),
-    .dbg_spi_data3_o    (arr_spi_bytes[3]),
-    .dbg_spi_data4_o    (arr_spi_bytes[4]),
-    .dbg_spi_data5_o    (arr_spi_bytes[5]),
-    .dbg_spi_data6_o    (arr_spi_bytes[6]),
-    .dbg_spi_data7_o    (arr_spi_bytes[7]),
-    .dbg_spi_data8_o    (arr_spi_bytes[8]),
-    .dbg_spi_data9_o    (arr_spi_bytes[9]),
-    .dbg_spi_dataA_o    (arr_spi_bytes[10]),
-    .dbg_spi_dataB_o    (arr_spi_bytes[11]),
-    .dbg_spi_dataC_o    (arr_spi_bytes[12]),
-    .dbg_spi_dataD_o    (arr_spi_bytes[13]),
-    .dbg_spi_bytes_io   (dbg_spi_bytes),
-    .dbg_spi_start_o    (dbg_spi_start),
-    .dbg_spi_device_o   (dbg_spi_device),   // 1=VGA, 2=SYN, 3=DDS, 4=ZMON
-    .dbg_spi_busy_i     (dbg_spi_busy),     // asserted while top processes SPI bytes
-    .dbg_enables_o      (dbg_enables),
+        // Asynchronous reset
+        .sys_rst_n         (sys_rst_n),
+        .sys_clk           (sys_clk),
     
-    // MMC is working! MMC fifo connections
-    // Read from MMC fifo connections
-    .opc_fif_dat_o      (mmc_fif_dat),          // MMC opcode fifo from mmc_tester into mux
-    .opc_fif_ren_i      (mmc_fif_ren),          // mmc fifo read enable
-    .opc_fif_mt_o       (mmc_fif_mt),           // mmc opcode fifo empty
-    .opc_rd_cnt_o       (mmc_fif_cnt),          // mmc opcode fifo fill level 
-    .opc_rd_reset_i     (1'b0), //mmc_inpf_rst),         // Synchronous mmc opcode fifo reset
-    //    -- Write to MMC fifo connections
-    .opc_rspf_dat_i     (mmc_rspf_dat),         // MMC response fifo
-    .opc_rspf_we_i      (mmc_rspf_wen),         // response fifo write line             
-    .opc_rspf_mt_o      (mmc_rspf_mt),          // response fifo empty
-    .opc_rspf_fl_o      (mmc_rspf_fl),          // response fifo full
-    .opc_rspf_reset_i   (1'b0), //opc_fifo_rst),         // Synchronous mmc response fifo reset
-    .opc_rspf_cnt_o     (mmc_rspf_cnt),         // MMC response fifo fill level
+        // Asynchronous serial interface
+        .cmd_i             (syscon_rxd),
+        .resp_o            (syscon_txd),
+    
+        // SD/MMC card signals
+        .mmc_clk_i         (MMC_CLK),
+        .mmc_cmd_i         (MMC_CMD),
+        .mmc_cmd_o         (mmc_cmd),
+        .mmc_cmd_oe_o      (mmc_cmd_oe),
+        .mmc_dat_i         (MMC_DAT_i),
+        .mmc_dat_o         (mmc_dat),
+        .mmc_dat_oe_o      (mmc_dat_oe),
+        .mmc_od_mode_o     (mmc_od_mode),  // open drain mode, applies to sd_cmd_o and sd_dat_o
+        .mmc_dat_siz_o     (mmc_dat_siz),
+        
+        // 31-Mar RMR added a crapload of debug signals
+        // signals for spi debug data written to MMC debug terminal (03000040 X Y Z...)
+        .dbg_spi_data0_o    (arr_spi_bytes[0]),
+        .dbg_spi_data1_o    (arr_spi_bytes[1]),
+        .dbg_spi_data2_o    (arr_spi_bytes[2]),
+        .dbg_spi_data3_o    (arr_spi_bytes[3]),
+        .dbg_spi_data4_o    (arr_spi_bytes[4]),
+        .dbg_spi_data5_o    (arr_spi_bytes[5]),
+        .dbg_spi_data6_o    (arr_spi_bytes[6]),
+        .dbg_spi_data7_o    (arr_spi_bytes[7]),
+        .dbg_spi_data8_o    (arr_spi_bytes[8]),
+        .dbg_spi_data9_o    (arr_spi_bytes[9]),
+        .dbg_spi_dataA_o    (arr_spi_bytes[10]),
+        .dbg_spi_dataB_o    (arr_spi_bytes[11]),
+        .dbg_spi_dataC_o    (arr_spi_bytes[12]),
+        .dbg_spi_dataD_o    (arr_spi_bytes[13]),
+        .dbg_spi_bytes_io   (dbg_spi_bytes),
+        .dbg_spi_start_o    (dbg_spi_start),
+        .dbg_spi_device_o   (dbg_spi_device),   // 1=VGA, 2=SYN, 3=DDS, 4=ZMON
+        .dbg_spi_busy_i     (dbg_spi_busy),     // asserted while top processes SPI bytes
+        .dbg_enables_o      (dbg_enables),
+        
+        // MMC is working! MMC fifo connections
+        // Read from MMC fifo connections
+        .opc_fif_dat_o      (mmc_fif_dat),          // MMC opcode fifo from mmc_interface into mux
+        .opc_fif_ren_i      (mmc_fif_ren),          // mmc fifo read enable
+        .opc_fif_mt_o       (mmc_fif_mt),           // mmc opcode fifo empty
+        .opc_rd_cnt_o       (mmc_fif_cnt),          // mmc opcode fifo fill level 
+        .opc_rd_reset_i     (1'b0), //mmc_inpf_rst),         // Synchronous mmc opcode fifo reset
+        //    -- Write to MMC fifo connections
+        .opc_rspf_dat_i     (mmc_rspf_dat),         // MMC response fifo
+        .opc_rspf_we_i      (mmc_rspf_wen),         // response fifo write line             
+        .opc_rspf_mt_o      (mmc_rspf_mt),          // response fifo empty
+        .opc_rspf_fl_o      (mmc_rspf_fl),          // response fifo full
+        .opc_rspf_reset_i   (1'b0), //opc_fifo_rst),         // Synchronous mmc response fifo reset
+        .opc_rspf_cnt_o     (mmc_rspf_cnt),         // MMC response fifo fill level
+    
+        // Debugging, these go from 0300003F down
+        .opc_oc_cnt_i      (opc_count),                             // opcodes_procesed
+        .opc_status1_i     ({9'd0, opc_state, 8'd0, opc_status}),   // opc_state__opc_status
+        .opc_status2_i     ({8'd0, mmc_rspf_cnt[7:0], 8'd0, mmc_fif_cnt[7:0]}), // rsp_fifo_count__opc_fifo_count
+        .opc_status3_i     (dbg_opcodes),           // Upr16[OpcMode(8)__patadr_count(8)]____Lwr16[first_opcode__last_opcode]
+        .sys_status4_i     (frequency),                             // system frequency setting in Hertz
+        .sys_status5_i     ({15'h0, SYN_STAT, 4'd0, dbm_x10}),      // MS 16 bits=SYN_STAT pin,1=PLL_LOCK, 0=not locked. 16 LSB's=power(dBm x10) setting
+        .sys_status6_i     (dbg_ptndata)                            // Last ptn opc after ptn run upper 8. Lower 24 measurement fifo count
+        );
+//// ******************************************************************************
+//// *                                                                            *
+//// *  mmc_tester:  The MMC Slave + Related Debug/Test HW                        *
+//// *                                                                            *
+//// ******************************************************************************
+//  mmc_tester #(
+//    .SYS_CLK_RATE         (`GLBL_CLK_FREQ),
+//    .SYS_LEDS             (16),    // <TBD> Eventually these need to go away.
+//    .SYS_SWITCHES         (8),     // <TBD> Eventually these need to go away.
+//    .EXT_CSD_INIT_FILE    ("ext_csd_init.txt"), // Initial contents of EXT_CSD
+//    .HOST_RAM_ADR_BITS    (14), // Determines amount of BRAM in MMC host
+//    .MMC_FIFO_DEPTH       (GLBL_MMC_FILL_LEVEL), // (2048),
+//    .MMC_FILL_LEVEL_BITS  (GLBL_MMC_FILL_LEVEL_BITS),    // (16),
+//    .MMC_RAM_ADR_BITS     (9)      // 512 bytes, 1st sector (17)
+//  ) mmc_tester_0 (
 
-    // Debugging, these go from 0300003F down
-    .opc_oc_cnt_i      (opc_count),                             // opcodes_procesed
-    .opc_status1_i     ({9'd0, opc_state, 8'd0, opc_status}),   // opc_state__opc_status
-    .opc_status2_i     ({8'd0, mmc_rspf_cnt[7:0], 8'd0, mmc_fif_cnt[7:0]}), // rsp_fifo_count__opc_fifo_count
-    .opc_status3_i     (dbg_opcodes),           // Upr16[OpcMode(8)__patadr_count(8)]____Lwr16[first_opcode__last_opcode]
-    .sys_status4_i     (frequency),                             // system frequency setting in Hertz
-    .sys_status5_i     ({interp_dac, 3'h0, SYN_STAT, 4'd0, dbm_x10}), // Top 12 bits interp_dac, 4 bits=SYN_STAT(PLL_LOCK). 16 LSB's=power(dBm x10) setting
-//    .sys_status6_i     (dbg_ptndata)                            // Last ptn opc after ptn run upper 8. Lower 24 measurement fifo count
-    .sys_status6_i     ({dbg_branch_count[15:0], dbg_branch_opcs[7:0], dbg_branch_adr[7:0]}) // ptn branch info
-    );
+//    // Asynchronous reset
+//    .sys_rst_n         (sys_rst_n),
+//    .sys_clk           (sys_clk),
+
+//    // Asynchronous serial interface
+//    .cmd_i             (syscon_rxd),
+//    .resp_o            (syscon_txd),
+
+//    // Board related
+//    .switch_i          (8'b0),
+//    .led_o             (),
+
+//    // Interface for SD/MMC traffic logging
+//    // via asynchronous serial transmission
+//    .tlm_send_i        (1'b0),
+//    .tlm_o             (mmc_tlm),
+
+//    // Tester Function Enables
+//    .slave_en_i        (1'b1),
+//`ifdef XILINX_SIMULATOR
+//    .host_en_i         (1'b1),
+//`else
+//    .host_en_i         (1'b0),
+//`endif
+
+//    // SD/MMC card signals
+//    .mmc_clk_i         (MMC_CLK),
+//    .mmc_clk_o         (mmc_clk),
+//    .mmc_clk_oe_o      (mmc_clk_oe),
+//    .mmc_cmd_i         (MMC_CMD),
+//    .mmc_cmd_o         (mmc_cmd),
+//    .mmc_cmd_oe_o      (mmc_cmd_oe),
+//    .mmc_dat_i         (MMC_DAT_i),
+//    .mmc_dat_o         (mmc_dat),
+//    .mmc_dat_oe_o      (mmc_dat_oe),
+//    .mmc_od_mode_o     (mmc_od_mode),  // open drain mode, applies to sd_cmd_o and sd_dat_o
+//    .mmc_dat_siz_o     (mmc_dat_siz),
+    
+//    // 31-Mar RMR added a crapload of debug signals
+//    // signals for spi debug data written to MMC debug terminal (03000040 X Y Z...)
+//    .dbg_spi_data0_o    (arr_spi_bytes[0]),
+//    .dbg_spi_data1_o    (arr_spi_bytes[1]),
+//    .dbg_spi_data2_o    (arr_spi_bytes[2]),
+//    .dbg_spi_data3_o    (arr_spi_bytes[3]),
+//    .dbg_spi_data4_o    (arr_spi_bytes[4]),
+//    .dbg_spi_data5_o    (arr_spi_bytes[5]),
+//    .dbg_spi_data6_o    (arr_spi_bytes[6]),
+//    .dbg_spi_data7_o    (arr_spi_bytes[7]),
+//    .dbg_spi_data8_o    (arr_spi_bytes[8]),
+//    .dbg_spi_data9_o    (arr_spi_bytes[9]),
+//    .dbg_spi_dataA_o    (arr_spi_bytes[10]),
+//    .dbg_spi_dataB_o    (arr_spi_bytes[11]),
+//    .dbg_spi_dataC_o    (arr_spi_bytes[12]),
+//    .dbg_spi_dataD_o    (arr_spi_bytes[13]),
+//    .dbg_spi_bytes_io   (dbg_spi_bytes),
+//    .dbg_spi_start_o    (dbg_spi_start),
+//    .dbg_spi_device_o   (dbg_spi_device),   // 1=VGA, 2=SYN, 3=DDS, 4=ZMON
+//    .dbg_spi_busy_i     (dbg_spi_busy),     // asserted while top processes SPI bytes
+//    .dbg_enables_o      (dbg_enables),
+    
+//    // MMC is working! MMC fifo connections
+//    // Read from MMC fifo connections
+//    .opc_fif_dat_o      (mmc_fif_dat),          // MMC opcode fifo from mmc_tester into mux
+//    .opc_fif_ren_i      (mmc_fif_ren),          // mmc fifo read enable
+//    .opc_fif_mt_o       (mmc_fif_mt),           // mmc opcode fifo empty
+//    .opc_rd_cnt_o       (mmc_fif_cnt),          // mmc opcode fifo fill level 
+//    .opc_rd_reset_i     (1'b0), //mmc_inpf_rst),         // Synchronous mmc opcode fifo reset
+//    //    -- Write to MMC fifo connections
+//    .opc_rspf_dat_i     (mmc_rspf_dat),         // MMC response fifo
+//    .opc_rspf_we_i      (mmc_rspf_wen),         // response fifo write line             
+//    .opc_rspf_mt_o      (mmc_rspf_mt),          // response fifo empty
+//    .opc_rspf_fl_o      (mmc_rspf_fl),          // response fifo full
+//    .opc_rspf_reset_i   (1'b0), //opc_fifo_rst),         // Synchronous mmc response fifo reset
+//    .opc_rspf_cnt_o     (mmc_rspf_cnt),         // MMC response fifo fill level
+
+//    // Debugging, these go from 0300003F down
+//    .opc_oc_cnt_i      (opc_count),                             // opcodes_procesed
+//    .opc_status1_i     ({9'd0, opc_state, 8'd0, opc_status}),   // opc_state__opc_status
+//    .opc_status2_i     ({8'd0, mmc_rspf_cnt[7:0], 8'd0, mmc_fif_cnt[7:0]}), // rsp_fifo_count__opc_fifo_count
+//    .opc_status3_i     (dbg_opcodes),           // Upr16[OpcMode(8)__patadr_count(8)]____Lwr16[first_opcode__last_opcode]
+//    .sys_status4_i     (frequency),                             // system frequency setting in Hertz
+//    .sys_status5_i     ({interp_dac, 3'h0, SYN_STAT, 4'd0, dbm_x10}), // Top 12 bits interp_dac, 4 bits=SYN_STAT(PLL_LOCK). 16 LSB's=power(dBm x10) setting
+////    .sys_status6_i     (dbg_ptndata)                            // Last ptn opc after ptn run upper 8. Lower 24 measurement fifo count
+//    .sys_status6_i     ({dbg_branch_count[15:0], dbg_branch_opcs[7:0], dbg_branch_adr[7:0]}) // ptn branch info
+//    );
 
 
   // Frequency processor instance. 
@@ -979,7 +1061,8 @@ end
 
     .tweak_pwr_o        (freq_done),            // pulsed after successful frequency change so power processor will reset power 
 
-    .status_o           (frq_status)            // 0=Busy, SUCCESS when done, or an error code
+    .status_o           (frq_status),           // 0=Busy, SUCCESS when done, or an error code
+    .status_ack_i       (frq_status_ack)        // frequency status acknowledge, this module clears error status
   );
 
   // Power processor instance. 
@@ -1020,7 +1103,8 @@ end
     
     .dbmx10_o           (dbm_x10),              // present power setting for all top-level modules to access
 
-    .status_o           (pwr_status),            // 0=busy, SUCCESS when done, or an error code
+    .status_o           (pwr_status),           // 0=busy, SUCCESS when done, or an error code
+    .status_ack_i       (pwr_status_ack),       // power status acknowledge, this module clears error status
     
     // Frequency interpolation debugging wires
 //    .Y2_o               (Y2),
@@ -1047,6 +1131,7 @@ end
     .pls_fifo_ren_o     (pls_fifo_ren),         // pulse processor fifo read line
     .pls_fifo_mt_i      (pls_fifo_mt),          // pulse fifo empty flag
     .pls_fifo_count_i   (pls_fifo_count),       // pulse fifo count
+    .meas_enable_i      (meas_enable),          // enable measurements during pattern run
 
     .rf_enable_i        (1'b1),                 // RF enabled by MCU, Interlock, etc.
     .rf_gate_o          (pls_rfgate),           // RF_GATE line
@@ -1066,7 +1151,8 @@ end
     .adc_fifo_wen_o     (meas_fifo_wen),        // ADC results fifo write enable
     .adc_fifo_full_i    (meas_fifo_full),       // ADC FIFO full
 
-    .status_o           (pls_status)            // 0=busy, SUCCESS when done, or an error code
+    .status_o           (pls_status),           // 0=busy, SUCCESS when done, or an error code
+    .status_ack_i       (pls_status_ack)        // pulse status acknowledge, this module clears error status
   );
 
   patterns #(
@@ -1102,7 +1188,8 @@ end
     .dbg_ptnbrs_o       (dbg_branch_opcs),      // debug, pattern branch opcode count
     .dbg_brnadr_o       (dbg_branch_adr),       // debug, pattern branch address(tick)
 
-    .status_o           (ptn_status)            // 0=busy, SUCCESS when done, or an error code
+    .status_o           (ptn_status),            // 0=busy, SUCCESS when done, or an error code
+    .status_ack_i       (ptn_status_ack)         // pattern status acknowledge, this module clears error status
   );
 
 // ******************************************************************************
@@ -1162,6 +1249,8 @@ end
     .meas_fifo_ren_o            (meas_fifo_ren),    // measurement fifo read enable
     .meas_fifo_cnt_i            (meas_fifo_count),  // measurements in fifo after pulse/pattern
     .meas_fifo_full_i           (meas_fifo_full),   // meas FIFO full
+    .meas_fifo_rst_o            (meas_fifo_rst),    // meas fifo clear/reset
+    .meas_enable_o              (meas_enable),      // enable measurements during pattern(pulse) run
                                           
     .bias_enable_o              (bias_en),          // bias control
 
@@ -1186,17 +1275,26 @@ end
     .opcode_counter_o           (opc_count),        // count opcodes for status info   
                                                         
     // Debugging
-    .status_o                   (opc_status),         // NULL opcode terminates, done=0, or error code
-    .state_o                    (opc_state),          // For debugger display
-    .mcu_alarm_o                (),                   // Alarm register for top level to
+    .status_o                   (opc_status),       // NULL opcode terminates, done=0, or error code
+    .state_o                    (opc_state),        // For debugger display
 
-    .dbg_opcodes_o              (dbg_opcodes),        // first ocode__last_opcode
-    .dbg2_o                     (dbg_ptndata),        // last pattern data read while running pattern
+    .dbg_opcodes_o              (dbg_opcodes),      // first ocode__last_opcode
+    .dbg2_o                     (dbg_ptndata),      // last pattern data read while running pattern
     
     // STATUS command
-    .syn_stat_i                 (SYN_STAT),           // SYN STAT pin, 1=PLL locked
-    .dbm_x10_i                  (dbm_x10),             // dBm x10, system power level    
-    .vgadac_i                   (interp_dac)          // pass VGA dac value in for return with STATUS command
+    .syn_stat_i                 (SYN_STAT),         // SYN STAT pin, 1=PLL locked
+    .dbm_x10_i                  (dbm_x10),          // dBm x10, system power level    
+    .vgadac_i                   (interp_dac),       // pass VGA dac value in for return with STATUS command
+
+    .pls_status_i               (pls_status),       // pulse processor status
+    .pls_status_ack_o           (pls_status_ack),
+    .pwr_status_i               (pwr_status),       // power processor status
+    .pwr_status_ack_o           (pwr_status_ack),
+    .frq_status_i               (frq_status),       // frequency processor status
+    .frq_status_ack_o           (frq_status_ack),
+    .ptn_status_ack_o           (ptn_status_ack),
+    
+    .mcu_alarm_o                (MMC_TRIG)          // signal MCU on error
   );
 
 // ******************************************************************************
@@ -1295,8 +1393,8 @@ end
     .sys_clk                    (sys_clk),
     .sys_rst_n                  (sys_rst_n),
   
-    .pulse_en_i                 (intrpt_test),
-    .pulse_o                    (MMC_TRIG), 
+    .pulse_en_i                 (),
+    .pulse_o                    (), 
   
     .spi_byte0_i                (arr_spi_bytes[0]),
     .spi_byte1_i                (arr_spi_bytes[1]),
@@ -1322,7 +1420,6 @@ end
     .SPI_SCLK_o                 (SPI_SCLK),
     .SPI_SSn_o                  (SPI_SSn)
   );
-
 
   // Manage the blue ACTIVE_LEDn signal.
   // ON when a pattern is running for at least 50 or 100ms so a user can see it.
@@ -1359,119 +1456,6 @@ end
             active_led <= 1'b1;                
       end
   end
-  
-
-
-//
-// This doesn't work either...
-// 
-//  localparam    COUNTER_3S      = 32'd300000000;     
-//  localparam    COUNTER_100MS   = 32'd10000000;     
-//  localparam    COUNTER_50MS    = 32'd5000000;      // 5e6 * 10e-9 ==> 50e-3
-//  localparam    COUNTER_25MS    = 32'd2500000;
-//  reg           ptn_runn;
-//  reg           bias_enn;  
-//  reg           active_led;
-//  reg  [31:0]   led_counter;
-//  reg  [31:0]   rdy_counter;
-//  always @(posedge sys_clk) begin
-//      if(sys_rst_n == 1'b0) begin
-//        active_led <= 1'b1;
-//        led_counter <= COUNTER_50MS;        // init as non-0    32'd0;
-//        rdy_counter <= 32'd0;
-//        ptn_runn <= 1'b0;
-//        bias_enn <= 1'b0;
-//      end
-//      else begin
-      
-//        // 1 tick signals
-//        ptn_runn <= ptn_busy;
-//        bias_enn <= PA_BIAS_EN;
-        
-//        if(ptn_busy && !ptn_runn && PA_BIAS_EN ||
-//           PA_BIAS_EN && !bias_enn && ptn_busy) begin
-//            // rising edge of ptn_busy when BIAS ON _OR_
-//            // rising edge of BIAS when ptn_busy
-//            active_led <= 1'b0;
-//            led_counter <= COUNTER_50MS;        
-//        end
-//        else if(active_led && dbg_opcodes[23:16] > 8'h0) begin
-//            // nothing happening but pattern is loaded,
-//            // blink READY every 3 seconds
-//            if(rdy_counter == 32'd0) begin
-//                active_led <= 1'b0;
-//                led_counter <= COUNTER_25MS;
-//                rdy_counter <= COUNTER_3S;
-//            end
-//            else
-//                rdy_counter <= rdy_counter - 1;               
-//        end
-//        else if(!active_led) begin
-//            led_counter <= led_counter - 32'd1;        
-//        end
-        
-//        if(led_counter == 32'd0) begin
-//            active_led <= 1'b1;
-//            rdy_counter <= COUNTER_3S;
-//        end                
-//      end
-//  end
-
-///
-/// This didn't work...
-/// No blue flash when pattern loaded
-/// Blue stayed on 30 seconds after pattern stopped running
-///
-//reg  [31:0]   rdy_counter;    // every 2 secs short blink if any patterns loaded & not running a pattern
-//reg  [31:0]   rdy_on_count;   // blink for 25ms
-//always @(posedge sys_clk) begin
-//    if(sys_rst_n == 1'b0) begin
-//      active_led <= 1'b1;
-//      led_counter <= 32'd0;
-//      rdy_counter <= 32'd0;
-//      rdy_on_count <= 32'd0;
-//    end
-//    else begin
-//      ptn_runn <= ptn_busy;
-//      bias_enn <= PA_BIAS_EN;
-      
-//      if((ptn_busy && !ptn_runn && PA_BIAS_EN) ||
-//          (PA_BIAS_EN && !bias_enn && ptn_busy)) begin
-//          // rising edge of ptn_busy with BIAS ON  _OR_
-//          // rising edge of PA_BIAS_EN with pattern running
-//          active_led <= 1'b0;
-//          led_counter <= COUNTER_50MS;        
-//      end
-//      else if(!active_led && ptn_busy && PA_BIAS_EN) begin
-//          if(led_counter == 32'd0)
-//              active_led <= 1'b1;
-//          else 
-//              led_counter <= led_counter - 32'd1;
-//      end
-         
-//      // if any patterns have been loaded do a
-//      // short blink every 2 seconds to indicate
-//      // "READY" when a pattern is not running
-//      // ptn_count register in opcode processor records how many
-//      // patterns have been loaded. Available here in: 
-//      // dbg_opcodes[23:16]
-//      if(active_led && dbg_opcodes[23:16] > 8'd0) begin
-//          if(rdy_counter == 32'd0) begin
-//              rdy_counter <= COUNTER_2S;
-//              if(rdy_on_count == 32'd0) begin
-//                  rdy_on_count <= COUNTER_25MS;
-//                  active_led <= 1'b0;                
-//              end
-//          end
-//          else
-//              rdy_counter <= rdy_counter - 32'd1;
-//      end
-//      else if(!ptn_busy && !active_led) begin
-//          rdy_on_count <= rdy_on_count - 32'd1;
-//          if(rdy_on_count == 32'd0) begin
-//              active_led <= 1'b1;                            
-//          end
-//      end
 
   /////////////////////////////////
   // Concurrent assignments
@@ -1482,8 +1466,8 @@ end
   assign ptn_busy     = (ptn_status == 8'h00) ? 1'b1 : 1'b0;
   
   // Implement MMC card tri-state drivers at the top level
-    // Drive the clock output when needed
-  assign MMC_CLK = mmc_clk_oe?mmc_clk:1'bZ;
+//    // Drive the clock output when needed
+//  assign MMC_CLK = mmc_clk_oe?mmc_clk:1'bZ;
     // Create mmc command signals
   assign mmc_cmd_zzz    = mmc_cmd?1'bZ:1'b0;
   assign mmc_cmd_choice = mmc_od_mode?mmc_cmd_zzz:mmc_cmd;
@@ -1645,11 +1629,9 @@ end
   // if config_word[3] is ON, pulse tweak_power
   assign tweak_power = freq_done & config_word[3];
   
-  assign intrpt_test = config_word[`CFGBIT_INTR_TEST]; 
- 
-  assign FPGA_MCU4 = MMC_CLK; //SYN_SCLK; //CONV; DDS_MOSI; //count4[15];    //  50MHz div'd by 2^16.
-  assign FPGA_MCU3 = MMC_CMD; //DDS_SCLK; //count3[15];    // 200MHz div'd by 2^16.
-  assign FPGA_MCU2 = MMC_DAT0;  //SYN_MUTEn; // ADCF_SDO;  // VGA_MOSI;  //ZMON_EN;
-  assign FPGA_MCU1 = VGA_SCLK;  //MMC_CMD;
+  assign FPGA_MCU4 = MMC_CLK;  //SYN_SCLK; //CONV; DDS_MOSI; //count4[15];    //  50MHz div'd by 2^16.
+  assign FPGA_MCU3 = MMC_CMD;  //DDS_SCLK; //count3[15];    // 200MHz div'd by 2^16.
+  assign FPGA_MCU2 = MMC_DAT0; //SYN_MUTEn; // ADCF_SDO;  // VGA_MOSI;  //ZMON_EN;
+  assign FPGA_MCU1 = MMC_DAT7; //VGA_SCLK;  //MMC_CMD;
 
   endmodule

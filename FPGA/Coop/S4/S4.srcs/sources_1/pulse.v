@@ -36,6 +36,7 @@ module pulse #(parameter FILL_BITS = 4)
     output reg          pls_fifo_ren_o,     // fifo read line
     input  wire         pls_fifo_mt_i,      // fifo empty flag
     input  wire [FILL_BITS-1:0]  pls_fifo_count_i,   // fifo count, for debug message only
+    input  wire         meas_enable_i,      // enable/disable measurements during pattern run
 
     input  wire         rf_enable_i,        // RF enabled by MCU, Interlock, etc.
     output wire         rf_gate_o,          // RF_GATE line
@@ -54,7 +55,8 @@ module pulse #(parameter FILL_BITS = 4)
     output reg          adc_fifo_wen_o,     // ADC results fifo write enable
     input  wire         adc_fifo_full_i,    // ADC FIFO full
 
-    output reg  [7:0]   status_o            // Pulse status, 0=Busy, SUCCESS when done, or an error code
+    output reg  [7:0]   status_o,            // Pulse status, 0=Busy, SUCCESS when done, or an error code
+    input  wire         status_ack_i          // pulse status acknowledge, this module clears error status
     );
 
     // Main Globals
@@ -552,8 +554,7 @@ module pulse #(parameter FILL_BITS = 4)
             ADone: begin
                 if(adc_fifo_full_i == 1'b0) begin
                     adc_fifo_dat_o <= {adcf_dat[15:2], 2'b0, adcf_dat[31:18], 2'b0};
-                    // RMR, use shifted 16-bit #'s above  adc_fifo_dat_o <= {2'b0, adcf_dat[15:2], 2'b0, adcf_dat[31:18]};
-                    // test:adc_fifo_dat_o <= {2'b0, 14'h1000, 2'b0, 14'h1fff};                
+                    // SIM testing adc_fifo_dat_o <= {16'hb592, 16'h599d};                
                     adc_fifo_wen_o <= 1'b1;                // write ADCF data
                 end
                 astate <= ADone2;
@@ -561,8 +562,7 @@ module pulse #(parameter FILL_BITS = 4)
             ADone2: begin
                 if(adc_fifo_full_i == 1'b0) begin
                     adc_fifo_dat_o <= {adcr_dat[15:2], 2'b0, adcr_dat[31:18], 2'b0};
-                    //adc_fifo_dat_o <= {2'b0, adcr_dat[15:2], 2'b0, adcr_dat[31:18]};
-                    // test:adc_fifo_dat_o <= {2'b0, 14'h2000, 2'b0, 14'h3000};
+                    // SIM testing adc_fifo_dat_o <= {16'h8bdf, 16'ha62b};
                     adc_fifo_wen_o <= 1'b1;                // write ADCR data
                 end
                 astate <= AIdle;
@@ -601,6 +601,11 @@ module pulse #(parameter FILL_BITS = 4)
             status_o <= `SUCCESS;
         end
         else if(pulse_en == 1'b1) begin
+
+            // reset our status on an ack
+            if(status_ack_i && status_o > `SUCCESS)
+                status_o <= `SUCCESS;
+    
             case(state)
             PULSE_IDLE: begin
                 if(!pls_fifo_mt_i && astate == AIdle) begin
@@ -638,13 +643,7 @@ module pulse #(parameter FILL_BITS = 4)
                 state <= PULSE_RUN;
             end
             PULSE_RUN: begin
-//                if(ticks == pulse) begin
-//                    state <= PULSE_DONE;
-//                    rf_gate <= 1'b0;
-//                    //rf_gate2 <= 1'b0;
-//                    conv <= 1'b0;
-//                end
-                if(measure) begin
+                if(measure && meas_enable_i) begin
                     if(ticks == measure_at)
                         conv <= 1'b1;           // Start ZMON conversion using conv line                    
                     else if(ticks == measure_at+1)

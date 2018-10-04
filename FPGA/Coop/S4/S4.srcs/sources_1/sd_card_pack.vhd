@@ -596,7 +596,7 @@ use IEEE.NUMERIC_STD.ALL;
 
 library work;
 use work.ucrc_pack.all;
-use work.sd_host_pack.all;
+--use work.sd_host_pack.all;
 use work.convert_pack.all;
 
 entity sd_card_data_unit is
@@ -2927,7 +2927,7 @@ mmc_1 : sd_card_emulator
       USE_FILE  => 0, -- Set to nonzero value to use INIT_FILE
       INIT_VAL  => 18,
       INIT_SEL  => 0, -- No generate loop here
-      INIT_FILE => ".\foo.txt", -- ASCII hexadecimal initialization file name
+      INIT_FILE => "./foo.txt", -- ASCII hexadecimal initialization file name
       FIL_WIDTH => 32, -- Bit width of init file lines
       ADR_WIDTH => RAM_ADR_WIDTH,
       DAT_WIDTH => 8

@@ -743,7 +743,7 @@ fill_level_proc: process(wr_row, rd_row, current_state)
       USE_FILE  => 0, -- Set to nonzero value to use INIT_FILE
       INIT_VAL  => 0,
       INIT_SEL  => 0, -- No generate loop here
-      INIT_FILE => ".\foo.txt", -- ASCII hexadecimal initialization file name
+      INIT_FILE => "./foo.txt", -- ASCII hexadecimal initialization file name
       FIL_WIDTH => 32, -- Bit width of init file lines
       ADR_WIDTH => FLG_WIDTH,
       DAT_WIDTH => WIDTH
@@ -977,7 +977,7 @@ fill_level <= (others=>'0') when wr_row=rd_row else
       USE_FILE  => 0, -- Set to nonzero value to use INIT_FILE
       INIT_VAL  => 0,
       INIT_SEL  => 0, -- No generate loop here
-      INIT_FILE => ".\foo.txt", -- ASCII hexadecimal initialization file name
+      INIT_FILE => "./foo.txt", -- ASCII hexadecimal initialization file name
       FIL_WIDTH => 32, -- Bit width of init file lines
       ADR_WIDTH => FLG_WIDTH,
       DAT_WIDTH => WIDTH

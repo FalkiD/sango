@@ -13,11 +13,12 @@ package sim_bus_control_port_pack is
     -- relating to file I/O
     INPUT_FILE      :  string;
     OUTPUT_FILE     :  string;
+    MSG_PREFIX      :  string; -- Prefix of console output messages from this unit
+    -- relating to the bus controller
     POR_DURATION    :    time;  -- Duration of internal reset signal activity
     POR_ASSERT_LOW  : boolean;  -- Determine polarity of reset signal
     CLKRATE         : integer;  -- Control Port clock rate
     LINE_LENGTH     : integer;  -- Length of buffer to hold file input bytes
-    -- relating to the bus controller
     ADR_DIGITS      : natural; -- # of hex digits for address
     DAT_DIGITS      : natural; -- # of hex digits for data
     QTY_DIGITS      : natural; -- # of hex digits for quantity
@@ -95,6 +96,9 @@ end sim_bus_control_port_pack;
 -- Date  : Dec. 27, 2013
 -- Update: 12/27/13 Copied code from async_syscon_pack.vhd, Wrote some description
 --                  Began merging in file I/O code from "uart_ascii_control_port_sim.vhd"
+--          7/27/18 Added MSG_PREFIX generic, so that multiple instances can operate,
+--                  each posting messages with a unique text prefix identifier.  Is
+--                  that not nifty?
 --
 -- Description
 ---------------------------------------------------------------------------------------
@@ -242,6 +246,9 @@ end sim_bus_control_port_pack;
 -- The output busses are not tri-stated.  The user may add tri-state buffers
 -- external to the module, using "stb_o" to enable the buffer outputs.
 --
+-- By changing the MSG_PREFIX, one can customize the messages that appear in
+-- the simulation console, making the simulation easier to understand.
+--
 ---------------------------------------------------------------------------------------
 
 library IEEE ;
@@ -258,13 +265,14 @@ use work.async_syscon_pack.all;
 entity sim_bus_control_port is
   generic (
     -- relating to file I/O
-    INPUT_FILE      : string  := ".\bus_sim_in.txt";
-    OUTPUT_FILE     : string  := ".\bus_sim_out.txt";
+    INPUT_FILE      : string  := "./bus_sim_in.txt";
+    OUTPUT_FILE     : string  := "./bus_sim_out.txt";
+    MSG_PREFIX      : string  := "Bus "; -- Prefix of console output messages from this unit
+    -- relating to the bus controller
     POR_DURATION    :   time  :=    500 ns;  -- Duration of internal reset signal activity
     POR_ASSERT_LOW  : boolean :=     false;  -- Determines polarity of reset output
     CLKRATE         : integer := 100000000;  -- Control Port clock rate default.
     LINE_LENGTH     : integer :=        40;  -- Length of buffer to hold file input bytes
-    -- relating to the bus controller
     ADR_DIGITS      : natural :=         4; -- # of hex digits for address
     DAT_DIGITS      : natural :=         4; -- # of hex digits for data
     QTY_DIGITS      : natural :=         2; -- # of hex digits for quantity
@@ -428,12 +436,13 @@ begin
             elsif (item_count=0 and temp_char/=' ') then
               stim_kind   <= temp_char;
               stim_kind_v := temp_char; -- Display stim uses this.  It cannot read stim_kind immediately.
+              write (line_2,MSG_PREFIX);
               if (stim_kind_v='b') then
-                write (line_2, string'("Bus Command: "));
+                write (line_2, string'(" command: "));
               elsif (stim_kind_v='d') then
-                write (line_2, string'("Bus delay token. "));
+                write (line_2, string'(" delay token. "));
               else
-                write (line_2, string'("Bus unknown stimulus type encountered. No Action. "));
+                write (line_2, string'(" unknown stimulus type encountered. No Action. "));
               end if;
               item_count  := item_count+1;
             elsif (item_count=1) then -- Time field read removes leading whitespace automatically.
@@ -473,7 +482,9 @@ begin
         elsif not (stim_done) then
           write (line_2, string'("At "));
           write (line_2, now, unit => ns);
-          write (line_2, string'(", Bus control port finished reading stimulus file. "));
+          write (line_2, string'(", "));
+          write (line_2,MSG_PREFIX);
+          write (line_2, string'(" bus control port finished reading stimulus file. "));
           writeline (output, line_2);
           stim_done := true;
         end if;

@@ -258,8 +258,8 @@ use work.async_syscon_pack.all;
 entity sim_bus_control_port is
   generic (
     -- relating to file I/O
-    INPUT_FILE      : string  := ".\bus_sim_in.txt";
-    OUTPUT_FILE     : string  := ".\bus_sim_out.txt";
+    INPUT_FILE      : string  := "./bus_sim_in.txt";
+    OUTPUT_FILE     : string  := "./bus_sim_out.txt";
     POR_DURATION    :   time  :=    500 ns;  -- Duration of internal reset signal activity
     POR_ASSERT_LOW  : boolean :=     false;  -- Determines polarity of reset output
     CLKRATE         : integer := 100000000;  -- Control Port clock rate default.

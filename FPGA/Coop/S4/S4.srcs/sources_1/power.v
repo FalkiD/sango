@@ -81,6 +81,7 @@ module power #(parameter FILL_BITS = 4)
   output reg  [11:0]    dbmx10_o,                 // present power setting for all top-level modules to access
   
   output reg  [7:0]     status_o,       // 0=busy, SUCCESS when done, or an error code
+  input  wire           status_ack_i,   // pattern status acknowledge, this module clears error status
 
 //  // Debugging interpolation registers
 //  output reg  [11:0]    Y2_o,
@@ -281,6 +282,10 @@ module power #(parameter FILL_BITS = 4)
       tweak_power <= 1'b0;
     end
     else if(power_en == 1) begin
+
+      // reset our status on an ack
+      if(status_ack_i && status_o > `SUCCESS)
+        status_o <= `SUCCESS;
 
       if(vga_dacctla_i && dac_control != CTL_DACA_ALSO)
         dac_control <= CTL_DACA_ALSO;

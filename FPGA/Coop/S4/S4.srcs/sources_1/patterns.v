@@ -66,7 +66,8 @@ module patterns #(parameter PTN_DEPTH = 65536,
       output wire [15:0]          dbg_ptnbrs_o,     // debug, pattern branch opcode count
       output wire [15:0]          dbg_brnadr_o,     // debug, pattern branch address(tick)
 
-      output reg  [7:0]           status_o            // pattern processor status
+      output reg  [7:0]           status_o,           // pattern processor status
+      input  wire                 status_ack_i        // pattern status acknowledge, this module clears error status
   );
     
   // Variables/registers:
@@ -143,6 +144,10 @@ module patterns #(parameter PTN_DEPTH = 65536,
         branch_adr <= 16'hf00d;        
     end
     else begin
+    
+        // reset our status on an ack
+        if(status_ack_i && status_o > `SUCCESS)
+            status_o <= `SUCCESS;
     
         if(ptn_state == PTN_INIT_RAM) begin
             case(init_state)

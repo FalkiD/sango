@@ -1,0 +1,456 @@
+-- Simulation Input File
+-- For "sim_bus_control_port"
+--
+-- b = bus command
+-- d = delay token
+-- <time delay> is relative time which elapses before next line is processed.
+--
+-- Format:
+--
+-- d <time delay>
+-- b <time delay> c aaaa dddd qq
+--
+-- A single Carriage Return is sent at the end of each line (at the ';' character)
+--
+-- For comments, there are two types, videlicet:
+--   "File Comments" which do not appear in the simulation console (e.g. "--")
+--   "syscon comments" which do appear in the simulation console (e.g. "#")
+-- Both types of comments may be used on the same line, for example:
+--   b 2.0 ms w 3000000 45 # Make my day; -- A quote from an old movie
+--
+
+-- 21-Feb-2017 Begin debug of opcode processor in simulation
+-- This set of commands is useful to exercise the module under test
+-- 23-Jun Send S4 MCU startup CMD0, CMD1 sequence
+-- Note:1st commands MUST use 400kHz
+d 10 us ;            -- Initial delay
+b 0.05 ms w 3000009 010624DE # Set DDS for sd_clk_o of 400kHz;
+b 0.05 ms w 300000E 0 # Set host DMA address at 0x00;
+b 0.05 ms w 3000000 200 0 # Set blk_size=512, blk_count=0;
+b 0.2 ms w 3000002 0 00000000 # Write CMD0 (RESET, no response);
+b 0.3 ms w 3000002 1 00000000 # Write CMD1 (SEND_OP_COND);
+--b 2.0 ms r 3000004 4 #Read CMD response;
+b 0.3 ms w 3000002 1 00FF8000 # Write CMD1 (SEND_OP_COND) (ocr_pwrup_done);
+--b 2.0 ms r 3000004 4 #Read CMD response;
+b 0.5 ms w 3000002 2 00000000 # Write CMD2 (ALL_SEND_CID, long response);
+b 0.3 ms w 3000002 3 00050000 # Write CMD3 (SET_RELATIVE_ADDRESS);
+b 0.2 ms w 3000002 7 00050000 # Write CMD7 (SELECT) GOES TO CARD_TRAN;
+b 0.05 ms w 3000009 80000000 # Set DDS for sd_clk_o of 50MHz;
+b 0.05 ms w 3000008 7D000002 # Set controller timeout=32000, bus size 8 bits;
+b 0.05 ms w 3000002 6 03B70200 # Write CMD6 (SWITCH) set bus width 8 bits;
+
+--Power opcode
+--b 2.0 ms w 4000000 04 06 01 00 00 3C 00 00 00 00 00 00; --POWER 60.0dBm 
+--Frequency then power, 2400MHz, 60dBm, check interpolation
+--b 2.0 ms w 4000000 06 04 00 18 0D 8F 04 06 01 00 00 3C; --Set frequency 2400MHz, power 60.0dBm, check interpolation 
+--Frequency opcode
+--b 2.0 ms w 4000000 06 04 00 00 00 72 6f 91 00 00 00 00; --Set frequency 2440MHz, interpolate & tweak power
+
+-- Comment host ram writes, write contents of host_ram_init
+-- enable alarms for testing ALARM opcode
+--b 2.0 ms w 4000000 04 24 FF 00 00 00 00 00 00 00 00 00; --ALARM, enable all, reset none 
+--b 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+b 0.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+-- read opcode processor response
+b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+b 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+--b 1.5 ms r 4000000 10; --Read response data from host adapter RAM, should contain ALARM status data(none yet except enable echo)
+
+--Override power opcode at index 1
+b 1.0 ms w 4000000 04 06 01 01 00 3B 00 00 00 00 00 00; --POWER 59.0dBm 
+b 1.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+b 0.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+-- read response data
+b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 12 00000200; -- Write CMD18 (READ_MULTIPLE_BLOCK)
+b 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+--b 1.0 ms r 4000000 20; --Read response data from host adapter RAM  
+
+--Reset(turn OFF) power override
+b 1.0 ms w 4000000 04 06 01 00 00 30 00 00 00 00 00 00; --power 48.0dBm, value doesn't matter, turns OFF override 
+b 1.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+b 0.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+-- read response data
+b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 12 00000200; -- Write CMD18 (READ_MULTIPLE_BLOCK)
+b 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+
+ 
+-- bogus freq to test alarm & alm reset
+--b 2.0 ms w 4000000 06 04 00 00 00 72 6f 02 00 00 00 00; --Set frequency very low to cause alarm 
+--b 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+-- read opcode processor response
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+--b 1.5 ms r 4000000 10; --Read response data from host adapter RAM  
+
+--read ALARM response for status info
+--b 2.0 ms w 4000000 04 24 FF 00 10 00 00 00 00 00 00 00; --ALARM, enable all, reset Under Freq 
+--b 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+-- read opcode processor response
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+--b 1.5 ms r 4000000 10; --Read response data from host adapter RAM, should contain ALARM status data  
+
+
+--Change VGA gain mode with CONFIG opcode
+--b 2.0 ms w 4000000 04 18 88 13 03 00 00 00 00 00 00 00; --VGA higain, 50ua ADLY, DAC_A control also 
+--b 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+-- read opcode processor response
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+--b 1.5 ms r 4000000 8; --Read response data from host adapter RAM  
+
+--Run opcode block from host_init_ram.txt (load looping pattern)
+-- Check saving of FREQ & POWER opcode addresses for override mode
+--b 0.05 ms w 300000E 0; -- Set host DMA address at 0x00
+--b 0.05 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.05 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+-- read opcode processor response
+--b 0.05 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.05 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+--b 0.05 ms r 4000000 8; -- Read response data from host adapter RAM  
+
+-- load pattern is done, run using trigger every 1ms for testing
+-- trigconf opcode is 0x09,
+-- bits 0x95 for arm, continuous, source, enable
+b 1.0 ms w 4000000 04 12 01 95 01 00 00 00 00 00 00 00; --Continuous trigger, 1ms for testing 
+--Manual trigger mode
+--b 1.0 ms w 4000000 04 12 01 85 00 00 00 00 00 00 00 00; --Manual trigger mode 
+b 1.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+b 0.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+-- read opcode processor response
+b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+b 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+b 0.1 ms r 4000000 08; --Read response data from host adapter RAM  
+
+-- STATUS command
+--b 1.0 ms w 4000000 00 02 00 00 00 00 00 00 00 00 00 00; --STATUS 
+--b 1.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+-- read opcode processor response
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+--b 1.5 ms r 4000000 30; --Read response data from host adapter RAM  
+
+d 0.1 ms ; -- Wait to let it run once or twice
+
+--Override power opcode at index 1
+b 1.0 ms w 4000000 04 06 01 01 00 3B 00 00 00 00 00 00; --POWER 59.0dBm 
+-- read measurement voltage results while continuous trigger ON, args are mode, unused, & 2-byte length, how many results to read.
+-- each result is 8 bytes, 16 bits each: FWDQ, FWDI, REFLQ, REFLI
+--b 1.0 ms w 4000000 04 64 04 00 40 00 00 00 00 00 00 00; --Read 64 sets of calibrated voltage results 
+b 1.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+b 0.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+-- read response data
+b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 12 00000200; -- Write CMD18 (READ_MULTIPLE_BLOCK)
+b 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+b 1.0 ms r 4000000 20; --Read response data from host adapter RAM  
+
+-- read measurement voltage results again.
+-- each result is 8 bytes, 16 bits each: FWDQ, FWDI, REFLQ, REFLI
+b 1.0 ms w 4000000 04 64 04 00 40 00 00 00 00 00 00 00; --Read 64 sets of calibrated voltage results 
+b 1.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+b 0.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+-- read opcode processor response
+b 0.5 ms w 3000002 17 00000003; -- Write CMD23 (SET_BLOCK_COUNT)
+b 0.5 ms w 3000002 12 00000200; -- Write CMD18 (READ_MULTIPLE_BLOCK)
+--b 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+b 1.0 ms r 4000000 20; --Read response data from host adapter RAM  
+
+
+
+-- override freq & power values in pattern
+--b 2.0 ms w 4000000 06 04 01 00 00 18 0D 8F 00 00 00 00; --Override frequency @ index 1
+--b 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --null terminator 
+
+-- stop pattern
+b 1.0 ms w 4000000 04 12 01 00 00 00 00 00 00 00 00 00; --Trigger OFF 
+b 1.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+b 0.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+-- read opcode processor response
+b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+b 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+
+-- read measurement voltage results while continuous trigger OFF, args are mode, unused, & 2-byte length, how many results to read.
+-- each result is 8 bytes, 16 bits each: FWDQ, FWDI, REFLQ, REFLI
+b 2.0 ms w 4000000 04 64 04 00 40 00 00 00 00 00 00 00; --Read 64 sets of calibrated voltage results 
+b 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+b 2.0 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+-- read opcode processor response
+b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+b 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+b 2.0 ms r 4000000 20; --Read response data from host adapter RAM  
+
+
+-- read measurement result count
+--b 2.0 ms w 4000000 00 60 00 00 00 00 00 00 00 00 00 00; # MEAS_ZMSIZE, return MEAS fifo number of readings available 
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 2.0 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+-- read opcode processor response
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+--b 2.0 ms r 4000000 08; # Get readings available count  
+
+-- run again with measurements disabled, meas fifo count should be 0
+--b 2.0 ms w 4000000 02 62 00 00 04 12 01 95 01 00 00 00; --Continuous trigger, 1ms for testing 
+--b 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+-- read opcode processor response
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+--d 1.0 ms ; -- Wait to let it run once or twice
+
+-- stop pattern
+--b 2.0 ms w 4000000 04 12 01 00 00 00 00 00 00 00 00 00; --Trigger OFF 
+--b 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+-- read opcode processor response
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+
+-- read measurement result count
+--b 2.0 ms w 4000000 00 60 00 00 00 00 00 00 00 00 00 00; # MEAS_ZMSIZE, return MEAS fifo number of readings available 
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 2.0 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+-- read opcode processor response
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+--b 2.0 ms r 4000000 08; # Get readings available count  
+
+-- run again with measurements enabled, check meas count is non-0
+--b 2.0 ms w 4000000 02 62 02 00 04 12 01 95 01 00 00 00; --Continuous trigger, 1ms for testing 
+--b 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+-- read opcode processor response
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+--d 1.0 ms ; -- Wait to let it run once or twice
+
+-- read measurement result count without bothering to stop the pattern
+--b 2.0 ms w 4000000 00 60 00 00 00 00 00 00 00 00 00 00; # MEAS_ZMSIZE, return MEAS fifo number of readings available 
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 2.0 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+-- read opcode processor response
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+--b 2.0 ms r 4000000 08; # Get readings available count  
+
+-- reset measurement result count
+--b 2.0 ms w 4000000 04 62 01 00 00 00 00 00 00 00 00 00; # MEAS_ZMCTRL, reset MEAS fifo(count) 
+--b 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 2.0 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+-- read opcode processor response
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+--b 2.0 ms r 4000000 08; # Get readings available count  
+
+-- run again, make sure MEAS fifo works after reset
+--b 2.0 ms w 4000000 04 12 01 95 01 00 00 00 00 00 00 00; --Continuous trigger, 1ms for testing 
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+-- read opcode processor response
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+--d 1.0 ms ; -- Wait to let it run once or twice
+
+--d 10 ms ; -- Wait to see 25ms blink end before starting pattern
+
+-- test clear RAM again, load pattern, then clear RAM opcode
+--b 2.0 ms w 4000000 04 44 04 00 00 00 00 00 00 00 00 00; --pat_ctl[Reset] clears all RAM 
+--b 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+
+-- load pattern is done, test external trigger
+-- trigconf opcode is 0x09,
+-- bits 0x83 for arm, external, enable
+-- test 0xA3 for arm, external, enable, invert
+--b 2.0 ms w 4000000 04 12 01 A3 00 00 00 00 00 00 00 00; --External trigger 
+--b 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+
+-- load pattern is done, now run it & read response
+--b 2.0 ms w 4000000 04 44 01 00 00 00 00 00 00 00 00 00; # PAT_CTRL[Run] 
+--b 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+-- write opcode block(sector) to MMC
+--b 0.5 ms w 3000002 17 00000001; # Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 18 00000200; # Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+-- read opcode processor response
+--b 0.5 ms w 3000002 17 00000001; # Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 11 00000200; # Write CMD17 (READ_BLOCK)
+--b 1.5 ms r 4000000 8; # Read response data from host adapter RAM  
+
+--repeat run pattern & read results
+--b 2.0 ms w 4000000 04 44 01 00 00 01 00 00 00 00 00 00; --PAT_CTRL[Run] 0x100 
+--b 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+-- read opcode processor response
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+--b 1.5 ms r 4000000 8; --Read response data from host adapter RAM  
+
+-- read measurement results, args are mode, unused, & 2-byte length, how many results to read.
+-- each result is 8 bytes, 16 bits each: FWDQ, FWDI, REFLQ, REFLI
+--b 2.0 ms w 4000000 04 64 02 00 40 00 00 00 00 00 00 00; --Read 64 sets of raw adc results 
+--b 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 2.0 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+-- read opcode processor response
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+--b 4.0 ms r 4000000 28; --Read response data from host adapter RAM  
+
+--CALZMON opcode, write directly
+--b 2.0 ms w 4000000 04 20 00 00 02 00 ff ff 00 00 03 00; --FIgain=2, FIoffset=-1, FQgain=3 
+--b 2.0 ms w 4000000 ff fe 00 00 02 00 ff fd 00 00 01 00; --FQoffset=-2, RIgain=2, RIoffset=-3, RQgain=1  
+--b 2.0 ms w 400000C ff fc 00 00 00 00 00 00 00 00 00 00; --RQoffset=-4, Null terminator 
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+-- read opcode processor response
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+--b 1.5 ms r 4000000 8; --Read response data from host adapter RAM  
+
+--d 10 ms ; -- Delay to see 50us ADCDLY
+
+--b 2.0 ms w 4000000 04 18 c4 09 00 00 00 00 00 00 00 00; --CONFIG, ADCDLY=25us(0x9c4) 
+--b 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+-- read opcode processor response
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+--b 1.5 ms r 4000000 8; --Read response data from host adapter RAM  
+
+-- load pattern is done, execute STATUS opcode to read system status
+--b 2.0 ms w 4000000 02 02 00 00 00 00 00 00 00 00 00 00; --STATUS opcode 
+--b 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+-- read opcode processor response
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+--b 3.5 ms r 4000000 1A; --Read 22+4 bytes of response data from host adapter RAM  
+
+-- execute a CALPWR opcode normally
+--b 2.0 ms w 4000000 04 1c 00 80 17 00 00 00 00 00 00 00; --CALPWR 0x800 
+--b 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+-- read opcode processor response
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+--b 1.5 ms r 4000000 8; --Read response data from host adapter RAM  
+
+--b 4.0 ms w 3000002 19 00000200; -- Write CMD25 to MMC address 0200, FIFO begin(WRITE_MULTIPLE_BLOCK)
+--b 0.5 ms w 3000002 C 00000000; -- Write CMD12 (STOP_TRANSMISSION, arg=stuff bits)
+--b 1.5 ms r 3000004 4; --Read CMD response
+-- read opcode processor response
+--b 0.5 ms w 300000E 0; -- Set host DMA address at 0x00
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+--b 0.5 ms w 3000002 12 00000200; -- Write CMD18 (READ_MULTIPLE_BLOCK)
+--b 0.5 ms w 3000002 C 00000000; -- Write CMD12 (STOP_TRANSMISSION, arg=stuff bits)
+--b 1.5 ms r 4000000 8; --Read response data from host adapter RAM  
+
+-- do it again, host RAM has been overwritten, setup again
+-- writing opcodes directly from UART...
+--b 2.0 ms w 4000000 06 04 80 08 08 92 04 06 01 00 00 32; --FREQ 2450, POWER 50.0dBm 
+--b 2.0 ms w 400000C 00 00 00 00 00 00 00 00 00 00 00 00; --Null terminator 
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 18 00000200; -- Write CMD24 to MMC address 0200, FIFO begin(WRITE_BLOCK)
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 11 00000200; -- Write CMD17 (READ_BLOCK)
+--b 1.5 ms r 4000000 8; --Read response data from host adapter RAM  
+
+--Older, original John C testing
+--b 1.0 ms r0 300002F 4; -- Read 4 card data pipe FIFO values
+--b 0.5 ms w 300000E 0; -- Set DMA address at 0x00
+--b 0.5 ms w 3000002 12 00000200; -- Write CMD18 (READ_MULTIPLE_BLOCK)
+--b 0.5 ms w 3000002 C 00000000; -- Write CMD12 (STOP_TRANSMISSION, arg=stuff bits)
+--b 1.0 ms r 4000000 2; --Read status  
+--
+--b 0.5 ms w 3000002 19 00000200 04 04 05 04 03 02; -- Write CMD25 (WRITE_MULTIPLE_BLOCK)
+--b 0.5 ms w 3000002 C 00000000; -- Write CMD12 (STOP_TRANSMISSION, arg=stuff bits)
+--b 0.5 ms w 3000002 17 00000001; -- Write CMD23 (SET_BLOCK_COUNT)
+--b 0.5 ms w 3000002 12 00000200; -- Write CMD18 (READ_MULTIPLE_BLOCK)
+--b 0.5 ms w 3000002 C 00000000; -- Write CMD12 (STOP_TRANSMISSION, arg=stuff bits)
+
+-- Original, older commands used in bus sim control port
+--d 10 us ;    -- Initial delay
+----b  5 us i; -- i<CR>
+--b  5 us w 3000009 00346DC6 # Set DDS for sd_clk_o of 400kHz;
+--b  5 us w 300000E 200; -- Set DMA address at 0x200
+--b 15 us r 3000000 10; -- Read registers
+--b  10 us w 3000000 200 0; -- Set BLK_SIZE=512, BLK_COUNT=0
+--b 300 us w 3000002 000 00000000; -- Write CMD0 (RESET, no response)
+--b 300 us w 3000002 119 00FF8000; -- Write CMD1 (SEND_OP_COND, short response)
+--b  10 us r 3000004 4; -- Read CMD Response
+--b 500 us w 3000002 21A 00000000; -- Write CMD2 (ALL_SEND_CID, long response)
+--b  10 us r 3000004 4; -- Read CMD Response
+--b 300 us w 3000002 319 00050000; -- Write CMD3 (SET_RELATIVE_ADDRESS, short response)
+--b  10 us r 3000004 4; -- Read CMD Response
+----b 300 us w 3000002 D19 00050000; -- Write CMD13 (SEND_STATUS, short response)
+----b  10 us r 3000004 4; -- Read CMD Response
+--b 300 us w 3000002 719 00050000; -- Write CMD7 (SELECT, short response) GOES TO CARD_TRAN
+--b  10 us r 3000004 4; -- Read CMD Response
+--b   5 us w 3000008 7D000001; -- Set controller timeout=32000, bus size
+--b 300 us w 3000002 619 03B70100; -- Write CMD6 (SWITCH, short response) set bus width
+--b  10 us r 3000004 4; -- Read CMD Response
+--b 300 us w 3000002 839 000001AA; -- Write CMD8 (SEND_EXT_CSD, short response, arg=stuff bits, read data)
+--b  10 us r 3000004 4; -- Read CMD Response
+--b   5 us w 3000009 189374BC; -- Set DDS for sd_clk_o of 48MHz
+--d 100 us ;
+--b  10 us r 4000200 40; -- Read first 64 EXT_CSD values
+--b  10 us r 40002B7 1; -- Read BUS_WIDTH value
+--b  10 us r 40003FE 2; -- Read last two EXT_CSD values
+--b   5 us w 300000E 200; -- Set DMA address at 0x200
+--b  30 us w 3000002 1959 00010000; -- Write CMD25 (WRITE_MULTIPLE_BLOCK)
+--b   5 us w 3000002 0C19 00000000; -- Write CMD12 (STOP_TRANSMISSION, arg=stuff bits)
+--b   5 us w 3000002 000 00000000; -- Write CMD0 (RESET, no response)
+--b   5 us w 3000002 119 00FF8080; -- Write CMD1 (SEND_OP_COND, short response)
+--b  10 us r 3000004 4; -- Read CMD Response
+--b  15 us w 3000002 21A 00000000; -- Write CMD2 (ALL_SEND_CID, long response)
+--b  10 us r 3000004 4; -- Read CMD Response
+--b   5 us w 3000002 319 00050000; -- Write CMD3 (SET_RELATIVE_ADDRESS, short response)
+--b  10 us r 3000004 4; -- Read CMD Response
+--b   5 us w 3000002 D19 00050000; -- Write CMD13 (SEND_STATUS, short response)
+--b  10 us r 3000004 4; -- Read CMD Response
+--b   5 us w 3000002 719 00050000; -- Write CMD7 (SELECT, short response) GOES TO CARD_TRAN
+--b  10 us r 3000004 4; -- Read CMD Response
+--b   5 us w 3000008 7D000000; -- Set controller timeout=32000, bus size
+--b   5 us w 3000002 619 03B70000; -- Write CMD6 (SWITCH, short response) set bus size
+--b  15 us w 3000002 1959 00010000; -- Write CMD25 (WRITE_MULTIPLE_BLOCK)
+--b   5 us w 3000002 0C19 00000000; -- Write CMD12 (STOP_TRANSMISSION, arg=stuff bits)
+
+-- Commands like these are useful to exercise the system:
+--d  10 us;             -- Delay
+--b 300 us i;           -- i<CR>
+--b 600 us r 00;        -- read in src region, qty unspecified. (POR default is used.)
+--b 300 us f 14 55 4;   -- fill in dst region
+--b 300 us f 18 AA 4;   -- fill
+--b 300 us w 1c 01 23;  -- write
+--b 300 us w 00 45 67;  -- write
+--b 300 us y 0r 45 67;  -- write, should cause "c?" message
+--b 300 us w 0r 45 67;  -- write, should cause "a?" message
+--b 300 us w 00 t5 67;  -- write, should cause "d?" message
+--b 300 us f 00 45 g7;  -- fill, should cause "q?" message

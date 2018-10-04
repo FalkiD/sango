@@ -74,6 +74,9 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
    reg                            syn_spi_rtck         = 1'b0;                 // 1-tick just prior to rising  edge of syn_spi_clk
    reg                            syn_spi_rtckr        = 1'b0;                 // 
 
+   // eliminate define before it's used warning
+   reg                            syn_init_we          = 1'b0;
+
    wire [11:0]                    syn_fifo_dati_w      = ( ({12{hwdbg_we_i}}    & hwdbg_dat_i)   | 
                                                            ({12{syn_init_we}}   & syn_init_datr) ); 
    wire                           syn_fifo_we          = hwdbg_we_i | syn_init_we;
@@ -97,7 +100,6 @@ module ltc_spi #( parameter VRSN      = 16'habcd, CLK_FREQ  = 100000000, SPI_CLK
    reg                            syn_init_loading     = 1'b0;
    reg                            syn_initd            = 1'b0;  // Completely done SPI-ing init.
    reg  [5:0]                     syn_init_op_cntr     = 6'b00_0000;
-   reg                            syn_init_we          = 1'b0;
    reg  [11:0]                    syn_init_datr;
    reg  [4:0]                     syn_init_done_cntr   = 5'b0_0001;
    reg                            syn_cal_loading      = 1'b0;

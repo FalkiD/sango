@@ -33,8 +33,8 @@ module meas_calcs(
     input  wire         run_i,              // do it
     output reg          done_o,             // calculation done
 
-    input  wire [31:0]  adcf_dat_i,         // Raw MEAS ADC fifo data, [FWDQ][00][FWDI][00]
-    input  wire [31:0]  adcr_dat_i,         // Raw MEAS ADC fifo data, [RFLQ][00][RFLI][00]
+    input  wire [31:0]  adcf_dat_i,         // Raw MEAS ADC fifo data, [FWDI][00][FWDQ][00]
+    input  wire [31:0]  adcr_dat_i,         // Raw MEAS ADC fifo data, [RFLI][00][RFLQ][00]
 
     output wire [31:0]  adcf_dat_o,         // [16 bits calibrated FWDQ][16 bits calibrated FWDI] (ops_i[M_ADC])
                                             // [Q15.16 format calibrated FWDI voltage] (ops_i[M_VOLTS])
@@ -80,6 +80,7 @@ module meas_calcs(
 
     // Build a table of power in watts entries at 0.1dBm steps between 50.0 and 61.0
     reg  [31:0]     volts_to_dbm [0:110];   // 111 entries, voltage value for each 0.1dBm step into 50 ohm load
+    reg  [15:0]     dbm [0:110];            // 111 entries, Q7.8 dBm value for each 0.1dBm step
     reg  [6:0]      ptbl_idx;               // power table index
     localparam  CAL_TBL_MAX = 7'd110;
 
@@ -90,12 +91,14 @@ module meas_calcs(
     localparam CAL3     = 4'd3;
     localparam CAL4     = 4'd4;    
     localparam CAL5     = 4'd5;    
-    localparam CAL_DONE = 4'd6;    
+    localparam CAL6     = 4'd6;    
     localparam CAL7     = 4'd7;    
-    localparam CAL8     = 4'd8;    
-    localparam CAL_MULT = 4'd9;    
-    localparam CAL_DBM  = 4'd10;
-    localparam CAL_INIT = 4'd11;
+    localparam CAL8     = 4'd8;
+    localparam CAL9     = 4'd9;    
+    localparam CAL_MULT = 4'd10;    
+    localparam CAL_DBM  = 4'd11;
+    localparam CAL_INIT = 4'd12;
+    localparam CAL_DONE = 4'd13;
     reg  [3:0]      cal_state;
     reg  [3:0]      next_state;
     reg  [31:0]     cal_tmp1;
@@ -110,34 +113,41 @@ module meas_calcs(
     wire [63:0]     adc1_cald;              // calibrated adc1 output
     wire [63:0]     adc2_cald;              // calibrated adc2 output
     wire [63:0]     adc3_cald;              // calibrated adc3 output
-    wire [63:0]     adc4_cald;              // calibrated adc4 output
+    wire [63:0]     adc4_cald;              // calibrated adc4 output    
+//    reg  [63:0]     sumvsquared_f;          // fwd sum of squared voltages
+//    reg  [63:0]     sumvsquared_r;          // rfl sum of squared voltages    
     reg             multiply;
-  // Latency for multiply operation, Xilinx multiplier
+//    reg  [7:0]      dbm_index;              // index to lookup matching sumsquared<<16 value
+//    reg  [7:0]      dbm_fwd_idx;
+//    reg  [7:0]      dbm_rfl_idx;
+//    reg             dbm_f_done;
+//    reg             dbm_r_done;
+    // Latency for multiply operation, Xilinx multiplier
     localparam MULTIPLIER_CLOCKS = 6'd6;
     reg  [5:0]      latency_counter;        // wait for multiplier 
     // Xilinx multiplier to perform 32 bit multiplication, output is 64 bits
-    ftw_mult adc1_multiplier (
+    interp_mult adc1_multiplier (
         .CLK(sys_clk),
         .A(cal_tmp1),
         .B(cal_mult1),
         .CE(multiply),
         .P(adc1_cald)
     );      
-    ftw_mult adc2_multiplier (
+    interp_mult adc2_multiplier (
         .CLK(sys_clk),
         .A(cal_tmp2),
         .B(cal_mult2),
         .CE(multiply),
         .P(adc2_cald)
     );      
-    ftw_mult adc3_multiplier (
+    interp_mult adc3_multiplier (
         .CLK(sys_clk),
         .A(cal_tmp3),
         .B(cal_mult3),
         .CE(multiply),
         .P(adc3_cald)
     );      
-    ftw_mult adc4_multiplier (
+    interp_mult adc4_multiplier (
         .CLK(sys_clk),
         .A(cal_tmp4),
         .B(cal_mult4),
@@ -150,13 +160,14 @@ module meas_calcs(
     // AdcLsbs = gain * (offset(Lsbs) + AdcRaw)
     // Gain is Q15.16 floating point
     // Offset is 16-bit signed int
+    // ADC is bipolar, used signed multiplier (05-Sep-2018)
     //
     always @(posedge sys_clk) begin    
         if(!sys_rst_n) begin
             cal_state <= CAL_INIT;
             done_o <= 1'b0;
             runr <= 1'b0;
-            ptbl_idx <= 7'b000_0000;
+            //ptbl_idx <= 7'b000_0000;
         end
         else begin        
             runr <= run_i;
@@ -169,492 +180,503 @@ module meas_calcs(
             
             case(cal_state)
             CAL_INIT: begin
-//            dBm, watts, volts RMS, vrms<<16(hex)
-//            50.0,  100.0,  70.71, 0x0046b5ef
-//            50.1,  102.3,  71.53, 0x0047878b
-//            50.2,  104.7,  72.36, 0x00485b94
-//            50.3,  107.2,  73.20, 0x00493213
-//            50.4,  109.6,  74.04, 0x004a0b0d
-//            50.5,  112.2,  74.90, 0x004ae68a
-//            50.6,  114.8,  75.77, 0x004bc492
-//            50.7,  117.5,  76.65, 0x004ca52c
-//            50.8,  120.2,  77.53, 0x004d8860
-//            50.9,  123.0,  78.43, 0x004e6e35
-//            51.0,  125.9,  79.34, 0x004f56b4
-//            51.1,  128.8,  80.26, 0x005041e3
-//            51.2,  131.8,  81.19, 0x00512fcc
-//            51.3,  134.9,  82.13, 0x00522077
-//            51.4,  138.0,  83.08, 0x005313ea
-//            51.5,  141.3,  84.04, 0x00540a30
-//            51.6,  144.5,  85.01, 0x0055034f
-//            51.7,  147.9,  86.00, 0x0055ff51
-//            51.8,  151.4,  86.99, 0x0056fe3e
-//            51.9,  154.9,  88.00, 0x0058001e
-//            52.0,  158.5,  89.02, 0x005904fb
-//            52.1,  162.2,  90.05, 0x005a0cde
-//            52.2,  166.0,  91.09, 0x005b17ce
-//            52.3,  169.8,  92.15, 0x005c25d6
-//            52.4,  173.8,  93.21, 0x005d36fe
-//            52.5,  177.8,  94.29, 0x005e4b51
-//            52.6,  182.0,  95.39, 0x005f62d6
-//            52.7,  186.2,  96.49, 0x00607d97
-//            52.8,  190.5,  97.61, 0x00619b9f
-//            52.9,  195.0,  98.74, 0x0062bcf7
-//            53.0,  199.5,  99.88, 0x0063e1a9
-//            53.1,  204.2, 101.04, 0x006509be
-//            53.2,  208.9, 102.21, 0x00663541
-//            53.3,  213.8, 103.39, 0x0067643b
-//            53.4,  218.8, 104.59, 0x006896b8
-//            53.5,  223.9, 105.80, 0x0069ccc2
-//            53.6,  229.1, 107.02, 0x006b0662
-//            53.7,  234.4, 108.26, 0x006c43a4
-//            53.8,  239.9, 109.52, 0x006d8493
-//            53.9,  245.5, 110.79, 0x006ec939
-//            54.0,  251.2, 112.07, 0x007011a1
-//            54.1,  257.0, 113.37, 0x00715dd7
-//            54.2,  263.0, 114.68, 0x0072ade6
-//            54.3,  269.2, 116.01, 0x007401d8
-//            54.4,  275.4, 117.35, 0x007559bb
-//            54.5,  281.8, 118.71, 0x0076b599
-//            54.6,  288.4, 120.08, 0x0078157e
-//            54.7,  295.1, 121.47, 0x00797976
-//            54.8,  302.0, 122.88, 0x007ae18e
-//            54.9,  309.0, 124.30, 0x007c4dd1
-//            55.0,  316.2, 125.74, 0x007dbe4b
-//            55.1,  323.6, 127.20, 0x007f330a
-//            55.2,  331.1, 128.67, 0x0080ac1a
-//            55.3,  338.8, 130.16, 0x00822988
-//            55.4,  346.7, 131.67, 0x0083ab60
-//            55.5,  354.8, 133.19, 0x008531b0
-//            55.6,  363.1, 134.74, 0x0086bc85
-//            55.7,  371.5, 136.30, 0x00884bed
-//            55.8,  380.2, 137.87, 0x0089dff5
-//            55.9,  389.0, 139.47, 0x008b78aa
-//            56.0,  398.1, 141.09, 0x008d161b
-//            56.1,  407.4, 142.72, 0x008eb855
-//            56.2,  416.9, 144.37, 0x00905f67
-//            56.3,  426.6, 146.04, 0x00920b5f
-//            56.4,  436.5, 147.74, 0x0093bc4c
-//            56.5,  446.7, 149.45, 0x0095723c
-//            56.6,  457.1, 151.18, 0x00972d3f
-//            56.7,  467.7, 152.93, 0x0098ed63
-//            56.8,  478.6, 154.70, 0x009ab2b7
-//            56.9,  489.8, 156.49, 0x009c7d4b
-//            57.0,  501.2, 158.30, 0x009e4d2e
-//            57.1,  512.9, 160.13, 0x00a02270
-//            57.2,  524.8, 161.99, 0x00a1fd22
-//            57.3,  537.0, 163.86, 0x00a3dd52
-//            57.4,  549.5, 165.76, 0x00a5c313
-//            57.5,  562.3, 167.68, 0x00a7ae73
-//            57.6,  575.4, 169.62, 0x00a99f83
-//            57.7,  588.8, 171.59, 0x00ab9655
-//            57.8,  602.6, 173.57, 0x00ad92fa
-//            57.9,  616.6, 175.58, 0x00af9582
-//            58.0,  631.0, 177.62, 0x00b19e00
-//            58.1,  645.7, 179.67, 0x00b3ac84
-//            58.2,  660.7, 181.75, 0x00b5c122
-//            58.3,  676.1, 183.86, 0x00b7dbea
-//            58.4,  691.8, 185.99, 0x00b9fcef
-//            58.5,  707.9, 188.14, 0x00bc2444
-//            58.6,  724.4, 190.32, 0x00be51fb
-//            58.7,  741.3, 192.52, 0x00c08628
-//            58.8,  758.6, 194.75, 0x00c2c0dd
-//            58.9,  776.2, 197.01, 0x00c5022e
-//            59.0,  794.3, 199.29, 0x00c74a2e
-//            59.1,  812.8, 201.60, 0x00c998f1
-//            59.2,  831.8, 203.93, 0x00cbee8b
-//            59.3,  851.1, 206.29, 0x00ce4b11
-//            59.4,  871.0, 208.68, 0x00d0ae97
-//            59.5,  891.3, 211.10, 0x00d31932
-//            59.6,  912.0, 213.54, 0x00d58af7
-//            59.7,  933.3, 216.02, 0x00d803fa
-//            59.8,  955.0, 218.52, 0x00da8452
-//            59.9,  977.2, 221.05, 0x00dd0c14
-//            60.0, 1000.0, 223.61, 0x00df9b57
-//            60.1, 1023.3, 226.20, 0x00e2322f
-//            60.2, 1047.1, 228.82, 0x00e4d0b5
-//            60.3, 1071.5, 231.46, 0x00e776fe
-//            60.4, 1096.5, 234.15, 0x00ea2522
-//            60.5, 1122.0, 236.86, 0x00ecdb38
-//            60.6, 1148.2, 239.60, 0x00ef9958
-//            60.7, 1174.9, 242.37, 0x00f25f98
-//            60.8, 1202.3, 245.18, 0x00f52e13
-//            60.9, 1230.3, 248.02, 0x00f804df
-//            61.0, 1258.9, 250.89, 0x00fae415
-//            61.1, 1288.2, 253.80, 0x00fdcbcf
-                case(ptbl_idx)
-                0: begin    // 50.0dBm in Q15.16 volts across 50 ohm load
-                    volts_to_dbm[0] <= 32'h0046b5ef; // 70.7 v << 16
-                end
-                1: begin
-                    volts_to_dbm[1] <= 32'h0047878b;
-                end
-                2: begin
-                    volts_to_dbm[2] <= 32'h00485b94;
-                end
-                3: begin
-                    volts_to_dbm[3] <= 32'h00493213;
-                end
-                4: begin
-                    volts_to_dbm[4] <= 32'h004a0b0d;
-                end
-                5: begin
-                    volts_to_dbm[5] <= 32'h004ae68a;
-                end
-                6: begin
-                    volts_to_dbm[6] <= 32'h004bc492;
-                end
-                7: begin
-                    volts_to_dbm[7] <= 32'h004ca52c;
-                end
-                8: begin
-                    volts_to_dbm[8] <= 32'h004d8860;
-                end
-                9: begin
-                    volts_to_dbm[9] <= 32'h004e6e35;
-                end
-                10: begin   // 51.0
-                    volts_to_dbm[10] <= 32'h004f56b4;
-                end
-                11: begin
-                    volts_to_dbm[11] <= 32'h005041e3;
-                end
-                12: begin
-                    volts_to_dbm[12] <= 32'h00512fcc;
-                end
-                13: begin
-                    volts_to_dbm[13] <= 32'h00522077;
-                end
-                14: begin
-                    volts_to_dbm[14] <= 32'h005313ea;
-                end
-                15: begin
-                    volts_to_dbm[15] <= 32'h00540a30;
-                end
-                16: begin
-                    volts_to_dbm[16] <= 32'h0055034f;
-                end
-                17: begin
-                    volts_to_dbm[17] <= 32'h0055ff51;
-                end
-                18: begin
-                    volts_to_dbm[18] <= 32'h0056fe3e;
-                end
-                19: begin
-                    volts_to_dbm[19] <= 32'h0058001e;
-                end
-                20: begin   // 52.0
-                    volts_to_dbm[20] <= 32'h005904fb;
-                end
-                21: begin
-                    volts_to_dbm[21] <= 32'h005a0cde;
-                end
-                22: begin
-                    volts_to_dbm[22] <= 32'h005b17ce;
-                end
-                23: begin
-                    volts_to_dbm[23] <= 32'h005c25d6;
-                end
-                24: begin
-                    volts_to_dbm[24] <= 32'h005d36fe;
-                end
-                25: begin
-                    volts_to_dbm[25] <= 32'h005e4b51;
-                end
-                26: begin
-                    volts_to_dbm[26] <= 32'h005f62d6;
-                end
-                27: begin
-                    volts_to_dbm[27] <= 32'h00607d97;
-                end
-                28: begin
-                    volts_to_dbm[28] <= 32'h00619b9f;
-                end
-                29: begin
-                    volts_to_dbm[29] <= 32'h0062bcf7;
-                end
-                30: begin   // 53.0
-                    volts_to_dbm[30] <= 32'h0063e1a9;
-                end
-                31: begin
-                    volts_to_dbm[31] <= 32'h006509be;
-                end
-                32: begin
-                    volts_to_dbm[32] <= 32'h00663541;
-                end
-                33: begin
-                    volts_to_dbm[33] <= 32'h0067643b;
-                end
-                34: begin
-                    volts_to_dbm[34] <= 32'h006896b8;
-                end
-                35: begin
-                    volts_to_dbm[35] <= 32'h0069ccc2;
-                end
-                36: begin
-                    volts_to_dbm[36] <= 32'h006b0662;
-                end
-                37: begin
-                    volts_to_dbm[37] <= 32'h006c43a4;
-                end
-                38: begin
-                    volts_to_dbm[38] <= 32'h006d8493;
-                end
-                39: begin
-                    volts_to_dbm[39] <= 32'h006ec939;
-                end
-                40: begin   // 54.0
-                    volts_to_dbm[40] <= 32'h007011a1;
-                end
-                41: begin
-                    volts_to_dbm[41] <= 32'h00715dd7;
-                end
-                42: begin
-                    volts_to_dbm[42] <= 32'h0072ade6;
-                end
-                43: begin
-                    volts_to_dbm[43] <= 32'h007401d8;
-                end
-                44: begin
-                    volts_to_dbm[44] <= 32'h007559bb;
-                end
-                45: begin
-                    volts_to_dbm[45] <= 32'h0076b599;
-                end
-                46: begin
-                    volts_to_dbm[46] <= 32'h0078157e;
-                end
-                47: begin
-                    volts_to_dbm[47] <= 32'h00797976;
-                end
-                48: begin
-                    volts_to_dbm[48] <= 32'h007ae18e;
-                end
-                49: begin
-                    volts_to_dbm[49] <= 32'h007c4dd1;
-                end
-                50: begin   // 55.0
-                    volts_to_dbm[50] <= 32'h007dbe4b;
-                end
-                51: begin
-                    volts_to_dbm[51] <= 32'h007f330a;
-                end
-                52: begin
-                    volts_to_dbm[52] <= 32'h0080ac1a;
-                end
-                53: begin
-                    volts_to_dbm[53] <= 32'h00822988;
-                end
-                54: begin
-                    volts_to_dbm[54] <= 32'h0083ab60;
-                end
-                55: begin
-                    volts_to_dbm[55] <= 32'h008531b0;
-                end
-                56: begin
-                    volts_to_dbm[56] <= 32'h0086bc85;
-                end
-                57: begin
-                    volts_to_dbm[57] <= 32'h00884bed;
-                end
-                58: begin
-                    volts_to_dbm[58] <= 32'h0089dff5;
-                end
-                59: begin
-                    volts_to_dbm[59] <= 32'h008b78aa;
-                end
-                60: begin   // 56.0
-                    volts_to_dbm[60] <= 32'h008d161b;
-                end
-                61: begin
-                    volts_to_dbm[61] <= 32'h008eb855;
-                end
-                62: begin
-                    volts_to_dbm[62] <= 32'h00905f67;
-                end
-                63: begin
-                    volts_to_dbm[63] <= 32'h00920b5f;
-                end
-                64: begin
-                    volts_to_dbm[64] <= 32'h0093bc4c;
-                end
-                65: begin
-                    volts_to_dbm[65] <= 32'h0095723c;
-                end
-                66: begin
-                    volts_to_dbm[66] <= 32'h00972d3f;
-                end
-                67: begin
-                    volts_to_dbm[67] <= 32'h0098ed63;
-                end
-                68: begin
-                    volts_to_dbm[68] <= 32'h009ab2b7;
-                end
-                69: begin
-                    volts_to_dbm[69] <= 32'h009c7d4b;
-                end
-                70: begin   // 57.0
-                    volts_to_dbm[70] <= 32'h009e4d2e;
-                end
-                71: begin
-                    volts_to_dbm[71] <= 32'h00a02270;
-                end
-                72: begin
-                    volts_to_dbm[72] <= 32'h00a1fd22;
-                end
-                73: begin
-                    volts_to_dbm[73] <= 32'h00a3dd52;
-                end
-                74: begin
-                    volts_to_dbm[74] <= 32'h00a5c313;
-                end
-                75: begin
-                    volts_to_dbm[75] <= 32'h00a7ae73;
-                end
-                76: begin
-                    volts_to_dbm[76] <= 32'h00a99f83;
-                end
-                77: begin
-                    volts_to_dbm[77] <= 32'h00ab9655;
-                end
-                78: begin
-                    volts_to_dbm[78] <= 32'h00ad92fa;
-                end
-                79: begin
-                    volts_to_dbm[79] <= 32'h00af9582;
-                end
-                80: begin   // 58.0
-                    volts_to_dbm[80] <= 32'h00b19e00;
-                end
-                81: begin
-                    volts_to_dbm[81] <= 32'h00b3ac84;
-                end
-                82: begin
-                    volts_to_dbm[82] <= 32'h00b5c122;
-                end
-                83: begin
-                    volts_to_dbm[83] <= 32'h00b7dbea;
-                end
-                84: begin
-                    volts_to_dbm[84] <= 32'h00b9fcef;
-                end
-                85: begin
-                    volts_to_dbm[85] <= 32'h00bc2444;
-                end
-                86: begin
-                    volts_to_dbm[86] <= 32'h00be51fb;
-                end
-                87: begin
-                    volts_to_dbm[87] <= 32'h00c08628;
-                end
-                88: begin
-                    volts_to_dbm[88] <= 32'h00c2c0dd;
-                end
-                89: begin
-                    volts_to_dbm[89] <= 32'h00c5022e;
-                end
-                90: begin   // 59.0
-                    volts_to_dbm[90] <= 32'h00c74a2e;
-                end
-                91: begin
-                    volts_to_dbm[91] <= 32'h00c998f1;
-                end
-                92: begin
-                    volts_to_dbm[92] <= 32'h00cbee8b;
-                end
-                93: begin
-                    volts_to_dbm[93] <= 32'h00ce4b11;
-                end
-                94: begin
-                    volts_to_dbm[94] <= 32'h00d0ae97;
-                end
-                95: begin
-                    volts_to_dbm[95] <= 32'h00d31932;
-                end
-                96: begin
-                    volts_to_dbm[96] <= 32'h00d58af7;
-                end
-                97: begin
-                    volts_to_dbm[97] <= 32'h00d803fa;
-                end
-                98: begin
-                    volts_to_dbm[98] <= 32'h00da8452;
-                end
-                99: begin
-                    volts_to_dbm[99] <= 32'h00dd0c14;
-                end
-                100: begin  // 60.0
-                    volts_to_dbm[100] <= 32'h00df9b57;
-                end
-                101: begin
-                    volts_to_dbm[101] <= 32'h00e2322f;
-                end
-                102: begin
-                    volts_to_dbm[102] <= 32'h00e4d0b5;
-                end
-                103: begin
-                    volts_to_dbm[103] <= 32'h00e776fe;
-                end
-                104: begin
-                    volts_to_dbm[104] <= 32'h00ea2522;
-                end
-                105: begin
-                    volts_to_dbm[105] <= 32'h00ecdb38;
-                end
-                106: begin
-                    volts_to_dbm[106] <= 32'h00ef9958;
-                end
-                107: begin
-                    volts_to_dbm[107] <= 32'h00f25f98;
-                end
-                108: begin
-                    volts_to_dbm[108] <= 32'h00f52e13;
-                end
-                109: begin
-                    volts_to_dbm[109] <= 32'h00f804df;
-                end
-                CAL_TBL_MAX: begin      // 61.0
-                    volts_to_dbm[110] <= 32'h00fae415;
-                    cal_state <= CAL_IDLE;                
-                end
-//                CAL_TBL_MAX: begin  // 61.1
-//                    volts_to_dbm[111] <= 32'h00fdcbcf;
+// 10-Sep-2018 dBm out not really needed
+//                case(ptbl_idx)
+//                0: begin            // 50.0dBm in Q15.16 volts across 50 ohm load
+//                    volts_to_dbm[0] <= 32'h13880000;
+//                    dbm[0] <= 16'd12800;    // 50.0 in Q7.8 format
+//                end
+//                1: begin
+//                    volts_to_dbm[1] <= 32'h13fc7707;
+//                    dbm[1] <= 16'd12825;
+//                end
+//                2: begin
+//                    volts_to_dbm[2] <= 32'h1473a48a;
+//                    dbm[2] <= 16'd12851;
+//                end
+//                3: begin
+//                    volts_to_dbm[3] <= 32'h14ed98b5;
+//                    dbm[3] <= 16'd12876;
+//                end
+//                4: begin
+//                    volts_to_dbm[4] <= 32'h156a6417;
+//                    dbm[4] <= 16'd12902;
+//                end
+//                5: begin
+//                    volts_to_dbm[5] <= 32'h15ea179f;
+//                    dbm[5] <= 16'd12928;
+//                end
+//                6: begin
+//                    volts_to_dbm[6] <= 32'h166cc4a2;
+//                    dbm[6] <= 16'd12953;
+//                end
+//                7: begin
+//                    volts_to_dbm[7] <= 32'h16f27cde;
+//                    dbm[7] <= 16'd12979;
+//                end
+//                8: begin
+//                    volts_to_dbm[8] <= 32'h177b5279;
+//                    dbm[8] <= 16'd13004;
+//                end
+//                9: begin
+//                    volts_to_dbm[9] <= 32'h18075806;
+//                    dbm[9] <= 16'd13030;
+//                end
+//                10: begin            // 51.0dBm in Q15.16 volts across 50 ohm load
+//                    volts_to_dbm[10] <= 32'h1896a086;
+//                    dbm[10] <= 16'd13056;
+//                end
+//                11: begin
+//                    volts_to_dbm[11] <= 32'h19293f6d;
+//                    dbm[11] <= 16'd13081;
+//                end
+//                12: begin
+//                    volts_to_dbm[12] <= 32'h19bf48a0;
+//                    dbm[12] <= 16'd13107;
+//                end
+//                13: begin
+//                    volts_to_dbm[13] <= 32'h1a58d07d;
+//                    dbm[13] <= 16'd13132;
+//                end
+//                14: begin
+//                    volts_to_dbm[14] <= 32'h1af5ebdb;
+//                    dbm[14] <= 16'd13158;
+//                end
+//                15: begin
+//                    volts_to_dbm[15] <= 32'h1b96b00e;
+//                    dbm[15] <= 16'd13184;
+//                end
+//                16: begin
+//                    volts_to_dbm[16] <= 32'h1c3b32e8;
+//                    dbm[16] <= 16'd13209;
+//                end
+//                17: begin
+//                    volts_to_dbm[17] <= 32'h1ce38abc;
+//                    dbm[17] <= 16'd13235;
+//                end
+//                18: begin
+//                    volts_to_dbm[18] <= 32'h1d8fce65;
+//                    dbm[18] <= 16'd13260;
+//                end
+//                19: begin
+//                    volts_to_dbm[19] <= 32'h1e401545;
+//                    dbm[19] <= 16'd13286;
+//                end
+//                20: begin            // 52.0dBm in Q15.16 volts across 50 ohm load
+//                    volts_to_dbm[20] <= 32'h1ef47749;
+//                    dbm[20] <= 16'd13312;
+//                end
+//                21: begin
+//                    volts_to_dbm[21] <= 32'h1fad0cec;
+//                    dbm[21] <= 16'd13337;
+//                end
+//                22: begin
+//                    volts_to_dbm[22] <= 32'h2069ef3d;
+//                    dbm[22] <= 16'd13363;
+//                end
+//                23: begin
+//                    volts_to_dbm[23] <= 32'h212b37e0;
+//                    dbm[23] <= 16'd13388;
+//                end
+//                24: begin
+//                    volts_to_dbm[24] <= 32'h21f1010f;
+//                    dbm[24] <= 16'd13414;
+//                end
+//                25: begin
+//                    volts_to_dbm[25] <= 32'h22bb65a5;
+//                    dbm[25] <= 16'd13440;
+//                end
+//                26: begin
+//                    volts_to_dbm[26] <= 32'h238a8119;
+//                    dbm[26] <= 16'd13465;
+//                end
+//                27: begin
+//                    volts_to_dbm[27] <= 32'h245e6f88;
+//                    dbm[27] <= 16'd13491;
+//                end
+//                28: begin
+//                    volts_to_dbm[28] <= 32'h25374db8;
+//                    dbm[28] <= 16'd13516;
+//                end
+//                29: begin
+//                    volts_to_dbm[29] <= 32'h26153916;
+//                    dbm[29] <= 16'd13542;
+//                end
+//                30: begin            // 53.0dBm in Q15.16 volts across 50 ohm load
+//                    volts_to_dbm[30] <= 32'h26f84fc3;
+//                    dbm[30] <= 16'd13568;
+//                end
+//                31: begin
+//                    volts_to_dbm[31] <= 32'h27e0b091;
+//                    dbm[31] <= 16'd13593;
+//                end
+//                32: begin
+//                    volts_to_dbm[32] <= 32'h28ce7b0c;
+//                    dbm[32] <= 16'd13619;
+//                end
+//                33: begin
+//                    volts_to_dbm[33] <= 32'h29c1cf79;
+//                    dbm[33] <= 16'd13644;
+//                end
+//                34: begin
+//                    volts_to_dbm[34] <= 32'h2abacee0;
+//                    dbm[34] <= 16'd13670;
+//                end
+//                35: begin
+//                    volts_to_dbm[35] <= 32'h2bb99b0e;
+//                    dbm[35] <= 16'd13696;
+//                end
+//                36: begin
+//                    volts_to_dbm[36] <= 32'h2cbe5698;
+//                    dbm[36] <= 16'd13721;
+//                end
+//                37: begin
+//                    volts_to_dbm[37] <= 32'h2dc924e2;
+//                    dbm[37] <= 16'd13747;
+//                end
+//                38: begin
+//                    volts_to_dbm[38] <= 32'h2eda2a22;
+//                    dbm[38] <= 16'd13772;
+//                end
+//                39: begin
+//                    volts_to_dbm[39] <= 32'h2ff18b69;
+//                    dbm[39] <= 16'd13798;
+//                end
+//                40: begin            // 54.0dBm in Q15.16 volts across 50 ohm load
+//                    volts_to_dbm[40] <= 32'h310f6ea1;
+//                    dbm[40] <= 16'd13824;
+//                end
+//                41: begin
+//                    volts_to_dbm[41] <= 32'h3233fa9a;
+//                    dbm[41] <= 16'd13849;
+//                end
+//                42: begin
+//                    volts_to_dbm[42] <= 32'h335f5707;
+//                    dbm[42] <= 16'd13875;
+//                end
+//                43: begin
+//                    volts_to_dbm[43] <= 32'h3491ac8c;
+//                    dbm[43] <= 16'd13900;
+//                end
+//                44: begin
+//                    volts_to_dbm[44] <= 32'h35cb24bd;
+//                    dbm[44] <= 16'd13926;
+//                end
+//                45: begin
+//                    volts_to_dbm[45] <= 32'h370bea26;
+//                    dbm[45] <= 16'd13952;
+//                end
+//                46: begin
+//                    volts_to_dbm[46] <= 32'h38542852;
+//                    dbm[46] <= 16'd13977;
+//                end
+//                47: begin
+//                    volts_to_dbm[47] <= 32'h39a40bcf;
+//                    dbm[47] <= 16'd14003;
+//                end
+//                48: begin
+//                    volts_to_dbm[48] <= 32'h3afbc233;
+//                    dbm[48] <= 16'd14028;
+//                end
+//                49: begin
+//                    volts_to_dbm[49] <= 32'h3c5b7a27;
+//                    dbm[49] <= 16'd14054;
+//                end
+//                50: begin            // 55.0dBm in Q15.16 volts across 50 ohm load
+//                    volts_to_dbm[50] <= 32'h3dc36367;
+//                    dbm[50] <= 16'd14080;
+//                end
+//                51: begin
+//                    volts_to_dbm[51] <= 32'h3f33aecf;
+//                    dbm[51] <= 16'd14105;
+//                end
+//                52: begin
+//                    volts_to_dbm[52] <= 32'h40ac8e5a;
+//                    dbm[52] <= 16'd14131;
+//                end
+//                53: begin
+//                    volts_to_dbm[53] <= 32'h422e3532;
+//                    dbm[53] <= 16'd14156;
+//                end
+//                54: begin
+//                    volts_to_dbm[54] <= 32'h43b8d7af;
+//                    dbm[54] <= 16'd14182;
+//                end
+//                55: begin
+//                    volts_to_dbm[55] <= 32'h454cab61;
+//                    dbm[55] <= 16'd14208;
+//                end
+//                56: begin
+//                    volts_to_dbm[56] <= 32'h46e9e719;
+//                    dbm[56] <= 16'd14233;
+//                end
+//                57: begin
+//                    volts_to_dbm[57] <= 32'h4890c2ee;
+//                    dbm[57] <= 16'd14259;
+//                end
+//                58: begin
+//                    volts_to_dbm[58] <= 32'h4a417845;
+//                    dbm[58] <= 16'd14284;
+//                end
+//                59: begin
+//                    volts_to_dbm[59] <= 32'h4bfc41db;
+//                    dbm[59] <= 16'd14310;
+//                end
+//                60: begin            // 56.0dBm in Q15.16 volts across 50 ohm load
+//                    volts_to_dbm[60] <= 32'h4dc15bc8;
+//                    dbm[60] <= 16'd14336;
+//                end
+//                61: begin
+//                    volts_to_dbm[61] <= 32'h4f91038e;
+//                    dbm[61] <= 16'd14361;
+//                end
+//                62: begin
+//                    volts_to_dbm[62] <= 32'h516b781b;
+//                    dbm[62] <= 16'd14387;
+//                end
+//                63: begin
+//                    volts_to_dbm[63] <= 32'h5350f9d7;
+//                    dbm[63] <= 16'd14412;
+//                end
+//                64: begin
+//                    volts_to_dbm[64] <= 32'h5541caa7;
+//                    dbm[64] <= 16'd14438;
+//                end
+//                65: begin
+//                    volts_to_dbm[65] <= 32'h573e2dfa;
+//                    dbm[65] <= 16'd14464;
+//                end
+//                66: begin
+//                    volts_to_dbm[66] <= 32'h594668d3;
+//                    dbm[66] <= 16'd14489;
+//                end
+//                67: begin
+//                    volts_to_dbm[67] <= 32'h5b5ac1ce;
+//                    dbm[67] <= 16'd14515;
+//                end
+//                68: begin
+//                    volts_to_dbm[68] <= 32'h5d7b812e;
+//                    dbm[68] <= 16'd14540;
+//                end
+//                69: begin
+//                    volts_to_dbm[69] <= 32'h5fa8f0e3;
+//                    dbm[69] <= 16'd14566;
+//                end
+//                70: begin            // 57.0dBm in Q15.16 volts across 50 ohm load
+//                    volts_to_dbm[70] <= 32'h61e35c97;
+//                    dbm[70] <= 16'd14592;
+//                end
+//                71: begin
+//                    volts_to_dbm[71] <= 32'h642b11b7;
+//                    dbm[71] <= 16'd14617;
+//                end
+//                72: begin
+//                    volts_to_dbm[72] <= 32'h66805f7d;
+//                    dbm[72] <= 16'd14643;
+//                end
+//                73: begin
+//                    volts_to_dbm[73] <= 32'h68e396fe;
+//                    dbm[73] <= 16'd14668;
+//                end
+//                74: begin
+//                    volts_to_dbm[74] <= 32'h6b550b2f;
+//                    dbm[74] <= 16'd14694;
+//                end
+//                75: begin
+//                    volts_to_dbm[75] <= 32'h6dd510f6;
+//                    dbm[75] <= 16'd14720;
+//                end
+//                76: begin
+//                    volts_to_dbm[76] <= 32'h7063ff32;
+//                    dbm[76] <= 16'd14745;
+//                end
+//                77: begin
+//                    volts_to_dbm[77] <= 32'h73022ec9;
+//                    dbm[77] <= 16'd14771;
+//                end
+//                78: begin
+//                    volts_to_dbm[78] <= 32'h75affab3;
+//                    dbm[78] <= 16'd14796;
+//                end
+//                79: begin
+//                    volts_to_dbm[79] <= 32'h786dc006;
+//                    dbm[79] <= 16'd14822;
+//                end
+//                80: begin            // 58.0dBm in Q15.16 volts across 50 ohm load
+//                    volts_to_dbm[80] <= 32'h7b3bde02;
+//                    dbm[80] <= 16'd14848;
+//                end
+//                81: begin
+//                    volts_to_dbm[81] <= 32'h7e1ab621;
+//                    dbm[81] <= 16'd14873;
+//                end
+//                82: begin
+//                    volts_to_dbm[82] <= 32'h810aac22;
+//                    dbm[82] <= 16'd14899;
+//                end
+//                83: begin
+//                    volts_to_dbm[83] <= 32'h840c2615;
+//                    dbm[83] <= 16'd14924;
+//                end
+//                84: begin
+//                    volts_to_dbm[84] <= 32'h871f8c6d;
+//                    dbm[84] <= 16'd14950;
+//                end
+//                85: begin
+//                    volts_to_dbm[85] <= 32'h8a454a0a;
+//                    dbm[85] <= 16'd14976;
+//                end
+//                86: begin
+//                    volts_to_dbm[86] <= 32'h8d7dcc49;
+//                    dbm[86] <= 16'd15001;
+//                end
+//                87: begin
+//                    volts_to_dbm[87] <= 32'h90c98316;
+//                    dbm[87] <= 16'd15027;
+//                end
+//                88: begin
+//                    volts_to_dbm[88] <= 32'h9428e0f5;
+//                    dbm[88] <= 16'd15052;
+//                end
+//                89: begin
+//                    volts_to_dbm[89] <= 32'h979c5b17;
+//                    dbm[89] <= 16'd15078;
+//                end
+//                90: begin            // 59.0dBm in Q15.16 volts across 50 ohm load
+//                    volts_to_dbm[90] <= 32'h9b246967;
+//                    dbm[90] <= 16'd15104;
+//                end
+//                91: begin
+//                    volts_to_dbm[91] <= 32'h9ec1869b;
+//                    dbm[91] <= 16'd15129;
+//                end
+//                92: begin
+//                    volts_to_dbm[92] <= 32'ha2743045;
+//                    dbm[92] <= 16'd15155;
+//                end
+//                93: begin
+//                    volts_to_dbm[93] <= 32'ha63ce6e3;
+//                    dbm[93] <= 16'd15180;
+//                end
+//                94: begin
+//                    volts_to_dbm[94] <= 32'haa1c2df3;
+//                    dbm[94] <= 16'd15206;
+//                end
+//                95: begin
+//                    volts_to_dbm[95] <= 32'hae128c02;
+//                    dbm[95] <= 16'd15232;
+//                end
+//                96: begin
+//                    volts_to_dbm[96] <= 32'hb2208abe;
+//                    dbm[96] <= 16'd15257;
+//                end
+//                97: begin
+//                    volts_to_dbm[97] <= 32'hb646b70c;
+//                    dbm[97] <= 16'd15283;
+//                end
+//                98: begin
+//                    volts_to_dbm[98] <= 32'hba85a119;
+//                    dbm[98] <= 16'd15308;
+//                end
+//                99: begin
+//                    volts_to_dbm[99] <= 32'hbedddc6d;
+//                    dbm[99] <= 16'd15334;
+//                end
+//                100: begin            // 60.0dBm in Q15.16 volts across 50 ohm load
+//                    volts_to_dbm[100] <= 32'hc3500000;
+//                    dbm[100] <= 16'd15360;
+//                end
+//                101: begin
+//                    volts_to_dbm[101] <= 32'hc7dca64d;
+//                    dbm[101] <= 16'd15385;
+//                end
+//                102: begin
+//                    volts_to_dbm[102] <= 32'hcc846d6a;
+//                    dbm[102] <= 16'd15411;
+//                end
+//                103: begin
+//                    volts_to_dbm[103] <= 32'hd147f71b;
+//                    dbm[103] <= 16'd15436;
+//                end
+//                104: begin
+//                    volts_to_dbm[104] <= 32'hd627e8e9;
+//                    dbm[104] <= 16'd15462;
+//                end
+//                105: begin
+//                    volts_to_dbm[105] <= 32'hdb24ec37;
+//                    dbm[105] <= 16'd15488;
+//                end
+//                106: begin
+//                    volts_to_dbm[106] <= 32'he03fae5a;
+//                    dbm[106] <= 16'd15513;
+//                end
+//                107: begin
+//                    volts_to_dbm[107] <= 32'he578e0b4;
+//                    dbm[107] <= 16'd15539;
+//                end
+//                108: begin
+//                    volts_to_dbm[108] <= 32'head138c3;
+//                    dbm[108] <= 16'd15564;
+//                end
+//                109: begin
+//                    volts_to_dbm[109] <= 32'hf0497044;
+//                    dbm[109] <= 16'd15590;
+//                end
+////                110: begin            // 61.0dBm in Q15.16 volts across 50 ohm load
+////                    volts_to_dbm[110] <= 32'hf5e24545;
+////                    dbm[110] <= 16'd15616;
+////                end
+//                CAL_TBL_MAX: begin      // 61.0
+//                    volts_to_dbm[110] <= 32'hfb9c7a42;
+//                    dbm[110] <= 16'd15616;
 //                    cal_state <= CAL_IDLE;                
 //                end
-                endcase
-                ptbl_idx <= ptbl_idx + 7'b000_0001;
+////                CAL_TBL_MAX: begin  // 61.1
+////                    volts_to_dbm[111] <= 32'h00fdcbcf;
+////                    cal_state <= CAL_IDLE;                
+////                end
+//                endcase
+//                ptbl_idx <= ptbl_idx + 7'b000_0001;
+                cal_state <= CAL_IDLE;                
             end
             CAL1: begin
-                cal_tmp1 <= {16'd0, adcf_dat_i[15:0]};      // FWDI
+                cal_tmp1 <= {16'h0000, adcf_dat_i[31:16]};      // FWDI
+                // this works great but adds 50 mins to synthesis! Use extra clock tick (CAL2)
+                //cal_tmp1[31:16] <= adcf_dat_i[31] ? 16'hffff : 16'h0000;    // sign extend
                 cal_mult1 <= zm_fi_gain_i;
-                cal_tmp2 <= {16'd0, adcf_dat_i[31:16]};     // FWDQ
+                
+                cal_tmp2 <= {16'h0000, adcf_dat_i[15:0]};       // FWDQ
+                //cal_tmp2[31:16] <= adcf_dat_i[15] ? 16'hffff : 16'h0000;    // sign extend
                 cal_mult2 <= zm_fq_gain_i;
-                cal_tmp3 <= {16'd0, adcr_dat_i[15:0]};      // REFLI
+                
+                cal_tmp3 <= {16'h0000, adcr_dat_i[31:16]};      // REFLI
+                //cal_tmp3[31:16] <= adcr_dat_i[31] ? 16'hffff : 16'h0000;    // sign extend
                 cal_mult3 <= zm_ri_gain_i;
-                cal_tmp4 <= {16'd0, adcr_dat_i[31:16]};     // REFLQ
+                
+                cal_tmp4 <= {16'h0000, adcr_dat_i[15:0]};      // REFLQ
+                //cal_tmp4[31:16] <= adcr_dat_i[15] ? 16'hffff : 16'h0000;    // sign extend
                 cal_mult4 <= zm_rq_gain_i;
                 cal_state <= CAL2;
             end
             CAL2: begin
-// 31-Jul-2018 update, ADC values already shifted left 2, don't need this
-//                // cal_tmp => [XX][14 bits ADC]
-//                // sign extend bipolar values            
-//                if(cal_tmp1[13])             
-//                    cal_tmp1[31:14] <= 18'b1111_1111_1111_1111_11; //{18'b1111_1111_1111_1111_11, cal_tmp1[13:0]};
-//                if(cal_tmp2[13])             
-//                    cal_tmp2[31:14] <= 18'b1111_1111_1111_1111_11; //{18'b1111_1111_1111_1111_11, cal_tmp2[13:0]};
-//                if(cal_tmp3[13])             
-//                    cal_tmp3[31:14] <= 18'b1111_1111_1111_1111_11; //{18'b1111_1111_1111_1111_11, cal_tmp3[13:0]};
-//                if(cal_tmp4[13])             
-//                    cal_tmp4[31:14] <= 18'b1111_1111_1111_1111_11; //{18'b1111_1111_1111_1111_11, cal_tmp4[13:0]};
-//                cal_state <= CAL3;
-//            end
-//            CAL3: begin
+                // cal_tmpN => [14 bits ADC][00]
+                // sign extend bipolar values for 32-bit multiplier input            
+                if(cal_tmp1[15])             
+                    cal_tmp1[31:16] <= 16'hffff;
+                if(cal_tmp2[15])             
+                    cal_tmp2[31:16] <= 16'hffff;
+                if(cal_tmp3[15])             
+                    cal_tmp3[31:16] <= 16'hffff;
+                if(cal_tmp4[15])             
+                    cal_tmp4[31:16] <= 16'hffff;
+                cal_state <= CAL3;
+            end
+            CAL3: begin
                 // d0=calibrated, d1=ADC, d2=volts, d3=dBm
                 // calibrated ADC value is meaningless, ignore d0
                 // output is either ADC, Volts, or dBm
                 if(ops_i[1])
-                    cal_state <= CAL_DONE;      // just copy signed int's to output
+                    cal_state <= CAL5;      // just copy signed int's to output
                 else begin
                     cal_tmp1 <= cal_tmp1 + zm_fi_offset;
                     cal_tmp2 <= cal_tmp2 + zm_fq_offset;            
@@ -673,18 +695,9 @@ module meas_calcs(
                 // result is Q15.16 volts across 50 ohm load
                 // if returning volts, we're done.
                 // output is volts across 50 ohm load (gain*(offset+raw adc))<<16
-                if(ops_i[3]) begin
-                    cal_state <= CAL_DBM;
-                end
-                else begin
-                    // returning volts, or some error condition
-                    cal_state <= CAL_DONE;
-                end
-            end
-            CAL_DONE: begin
-                // done cal, format output as needed
+                // done raw or voltage cal, continue for power
                 if(ops_i[1]) begin
-                    adcf_dat <= {cal_tmp2[15:0], cal_tmp1[15:0]};   // [FWDQ,FWDI]
+                    adcf_dat <= {cal_tmp2[15:0], cal_tmp1[15:0]};   // [FWDQ, FWDI]
                     adcr_dat <= {cal_tmp4[15:0], cal_tmp3[15:0]};   // [REFLQ, REFLI]
                     done_o <= 1'b1;
                     cal_state <= CAL_IDLE;
@@ -698,25 +711,74 @@ module meas_calcs(
                     done_o <= 1'b1;
                     cal_state <= CAL_IDLE;
                 end
-                else if(ops_i[3]) begin
-                    // Pfwd = (VqFwd^2 + ViFwd^2)/50
-                    // Prfl = (VqRfl^2 + ViRfl^2)/50
-                    
-
-
-
-
-
-
-                    done_o <= 1'b1;
-                    cal_state <= CAL_IDLE;
-    
-                end
+//                else if(ops_i[3]) begin
+//                    // Pfwd = (VqFwd^2 + ViFwd^2)/50
+//                    // (VqFwd*2^16) * (VqFwd*2^16) == VqFwd squared * 2**32)
+//                    // Add the I & Q squared results, then extract middle 32 bits
+//                    // as the unsigned Q16.16 value to lookup in the table for dBm
+//                    cal_tmp1 <= adc1_cald[31:0];
+//                    cal_mult1 <= adc1_cald[31:0];
+//                    cal_tmp2 <= adc2_cald[31:0];
+//                    cal_mult2 <= adc2_cald[31:0];
+//                    // Prfl = (VqRfl^2 + ViRfl^2)/50
+//                    cal_tmp3 <= adc3_cald[31:0];
+//                    cal_mult3 <= adc3_cald[31:0];
+//                    cal_tmp4 <= adc4_cald[31:0];
+//                    cal_mult4 <= adc4_cald[31:0];
+//                    // square all 4 voltages
+//                    latency_counter <= MULTIPLIER_CLOCKS;
+//                    multiply <= 1'b1;
+//                    next_state <= CAL6;
+//                    cal_state <= CAL_MULT;
+//                end
                 else begin// ? error of some sort
                     done_o <= 1'b1;                
                     cal_state <= CAL_IDLE;
                 end
             end
+//            CAL6: begin
+//                sumvsquared_f <= 64'd213584428662784;  //  (223*65536)^2 for SIM test   adc1_cald + adc2_cald;        // fwd sum of squared voltages (*2^32)
+//                sumvsquared_r <= 64'd180490492355625;  //  (205*65536)^2 for REFL SIM test  adc3_cald + adc4_cald;        // rfl sum of squared voltages (*2^32)   
+//                dbm_index <= 8'h00;                            // start at bottom of dbm table
+//                dbm_f_done <= 1'b0;
+//                //dbm_fwd <= dbm[0];
+//                dbm_fwd_idx <= 8'h00;
+//                dbm_r_done <= 1'b0;
+//                //dbm_rfl <= dbm[0];
+//                dbm_rfl_idx <= 8'h00;
+//                cal_state <= CAL7;
+//            end
+//            CAL7: begin
+//                if(dbm_f_done && dbm_r_done) begin
+//                    cal_state <= CAL8;
+//                end
+//                else if(dbm_index == CAL_TBL_MAX) begin
+//                    // indicate error?
+//                    cal_state <= CAL8;
+//                end
+//                else begin
+//                    if(sumvsquared_f[47:16] <= volts_to_dbm[dbm_index]) begin
+//                        dbm_fwd_idx <= dbm_index;
+//                        dbm_f_done <= 1'b1;
+//                    end
+//                    if(sumvsquared_r[47:16] <= volts_to_dbm[dbm_index]) begin
+//                        dbm_rfl_idx <= dbm_index;
+//                        dbm_r_done <= 1'b1;
+//                    end    
+//                    dbm_index <= dbm_index + 8'h01;
+//                end 
+//            end
+//            CAL8: begin
+//                dbm_index <= dbm_index - 8'h01;
+//                cal_state <= CAL9;
+//            end
+//            CAL9: begin
+//                // dbm_fwd & dbm_rfl are set to something, write response
+//                adcf_dat <= dbm[dbm_fwd_idx];   // Forward power in Q7.8 format dBm
+//                adcr_dat <= dbm[dbm_rfl_idx];   // Reflected power in Q7.8 format dBm
+//                done_o <= 1'b1;
+//                cal_state <= CAL_IDLE;
+//            end
             CAL_MULT: begin           
                 if(latency_counter == 0) begin
                     cal_state <= next_state;

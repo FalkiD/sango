@@ -130,23 +130,23 @@
 `define ENA_PULSE_WIDTH     1
 `define ENA_DUTY_CYCLE		0        
 
-`define RD_OVER_POWER		15
-`define RD_UNDER_POWER		14
-`define RD_OVER_FREQ		13
-`define RD_UNDER_FREQ		12
-`define RD_PLL_LOCK         11
-`define RD_OPC_ERROR        10
-`define RD_PULSE_WIDTH      9
-`define RD_DUTY_CYCLE		8
+`define RD_OVER_POWER		7
+`define RD_UNDER_POWER		6
+`define RD_OVER_FREQ		5
+`define RD_UNDER_FREQ		4
+`define RD_PLL_LOCK         3
+`define RD_OPC_ERROR        2
+`define RD_PULSE_WIDTH      1
+`define RD_DUTY_CYCLE		0
 
-`define LATCH_OVER_POWER	23
-`define LATCH_UNDER_POWER	22
-`define LATCH_OVER_FREQ		21
-`define LATCH_UNDER_FREQ	20
-`define LATCH_PLL_LOCK      19
-`define LATCH_OPC_ERROR     18
-`define LATCH_PULSE_WIDTH   17
-`define LATCH_DUTY_CYCLE	16
+`define LATCH_OVER_POWER	15
+`define LATCH_UNDER_POWER	14
+`define LATCH_OVER_FREQ		13
+`define LATCH_UNDER_FREQ	12
+`define LATCH_PLL_LOCK      11
+`define LATCH_OPC_ERROR     10
+`define LATCH_PULSE_WIDTH   9
+`define LATCH_DUTY_CYCLE	8
 
 // Debug SPI state globals
 `define SPI_IDLE            4'd0

@@ -2,15 +2,17 @@
 -- For "sim_bus_control_port"
 --
 -- b = bus command
+-- d = delay token
 -- <time delay> is relative time which elapses before next line is processed.
 --
 -- Format:
 --
+-- d <time delay>
 -- b <time delay> c aaaa dddd qq
 --
 -- A single Carriage Return is sent at the end of each line (at the ';' character)
-
--- This set of commands is useful to verify operation of the system controller module.
+--
+-- Commands like these are useful to exercise the system:
 --d  10 us;             -- Delay
 --b 300 us ;            -- <CR> (Allows autobaud to obtain lock on baud rate.)
 --b 300 us i;           -- i<CR>

@@ -107,7 +107,7 @@ entity block_ram is
       WRITETHRU : integer := 1; -- Set to nonzero value for writethrough mode
       USE_FILE  : integer := 0; -- Set to nonzero value to use INIT_FILE
       INIT_VAL  : integer := 0; -- Value used when INIT_FILE is not used
-      INIT_FILE : string  := ".\foo.txt";  -- ASCII hexadecimal initialization file name
+      INIT_FILE : string  := "./foo.txt";  -- ASCII hexadecimal initialization file name
       FIL_WIDTH : integer := 32; -- Bit width of init file lines
       ADR_WIDTH : integer := 3;
       DAT_WIDTH : integer := 32
@@ -222,7 +222,7 @@ entity block_ram_async_reset is
       WRITETHRU : integer := 1; -- Set to nonzero value for writethrough mode
       USE_FILE  : integer := 0; -- Set to nonzero value to use INIT_FILE
       INIT_VAL  : integer := 0; -- Value used when INIT_FILE is not used
-      INIT_FILE : string  := ".\foo.txt";  -- ASCII hexadecimal initialization file name
+      INIT_FILE : string  := "./foo.txt";  -- ASCII hexadecimal initialization file name
       FIL_WIDTH : integer := 32; -- Bit width of init file lines
       ADR_WIDTH : integer := 3;
       DAT_WIDTH : integer := 32
@@ -347,7 +347,7 @@ entity swiss_army_ram is
       USE_FILE  : integer := 0; -- Set to nonzero value to use INIT_FILE
       INIT_VAL  : integer := 0; -- Value used when INIT_FILE is not used
       INIT_SEL  : natural := 0; -- Can be used with generate loop variable to select a segment of the (larger) init file
-      INIT_FILE : string  := ".\foo.txt";  -- ASCII hexadecimal initialization file name
+      INIT_FILE : string  := "./foo.txt";  -- ASCII hexadecimal initialization file name
       FIL_WIDTH : integer := 32; -- Bit width of init file lines
       ADR_WIDTH : integer := 3;
       DAT_WIDTH : integer := 32

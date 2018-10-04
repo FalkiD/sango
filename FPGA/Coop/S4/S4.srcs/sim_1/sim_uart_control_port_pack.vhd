@@ -12,6 +12,7 @@ package sim_uart_control_port_pack is
   generic(
     INPUT_FILE     :  string;
     OUTPUT_FILE    :  string;
+    MSG_PREFIX     :  string; -- Prefix of console output messages from this unit
     POR_DURATION   :    time;  -- Duration of internal reset signal activity
     POR_ASSERT_LOW : boolean;  -- Determine polarity of reset signal
     CLKRATE        : integer;  -- Control Port clock rate default.
@@ -39,6 +40,9 @@ end sim_uart_control_port_pack;
 -- Author: John Clayton
 -- Date  : Jan. 02, 2014 Transferred component into package file, wrote
 --                       short description.
+--         July 27, 2018 Added MSG_PREFIX generic, so that multiple instances can operate,
+--                       each posting messages with a unique text prefix identifier.  Is
+--                       that not nifty?
 --
 -- Description
 -------------------------------------------------------------------------------
@@ -87,8 +91,9 @@ use work.uart_sqclk_pack.all;
 
 entity sim_uart_control_port is
   generic(
-    INPUT_FILE     : string  := ".\uart_sim_in.txt";
-    OUTPUT_FILE    : string  := ".\uart_sim_out.txt";
+    INPUT_FILE     : string  := "./uart_sim_in.txt";
+    OUTPUT_FILE    : string  := "./uart_sim_out.txt";
+    MSG_PREFIX     : string  :=   "UART "; -- Prefix of console output messages from this unit
     POR_DURATION   :   time  :=    500 ns;  -- Duration of internal reset signal activity
     POR_ASSERT_LOW : boolean :=     false;  -- Determines polarity of reset output
     CLKRATE        : integer := 100000000;  -- Control Port clock rate default.
@@ -249,12 +254,13 @@ BEGIN
             elsif (item_count=0 and temp_char/=' ') then
               stim_kind   <= temp_char;
               stim_kind_v := temp_char; -- Display stim uses this.  It cannot read stim_kind immediately.
+              write (line_2,MSG_PREFIX);
               if (stim_kind_v='u') then
-                write(line_2,string'("UART Command: "));
+                write(line_2,string'(" command: "));
               elsif (stim_kind_v='d') then
-                write(line_2,string'("UART Delay Token. "));
+                write(line_2,string'(" delay token. "));
               else
-                write(line_2,string'("UART Unknown stimulus type encountered.  No action taken."));
+                write(line_2,string'(" unknown stimulus type encountered.  No action taken."));
               end if;
               item_count  := item_count+1;
             elsif (item_count=1) then -- Time field read removes leading whitespace automatically.
@@ -297,7 +303,9 @@ BEGIN
         elsif not (stim_done) then
           write (line_2, string'("At "));
           write (line_2, now, unit => ns);
-          write (line_2, string'(", UART control port finished reading stimulus file. "));
+          write (line_2, string'(", "));
+          write (line_2,MSG_PREFIX);
+          write (line_2, string'(" UART control port finished reading stimulus file. "));
           writeline (output, line_2);
           stim_done := true;
         end if;

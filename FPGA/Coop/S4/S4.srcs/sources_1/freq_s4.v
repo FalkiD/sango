@@ -20,16 +20,8 @@
 //                  for SYN_LOCK to turn ON. If no SYN lock, set status to ERR code
 // Revision 0.01 - File Created
 // Additional Comments:  
-// 
+//
 //////////////////////////////////////////////////////////////////////////////////
-
-/*
- * Programming notes:
- *
- * -On the S4, changing frequency while a pattern is running is supported.
- * We'll use either two frequency registers, or a flag, to control
- * overriding the frequency on the S4.
- */
 
 `include "timescale.v"
 `include "status.h"
@@ -63,7 +55,8 @@ module freq_s4 #(parameter FILL_BITS = 6,
   
   output wire             tweak_pwr_o,       // pulse so power processor will reset power after successful frequency change
 
-  output reg  [7:0]       status_o           // 0=Busy, SUCCESS when done, or an error code
+  output reg  [7:0]       status_o,          // 0=Busy, SUCCESS when done, or an error code
+  input  wire             status_ack_i       // frequency processor status acknowledge, this module clears error status
 );
 
   // Main Globals
@@ -113,6 +106,9 @@ module freq_s4 #(parameter FILL_BITS = 6,
   localparam FRQ_SYN_SSOFF = 12;    // wait for SYN SS OFF
   localparam FRQ_SYN_LOCK  = 13;    // wait for SYN PLL lock
       
+  localparam FREQ_MIN = 2400000000;
+  localparam FREQ_MAX = 2500000000;    
+      
   always @(posedge sys_clk)
   begin
     if(!sys_rst_n) begin
@@ -132,6 +128,10 @@ module freq_s4 #(parameter FILL_BITS = 6,
         // FPGA was just powered ON, initialize all HW... TBD
         frequency <= 32'd2450000000;    // Hz
       end
+      
+      if(status_ack_i && status_o > `SUCCESS)
+        status_o <= `SUCCESS;
+      
       case(state)
       FRQ_WAIT: begin
         if(latency_counter == 0) begin
@@ -152,8 +152,18 @@ module freq_s4 #(parameter FILL_BITS = 6,
         state <= FRQ_READ;
       end
       FRQ_READ: begin
-        frequency <= frq_fifo_i;        // requested frequency in Hertz
-        state <= FRQ_DDS_MULT;
+        if(frq_fifo_i < FREQ_MIN) begin
+          status_o <= `ERR_UNDER_FREQ;
+          state <= FRQ_IDLE;
+        end
+        else if(frq_fifo_i > FREQ_MAX) begin
+          status_o <= `ERR_OVER_FREQ;
+          state <= FRQ_IDLE;
+        end
+        else begin
+          frequency <= frq_fifo_i;        // requested frequency in Hertz
+          state <= FRQ_DDS_MULT;
+        end
       end
       FRQ_DDS_MULT: begin
         frq_fifo_ren_o <= 1'b0;
